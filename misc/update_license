@@ -1,0 +1,21 @@
+#! /bin/bash
+
+year=$(date +%Y)
+
+files=
+files="$files $(find . -name LICENSE.txt)"
+files="$files $(find . -name CMakeLists.txt)"
+files="$files $(find config -name \*.cmake)"
+files="$files $(find examples -name \*.c)"
+files="$files $(find src -name \*.c)"
+files="$files $(find src -name \*.h)"
+files="$files $(find tests -name \*.c)"
+
+name="Matthew J. Smith and Overkit contributors"
+
+for file in $files; do
+  cp "$file" old_license_file
+  sed -e "s/Copyright (c) [0-9]\{4\} $name/Copyright (c) $year $name/g" old_license_file > "$file"
+done
+
+rm -f old_license_file
