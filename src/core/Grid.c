@@ -9,6 +9,8 @@
 #include "Logger.h"
 #include "TextUtils.h"
 
+static void CreateNeighborInfo(ovk_grid *Grid);
+static void DestroyNeighborInfo(ovk_grid *Grid);
 static void PrintGridSummary(const ovk_grid *Grid);
 static void PrintGridDecomposition(const ovk_grid *Grid);
 
@@ -60,6 +62,8 @@ void CreateGrid(ovk_grid **Grid_, int ID, const ovk_grid_params *Params, t_logge
   Grid->logger = Logger;
   Grid->error_handler = ErrorHandler;
 
+  CreateNeighborInfo(Grid);
+
   if (Grid->properties->comm_rank == 0) {
     PrintGridSummary(Grid);
   }
@@ -77,6 +81,8 @@ void DestroyGrid(ovk_grid **Grid_) {
   ovk_grid *Grid = *Grid_;
 
   MPI_Barrier(Grid->properties->comm);
+
+  DestroyNeighborInfo(Grid);
 
   t_logger *Logger = Grid->logger;
   MPI_Comm Comm = Grid->properties->comm;
@@ -99,6 +105,55 @@ void DestroyGrid(ovk_grid **Grid_) {
 void ovkGetGridProperties(const ovk_grid *Grid, const ovk_grid_properties **Properties) {
 
   *Properties = Grid->properties;
+
+}
+
+static void CreateNeighborInfo(ovk_grid *Grid) {
+
+  int i, j;
+
+  int NumNeighbors = Grid->properties->num_neighbors;
+  int *NeighborRanks = Grid->properties->neighbor_ranks;
+
+  Grid->neighbors = malloc(NumNeighbors*sizeof(t_grid_neighbor_info));
+
+  int *NeighborIndexRanges = malloc(6*NumNeighbors*sizeof(int));
+
+  int IndexRange[6];
+  IndexRange[0] = Grid->properties->local_start[0];
+  IndexRange[1] = Grid->properties->local_start[1];
+  IndexRange[2] = Grid->properties->local_start[2];
+  IndexRange[3] = Grid->properties->local_end[0];
+  IndexRange[4] = Grid->properties->local_end[1];
+  IndexRange[5] = Grid->properties->local_end[2];
+
+  MPI_Request *Requests = malloc(2*NumNeighbors*sizeof(MPI_Request));
+  for (i = 0; i < NumNeighbors; ++i) {
+    MPI_Request *NeighborRequests = Requests + 2*i;
+    MPI_Irecv(NeighborIndexRanges+6*i, 6, MPI_INT, NeighborRanks[i], 0, Grid->properties->comm,
+      NeighborRequests);
+    MPI_Isend(IndexRange, 6, MPI_INT, NeighborRanks[i], 0, Grid->properties->comm,
+      NeighborRequests+1);
+  }
+  MPI_Waitall(2*NumNeighbors, Requests, MPI_STATUSES_IGNORE);
+
+  for (i = 0; i < NumNeighbors; ++i) {
+    Grid->neighbors->comm_rank = NeighborRanks[i];
+    int *NeighborIndexRange = NeighborIndexRanges+6*i;
+    for (j = 0; j < MAX_DIMS; ++j) {
+      Grid->neighbors->local_start[j] = NeighborIndexRange[j];
+      Grid->neighbors->local_end[j] = NeighborIndexRanges[MAX_DIMS+j];
+    }
+  }
+
+  free(Requests);
+  free(NeighborIndexRanges);
+
+}
+
+static void DestroyNeighborInfo(ovk_grid *Grid) {
+
+  free(Grid->neighbors);
 
 }
 

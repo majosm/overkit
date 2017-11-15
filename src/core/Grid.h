@@ -25,10 +25,17 @@ struct ovk_grid_params {
   int *neighbor_ranks;
 };
 
+typedef struct {
+  int comm_rank;
+  int local_start[MAX_DIMS];
+  int local_end[MAX_DIMS];
+} t_grid_neighbor_info;
+
 struct ovk_grid {
   ovk_grid_properties *properties;
   t_logger *logger;
   t_error_handler *error_handler;
+  t_grid_neighbor_info *neighbors;
 };
 
 struct ovk_grid_properties {
