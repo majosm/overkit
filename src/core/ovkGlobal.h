@@ -18,6 +18,14 @@
 static const int OVK_MAX_DIMS = 3;
 
 typedef enum {
+  OVK_LOG_NONE = 0,
+  OVK_LOG_ERRORS = 1 << 0,
+  OVK_LOG_WARNINGS = 1 << 1,
+  OVK_LOG_STATUS = 1 << 2,
+  OVK_LOG_ALL = OVK_LOG_ERRORS | OVK_LOG_WARNINGS | OVK_LOG_STATUS
+} ovk_log_level;
+
+typedef enum {
   OVK_ERROR_HANDLER_ABORT,
   OVK_ERROR_HANDLER_RETURN
 } ovk_error_handler_type;

@@ -6,3 +6,4 @@
 #include "Debug.h"
 #include "ErrorHandler.h"
 #include "Global.h"
+#include "Logger.h"
