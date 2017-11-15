@@ -8,6 +8,8 @@
 
 #include "ErrorHandler.h"
 #include "Global.h"
+#include "List.h"
 #include "Logger.h"
+#include "OrderedMap.h"
 
 #endif
