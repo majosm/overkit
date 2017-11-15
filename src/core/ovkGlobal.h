@@ -17,4 +17,14 @@
 
 static const int OVK_MAX_DIMS = 3;
 
+typedef enum {
+  OVK_ERROR_HANDLER_ABORT,
+  OVK_ERROR_HANDLER_RETURN
+} ovk_error_handler_type;
+
+typedef enum {
+  OVK_ERROR_NONE = 0,
+  OVK_MAX_ERROR
+} ovk_error;
+
 #endif

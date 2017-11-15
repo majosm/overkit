@@ -4,4 +4,5 @@
 #include "Context.h"
 
 #include "Debug.h"
+#include "ErrorHandler.h"
 #include "Global.h"

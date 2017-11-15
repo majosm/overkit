@@ -6,6 +6,7 @@
 
 #include "ovkContext.h"
 
+#include "ErrorHandler.h"
 #include "Global.h"
 
 #endif
