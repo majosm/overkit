@@ -7,6 +7,8 @@
 
 set(OVERKIT_SOURCES
   Context.c
+  Domain.c
+  Grid.c
 )
 
 add_library(overkit ${OVERKIT_SOURCES})

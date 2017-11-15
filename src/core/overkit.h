@@ -9,7 +9,9 @@ extern "C" {
 #endif
 
 #include <ovkContext.h>
+#include <ovkDomain.h>
 #include <ovkGlobal.h>
+#include <ovkGrid.h>
 
 // Make sure internal headers weren't accidentally included into any public headers
 #ifdef OVK_INTERNAL

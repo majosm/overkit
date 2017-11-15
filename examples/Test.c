@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
 
 void ExchangeTest(int argc, char **argv) {
 
-  int p;
+  int m, p;
 
   MPI_Init(&argc, &argv);
 
@@ -74,8 +74,6 @@ void ExchangeTest(int argc, char **argv) {
   grid *Grids;
   state *States;
   CreateInputs(&NumGrids, &Grids, &States);
-
-#ifdef NOPE
 
   ovk_context_params *ContextParams;
   ovkCreateContextParams(&ContextParams);
@@ -132,6 +130,8 @@ void ExchangeTest(int argc, char **argv) {
       ovkCreateGridRemote(Domain, NULL);
     }
   }
+
+#ifdef NOPE
 
 //   ovk_grid *EditGrid[NumGrids];
 //   for (m = 0; m < 2; ++m) {
@@ -397,9 +397,9 @@ void ExchangeTest(int argc, char **argv) {
   free(SendBuffers);
   free(ReceiverBuffers);
 
-  ovkDestroyContext(&Context);
-
 #endif
+
+  ovkDestroyContext(&Context);
 
   DestroyInputs(NumGrids, &Grids, &States);
 
