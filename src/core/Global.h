@@ -18,6 +18,8 @@
 
 static const int MAX_DIMS = OVK_MAX_DIMS;
 
+static const int NUMBER_STRING_LENGTH = 32;
+
 static inline int min(a, b) {
   return a < b ? a : b;
 }
