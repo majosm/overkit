@@ -613,29 +613,6 @@ void CreateInputs(int *NumGrids, grid **Grids, state **States) {
     Grid->local_count = Grid->local_size[0] * Grid->local_size[1];
   }
 
-//   for (p = 0; p < NumProcs; ++p) {
-//     if (Rank == p) {
-//       printf("Rank %i:\n", p);
-//       for (n = 0; n < *NumGrids; ++n) {
-//         grid *Grid = &Grids_[n];
-//         printf("Contains grid %i\n", Grid->id);
-//         printf("* Comm size = %i\n", Grid->comm_size);
-//         printf("* Comm rank = %i\n", Grid->comm_rank);
-//         printf("* Comm dims = %i %i\n", Grid->comm_dims[0], Grid->comm_dims[1]);
-//         printf("* Comm coords = %i %i\n", Grid->comm_coords[0], Grid->comm_coords[1]);
-//         printf("* Neighbor ranks = ");
-//         for (l = 0; l < Grid->num_neighbors; ++l) {
-//           printf("%i ", Grid->neighbor_ranks[l]);
-//         }
-//         printf("\n");
-//         printf("* iStart = %i %i\n", Grid->is[0], Grid->is[1]);
-//         printf("* iEnd = %i %i\n", Grid->ie[0], Grid->ie[1]);
-//       }
-//       printf("\n");
-//     }
-//     MPI_Barrier(MPI_COMM_WORLD);
-//   }
-
   for (n = 0; n < *NumGrids; ++n) {
     grid *Grid = &Grids_[n];
     Grid->xyz = malloc(Grid->local_count*2*sizeof(double));
