@@ -94,7 +94,6 @@ void DestroyGrid(ovk_grid **Grid_) {
   t_logger *Logger = Grid->logger;
   MPI_Comm Comm = Grid->properties->comm;
   bool IsGridRoot = Grid->properties->comm_rank == 0;
-  int ID = Grid->properties->id;
   char Name[OVK_NAME_LENGTH];
   strncpy(Name, Grid->properties->name, OVK_NAME_LENGTH);
 
