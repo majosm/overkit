@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 
 int min(a, b) {
   return a < b ? a : b;
@@ -14,6 +15,7 @@ int min(a, b) {
 
 typedef struct {
   int id;
+  char name[64];
   MPI_Comm comm;
   int comm_size;
   int comm_rank;
@@ -104,6 +106,7 @@ void ExchangeTest(int argc, char **argv) {
   ovk_domain *OtherDomain = NULL;
   if (Rank % 2 == 1) {
     ovkCreateDomainParams(Context, &DomainParams);
+    ovkSetDomainParamName(DomainParams, "OtherDomain");
     ovkSetDomainParamDimension(DomainParams, 2);
     ovkSetDomainParamComm(DomainParams, SplitComm);
     ovkCreateDomain(Context, &OtherDomain, DomainParams);
@@ -119,6 +122,7 @@ void ExchangeTest(int argc, char **argv) {
       ovk_grid_params *GridParams;
       ovkCreateGridParams(Domain, &GridParams);
       ovkSetGridParamID(GridParams, Grids[p].id);
+      ovkSetGridParamName(GridParams, Grids[p].name);
       ovkSetGridParamComm(GridParams, Grids[p].comm);
       ovkSetGridParamGlobalSize(GridParams, Grids[p].global_size);
       ovkSetGridParamLocalStart(GridParams, Grids[p].is);
@@ -549,6 +553,14 @@ void CreateInputs(int *NumGrids, grid **Grids, state **States) {
     if (Rank >= GridToProcMap[2*m] && Rank < GridToProcMap[2*m+1]) {
       Grids_[n].id = m+1;
       ++n;
+    }
+  }
+
+  for (n = 0; n < *NumGrids; ++n) {
+    if (Grids_[n].id == 1) {
+      strcpy(Grids_[n].name, "Left");
+    } else {
+      strcpy(Grids_[n].name, "Right");
     }
   }
 

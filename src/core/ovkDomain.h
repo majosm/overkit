@@ -32,11 +32,14 @@ void ovkDestroyGrid(ovk_domain *Domain, int *GridID);
 void ovkGetGrid(const ovk_domain *Domain, int GridID, const ovk_grid **Grid);
 void ovkGetGrids(const ovk_domain *Domain, int Count, int *GridIDs, const ovk_grid **Grids);
 
+void ovkGetDomainParamName(const ovk_domain_params *Params, char *Name);
+void ovkSetDomainParamName(ovk_domain_params *Params, const char *Name);
 void ovkGetDomainParamDimension(const ovk_domain_params *Params, int *NumDims);
 void ovkSetDomainParamDimension(ovk_domain_params *Params, int NumDims);
 void ovkGetDomainParamComm(const ovk_domain_params *Params, MPI_Comm *Comm);
 void ovkSetDomainParamComm(ovk_domain_params *Params, MPI_Comm Comm);
 
+void ovkGetDomainPropertyName(const ovk_domain_properties *Properties, char *Name);
 void ovkGetDomainPropertyDimension(const ovk_domain_properties *Properties, int *NumDims);
 void ovkGetDomainPropertyComm(const ovk_domain_properties *Properties, MPI_Comm *Comm);
 

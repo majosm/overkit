@@ -16,6 +16,7 @@
 #endif
 
 static const int OVK_MAX_DIMS = 3;
+static const int OVK_NAME_LENGTH = 256;
 
 typedef enum {
   OVK_LOG_NONE = 0,

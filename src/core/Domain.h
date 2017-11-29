@@ -13,6 +13,7 @@
 #include "OrderedMap.h"
 
 struct ovk_domain_params {
+  char name[OVK_NAME_LENGTH];
   int num_dims;
   MPI_Comm comm;
 };
@@ -26,6 +27,7 @@ struct ovk_domain {
 };
 
 struct ovk_domain_properties {
+  char name[OVK_NAME_LENGTH];
   int num_dims;
   MPI_Comm comm;
   int comm_size;

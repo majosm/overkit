@@ -35,6 +35,12 @@ void CreateDomain(ovk_domain **Domain_, const ovk_domain_params *Params, t_logge
 
   CreateDomainProperties(&Domain->properties);
 
+  if (strlen(Params->name) > 0) {
+    strncpy(Domain->properties->name, Params->name, OVK_NAME_LENGTH);
+  } else {
+    strcpy(Domain->properties->name, "Domain");
+  }
+
   Domain->properties->num_dims = Params->num_dims;
 
   Domain->properties->comm = Comm;
@@ -51,8 +57,8 @@ void CreateDomain(ovk_domain **Domain_, const ovk_domain_params *Params, t_logge
   if (Domain->properties->comm_rank == 0) {
     char ProcessesString[32];
     PluralizeLabel(Domain->properties->comm_size, "processes", "process", ProcessesString);
-    LogStatus(Logger, true, 0, "Created %1iD domain on %s.", Domain->properties->num_dims,
-      ProcessesString);
+    LogStatus(Logger, true, 0, "Created %1iD domain '%s' on %s.", Domain->properties->num_dims,
+      Domain->properties->name, ProcessesString);
   }
 
   MPI_Barrier(Domain->properties->comm);
@@ -82,6 +88,8 @@ void DestroyDomain(ovk_domain **Domain_) {
   t_logger *Logger = Domain->logger;
   MPI_Comm Comm = Domain->properties->comm;
   bool IsDomainRoot = Domain->properties->comm_rank == 0;
+  char Name[OVK_NAME_LENGTH];
+  strncpy(Name, Domain->properties->name, OVK_NAME_LENGTH);
 
   DestroyDomainProperties(&Domain->properties);
 
@@ -92,7 +100,7 @@ void DestroyDomain(ovk_domain **Domain_) {
 
   MPI_Comm_free(&Comm);
 
-  LogStatus(Logger, IsDomainRoot, 0, "Destroyed domain.");
+  LogStatus(Logger, IsDomainRoot, 0, "Destroyed domain '%s'.", Name);
 
 }
 
@@ -273,6 +281,8 @@ void CreateDomainParams(ovk_domain_params **Params_, MPI_Comm DefaultComm) {
   *Params_ = malloc(sizeof(ovk_domain_params));
   ovk_domain_params *Params = *Params_;
 
+  memset(Params->name, 0, OVK_NAME_LENGTH);
+
   Params->num_dims = 2;
   Params->comm = DefaultComm;
 
@@ -282,6 +292,18 @@ void DestroyDomainParams(ovk_domain_params **Params) {
 
   free(*Params);
   *Params = NULL;
+
+}
+
+void ovkGetDomainParamName(const ovk_domain_params *Params, char *Name) {
+
+  strcpy(Name, Params->name);
+
+}
+
+void ovkSetDomainParamName(ovk_domain_params *Params, const char *Name) {
+
+  strncpy(Params->name, Name, OVK_NAME_LENGTH);
 
 }
 
@@ -318,6 +340,8 @@ static void CreateDomainProperties(ovk_domain_properties **Properties_) {
   *Properties_ = malloc(sizeof(ovk_domain_properties));
   ovk_domain_properties *Properties = *Properties_;
 
+  memset(Properties->name, 0, OVK_NAME_LENGTH);
+
   Properties->num_dims = 2;
   Properties->comm = MPI_COMM_NULL;
   Properties->comm_size = 0;
@@ -329,6 +353,12 @@ static void DestroyDomainProperties(ovk_domain_properties **Properties_) {
 
   free(*Properties_);
   *Properties_ = NULL;
+
+}
+
+void ovkGetDomainPropertyName(const ovk_domain_properties *Properties, char *Name) {
+
+  strcpy(Name, Properties->name);
 
 }
 

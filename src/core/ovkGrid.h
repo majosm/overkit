@@ -21,6 +21,8 @@ void ovkGetGridProperties(const ovk_grid *Grid, const ovk_grid_properties **Prop
 
 void ovkGetGridParamID(const ovk_grid_params *Params, int *ID);
 void ovkSetGridParamID(ovk_grid_params *Params, int ID);
+void ovkGetGridParamName(const ovk_grid_params *Params, char *Name);
+void ovkSetGridParamName(ovk_grid_params *Params, const char *Name);
 void ovkGetGridParamGlobalSize(const ovk_grid_params *Params, int *GlobalSize);
 void ovkSetGridParamGlobalSize(ovk_grid_params *Params, const int *GlobalSize);
 void ovkGetGridParamLocalStart(const ovk_grid_params *Params, int *LocalStart);
@@ -44,6 +46,7 @@ void ovkSetGridParamNeighborRanks(ovk_grid_params *Params, int NumNeighbors,
   const int *NeighborRanks);
 
 void ovkGetGridPropertyID(const ovk_grid_properties *Properties, int *ID);
+void ovkGetGridPropertyName(const ovk_grid_properties *Properties, char *Name);
 void ovkGetGridPropertyDimension(const ovk_grid_properties *Properties, int *NumDims);
 void ovkGetGridPropertyGlobalSize(const ovk_grid_properties *Properties, int *GlobalSize);
 void ovkGetGridPropertyLocalStart(const ovk_grid_properties *Properties, int *LocalStart);

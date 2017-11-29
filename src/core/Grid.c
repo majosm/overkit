@@ -33,6 +33,13 @@ void CreateGrid(ovk_grid **Grid_, int ID, const ovk_grid_params *Params, t_logge
   CreateGridProperties(&Grid->properties);
 
   Grid->properties->id = ID;
+
+  if (strlen(Params->name) > 0) {
+    strncpy(Grid->properties->name, Params->name, OVK_NAME_LENGTH);
+  } else {
+    sprintf(Grid->properties->name, "Grid%i", Grid->properties->id);
+  }
+
   Grid->properties->num_dims = Params->num_dims;
 
   for (i = 0; i < MAX_DIMS; ++i) {
@@ -88,6 +95,8 @@ void DestroyGrid(ovk_grid **Grid_) {
   MPI_Comm Comm = Grid->properties->comm;
   bool IsGridRoot = Grid->properties->comm_rank == 0;
   int ID = Grid->properties->id;
+  char Name[OVK_NAME_LENGTH];
+  strncpy(Name, Grid->properties->name, OVK_NAME_LENGTH);
 
   DestroyGridProperties(&Grid->properties);
 
@@ -98,7 +107,7 @@ void DestroyGrid(ovk_grid **Grid_) {
 
   MPI_Comm_free(&Comm);
 
-  LogStatus(Logger, IsGridRoot, 0, "Destroyed grid %i.", ID);
+  LogStatus(Logger, IsGridRoot, 0, "Destroyed grid '%s'.", Name);
 
 }
 
@@ -159,6 +168,9 @@ static void DestroyNeighborInfo(ovk_grid *Grid) {
 
 static void PrintGridSummary(const ovk_grid *Grid) {
 
+  char IDString[NUMBER_STRING_LENGTH];
+  IntToString(Grid->properties->id, IDString);
+
   size_t TotalPoints =
     (size_t)Grid->properties->global_size[0] *
     (size_t)Grid->properties->global_size[1] *
@@ -179,12 +191,13 @@ static void PrintGridSummary(const ovk_grid *Grid) {
 
   switch (Grid->properties->num_dims) {
   case 2:
-    LogStatus(Grid->logger, true, 0, "Created grid %i: %s x %s (%s) on %s.",
-      Grid->properties->id, ISizeString, JSizeString, TotalPointsString, ProcessesString);
+    LogStatus(Grid->logger, true, 0, "Created grid '%s' (ID=%s): %s x %s (%s) on %s.",
+      Grid->properties->name, IDString, ISizeString, JSizeString, TotalPointsString,
+      ProcessesString);
     break;
   case 3:
-    LogStatus(Grid->logger, true, 0, "Created grid %i: %s x %s x %s (%s) on %s.",
-      Grid->properties->id, ISizeString, JSizeString, KSizeString, TotalPointsString,
+    LogStatus(Grid->logger, true, 0, "Created grid '%s' (ID=%s): %s x %s x %s (%s) on %s.",
+      Grid->properties->name, IDString, ISizeString, JSizeString, KSizeString, TotalPointsString,
       ProcessesString);
     break;
   }
@@ -243,8 +256,8 @@ static void PrintGridDecomposition(const ovk_grid *Grid) {
 
     if (Grid->properties->comm_rank == i) {
 
-      LogStatus(Grid->logger, Grid->properties->comm_rank == 0, 0, "Grid %s decomposition info:",
-        IDString);
+      LogStatus(Grid->logger, Grid->properties->comm_rank == 0, 0, "Grid '%s' (ID=%s) "
+        "decomposition info:", IDString);
 
       switch (Grid->properties->num_dims) {
       case 2:
@@ -278,6 +291,9 @@ void CreateGridParams(ovk_grid_params **Params_, int NumDims, MPI_Comm DefaultCo
   ovk_grid_params *Params = *Params_;
 
   Params->id = -1;
+
+  memset(Params->name, 0, OVK_NAME_LENGTH);
+
   Params->num_dims = NumDims;
   Params->global_size[0] = 0;
   Params->global_size[1] = 0;
@@ -324,6 +340,18 @@ void ovkGetGridParamID(const ovk_grid_params *Params, int *ID) {
 void ovkSetGridParamID(ovk_grid_params *Params, int ID) {
 
   Params->id = ID;
+
+}
+
+void ovkGetGridParamName(const ovk_grid_params *Params, char *Name) {
+
+  strcpy(Name, Params->name);
+
+}
+
+void ovkSetGridParamName(ovk_grid_params *Params, const char *Name) {
+
+  strncpy(Params->name, Name, OVK_NAME_LENGTH);
 
 }
 
@@ -484,6 +512,9 @@ static void CreateGridProperties(ovk_grid_properties **Properties_) {
   ovk_grid_properties *Properties = *Properties_;
 
   Properties->id = -1;
+
+  memset(Properties->name, 0, OVK_NAME_LENGTH);
+
   Properties->num_dims = 2;
   Properties->global_size[0] = 0;
   Properties->global_size[1] = 0;
@@ -518,6 +549,18 @@ static void DestroyGridProperties(ovk_grid_properties **Properties_) {
 
   free(*Properties_);
   *Properties_ = NULL;
+
+}
+
+void ovkGetGridPropertyID(const ovk_grid_properties *Properties, int *ID) {
+
+  *ID = Properties->id;
+
+}
+
+void ovkGetGridPropertyName(const ovk_grid_properties *Properties, char *Name) {
+
+  strcpy(Name, Properties->name);
 
 }
 

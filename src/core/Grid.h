@@ -12,6 +12,7 @@
 
 struct ovk_grid_params {
   int id;
+  char name[OVK_NAME_LENGTH];
   int num_dims;
   int global_size[MAX_DIMS];
   int local_start[MAX_DIMS];
@@ -40,6 +41,7 @@ struct ovk_grid {
 
 struct ovk_grid_properties {
   int id;
+  char name[OVK_NAME_LENGTH];
   int num_dims;
   int global_size[MAX_DIMS];
   int local_start[MAX_DIMS];
