@@ -96,25 +96,6 @@ void DestroyDomain(ovk_domain **Domain_) {
 
 }
 
-static void CreateDomainProperties(ovk_domain_properties **Properties_) {
-  
-  *Properties_ = malloc(sizeof(ovk_domain_properties));
-  ovk_domain_properties *Properties = *Properties_;
-
-  Properties->num_dims = 2;
-  Properties->comm = MPI_COMM_NULL;
-  Properties->comm_size = 0;
-  Properties->comm_rank = 0;
-
-}
-
-static void DestroyDomainProperties(ovk_domain_properties **Properties_) {
-
-  free(*Properties_);
-  *Properties_ = NULL;
-
-}
-
 void ovkConfigureDomain(ovk_domain *Domain, ovk_domain_config Config) {
 
   Domain->config = Config;
@@ -329,6 +310,25 @@ void ovkSetDomainParamComm(ovk_domain_params *Params, MPI_Comm Comm) {
   OVK_DEBUG_ASSERT(Comm != MPI_COMM_NULL, "Invalid MPI communicator.");
 
   Params->comm = Comm;
+
+}
+
+static void CreateDomainProperties(ovk_domain_properties **Properties_) {
+
+  *Properties_ = malloc(sizeof(ovk_domain_properties));
+  ovk_domain_properties *Properties = *Properties_;
+
+  Properties->num_dims = 2;
+  Properties->comm = MPI_COMM_NULL;
+  Properties->comm_size = 0;
+  Properties->comm_rank = 0;
+
+}
+
+static void DestroyDomainProperties(ovk_domain_properties **Properties_) {
+
+  free(*Properties_);
+  *Properties_ = NULL;
 
 }
 
