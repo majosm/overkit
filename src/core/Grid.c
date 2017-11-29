@@ -277,6 +277,7 @@ void CreateGridParams(ovk_grid_params **Params_, int NumDims, MPI_Comm DefaultCo
   *Params_ = malloc(sizeof(ovk_grid_params));
   ovk_grid_params *Params = *Params_;
 
+  Params->id = -1;
   Params->num_dims = NumDims;
   Params->global_size[0] = 0;
   Params->global_size[1] = 0;
