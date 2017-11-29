@@ -255,8 +255,8 @@ static void PrintGridDecomposition(const ovk_grid *Grid) {
 
     if (Grid->properties->comm_rank == i) {
 
-      LogStatus(Grid->logger, Grid->properties->comm_rank == 0, 0, "Grid '%s' (ID=%s) "
-        "decomposition info:", IDString);
+      LogStatus(Grid->logger, Grid->properties->comm_rank == 0, 0, "Grid '%s' decomposition info:",
+        Grid->properties->name);
 
       switch (Grid->properties->num_dims) {
       case 2:
