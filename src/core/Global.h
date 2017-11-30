@@ -20,12 +20,10 @@ static const int MAX_DIMS = OVK_MAX_DIMS;
 
 static const int NUMBER_STRING_LENGTH = 32;
 
-static inline int min(a, b) {
-  return a < b ? a : b;
-}
+#undef min
+#define min(a, b) ovk_min(a, b)
 
-static inline int max(a, b) {
-  return a > b ? a : b;
-}
+#undef max
+#define max(a, b) ovk_max(a, b)
 
 #endif

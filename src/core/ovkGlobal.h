@@ -9,6 +9,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define ovk_min(a, b) ((a) < (b) ? (a) : (b))
+#define ovk_max(a, b) ((a) > (b) ? (a) : (b))
+
 #ifdef OVERKIT_DEBUG
   static const bool OVK_DEBUG = true;
 #else
