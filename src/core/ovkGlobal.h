@@ -7,6 +7,7 @@
 // Headers that are needed for API
 #include <mpi.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #define ovk_min(a, b) ((a) < (b) ? (a) : (b))
