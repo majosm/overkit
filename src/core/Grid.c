@@ -44,7 +44,7 @@ void CreateGrid(ovk_grid **Grid_, int ID, const ovk_grid_params *Params, t_logge
 
   for (i = 0; i < MAX_DIMS; ++i) {
     Grid->properties->global_size[i] = Params->global_size[i];
-    Grid->properties->local_start[i] = Params->local_start[i];
+    Grid->properties->local_begin[i] = Params->local_begin[i];
     Grid->properties->local_end[i] = Params->local_end[i];
     Grid->properties->periodic[i] = Params->periodic[i];
     Grid->properties->periodic_length[i] = Params->periodic_length[i];
@@ -128,9 +128,9 @@ static void CreateNeighborInfo(ovk_grid *Grid) {
   int *NeighborIndexRanges = malloc(6*NumNeighbors*sizeof(int));
 
   int IndexRange[6];
-  IndexRange[0] = Grid->properties->local_start[0];
-  IndexRange[1] = Grid->properties->local_start[1];
-  IndexRange[2] = Grid->properties->local_start[2];
+  IndexRange[0] = Grid->properties->local_begin[0];
+  IndexRange[1] = Grid->properties->local_begin[1];
+  IndexRange[2] = Grid->properties->local_begin[2];
   IndexRange[3] = Grid->properties->local_end[0];
   IndexRange[4] = Grid->properties->local_end[1];
   IndexRange[5] = Grid->properties->local_end[2];
@@ -149,7 +149,7 @@ static void CreateNeighborInfo(ovk_grid *Grid) {
     Grid->neighbors->comm_rank = NeighborRanks[i];
     int *NeighborIndexRange = NeighborIndexRanges+6*i;
     for (j = 0; j < MAX_DIMS; ++j) {
-      Grid->neighbors->local_start[j] = NeighborIndexRange[j];
+      Grid->neighbors->local_begin[j] = NeighborIndexRange[j];
       Grid->neighbors->local_end[j] = NeighborIndexRanges[MAX_DIMS+j];
     }
   }
@@ -213,12 +213,12 @@ static void PrintGridDecomposition(const ovk_grid *Grid) {
   char RankString[NUMBER_STRING_LENGTH];
   IntToString(Grid->properties->comm_rank, RankString);
 
-  char ILocalStartString[NUMBER_STRING_LENGTH], ILocalEndString[NUMBER_STRING_LENGTH];
-  char JLocalStartString[NUMBER_STRING_LENGTH], JLocalEndString[NUMBER_STRING_LENGTH];
-  char KLocalStartString[NUMBER_STRING_LENGTH], KLocalEndString[NUMBER_STRING_LENGTH];
-  IntToString(Grid->properties->local_start[0], ILocalStartString);
-  IntToString(Grid->properties->local_start[1], JLocalStartString);
-  IntToString(Grid->properties->local_start[2], KLocalStartString);
+  char ILocalBeginString[NUMBER_STRING_LENGTH], ILocalEndString[NUMBER_STRING_LENGTH];
+  char JLocalBeginString[NUMBER_STRING_LENGTH], JLocalEndString[NUMBER_STRING_LENGTH];
+  char KLocalBeginString[NUMBER_STRING_LENGTH], KLocalEndString[NUMBER_STRING_LENGTH];
+  IntToString(Grid->properties->local_begin[0], ILocalBeginString);
+  IntToString(Grid->properties->local_begin[1], JLocalBeginString);
+  IntToString(Grid->properties->local_begin[2], KLocalBeginString);
   IntToString(Grid->properties->local_end[0], ILocalEndString);
   IntToString(Grid->properties->local_end[1], JLocalEndString);
   IntToString(Grid->properties->local_end[2], KLocalEndString);
@@ -228,14 +228,14 @@ static void PrintGridDecomposition(const ovk_grid *Grid) {
   switch (Grid->properties->num_dims) {
   case 2:
     TotalLocalPoints =
-      (size_t)(Grid->properties->local_end[0] - Grid->properties->local_start[0]) *
-      (size_t)(Grid->properties->local_end[1] - Grid->properties->local_start[1]);
+      (size_t)(Grid->properties->local_end[0] - Grid->properties->local_begin[0]) *
+      (size_t)(Grid->properties->local_end[1] - Grid->properties->local_begin[1]);
     break;
   case 3:
     TotalLocalPoints =
-      (size_t)(Grid->properties->local_end[0] - Grid->properties->local_start[0]) *
-      (size_t)(Grid->properties->local_end[1] - Grid->properties->local_start[1]) *
-      (size_t)(Grid->properties->local_end[2] - Grid->properties->local_start[2]);
+      (size_t)(Grid->properties->local_end[0] - Grid->properties->local_begin[0]) *
+      (size_t)(Grid->properties->local_end[1] - Grid->properties->local_begin[1]) *
+      (size_t)(Grid->properties->local_end[2] - Grid->properties->local_begin[2]);
     break;
   }
   PluralizeLabel(TotalLocalPoints, "points", "point", TotalLocalPointsString);
@@ -261,13 +261,13 @@ static void PrintGridDecomposition(const ovk_grid *Grid) {
       switch (Grid->properties->num_dims) {
       case 2:
         LogStatus(Grid->logger, true, 1, "Rank %s contains i=%s:%s, j=%s:%s (%s)",
-          RankString, ILocalStartString, ILocalEndString, JLocalStartString, JLocalEndString,
+          RankString, ILocalBeginString, ILocalEndString, JLocalBeginString, JLocalEndString,
           TotalLocalPointsString);
         break;
       case 3:
         LogStatus(Grid->logger, true, 1, "Rank %s contains i=%s:%s, j=%s:%s, k=%s:%s (%s)",
-          RankString, ILocalStartString, ILocalEndString, JLocalStartString, JLocalEndString,
-          KLocalStartString, KLocalEndString, TotalLocalPointsString);
+          RankString, ILocalBeginString, ILocalEndString, JLocalBeginString, JLocalEndString,
+          KLocalBeginString, KLocalEndString, TotalLocalPointsString);
         break;
       }
 
@@ -297,9 +297,9 @@ void CreateGridParams(ovk_grid_params **Params_, int NumDims, MPI_Comm DefaultCo
   Params->global_size[0] = 0;
   Params->global_size[1] = 0;
   Params->global_size[2] = 1;
-  Params->local_start[0] = 0;
-  Params->local_start[1] = 0;
-  Params->local_start[2] = 1;
+  Params->local_begin[0] = 0;
+  Params->local_begin[1] = 0;
+  Params->local_begin[2] = 1;
   Params->local_end[0] = 0;
   Params->local_end[1] = 0;
   Params->local_end[2] = 1;
@@ -370,18 +370,18 @@ void ovkSetGridParamGlobalSize(ovk_grid_params *Params, const int *GlobalSize) {
 
 }
 
-void ovkGetGridParamLocalStart(const ovk_grid_params *Params, int *LocalStart) {
+void ovkGetGridParamLocalBegin(const ovk_grid_params *Params, int *LocalBegin) {
 
   for (int i = 0; i < Params->num_dims; ++i) {
-    LocalStart[i] = Params->local_start[i];
+    LocalBegin[i] = Params->local_begin[i];
   }
 
 }
 
-void ovkSetGridParamLocalStart(ovk_grid_params *Params, const int *LocalStart) {
+void ovkSetGridParamLocalBegin(ovk_grid_params *Params, const int *LocalBegin) {
 
   for (int i = 0; i < Params->num_dims; ++i) {
-    Params->local_start[i] = LocalStart[i];
+    Params->local_begin[i] = LocalBegin[i];
   }
 
 }
@@ -518,9 +518,9 @@ static void CreateGridProperties(ovk_grid_properties **Properties_) {
   Properties->global_size[0] = 0;
   Properties->global_size[1] = 0;
   Properties->global_size[2] = 1;
-  Properties->local_start[0] = 0;
-  Properties->local_start[1] = 0;
-  Properties->local_start[2] = 1;
+  Properties->local_begin[0] = 0;
+  Properties->local_begin[1] = 0;
+  Properties->local_begin[2] = 1;
   Properties->local_end[0] = 0;
   Properties->local_end[1] = 0;
   Properties->local_end[2] = 1;
@@ -577,10 +577,10 @@ void ovkGetGridPropertyGlobalSize(const ovk_grid_properties *Properties, int *Gl
 
 }
 
-void ovkGetGridPropertyLocalStart(const ovk_grid_properties *Properties, int *LocalStart) {
+void ovkGetGridPropertyLocalBegin(const ovk_grid_properties *Properties, int *LocalBegin) {
 
   for (int i = 0; i < Properties->num_dims; ++i) {
-    LocalStart[i] = Properties->local_start[i];
+    LocalBegin[i] = Properties->local_begin[i];
   }
 
 }

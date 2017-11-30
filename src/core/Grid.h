@@ -15,7 +15,7 @@ struct ovk_grid_params {
   char name[OVK_NAME_LENGTH];
   int num_dims;
   int global_size[MAX_DIMS];
-  int local_start[MAX_DIMS];
+  int local_begin[MAX_DIMS];
   int local_end[MAX_DIMS];
   bool periodic[MAX_DIMS];
   ovk_periodic_storage periodic_storage;
@@ -28,7 +28,7 @@ struct ovk_grid_params {
 
 typedef struct {
   int comm_rank;
-  int local_start[MAX_DIMS];
+  int local_begin[MAX_DIMS];
   int local_end[MAX_DIMS];
 } t_grid_neighbor_info;
 
@@ -44,7 +44,7 @@ struct ovk_grid_properties {
   char name[OVK_NAME_LENGTH];
   int num_dims;
   int global_size[MAX_DIMS];
-  int local_start[MAX_DIMS];
+  int local_begin[MAX_DIMS];
   int local_end[MAX_DIMS];
   bool periodic[MAX_DIMS];
   ovk_periodic_storage periodic_storage;

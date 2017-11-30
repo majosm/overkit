@@ -125,7 +125,7 @@ void ExchangeTest(int argc, char **argv) {
       ovkSetGridParamName(GridParams, Grids[p].name);
       ovkSetGridParamComm(GridParams, Grids[p].comm);
       ovkSetGridParamGlobalSize(GridParams, Grids[p].global_size);
-      ovkSetGridParamLocalStart(GridParams, Grids[p].is);
+      ovkSetGridParamLocalBegin(GridParams, Grids[p].is);
       ovkSetGridParamLocalEnd(GridParams, Grids[p].ie);
       ovkSetGridParamNeighborRanks(GridParams, Grids[p].num_neighbors, Grids[p].neighbor_ranks);
       ovkCreateGridLocal(Domain, NULL, GridParams);
