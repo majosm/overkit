@@ -480,15 +480,15 @@ void AssembleTest(int argc, char **argv) {
   for (m = 0; m < NumGrids; ++m) {
     ovk_grid *Grid;
     ovkEditGrid(Domain, Grids[m].id, &Grid);
-    ovk_cart Cart;
-    ovkGetGridCart(Grid, &Cart);
+    ovk_range LocalRange;
+    ovkGetGridLocalRange(Grid, &LocalRange);
     double *XYZ[2];
     ovkEditGridCoords(Grid, &XYZ);
-    for (j = Grids[m].is[1]; j < Grids[m].ie[1]; ++j) {
-      for (i = Grids[m].is[0]; i < Grids[m].ie[0]; ++i) {
+    for (j = LocalRange.b[1]; j < LocalRange.e[1]; ++j) {
+      for (i = LocalRange.b[0]; i < LocalRange.e[0]; ++i) {
         int Point[2] = {i,j};
         l = (i-Grids[m].is[0]) + (j-Grids[m].is[1]) * Grids[m].local_size[0];
-        p = ovkCartTupleToIndex(Cart, Point);
+        p = ovkRangeTupleToIndex(&LocalRange, Point);
         XYZ[0][p] = Grids[m].xyz[l];
         YYZ[1][p] = Grids[m].xyz[l+Grids[m].local_count];
       }
