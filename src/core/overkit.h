@@ -10,6 +10,8 @@ extern "C" {
 
 #include <ovkBox.h>
 #include <ovkBox.inl>
+#include <ovkCart.h>
+#include <ovkCart.inl>
 #include <ovkContext.h>
 #include <ovkDomain.h>
 #include <ovkGlobal.h>
