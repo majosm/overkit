@@ -3,6 +3,7 @@
 
 #include "Grid.h"
 
+#include "Cart.h"
 #include "Debug.h"
 #include "ErrorHandler.h"
 #include "Global.h"
@@ -71,6 +72,12 @@ void CreateGrid(ovk_grid **Grid_, int ID, const ovk_grid_params *Params, t_logge
   Grid->error_handler = ErrorHandler;
 
   CreateNeighborInfo(Grid);
+
+  ovkCartDefault(&Grid->cart, Grid->properties->num_dims);
+  for (i = 0; i < Grid->properties->num_dims; ++i) {
+    Grid->cart.size[i] = Grid->properties->global_size[i];
+    Grid->cart.periodic[i] = Grid->properties->periodic[i];
+  }
 
   if (Grid->properties->comm_rank == 0) {
     PrintGridSummary(Grid);

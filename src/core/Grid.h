@@ -6,6 +6,7 @@
 
 #include "ovkGrid.h"
 
+#include "Cart.h"
 #include "ErrorHandler.h"
 #include "Global.h"
 #include "Logger.h"
@@ -36,6 +37,7 @@ struct ovk_grid {
   t_logger *logger;
   t_error_handler *error_handler;
   t_grid_neighbor_info *neighbors;
+  ovk_cart cart;
 };
 
 struct ovk_grid_properties {
