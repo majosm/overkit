@@ -44,4 +44,4 @@ install(TARGETS overkit
 # Install headers
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/overkit.h" DESTINATION include)
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/" DESTINATION include
-  FILES_MATCHING PATTERN "ovk*.h")
+  FILES_MATCHING PATTERN "ovk*.h" PATTERN "ovk*.inl")
