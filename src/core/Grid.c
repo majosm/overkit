@@ -146,11 +146,11 @@ static void CreateNeighborInfo(ovk_grid *Grid) {
   MPI_Waitall(2*NumNeighbors, Requests, MPI_STATUSES_IGNORE);
 
   for (i = 0; i < NumNeighbors; ++i) {
-    Grid->neighbors->comm_rank = NeighborRanks[i];
+    Grid->neighbors[i].comm_rank = NeighborRanks[i];
     int *NeighborIndexRange = NeighborIndexRanges+6*i;
     for (j = 0; j < MAX_DIMS; ++j) {
-      Grid->neighbors->local_begin[j] = NeighborIndexRange[j];
-      Grid->neighbors->local_end[j] = NeighborIndexRanges[MAX_DIMS+j];
+      Grid->neighbors[i].local_begin[j] = NeighborIndexRange[j];
+      Grid->neighbors[i].local_end[j] = NeighborIndexRanges[MAX_DIMS+j];
     }
   }
 
