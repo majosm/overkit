@@ -9,27 +9,26 @@
 #include "ErrorHandler.h"
 #include "Global.h"
 #include "Logger.h"
+#include "Range.h"
 
 struct ovk_grid_params {
   int id;
   char name[OVK_NAME_LENGTH];
   int num_dims;
+  MPI_Comm comm;
   int global_size[MAX_DIMS];
-  int local_begin[MAX_DIMS];
-  int local_end[MAX_DIMS];
   bool periodic[MAX_DIMS];
   ovk_periodic_storage periodic_storage;
   double periodic_length[MAX_DIMS];
   ovk_geometry_type geometry_type;
-  MPI_Comm comm;
+  ovk_range local_range;
   int num_neighbors;
   int *neighbor_ranks;
 };
 
 typedef struct {
   int comm_rank;
-  int local_begin[MAX_DIMS];
-  int local_end[MAX_DIMS];
+  ovk_range local_range;
 } t_grid_neighbor_info;
 
 struct ovk_grid {
@@ -43,16 +42,15 @@ struct ovk_grid_properties {
   int id;
   char name[OVK_NAME_LENGTH];
   int num_dims;
+  MPI_Comm comm;
+  int comm_size;
+  int comm_rank;
   int global_size[MAX_DIMS];
-  int local_begin[MAX_DIMS];
-  int local_end[MAX_DIMS];
   bool periodic[MAX_DIMS];
   ovk_periodic_storage periodic_storage;
   double periodic_length[MAX_DIMS];
   ovk_geometry_type geometry_type;
-  MPI_Comm comm;
-  int comm_size;
-  int comm_rank;
+  ovk_range local_range;
   int num_neighbors;
   int *neighbor_ranks;
 };

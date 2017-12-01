@@ -7,6 +7,7 @@
 #include "ErrorHandler.h"
 #include "Global.h"
 #include "Logger.h"
+#include "Range.h"
 #include "TextUtils.h"
 
 static void CreateNeighborInfo(ovk_grid *Grid);
@@ -42,10 +43,12 @@ void CreateGrid(ovk_grid **Grid_, int ID, const ovk_grid_params *Params, t_logge
 
   Grid->properties->num_dims = Params->num_dims;
 
+  Grid->properties->comm = Comm;
+  MPI_Comm_size(Grid->properties->comm, &Grid->properties->comm_size);
+  MPI_Comm_rank(Grid->properties->comm, &Grid->properties->comm_rank);
+
   for (i = 0; i < MAX_DIMS; ++i) {
     Grid->properties->global_size[i] = Params->global_size[i];
-    Grid->properties->local_begin[i] = Params->local_begin[i];
-    Grid->properties->local_end[i] = Params->local_end[i];
     Grid->properties->periodic[i] = Params->periodic[i];
     Grid->properties->periodic_length[i] = Params->periodic_length[i];
   }
@@ -53,9 +56,7 @@ void CreateGrid(ovk_grid **Grid_, int ID, const ovk_grid_params *Params, t_logge
   Grid->properties->periodic_storage = Params->periodic_storage;
   Grid->properties->geometry_type = Params->geometry_type;
 
-  Grid->properties->comm = Comm;
-  MPI_Comm_size(Grid->properties->comm, &Grid->properties->comm_size);
-  MPI_Comm_rank(Grid->properties->comm, &Grid->properties->comm_rank);
+  Grid->properties->local_range = Params->local_range;
 
   Grid->properties->num_neighbors = Params->num_neighbors;
   if (Params->num_neighbors > 0) {
@@ -128,12 +129,12 @@ static void CreateNeighborInfo(ovk_grid *Grid) {
   int *NeighborIndexRanges = malloc(6*NumNeighbors*sizeof(int));
 
   int IndexRange[6];
-  IndexRange[0] = Grid->properties->local_begin[0];
-  IndexRange[1] = Grid->properties->local_begin[1];
-  IndexRange[2] = Grid->properties->local_begin[2];
-  IndexRange[3] = Grid->properties->local_end[0];
-  IndexRange[4] = Grid->properties->local_end[1];
-  IndexRange[5] = Grid->properties->local_end[2];
+  IndexRange[0] = Grid->properties->local_range.b[0];
+  IndexRange[1] = Grid->properties->local_range.b[1];
+  IndexRange[2] = Grid->properties->local_range.b[2];
+  IndexRange[3] = Grid->properties->local_range.e[0];
+  IndexRange[4] = Grid->properties->local_range.e[1];
+  IndexRange[5] = Grid->properties->local_range.e[2];
 
   MPI_Request *Requests = malloc(2*NumNeighbors*sizeof(MPI_Request));
   for (i = 0; i < NumNeighbors; ++i) {
@@ -147,10 +148,11 @@ static void CreateNeighborInfo(ovk_grid *Grid) {
 
   for (i = 0; i < NumNeighbors; ++i) {
     Grid->neighbors[i].comm_rank = NeighborRanks[i];
+    ovkRangeDefault(&Grid->neighbors[i].local_range, Grid->properties->num_dims);
     int *NeighborIndexRange = NeighborIndexRanges+6*i;
     for (j = 0; j < MAX_DIMS; ++j) {
-      Grid->neighbors[i].local_begin[j] = NeighborIndexRange[j];
-      Grid->neighbors[i].local_end[j] = NeighborIndexRanges[MAX_DIMS+j];
+      Grid->neighbors[i].local_range.b[j] = NeighborIndexRange[j];
+      Grid->neighbors[i].local_range.e[j] = NeighborIndexRanges[MAX_DIMS+j];
     }
   }
 
@@ -216,28 +218,16 @@ static void PrintGridDecomposition(const ovk_grid *Grid) {
   char ILocalBeginString[NUMBER_STRING_LENGTH], ILocalEndString[NUMBER_STRING_LENGTH];
   char JLocalBeginString[NUMBER_STRING_LENGTH], JLocalEndString[NUMBER_STRING_LENGTH];
   char KLocalBeginString[NUMBER_STRING_LENGTH], KLocalEndString[NUMBER_STRING_LENGTH];
-  IntToString(Grid->properties->local_begin[0], ILocalBeginString);
-  IntToString(Grid->properties->local_begin[1], JLocalBeginString);
-  IntToString(Grid->properties->local_begin[2], KLocalBeginString);
-  IntToString(Grid->properties->local_end[0], ILocalEndString);
-  IntToString(Grid->properties->local_end[1], JLocalEndString);
-  IntToString(Grid->properties->local_end[2], KLocalEndString);
+  IntToString(Grid->properties->local_range.b[0], ILocalBeginString);
+  IntToString(Grid->properties->local_range.b[1], JLocalBeginString);
+  IntToString(Grid->properties->local_range.b[2], KLocalBeginString);
+  IntToString(Grid->properties->local_range.e[0], ILocalEndString);
+  IntToString(Grid->properties->local_range.e[1], JLocalEndString);
+  IntToString(Grid->properties->local_range.e[2], KLocalEndString);
 
   char TotalLocalPointsString[NUMBER_STRING_LENGTH+7];
   size_t TotalLocalPoints;
-  switch (Grid->properties->num_dims) {
-  case 2:
-    TotalLocalPoints =
-      (size_t)(Grid->properties->local_end[0] - Grid->properties->local_begin[0]) *
-      (size_t)(Grid->properties->local_end[1] - Grid->properties->local_begin[1]);
-    break;
-  case 3:
-    TotalLocalPoints =
-      (size_t)(Grid->properties->local_end[0] - Grid->properties->local_begin[0]) *
-      (size_t)(Grid->properties->local_end[1] - Grid->properties->local_begin[1]) *
-      (size_t)(Grid->properties->local_end[2] - Grid->properties->local_begin[2]);
-    break;
-  }
+  ovkRangeCount(&Grid->properties->local_range, &TotalLocalPoints);
   PluralizeLabel(TotalLocalPoints, "points", "point", TotalLocalPointsString);
 
   char NeighborRanksString[256];
@@ -294,15 +284,10 @@ void CreateGridParams(ovk_grid_params **Params_, int NumDims, MPI_Comm DefaultCo
   memset(Params->name, 0, OVK_NAME_LENGTH);
 
   Params->num_dims = NumDims;
+  Params->comm = DefaultComm;
   Params->global_size[0] = 0;
   Params->global_size[1] = 0;
   Params->global_size[2] = 1;
-  Params->local_begin[0] = 0;
-  Params->local_begin[1] = 0;
-  Params->local_begin[2] = 1;
-  Params->local_end[0] = 0;
-  Params->local_end[1] = 0;
-  Params->local_end[2] = 1;
   Params->periodic[0] = false;
   Params->periodic[1] = false;
   Params->periodic[2] = false;
@@ -311,7 +296,9 @@ void CreateGridParams(ovk_grid_params **Params_, int NumDims, MPI_Comm DefaultCo
   Params->periodic_length[1] = 0.;
   Params->periodic_length[2] = 0.;
   Params->geometry_type = OVK_GEOMETRY_TYPE_CURVILINEAR;
-  Params->comm = DefaultComm;
+
+  ovkRangeDefault(&Params->local_range, NumDims);
+
   Params->num_neighbors = 0;
   Params->neighbor_ranks = NULL;
 
@@ -354,6 +341,18 @@ void ovkSetGridParamName(ovk_grid_params *Params, const char *Name) {
 
 }
 
+void ovkGetGridParamComm(const ovk_grid_params *Params, MPI_Comm *Comm) {
+
+  *Comm = Params->comm;
+
+}
+
+void ovkSetGridParamComm(ovk_grid_params *Params, MPI_Comm Comm) {
+
+  Params->comm = Comm;
+
+}
+
 void ovkGetGridParamGlobalSize(const ovk_grid_params *Params, int *GlobalSize) {
 
   for (int i = 0; i < Params->num_dims; ++i) {
@@ -366,38 +365,6 @@ void ovkSetGridParamGlobalSize(ovk_grid_params *Params, const int *GlobalSize) {
 
   for (int i = 0; i < Params->num_dims; ++i) {
     Params->global_size[i] = GlobalSize[i];
-  }
-
-}
-
-void ovkGetGridParamLocalBegin(const ovk_grid_params *Params, int *LocalBegin) {
-
-  for (int i = 0; i < Params->num_dims; ++i) {
-    LocalBegin[i] = Params->local_begin[i];
-  }
-
-}
-
-void ovkSetGridParamLocalBegin(ovk_grid_params *Params, const int *LocalBegin) {
-
-  for (int i = 0; i < Params->num_dims; ++i) {
-    Params->local_begin[i] = LocalBegin[i];
-  }
-
-}
-
-void ovkGetGridParamLocalEnd(const ovk_grid_params *Params, int *LocalEnd) {
-
-  for (int i = 0; i < Params->num_dims; ++i) {
-    LocalEnd[i] = Params->local_end[i];
-  }
-
-}
-
-void ovkSetGridParamLocalEnd(ovk_grid_params *Params, const int *LocalEnd) {
-
-  for (int i = 0; i < Params->num_dims; ++i) {
-    Params->local_end[i] = LocalEnd[i];
   }
 
 }
@@ -459,15 +426,47 @@ void ovkSetGridParamGeometryType(ovk_grid_params *Params, ovk_geometry_type Geom
 
 }
 
-void ovkGetGridParamComm(const ovk_grid_params *Params, MPI_Comm *Comm) {
+void ovkGetGridParamLocalBegin(const ovk_grid_params *Params, int *LocalBegin) {
 
-  *Comm = Params->comm;
+  for (int i = 0; i < Params->num_dims; ++i) {
+    LocalBegin[i] = Params->local_range.b[i];
+  }
 
 }
 
-void ovkSetGridParamComm(ovk_grid_params *Params, MPI_Comm Comm) {
+void ovkSetGridParamLocalBegin(ovk_grid_params *Params, const int *LocalBegin) {
 
-  Params->comm = Comm;
+  for (int i = 0; i < Params->num_dims; ++i) {
+    Params->local_range.b[i] = LocalBegin[i];
+  }
+
+}
+
+void ovkGetGridParamLocalEnd(const ovk_grid_params *Params, int *LocalEnd) {
+
+  for (int i = 0; i < Params->num_dims; ++i) {
+    LocalEnd[i] = Params->local_range.e[i];
+  }
+
+}
+
+void ovkSetGridParamLocalEnd(ovk_grid_params *Params, const int *LocalEnd) {
+
+  for (int i = 0; i < Params->num_dims; ++i) {
+    Params->local_range.e[i] = LocalEnd[i];
+  }
+
+}
+
+void ovkGetGridParamLocalRange(const ovk_grid_params *Params, ovk_range *LocalRange) {
+
+  *LocalRange = Params->local_range;
+
+}
+
+void ovkSetGridParamLocalRange(ovk_grid_params *Params, const ovk_range *LocalRange) {
+
+  Params->local_range = *LocalRange;
 
 }
 
@@ -515,15 +514,12 @@ static void CreateGridProperties(ovk_grid_properties **Properties_) {
   memset(Properties->name, 0, OVK_NAME_LENGTH);
 
   Properties->num_dims = 2;
+  Properties->comm = MPI_COMM_NULL;
+  Properties->comm_size = 0;
+  Properties->comm_rank = 0;
   Properties->global_size[0] = 0;
   Properties->global_size[1] = 0;
   Properties->global_size[2] = 1;
-  Properties->local_begin[0] = 0;
-  Properties->local_begin[1] = 0;
-  Properties->local_begin[2] = 1;
-  Properties->local_end[0] = 0;
-  Properties->local_end[1] = 0;
-  Properties->local_end[2] = 1;
   Properties->periodic[0] = false;
   Properties->periodic[1] = false;
   Properties->periodic[2] = false;
@@ -532,9 +528,11 @@ static void CreateGridProperties(ovk_grid_properties **Properties_) {
   Properties->periodic_length[1] = 0.;
   Properties->periodic_length[2] = 0.;
   Properties->geometry_type = OVK_GEOMETRY_TYPE_CURVILINEAR;
-  Properties->comm = MPI_COMM_NULL;
-  Properties->comm_size = 0;
-  Properties->comm_rank = 0;
+
+  ovkRangeDefault(&Properties->local_range, 2);
+
+  Properties->num_neighbors = 0;
+  Properties->neighbor_ranks = NULL;
 
 }
 
@@ -569,26 +567,16 @@ void ovkGetGridPropertyDimension(const ovk_grid_properties *Properties, int *Num
 
 }
 
+void ovkGetGridPropertyComm(const ovk_grid_properties *Properties, MPI_Comm *Comm) {
+
+  *Comm = Properties->comm;
+
+}
+
 void ovkGetGridPropertyGlobalSize(const ovk_grid_properties *Properties, int *GlobalSize) {
 
   for (int i = 0; i < Properties->num_dims; ++i) {
     GlobalSize[i] = Properties->global_size[i];
-  }
-
-}
-
-void ovkGetGridPropertyLocalBegin(const ovk_grid_properties *Properties, int *LocalBegin) {
-
-  for (int i = 0; i < Properties->num_dims; ++i) {
-    LocalBegin[i] = Properties->local_begin[i];
-  }
-
-}
-
-void ovkGetGridPropertyLocalEnd(const ovk_grid_properties *Properties, int *LocalEnd) {
-
-  for (int i = 0; i < Properties->num_dims; ++i) {
-    LocalEnd[i] = Properties->local_end[i];
   }
 
 }
@@ -624,9 +612,25 @@ void ovkGetGridPropertyGeometryType(const ovk_grid_properties *Properties,
 
 }
 
-void ovkGetGridPropertyComm(const ovk_grid_properties *Properties, MPI_Comm *Comm) {
+void ovkGetGridPropertyLocalBegin(const ovk_grid_properties *Properties, int *LocalBegin) {
 
-  *Comm = Properties->comm;
+  for (int i = 0; i < Properties->num_dims; ++i) {
+    LocalBegin[i] = Properties->local_range.b[i];
+  }
+
+}
+
+void ovkGetGridPropertyLocalEnd(const ovk_grid_properties *Properties, int *LocalEnd) {
+
+  for (int i = 0; i < Properties->num_dims; ++i) {
+    LocalEnd[i] = Properties->local_range.e[i];
+  }
+
+}
+
+void ovkGetGridPropertyLocalRange(const ovk_grid_properties *Properties, ovk_range *LocalRange) {
+
+  *LocalRange = Properties->local_range;
 
 }
 
