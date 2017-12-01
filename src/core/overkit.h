@@ -8,6 +8,8 @@
 extern "C" {
 #endif
 
+#include <ovkBox.h>
+#include <ovkBox.inl>
 #include <ovkContext.h>
 #include <ovkDomain.h>
 #include <ovkGlobal.h>
