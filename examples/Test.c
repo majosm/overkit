@@ -9,9 +9,8 @@
 #include <stdbool.h>
 #include <string.h>
 
-int min(a, b) {
-  return a < b ? a : b;
-}
+#define min(a, b) ovk_min(a, b)
+#define max(a, b) ovk_max(a, b)
 
 typedef struct {
   int id;
