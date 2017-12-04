@@ -49,7 +49,7 @@ void CreateGrid(ovk_grid **Grid_, int ID, const ovk_grid_params *Params, t_logge
   MPI_Comm_rank(Grid->properties->comm, &Grid->properties->comm_rank);
 
   for (i = 0; i < MAX_DIMS; ++i) {
-    Grid->properties->global_size[i] = Params->global_size[i];
+    Grid->properties->size[i] = Params->size[i];
     Grid->properties->periodic[i] = Params->periodic[i];
     Grid->properties->periodic_length[i] = Params->periodic_length[i];
   }
@@ -77,9 +77,9 @@ void CreateGrid(ovk_grid **Grid_, int ID, const ovk_grid_params *Params, t_logge
   for (i = 0; i < Grid->properties->num_dims; ++i) {
     if (Grid->properties->periodic[i] && Grid->properties->periodic_storage ==
       OVK_OVERLAP_PERIODIC) {
-      Grid->cart.size[i] = Grid->properties->global_size[i]-1;
+      Grid->cart.size[i] = Grid->properties->size[i]-1;
     } else {
-      Grid->cart.size[i] = Grid->properties->global_size[i];
+      Grid->cart.size[i] = Grid->properties->size[i];
     }
     Grid->cart.periodic[i] = Grid->properties->periodic[i];
   }
@@ -185,9 +185,9 @@ static void PrintGridSummary(const ovk_grid *Grid) {
   IntToString(Grid->properties->id, IDString);
 
   size_t TotalPoints =
-    (size_t)Grid->properties->global_size[0] *
-    (size_t)Grid->properties->global_size[1] *
-    (size_t)Grid->properties->global_size[2];
+    (size_t)Grid->properties->size[0] *
+    (size_t)Grid->properties->size[1] *
+    (size_t)Grid->properties->size[2];
 
   char TotalPointsString[NUMBER_STRING_LENGTH+7];
   PluralizeLabel(TotalPoints, "points", "point", TotalPointsString);
@@ -198,9 +198,9 @@ static void PrintGridSummary(const ovk_grid *Grid) {
   char ISizeString[NUMBER_STRING_LENGTH];
   char JSizeString[NUMBER_STRING_LENGTH];
   char KSizeString[NUMBER_STRING_LENGTH];
-  SizeToString(Grid->properties->global_size[0], ISizeString);
-  SizeToString(Grid->properties->global_size[1], JSizeString);
-  SizeToString(Grid->properties->global_size[2], KSizeString);
+  SizeToString(Grid->properties->size[0], ISizeString);
+  SizeToString(Grid->properties->size[1], JSizeString);
+  SizeToString(Grid->properties->size[2], KSizeString);
 
   switch (Grid->properties->num_dims) {
   case 2:
@@ -297,9 +297,9 @@ void CreateGridParams(ovk_grid_params **Params_, int NumDims, MPI_Comm DefaultCo
 
   Params->num_dims = NumDims;
   Params->comm = DefaultComm;
-  Params->global_size[0] = 0;
-  Params->global_size[1] = 0;
-  Params->global_size[2] = 1;
+  Params->size[0] = 0;
+  Params->size[1] = 0;
+  Params->size[2] = 1;
   Params->periodic[0] = false;
   Params->periodic[1] = false;
   Params->periodic[2] = false;
@@ -365,18 +365,18 @@ void ovkSetGridParamComm(ovk_grid_params *Params, MPI_Comm Comm) {
 
 }
 
-void ovkGetGridParamGlobalSize(const ovk_grid_params *Params, int *GlobalSize) {
+void ovkGetGridParamSize(const ovk_grid_params *Params, int *Size) {
 
   for (int i = 0; i < Params->num_dims; ++i) {
-    GlobalSize[i] = Params->global_size[i];
+    Size[i] = Params->size[i];
   }
 
 }
 
-void ovkSetGridParamGlobalSize(ovk_grid_params *Params, const int *GlobalSize) {
+void ovkSetGridParamSize(ovk_grid_params *Params, const int *Size) {
 
   for (int i = 0; i < Params->num_dims; ++i) {
-    Params->global_size[i] = GlobalSize[i];
+    Params->size[i] = Size[i];
   }
 
 }
@@ -529,9 +529,9 @@ static void CreateGridProperties(ovk_grid_properties **Properties_) {
   Properties->comm = MPI_COMM_NULL;
   Properties->comm_size = 0;
   Properties->comm_rank = 0;
-  Properties->global_size[0] = 0;
-  Properties->global_size[1] = 0;
-  Properties->global_size[2] = 1;
+  Properties->size[0] = 0;
+  Properties->size[1] = 0;
+  Properties->size[2] = 1;
   Properties->periodic[0] = false;
   Properties->periodic[1] = false;
   Properties->periodic[2] = false;
@@ -585,10 +585,10 @@ void ovkGetGridPropertyComm(const ovk_grid_properties *Properties, MPI_Comm *Com
 
 }
 
-void ovkGetGridPropertyGlobalSize(const ovk_grid_properties *Properties, int *GlobalSize) {
+void ovkGetGridPropertySize(const ovk_grid_properties *Properties, int *Size) {
 
   for (int i = 0; i < Properties->num_dims; ++i) {
-    GlobalSize[i] = Properties->global_size[i];
+    Size[i] = Properties->size[i];
   }
 
 }

@@ -124,7 +124,7 @@ void ExchangeTest(int argc, char **argv) {
       ovkSetGridParamID(GridParams, Grids[p].id);
       ovkSetGridParamName(GridParams, Grids[p].name);
       ovkSetGridParamComm(GridParams, Grids[p].comm);
-      ovkSetGridParamGlobalSize(GridParams, Grids[p].global_size);
+      ovkSetGridParamSize(GridParams, Grids[p].global_size);
       ovkSetGridParamLocalBegin(GridParams, Grids[p].is);
       ovkSetGridParamLocalEnd(GridParams, Grids[p].ie);
       ovkSetGridParamNeighborRanks(GridParams, Grids[p].num_neighbors, Grids[p].neighbor_ranks);
@@ -457,7 +457,7 @@ void AssembleTest(int argc, char **argv) {
     ovk_grid_params *GridParams;
     ovkCreateGridParams(&GridParams, 2);
     ovkSetGridParamComm(GridParams, Grids[m].comm);
-    ovkSetGridParamGlobalSize(GridParams, Grids[m].global_size);
+    ovkSetGridParamSize(GridParams, Grids[m].global_size);
     ovkSetGridParamLocalStart(GridParams, Grids[m].is);
     ovkSetGridParamLocalEnd(GridParams, Grids[m].ie);
     ovkSetGridParamNeighborRanks(GridParams, Grids[m].num_neighbors, Grids[m].neighbor_ranks);

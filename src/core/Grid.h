@@ -17,7 +17,7 @@ struct ovk_grid_params {
   char name[OVK_NAME_LENGTH];
   int num_dims;
   MPI_Comm comm;
-  int global_size[MAX_DIMS];
+  int size[MAX_DIMS];
   bool periodic[MAX_DIMS];
   ovk_periodic_storage periodic_storage;
   double periodic_length[MAX_DIMS];
@@ -47,7 +47,7 @@ struct ovk_grid_properties {
   MPI_Comm comm;
   int comm_size;
   int comm_rank;
-  int global_size[MAX_DIMS];
+  int size[MAX_DIMS];
   bool periodic[MAX_DIMS];
   ovk_periodic_storage periodic_storage;
   double periodic_length[MAX_DIMS];
