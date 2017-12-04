@@ -171,6 +171,8 @@ void ovkCreateGridLocal(ovk_domain *Domain, int *GridID_, const ovk_grid_params 
 
   OMInsert(Domain->grids, GridID, Container);
 
+  ++Domain->properties->num_grids;
+
   if (GridID_) {
     *GridID_ = GridID;
   }
@@ -207,6 +209,8 @@ void ovkCreateGridRemote(ovk_domain *Domain, int *GridID_) {
 
   OMInsert(Domain->grids, GridID, Container);
 
+  ++Domain->properties->num_grids;
+
   if (GridID_) {
     *GridID_ = GridID;
   }
@@ -238,6 +242,8 @@ void ovkDestroyGrid(ovk_domain *Domain, int *GridID_) {
   free(Container);
 
   OMRemove(Domain->grids, GridID);
+
+  --Domain->properties->num_grids;
 
   *GridID_ = -1;
 
@@ -346,6 +352,7 @@ static void CreateDomainProperties(ovk_domain_properties **Properties_) {
   Properties->comm = MPI_COMM_NULL;
   Properties->comm_size = 0;
   Properties->comm_rank = 0;
+  Properties->num_grids = 0;
 
 }
 
@@ -371,5 +378,11 @@ void ovkGetDomainPropertyDimension(const ovk_domain_properties *Properties, int 
 void ovkGetDomainPropertyComm(const ovk_domain_properties *Properties, MPI_Comm *Comm) {
 
   *Comm = Properties->comm;
+
+}
+
+void ovkGetDomainPropertyGridCount(const ovk_domain_properties *Properties, int *NumGrids) {
+
+  *NumGrids = Properties->num_grids;
 
 }

@@ -42,5 +42,6 @@ void ovkSetDomainParamComm(ovk_domain_params *Params, MPI_Comm Comm);
 void ovkGetDomainPropertyName(const ovk_domain_properties *Properties, char *Name);
 void ovkGetDomainPropertyDimension(const ovk_domain_properties *Properties, int *NumDims);
 void ovkGetDomainPropertyComm(const ovk_domain_properties *Properties, MPI_Comm *Comm);
+void ovkGetDomainPropertyGridCount(const ovk_domain_properties *Properties, int *NumGrids);
 
 #endif

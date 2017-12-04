@@ -32,6 +32,7 @@ struct ovk_domain_properties {
   MPI_Comm comm;
   int comm_size;
   int comm_rank;
+  int num_grids;
 };
 
 void CreateDomainParams(ovk_domain_params **Params, MPI_Comm DefaultComm);
