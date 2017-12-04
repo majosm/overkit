@@ -27,19 +27,6 @@ struct ovk_grid_params {
   int *neighbor_ranks;
 };
 
-typedef struct {
-  int comm_rank;
-  ovk_range local_range;
-} t_grid_neighbor_info;
-
-struct ovk_grid {
-  ovk_grid_properties *properties;
-  t_logger *logger;
-  t_error_handler *error_handler;
-  t_grid_neighbor_info *neighbors;
-  ovk_cart cart;
-};
-
 struct ovk_grid_properties {
   int id;
   char name[OVK_NAME_LENGTH];
@@ -55,6 +42,19 @@ struct ovk_grid_properties {
   ovk_range local_range;
   int num_neighbors;
   int *neighbor_ranks;
+};
+
+typedef struct {
+  int comm_rank;
+  ovk_range local_range;
+} t_grid_neighbor_info;
+
+struct ovk_grid {
+  ovk_grid_properties properties;
+  t_logger *logger;
+  t_error_handler *error_handler;
+  t_grid_neighbor_info *neighbors;
+  ovk_cart cart;
 };
 
 void CreateGridParams(ovk_grid_params **Params, int NumDims, MPI_Comm DefaultComm);

@@ -18,14 +18,6 @@ struct ovk_domain_params {
   MPI_Comm comm;
 };
 
-struct ovk_domain {
-  ovk_domain_properties *properties;
-  t_logger *logger;
-  t_error_handler *error_handler;
-  ovk_domain_config config;
-  t_ordered_map *grids;
-};
-
 struct ovk_domain_properties {
   char name[OVK_NAME_LENGTH];
   int num_dims;
@@ -33,6 +25,14 @@ struct ovk_domain_properties {
   int comm_size;
   int comm_rank;
   int num_grids;
+};
+
+struct ovk_domain {
+  ovk_domain_properties properties;
+  t_logger *logger;
+  t_error_handler *error_handler;
+  ovk_domain_config config;
+  t_ordered_map *grids;
 };
 
 void CreateDomainParams(ovk_domain_params **Params, MPI_Comm DefaultComm);

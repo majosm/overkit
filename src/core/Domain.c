@@ -17,8 +17,7 @@ typedef struct {
   int root_rank;
 } t_grid_container;
 
-static void CreateDomainProperties(ovk_domain_properties **Properties_);
-static void DestroyDomainProperties(ovk_domain_properties **Properties_);
+static void DefaultDomainProperties(ovk_domain_properties *Properties);
 
 void CreateDomain(ovk_domain **Domain_, const ovk_domain_params *Params, t_logger *Logger,
   t_error_handler *ErrorHandler) {
@@ -33,19 +32,19 @@ void CreateDomain(ovk_domain **Domain_, const ovk_domain_params *Params, t_logge
   *Domain_ = malloc(sizeof(ovk_domain));
   ovk_domain *Domain = *Domain_;
 
-  CreateDomainProperties(&Domain->properties);
+  DefaultDomainProperties(&Domain->properties);
 
   if (strlen(Params->name) > 0) {
-    strncpy(Domain->properties->name, Params->name, OVK_NAME_LENGTH);
+    strncpy(Domain->properties.name, Params->name, OVK_NAME_LENGTH);
   } else {
-    strcpy(Domain->properties->name, "Domain");
+    strcpy(Domain->properties.name, "Domain");
   }
 
-  Domain->properties->num_dims = Params->num_dims;
+  Domain->properties.num_dims = Params->num_dims;
 
-  Domain->properties->comm = Comm;
-  MPI_Comm_size(Domain->properties->comm, &Domain->properties->comm_size);
-  MPI_Comm_rank(Domain->properties->comm, &Domain->properties->comm_rank);
+  Domain->properties.comm = Comm;
+  MPI_Comm_size(Domain->properties.comm, &Domain->properties.comm_size);
+  MPI_Comm_rank(Domain->properties.comm, &Domain->properties.comm_rank);
 
   Domain->logger = Logger;
   Domain->error_handler = ErrorHandler;
@@ -54,14 +53,14 @@ void CreateDomain(ovk_domain **Domain_, const ovk_domain_params *Params, t_logge
 
   OMCreate(&Domain->grids);
 
-  if (Domain->properties->comm_rank == 0) {
+  if (Domain->properties.comm_rank == 0) {
     char ProcessesString[32];
-    PluralizeLabel(Domain->properties->comm_size, "processes", "process", ProcessesString);
-    LogStatus(Logger, true, 0, "Created %1iD domain '%s' on %s.", Domain->properties->num_dims,
-      Domain->properties->name, ProcessesString);
+    PluralizeLabel(Domain->properties.comm_size, "processes", "process", ProcessesString);
+    LogStatus(Logger, true, 0, "Created %1iD domain '%s' on %s.", Domain->properties.num_dims,
+      Domain->properties.name, ProcessesString);
   }
 
-  MPI_Barrier(Domain->properties->comm);
+  MPI_Barrier(Domain->properties.comm);
 
 }
 
@@ -71,7 +70,7 @@ void DestroyDomain(ovk_domain **Domain_) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
 
-  MPI_Barrier(Domain->properties->comm);
+  MPI_Barrier(Domain->properties.comm);
 
   t_ordered_map_entry *Entry = OMBegin(Domain->grids);
   while (Entry != OMEnd(Domain->grids)) {
@@ -86,12 +85,10 @@ void DestroyDomain(ovk_domain **Domain_) {
   OMDestroy(&Domain->grids);
 
   t_logger *Logger = Domain->logger;
-  MPI_Comm Comm = Domain->properties->comm;
-  bool IsDomainRoot = Domain->properties->comm_rank == 0;
+  MPI_Comm Comm = Domain->properties.comm;
+  bool IsDomainRoot = Domain->properties.comm_rank == 0;
   char Name[OVK_NAME_LENGTH];
-  strncpy(Name, Domain->properties->name, OVK_NAME_LENGTH);
-
-  DestroyDomainProperties(&Domain->properties);
+  strncpy(Name, Domain->properties.name, OVK_NAME_LENGTH);
 
   free(*Domain_);
   *Domain_ = NULL;
@@ -112,13 +109,13 @@ void ovkConfigureDomain(ovk_domain *Domain, ovk_domain_config Config) {
 
 void ovkGetDomainProperties(const ovk_domain *Domain, const ovk_domain_properties **Properties) {
 
-  *Properties = Domain->properties;
+  *Properties = &Domain->properties;
 
 }
 
 void ovkCreateGridParams(ovk_domain *Domain, ovk_grid_params **Params) {
 
-  CreateGridParams(Params, Domain->properties->num_dims, Domain->properties->comm);
+  CreateGridParams(Params, Domain->properties.num_dims, Domain->properties.comm);
 
 }
 
@@ -135,7 +132,7 @@ void ovkCreateGridLocal(ovk_domain *Domain, int *GridID_, const ovk_grid_params 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
   OVK_DEBUG_ASSERT(Params, "Invalid grid params pointer.");
 
-  MPI_Barrier(Domain->properties->comm);
+  MPI_Barrier(Domain->properties.comm);
 
   MPI_Comm TempComm;
   MPI_Comm_dup(Params->comm, &TempComm);
@@ -147,11 +144,11 @@ void ovkCreateGridLocal(ovk_domain *Domain, int *GridID_, const ovk_grid_params 
 
   int Local = 1;
   int AtLeastOneLocal = 0;
-  MPI_Allreduce(&Local, &AtLeastOneLocal, 1, MPI_INT, MPI_LOR, Domain->properties->comm);
+  MPI_Allreduce(&Local, &AtLeastOneLocal, 1, MPI_INT, MPI_LOR, Domain->properties.comm);
 
   int GridID;
   if (IsGridRoot) GridID = Params->id;
-  BroadcastAnySource(&GridID, 1, MPI_INT, IsGridRoot, Domain->properties->comm);
+  BroadcastAnySource(&GridID, 1, MPI_INT, IsGridRoot, Domain->properties.comm);
 
   if (GridID == OVK_GENERATE_ID) {
     GridID = OMNextAvailableKey(Domain->grids);
@@ -161,8 +158,8 @@ void ovkCreateGridLocal(ovk_domain *Domain, int *GridID_, const ovk_grid_params 
   CreateGrid(&Grid, GridID, Params, Domain->logger, Domain->error_handler);
 
   int GridRootRank;
-  if (IsGridRoot) GridRootRank = Domain->properties->comm_rank;
-  BroadcastAnySource(&GridRootRank, 1, MPI_INT, IsGridRoot, Domain->properties->comm);
+  if (IsGridRoot) GridRootRank = Domain->properties.comm_rank;
+  BroadcastAnySource(&GridRootRank, 1, MPI_INT, IsGridRoot, Domain->properties.comm);
 
   t_grid_container *Container = malloc(sizeof(t_grid_container));
   Container->local = true;
@@ -171,13 +168,13 @@ void ovkCreateGridLocal(ovk_domain *Domain, int *GridID_, const ovk_grid_params 
 
   OMInsert(Domain->grids, GridID, Container);
 
-  ++Domain->properties->num_grids;
+  ++Domain->properties.num_grids;
 
   if (GridID_) {
     *GridID_ = GridID;
   }
 
-  MPI_Barrier(Domain->properties->comm);
+  MPI_Barrier(Domain->properties.comm);
 
 }
 
@@ -185,22 +182,22 @@ void ovkCreateGridRemote(ovk_domain *Domain, int *GridID_) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
 
-  MPI_Barrier(Domain->properties->comm);
+  MPI_Barrier(Domain->properties.comm);
 
   int Local = 0;
   int AtLeastOneLocal = 0;
-  MPI_Allreduce(&Local, &AtLeastOneLocal, 1, MPI_INT, MPI_LOR, Domain->properties->comm);
+  MPI_Allreduce(&Local, &AtLeastOneLocal, 1, MPI_INT, MPI_LOR, Domain->properties.comm);
   OVK_DEBUG_ASSERT(AtLeastOneLocal, "Grid must exist on at least one process.");
 
   int GridID;
-  BroadcastAnySource(&GridID, 1, MPI_INT, false, Domain->properties->comm);
+  BroadcastAnySource(&GridID, 1, MPI_INT, false, Domain->properties.comm);
 
   if (GridID == OVK_GENERATE_ID) {
     GridID = OMNextAvailableKey(Domain->grids);
   }
 
   int GridRootRank;
-  BroadcastAnySource(&GridRootRank, 1, MPI_INT, false, Domain->properties->comm);
+  BroadcastAnySource(&GridRootRank, 1, MPI_INT, false, Domain->properties.comm);
 
   t_grid_container *Container = malloc(sizeof(t_grid_container));
   Container->local = false;
@@ -209,13 +206,13 @@ void ovkCreateGridRemote(ovk_domain *Domain, int *GridID_) {
 
   OMInsert(Domain->grids, GridID, Container);
 
-  ++Domain->properties->num_grids;
+  ++Domain->properties.num_grids;
 
   if (GridID_) {
     *GridID_ = GridID;
   }
 
-  MPI_Barrier(Domain->properties->comm);
+  MPI_Barrier(Domain->properties.comm);
 
 }
 
@@ -224,7 +221,7 @@ void ovkDestroyGrid(ovk_domain *Domain, int *GridID_) {
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
   OVK_DEBUG_ASSERT(GridID_, "Invalid grid ID pointer.");
 
-  MPI_Barrier(Domain->properties->comm);
+  MPI_Barrier(Domain->properties.comm);
 
   int GridID = *GridID_;
 
@@ -243,11 +240,11 @@ void ovkDestroyGrid(ovk_domain *Domain, int *GridID_) {
 
   OMRemove(Domain->grids, GridID);
 
-  --Domain->properties->num_grids;
+  --Domain->properties.num_grids;
 
   *GridID_ = -1;
 
-  MPI_Barrier(Domain->properties->comm);
+  MPI_Barrier(Domain->properties.comm);
 
 }
 
@@ -260,7 +257,7 @@ void ovkGetGrid(const ovk_domain *Domain, int GridID, const ovk_grid **Grid) {
   const t_grid_container *Container = OMDataC(Entry);
 
   OVK_DEBUG_ASSERT(Container->local, "Grid %i does not have local data on rank %i.", GridID,
-    Domain->properties->comm_rank);
+    Domain->properties.comm_rank);
 
   if (Container->local) {
     *Grid = Container->local_data;
@@ -341,10 +338,7 @@ void ovkSetDomainParamComm(ovk_domain_params *Params, MPI_Comm Comm) {
 
 }
 
-static void CreateDomainProperties(ovk_domain_properties **Properties_) {
-
-  *Properties_ = malloc(sizeof(ovk_domain_properties));
-  ovk_domain_properties *Properties = *Properties_;
+static void DefaultDomainProperties(ovk_domain_properties *Properties) {
 
   memset(Properties->name, 0, OVK_NAME_LENGTH);
 
@@ -353,13 +347,6 @@ static void CreateDomainProperties(ovk_domain_properties **Properties_) {
   Properties->comm_size = 0;
   Properties->comm_rank = 0;
   Properties->num_grids = 0;
-
-}
-
-static void DestroyDomainProperties(ovk_domain_properties **Properties_) {
-
-  free(*Properties_);
-  *Properties_ = NULL;
 
 }
 

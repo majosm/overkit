@@ -16,8 +16,7 @@ static void DestroyNeighborInfo(ovk_grid *Grid);
 static void PrintGridSummary(const ovk_grid *Grid);
 static void PrintGridDecomposition(const ovk_grid *Grid);
 
-static void CreateGridProperties(ovk_grid_properties **Properties_);
-static void DestroyGridProperties(ovk_grid_properties **Properties_);
+static void DefaultGridProperties(ovk_grid_properties *Properties);
 
 void CreateGrid(ovk_grid **Grid_, int ID, const ovk_grid_params *Params, t_logger *Logger,
   t_error_handler *ErrorHandler) {
@@ -32,40 +31,40 @@ void CreateGrid(ovk_grid **Grid_, int ID, const ovk_grid_params *Params, t_logge
   *Grid_ = malloc(sizeof(ovk_grid));
   ovk_grid *Grid = *Grid_;
 
-  CreateGridProperties(&Grid->properties);
+  DefaultGridProperties(&Grid->properties);
 
-  Grid->properties->id = ID;
+  Grid->properties.id = ID;
 
   if (strlen(Params->name) > 0) {
-    strncpy(Grid->properties->name, Params->name, OVK_NAME_LENGTH);
+    strncpy(Grid->properties.name, Params->name, OVK_NAME_LENGTH);
   } else {
-    sprintf(Grid->properties->name, "Grid%i", Grid->properties->id);
+    sprintf(Grid->properties.name, "Grid%i", Grid->properties.id);
   }
 
-  Grid->properties->num_dims = Params->num_dims;
+  Grid->properties.num_dims = Params->num_dims;
 
-  Grid->properties->comm = Comm;
-  MPI_Comm_size(Grid->properties->comm, &Grid->properties->comm_size);
-  MPI_Comm_rank(Grid->properties->comm, &Grid->properties->comm_rank);
+  Grid->properties.comm = Comm;
+  MPI_Comm_size(Grid->properties.comm, &Grid->properties.comm_size);
+  MPI_Comm_rank(Grid->properties.comm, &Grid->properties.comm_rank);
 
   for (i = 0; i < MAX_DIMS; ++i) {
-    Grid->properties->size[i] = Params->size[i];
-    Grid->properties->periodic[i] = Params->periodic[i];
-    Grid->properties->periodic_length[i] = Params->periodic_length[i];
+    Grid->properties.size[i] = Params->size[i];
+    Grid->properties.periodic[i] = Params->periodic[i];
+    Grid->properties.periodic_length[i] = Params->periodic_length[i];
   }
 
-  Grid->properties->periodic_storage = Params->periodic_storage;
-  Grid->properties->geometry_type = Params->geometry_type;
+  Grid->properties.periodic_storage = Params->periodic_storage;
+  Grid->properties.geometry_type = Params->geometry_type;
 
-  Grid->properties->local_range = Params->local_range;
+  Grid->properties.local_range = Params->local_range;
 
-  Grid->properties->num_neighbors = Params->num_neighbors;
+  Grid->properties.num_neighbors = Params->num_neighbors;
   if (Params->num_neighbors > 0) {
-    Grid->properties->neighbor_ranks = malloc(Params->num_neighbors*sizeof(int));
+    Grid->properties.neighbor_ranks = malloc(Params->num_neighbors*sizeof(int));
   }
 
   for (i = 0; i < Params->num_neighbors; ++i) {
-    Grid->properties->neighbor_ranks[i] = Params->neighbor_ranks[i];
+    Grid->properties.neighbor_ranks[i] = Params->neighbor_ranks[i];
   }
 
   Grid->logger = Logger;
@@ -73,18 +72,17 @@ void CreateGrid(ovk_grid **Grid_, int ID, const ovk_grid_params *Params, t_logge
 
   CreateNeighborInfo(Grid);
 
-  ovkCartDefault(&Grid->cart, Grid->properties->num_dims);
-  for (i = 0; i < Grid->properties->num_dims; ++i) {
-    if (Grid->properties->periodic[i] && Grid->properties->periodic_storage ==
-      OVK_OVERLAP_PERIODIC) {
-      Grid->cart.size[i] = Grid->properties->size[i]-1;
+  ovkCartDefault(&Grid->cart, Grid->properties.num_dims);
+  for (i = 0; i < Grid->properties.num_dims; ++i) {
+    if (Grid->properties.periodic[i] && Grid->properties.periodic_storage == OVK_OVERLAP_PERIODIC) {
+      Grid->cart.size[i] = Grid->properties.size[i]-1;
     } else {
-      Grid->cart.size[i] = Grid->properties->size[i];
+      Grid->cart.size[i] = Grid->properties.size[i];
     }
-    Grid->cart.periodic[i] = Grid->properties->periodic[i];
+    Grid->cart.periodic[i] = Grid->properties.periodic[i];
   }
 
-  if (Grid->properties->comm_rank == 0) {
+  if (Grid->properties.comm_rank == 0) {
     PrintGridSummary(Grid);
   }
 
@@ -92,7 +90,7 @@ void CreateGrid(ovk_grid **Grid_, int ID, const ovk_grid_params *Params, t_logge
     PrintGridDecomposition(Grid);
   }
 
-  MPI_Barrier(Grid->properties->comm);
+  MPI_Barrier(Grid->properties.comm);
 
 }
 
@@ -100,17 +98,19 @@ void DestroyGrid(ovk_grid **Grid_) {
 
   ovk_grid *Grid = *Grid_;
 
-  MPI_Barrier(Grid->properties->comm);
+  MPI_Barrier(Grid->properties.comm);
 
   DestroyNeighborInfo(Grid);
 
   t_logger *Logger = Grid->logger;
-  MPI_Comm Comm = Grid->properties->comm;
-  bool IsGridRoot = Grid->properties->comm_rank == 0;
+  MPI_Comm Comm = Grid->properties.comm;
+  bool IsGridRoot = Grid->properties.comm_rank == 0;
   char Name[OVK_NAME_LENGTH];
-  strncpy(Name, Grid->properties->name, OVK_NAME_LENGTH);
+  strncpy(Name, Grid->properties.name, OVK_NAME_LENGTH);
 
-  DestroyGridProperties(&Grid->properties);
+  if (Grid->properties.num_neighbors > 0) {
+    free(Grid->properties.neighbor_ranks);
+  }
 
   free(*Grid_);
   *Grid_ = NULL;
@@ -125,7 +125,7 @@ void DestroyGrid(ovk_grid **Grid_) {
 
 void ovkGetGridProperties(const ovk_grid *Grid, const ovk_grid_properties **Properties) {
 
-  *Properties = Grid->properties;
+  *Properties = &Grid->properties;
 
 }
 
@@ -133,34 +133,34 @@ static void CreateNeighborInfo(ovk_grid *Grid) {
 
   int i, j;
 
-  int NumNeighbors = Grid->properties->num_neighbors;
-  int *NeighborRanks = Grid->properties->neighbor_ranks;
+  int NumNeighbors = Grid->properties.num_neighbors;
+  int *NeighborRanks = Grid->properties.neighbor_ranks;
 
   Grid->neighbors = malloc(NumNeighbors*sizeof(t_grid_neighbor_info));
 
   int *NeighborIndexRanges = malloc(6*NumNeighbors*sizeof(int));
 
   int IndexRange[6];
-  IndexRange[0] = Grid->properties->local_range.b[0];
-  IndexRange[1] = Grid->properties->local_range.b[1];
-  IndexRange[2] = Grid->properties->local_range.b[2];
-  IndexRange[3] = Grid->properties->local_range.e[0];
-  IndexRange[4] = Grid->properties->local_range.e[1];
-  IndexRange[5] = Grid->properties->local_range.e[2];
+  IndexRange[0] = Grid->properties.local_range.b[0];
+  IndexRange[1] = Grid->properties.local_range.b[1];
+  IndexRange[2] = Grid->properties.local_range.b[2];
+  IndexRange[3] = Grid->properties.local_range.e[0];
+  IndexRange[4] = Grid->properties.local_range.e[1];
+  IndexRange[5] = Grid->properties.local_range.e[2];
 
   MPI_Request *Requests = malloc(2*NumNeighbors*sizeof(MPI_Request));
   for (i = 0; i < NumNeighbors; ++i) {
     MPI_Request *NeighborRequests = Requests + 2*i;
-    MPI_Irecv(NeighborIndexRanges+6*i, 6, MPI_INT, NeighborRanks[i], 0, Grid->properties->comm,
+    MPI_Irecv(NeighborIndexRanges+6*i, 6, MPI_INT, NeighborRanks[i], 0, Grid->properties.comm,
       NeighborRequests);
-    MPI_Isend(IndexRange, 6, MPI_INT, NeighborRanks[i], 0, Grid->properties->comm,
+    MPI_Isend(IndexRange, 6, MPI_INT, NeighborRanks[i], 0, Grid->properties.comm,
       NeighborRequests+1);
   }
   MPI_Waitall(2*NumNeighbors, Requests, MPI_STATUSES_IGNORE);
 
   for (i = 0; i < NumNeighbors; ++i) {
     Grid->neighbors[i].comm_rank = NeighborRanks[i];
-    ovkRangeDefault(&Grid->neighbors[i].local_range, Grid->properties->num_dims);
+    ovkRangeDefault(&Grid->neighbors[i].local_range, Grid->properties.num_dims);
     int *NeighborIndexRange = NeighborIndexRanges+6*i;
     for (j = 0; j < MAX_DIMS; ++j) {
       Grid->neighbors[i].local_range.b[j] = NeighborIndexRange[j];
@@ -182,35 +182,35 @@ static void DestroyNeighborInfo(ovk_grid *Grid) {
 static void PrintGridSummary(const ovk_grid *Grid) {
 
   char IDString[NUMBER_STRING_LENGTH];
-  IntToString(Grid->properties->id, IDString);
+  IntToString(Grid->properties.id, IDString);
 
   size_t TotalPoints =
-    (size_t)Grid->properties->size[0] *
-    (size_t)Grid->properties->size[1] *
-    (size_t)Grid->properties->size[2];
+    (size_t)Grid->properties.size[0] *
+    (size_t)Grid->properties.size[1] *
+    (size_t)Grid->properties.size[2];
 
   char TotalPointsString[NUMBER_STRING_LENGTH+7];
   PluralizeLabel(TotalPoints, "points", "point", TotalPointsString);
 
   char ProcessesString[NUMBER_STRING_LENGTH+10];
-  PluralizeLabel(Grid->properties->comm_size, "processes", "process", ProcessesString);
+  PluralizeLabel(Grid->properties.comm_size, "processes", "process", ProcessesString);
 
   char ISizeString[NUMBER_STRING_LENGTH];
   char JSizeString[NUMBER_STRING_LENGTH];
   char KSizeString[NUMBER_STRING_LENGTH];
-  SizeToString(Grid->properties->size[0], ISizeString);
-  SizeToString(Grid->properties->size[1], JSizeString);
-  SizeToString(Grid->properties->size[2], KSizeString);
+  SizeToString(Grid->properties.size[0], ISizeString);
+  SizeToString(Grid->properties.size[1], JSizeString);
+  SizeToString(Grid->properties.size[2], KSizeString);
 
-  switch (Grid->properties->num_dims) {
+  switch (Grid->properties.num_dims) {
   case 2:
     LogStatus(Grid->logger, true, 0, "Created grid '%s' (ID=%s): %s x %s (%s) on %s.",
-      Grid->properties->name, IDString, ISizeString, JSizeString, TotalPointsString,
+      Grid->properties.name, IDString, ISizeString, JSizeString, TotalPointsString,
       ProcessesString);
     break;
   case 3:
     LogStatus(Grid->logger, true, 0, "Created grid '%s' (ID=%s): %s x %s x %s (%s) on %s.",
-      Grid->properties->name, IDString, ISizeString, JSizeString, KSizeString, TotalPointsString,
+      Grid->properties.name, IDString, ISizeString, JSizeString, KSizeString, TotalPointsString,
       ProcessesString);
     break;
   }
@@ -222,45 +222,45 @@ static void PrintGridDecomposition(const ovk_grid *Grid) {
   int i;
 
   char IDString[NUMBER_STRING_LENGTH];
-  IntToString(Grid->properties->id, IDString);
+  IntToString(Grid->properties.id, IDString);
 
   char RankString[NUMBER_STRING_LENGTH];
-  IntToString(Grid->properties->comm_rank, RankString);
+  IntToString(Grid->properties.comm_rank, RankString);
 
   char ILocalBeginString[NUMBER_STRING_LENGTH], ILocalEndString[NUMBER_STRING_LENGTH];
   char JLocalBeginString[NUMBER_STRING_LENGTH], JLocalEndString[NUMBER_STRING_LENGTH];
   char KLocalBeginString[NUMBER_STRING_LENGTH], KLocalEndString[NUMBER_STRING_LENGTH];
-  IntToString(Grid->properties->local_range.b[0], ILocalBeginString);
-  IntToString(Grid->properties->local_range.b[1], JLocalBeginString);
-  IntToString(Grid->properties->local_range.b[2], KLocalBeginString);
-  IntToString(Grid->properties->local_range.e[0], ILocalEndString);
-  IntToString(Grid->properties->local_range.e[1], JLocalEndString);
-  IntToString(Grid->properties->local_range.e[2], KLocalEndString);
+  IntToString(Grid->properties.local_range.b[0], ILocalBeginString);
+  IntToString(Grid->properties.local_range.b[1], JLocalBeginString);
+  IntToString(Grid->properties.local_range.b[2], KLocalBeginString);
+  IntToString(Grid->properties.local_range.e[0], ILocalEndString);
+  IntToString(Grid->properties.local_range.e[1], JLocalEndString);
+  IntToString(Grid->properties.local_range.e[2], KLocalEndString);
 
   char TotalLocalPointsString[NUMBER_STRING_LENGTH+7];
   size_t TotalLocalPoints;
-  ovkRangeCount(&Grid->properties->local_range, &TotalLocalPoints);
+  ovkRangeCount(&Grid->properties.local_range, &TotalLocalPoints);
   PluralizeLabel(TotalLocalPoints, "points", "point", TotalLocalPointsString);
 
   char NeighborRanksString[256];
   int Offset = 0;
-  for (int i = 0; i < Grid->properties->num_neighbors; ++i) {
+  for (int i = 0; i < Grid->properties.num_neighbors; ++i) {
     char NeighborRankString[NUMBER_STRING_LENGTH];
-    IntToString(Grid->properties->neighbor_ranks[i], NeighborRankString);
+    IntToString(Grid->properties.neighbor_ranks[i], NeighborRankString);
     Offset += sprintf(NeighborRanksString+Offset, "%s", NeighborRankString);
-    if (i != Grid->properties->num_neighbors-1) { 
+    if (i != Grid->properties.num_neighbors-1) {
       Offset += sprintf(NeighborRanksString+Offset, ", ");
     }
   }
 
-  for (i = 0; i < Grid->properties->comm_size; ++i) {
+  for (i = 0; i < Grid->properties.comm_size; ++i) {
 
-    if (Grid->properties->comm_rank == i) {
+    if (Grid->properties.comm_rank == i) {
 
-      LogStatus(Grid->logger, Grid->properties->comm_rank == 0, 0, "Grid '%s' decomposition info:",
-        Grid->properties->name);
+      LogStatus(Grid->logger, Grid->properties.comm_rank == 0, 0, "Grid '%s' decomposition info:",
+        Grid->properties.name);
 
-      switch (Grid->properties->num_dims) {
+      switch (Grid->properties.num_dims) {
       case 2:
         LogStatus(Grid->logger, true, 1, "Rank %s contains i=%s:%s, j=%s:%s (%s)",
           RankString, ILocalBeginString, ILocalEndString, JLocalBeginString, JLocalEndString,
@@ -273,14 +273,14 @@ static void PrintGridDecomposition(const ovk_grid *Grid) {
         break;
       }
 
-      if (Grid->properties->num_neighbors > 0) {
+      if (Grid->properties.num_neighbors > 0) {
         LogStatus(Grid->logger, true, 1, "Rank %s has neighbors: %s", RankString,
           NeighborRanksString);
       }
 
     }
 
-    MPI_Barrier(Grid->properties->comm);
+    MPI_Barrier(Grid->properties.comm);
 
   }
 
@@ -516,10 +516,7 @@ void ovkSetGridParamNeighborRanks(ovk_grid_params *Params, int NumNeighbors,
 
 }
 
-static void CreateGridProperties(ovk_grid_properties **Properties_) {
-  
-  *Properties_ = malloc(sizeof(ovk_grid_properties));
-  ovk_grid_properties *Properties = *Properties_;
+static void DefaultGridProperties(ovk_grid_properties *Properties) {
 
   Properties->id = -1;
 
@@ -545,19 +542,6 @@ static void CreateGridProperties(ovk_grid_properties **Properties_) {
 
   Properties->num_neighbors = 0;
   Properties->neighbor_ranks = NULL;
-
-}
-
-static void DestroyGridProperties(ovk_grid_properties **Properties_) {
-
-  ovk_grid_properties *Properties = *Properties_;
-
-  if (Properties->num_neighbors > 0) {
-    free(Properties->neighbor_ranks);
-  }
-
-  free(*Properties_);
-  *Properties_ = NULL;
 
 }
 

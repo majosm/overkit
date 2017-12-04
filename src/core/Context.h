@@ -18,19 +18,19 @@ struct ovk_context_params {
   ovk_error_handler_type error_handler_type;
 };
 
-struct ovk_context {
-  ovk_context_properties *properties;
-  t_logger *logger;
-  t_error_handler *error_handler;
-  t_list *domains;
-};
-
 struct ovk_context_properties {
   MPI_Comm comm;
   int comm_size;
   int comm_rank;
   ovk_log_level log_level;
   ovk_error_handler_type error_handler_type;
+};
+
+struct ovk_context {
+  ovk_context_properties properties;
+  t_logger *logger;
+  t_error_handler *error_handler;
+  t_list *domains;
 };
 
 #endif

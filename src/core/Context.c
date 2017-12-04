@@ -10,8 +10,7 @@
 #include "List.h"
 #include "Logger.h"
 
-static void CreateContextProperties(ovk_context_properties **Properties);
-static void DestroyContextProperties(ovk_context_properties **Properties);
+static void DefaultContextProperties(ovk_context_properties *Properties);
 
 ovk_error ovkCreateContext(ovk_context **Context_, const ovk_context_params *Params) {
 
@@ -25,23 +24,23 @@ ovk_error ovkCreateContext(ovk_context **Context_, const ovk_context_params *Par
   *Context_ = malloc(sizeof(ovk_context));
   ovk_context *Context = *Context_;
 
-  CreateContextProperties(&Context->properties);
+  DefaultContextProperties(&Context->properties);
 
-  Context->properties->comm = Comm;
-  MPI_Comm_size(Comm, &Context->properties->comm_size);
-  MPI_Comm_rank(Comm, &Context->properties->comm_rank);
+  Context->properties.comm = Comm;
+  MPI_Comm_size(Comm, &Context->properties.comm_size);
+  MPI_Comm_rank(Comm, &Context->properties.comm_rank);
 
-  Context->properties->log_level = Params->log_level;
+  Context->properties.log_level = Params->log_level;
   CreateLogger(&Context->logger, Params->log_level);
 
-  Context->properties->error_handler_type = Params->error_handler_type;
+  Context->properties.error_handler_type = Params->error_handler_type;
   CreateErrorHandler(&Context->error_handler, Params->error_handler_type);
 
   ListCreate(&Context->domains);
 
-  MPI_Barrier(Context->properties->comm);
+  MPI_Barrier(Context->properties.comm);
 
-  LogStatus(Context->logger, Context->properties->comm_rank == 0, 0, "Context created.");
+  LogStatus(Context->logger, Context->properties.comm_rank == 0, 0, "Context created.");
 
   return OVK_ERROR_NONE;
 
@@ -53,7 +52,7 @@ void ovkDestroyContext(ovk_context **Context_) {
 
   OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
 
-  MPI_Barrier(Context->properties->comm);
+  MPI_Barrier(Context->properties.comm);
 
   t_list_entry *Entry = ListBegin(Context->domains);
   while (Entry != ListEnd(Context->domains)) {
@@ -67,10 +66,8 @@ void ovkDestroyContext(ovk_context **Context_) {
 
   DestroyErrorHandler(&Context->error_handler);
 
-  MPI_Comm Comm = Context->properties->comm;
-  bool IsCoreRank = Context->properties->comm_rank == 0;
-
-  DestroyContextProperties(&Context->properties);
+  MPI_Comm Comm = Context->properties.comm;
+  bool IsCoreRank = Context->properties.comm_rank == 0;
 
   free(*Context_);
   *Context_ = NULL;
@@ -84,9 +81,16 @@ void ovkDestroyContext(ovk_context **Context_) {
 
 }
 
+void ovkGetContextProperties(const ovk_context *Context, const ovk_context_properties **Properties)
+  {
+
+  *Properties = &Context->properties;
+
+}
+
 void ovkCreateDomainParams(ovk_context *Context, ovk_domain_params **Params) {
 
-  CreateDomainParams(Params, Context->properties->comm);
+  CreateDomainParams(Params, Context->properties.comm);
 
 }
 
@@ -206,30 +210,13 @@ void ovkSetContextParamErrorHandlerType(ovk_context_params *Params, ovk_error_ha
 
 }
 
-static void CreateContextProperties(ovk_context_properties **Properties_) {
-
-  *Properties_ = malloc(sizeof(ovk_context_properties));
-  ovk_context_properties *Properties = *Properties_;
+static void DefaultContextProperties(ovk_context_properties *Properties) {
 
   Properties->comm = MPI_COMM_NULL;
   Properties->comm_size = 0;
   Properties->comm_rank = -1;
   Properties->log_level = OVK_LOG_ALL;
   Properties->error_handler_type = OVK_ERROR_HANDLER_ABORT;
-
-}
-
-static void DestroyContextProperties(ovk_context_properties **Properties) {
-
-  free(*Properties);
-  *Properties = NULL;
-
-}
-
-void ovkGetContextProperties(const ovk_context *Context, const ovk_context_properties **Properties)
-  {
-
-  *Properties = Context->properties;
 
 }
 
