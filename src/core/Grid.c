@@ -244,7 +244,7 @@ static void PrintGridDecomposition(const ovk_grid *Grid) {
 
   char NeighborRanksString[256];
   int Offset = 0;
-  for (int i = 0; i < Grid->properties.num_neighbors; ++i) {
+  for (i = 0; i < Grid->properties.num_neighbors; ++i) {
     char NeighborRankString[NUMBER_STRING_LENGTH];
     IntToString(Grid->properties.neighbor_ranks[i], NeighborRankString);
     Offset += sprintf(NeighborRanksString+Offset, "%s", NeighborRankString);
@@ -367,7 +367,9 @@ void ovkSetGridParamComm(ovk_grid_params *Params, MPI_Comm Comm) {
 
 void ovkGetGridParamSize(const ovk_grid_params *Params, int *Size) {
 
-  for (int i = 0; i < Params->num_dims; ++i) {
+  int i;
+
+  for (i = 0; i < Params->num_dims; ++i) {
     Size[i] = Params->size[i];
   }
 
@@ -375,7 +377,9 @@ void ovkGetGridParamSize(const ovk_grid_params *Params, int *Size) {
 
 void ovkSetGridParamSize(ovk_grid_params *Params, const int *Size) {
 
-  for (int i = 0; i < Params->num_dims; ++i) {
+  int i;
+
+  for (i = 0; i < Params->num_dims; ++i) {
     Params->size[i] = Size[i];
   }
 
@@ -383,7 +387,9 @@ void ovkSetGridParamSize(ovk_grid_params *Params, const int *Size) {
 
 void ovkGetGridParamPeriodic(const ovk_grid_params *Params, bool *Periodic) {
 
-  for (int i = 0; i < Params->num_dims; ++i) {
+  int i;
+
+  for (i = 0; i < Params->num_dims; ++i) {
     Periodic[i] = Params->periodic[i];
   }
 
@@ -391,7 +397,9 @@ void ovkGetGridParamPeriodic(const ovk_grid_params *Params, bool *Periodic) {
 
 void ovkSetGridParamPeriodic(ovk_grid_params *Params, const bool *Periodic) {
 
-  for (int i = 0; i < Params->num_dims; ++i) {
+  int i;
+
+  for (i = 0; i < Params->num_dims; ++i) {
     Params->periodic[i] = Periodic[i];
   }
 
@@ -412,7 +420,9 @@ void ovkSetGridParamPeriodicStorage(ovk_grid_params *Params, ovk_periodic_storag
 
 void ovkGetGridParamPeriodicLength(const ovk_grid_params *Params, double *PeriodicLength) {
 
-  for (int i = 0; i < Params->num_dims; ++i) {
+  int i;
+
+  for (i = 0; i < Params->num_dims; ++i) {
     PeriodicLength[i] = Params->periodic_length[i];
   }
 
@@ -420,7 +430,9 @@ void ovkGetGridParamPeriodicLength(const ovk_grid_params *Params, double *Period
 
 void ovkSetGridParamPeriodicLength(ovk_grid_params *Params, const double *PeriodicLength) {
 
-  for (int i = 0; i < Params->num_dims; ++i) {
+  int i;
+
+  for (i = 0; i < Params->num_dims; ++i) {
     Params->periodic_length[i] = PeriodicLength[i];
   }
 
@@ -440,7 +452,9 @@ void ovkSetGridParamGeometryType(ovk_grid_params *Params, ovk_geometry_type Geom
 
 void ovkGetGridParamLocalBegin(const ovk_grid_params *Params, int *LocalBegin) {
 
-  for (int i = 0; i < Params->num_dims; ++i) {
+  int i;
+
+  for (i = 0; i < Params->num_dims; ++i) {
     LocalBegin[i] = Params->local_range.b[i];
   }
 
@@ -448,7 +462,9 @@ void ovkGetGridParamLocalBegin(const ovk_grid_params *Params, int *LocalBegin) {
 
 void ovkSetGridParamLocalBegin(ovk_grid_params *Params, const int *LocalBegin) {
 
-  for (int i = 0; i < Params->num_dims; ++i) {
+  int i;
+
+  for (i = 0; i < Params->num_dims; ++i) {
     Params->local_range.b[i] = LocalBegin[i];
   }
 
@@ -456,7 +472,9 @@ void ovkSetGridParamLocalBegin(ovk_grid_params *Params, const int *LocalBegin) {
 
 void ovkGetGridParamLocalEnd(const ovk_grid_params *Params, int *LocalEnd) {
 
-  for (int i = 0; i < Params->num_dims; ++i) {
+  int i;
+
+  for (i = 0; i < Params->num_dims; ++i) {
     LocalEnd[i] = Params->local_range.e[i];
   }
 
@@ -464,7 +482,9 @@ void ovkGetGridParamLocalEnd(const ovk_grid_params *Params, int *LocalEnd) {
 
 void ovkSetGridParamLocalEnd(ovk_grid_params *Params, const int *LocalEnd) {
 
-  for (int i = 0; i < Params->num_dims; ++i) {
+  int i;
+
+  for (i = 0; i < Params->num_dims; ++i) {
     Params->local_range.e[i] = LocalEnd[i];
   }
 
@@ -490,7 +510,9 @@ void ovkGetGridParamNumNeighborRanks(ovk_grid_params *Params, int *NumNeighbors)
 
 void ovkGetGridParamNeighborRanks(ovk_grid_params *Params, int *NeighborRanks) {
 
-  for (int i = 0; i < Params->num_neighbors; ++i) {
+  int i;
+
+  for (i = 0; i < Params->num_neighbors; ++i) {
     NeighborRanks[i] = Params->neighbor_ranks[i];
   }
 
@@ -498,6 +520,8 @@ void ovkGetGridParamNeighborRanks(ovk_grid_params *Params, int *NeighborRanks) {
 
 void ovkSetGridParamNeighborRanks(ovk_grid_params *Params, int NumNeighbors,
   const int *NeighborRanks) {
+
+  int i;
 
   if (Params->num_neighbors > 0) {
     free(Params->neighbor_ranks);
@@ -507,7 +531,7 @@ void ovkSetGridParamNeighborRanks(ovk_grid_params *Params, int NumNeighbors,
 
   if (NumNeighbors > 0) {
     Params->neighbor_ranks = malloc(NumNeighbors*sizeof(int));
-    for (int i = 0; i < NumNeighbors; ++i) {
+    for (i = 0; i < NumNeighbors; ++i) {
       Params->neighbor_ranks[i] = NeighborRanks[i];
     }
   } else {
@@ -571,7 +595,9 @@ void ovkGetGridPropertyComm(const ovk_grid_properties *Properties, MPI_Comm *Com
 
 void ovkGetGridPropertySize(const ovk_grid_properties *Properties, int *Size) {
 
-  for (int i = 0; i < Properties->num_dims; ++i) {
+  int i;
+
+  for (i = 0; i < Properties->num_dims; ++i) {
     Size[i] = Properties->size[i];
   }
 
@@ -579,7 +605,9 @@ void ovkGetGridPropertySize(const ovk_grid_properties *Properties, int *Size) {
 
 void ovkGetGridPropertyPeriodic(const ovk_grid_properties *Properties, bool *Periodic) {
 
-  for (int i = 0; i < Properties->num_dims; ++i) {
+  int i;
+
+  for (i = 0; i < Properties->num_dims; ++i) {
     Periodic[i] = Properties->periodic[i];
   }
 
@@ -595,7 +623,9 @@ void ovkGetGridPropertyPeriodicStorage(const ovk_grid_properties *Properties,
 void ovkGetGridPropertyPeriodicLength(const ovk_grid_properties *Properties,
   double *PeriodicLength) {
 
-  for (int i = 0; i < Properties->num_dims; ++i) {
+  int i;
+
+  for (i = 0; i < Properties->num_dims; ++i) {
     PeriodicLength[i] = Properties->periodic_length[i];
   }
 
@@ -610,7 +640,9 @@ void ovkGetGridPropertyGeometryType(const ovk_grid_properties *Properties,
 
 void ovkGetGridPropertyLocalBegin(const ovk_grid_properties *Properties, int *LocalBegin) {
 
-  for (int i = 0; i < Properties->num_dims; ++i) {
+  int i;
+
+  for (i = 0; i < Properties->num_dims; ++i) {
     LocalBegin[i] = Properties->local_range.b[i];
   }
 
@@ -618,7 +650,9 @@ void ovkGetGridPropertyLocalBegin(const ovk_grid_properties *Properties, int *Lo
 
 void ovkGetGridPropertyLocalEnd(const ovk_grid_properties *Properties, int *LocalEnd) {
 
-  for (int i = 0; i < Properties->num_dims; ++i) {
+  int i;
+
+  for (i = 0; i < Properties->num_dims; ++i) {
     LocalEnd[i] = Properties->local_range.e[i];
   }
 
@@ -638,7 +672,9 @@ void ovkGetGridPropertyNumNeighbors(ovk_grid_properties *Properties, int *NumNei
 
 void ovkGetGridPropertyNeighborRanks(ovk_grid_properties *Properties, int *NeighborRanks) {
 
-  for (int i = 0; i < Properties->num_neighbors; ++i) {
+  int i;
+
+  for (i = 0; i < Properties->num_neighbors; ++i) {
     NeighborRanks[i] = Properties->neighbor_ranks[i];
   }
 

@@ -16,12 +16,14 @@ struct ovk_cart {
 
 static inline void ovkCartDefault(ovk_cart *Cart, int NumDims) {
 
+  int d;
+
   Cart->nd = NumDims;
-  for (int d = 0; d < Cart->nd; ++d) {
+  for (d = 0; d < Cart->nd; ++d) {
     Cart->size[d] = 0;
     Cart->periodic[d] = false;
   }
-  for (int d = Cart->nd; d < OVK_MAX_DIMS; ++d) {
+  for (d = Cart->nd; d < OVK_MAX_DIMS; ++d) {
     Cart->size[d] = 1;
     Cart->periodic[d] = false;
   }
@@ -30,9 +32,11 @@ static inline void ovkCartDefault(ovk_cart *Cart, int NumDims) {
 
 static inline void ovkCartCount(const ovk_cart *Cart, size_t *Count) {
 
+  int d;
+
   *Count = 1;
 
-  for (int d = 0; d < Cart->nd; ++d) {
+  for (d = 0; d < Cart->nd; ++d) {
     *Count *= (size_t)Cart->size[d];
   }
 
@@ -53,7 +57,9 @@ static inline bool ovkCartEquals(const ovk_cart *Cart, const ovk_cart *OtherCart
 static inline void ovkCartPeriodicAdjust(const ovk_cart *Cart, const int *Tuple,
   int *AdjustedTuple) {
 
-  for (int d = 0; d < Cart->nd; ++d) {
+  int d;
+
+  for (d = 0; d < Cart->nd; ++d) {
     if (Cart->periodic[d]) {
       AdjustedTuple[d] = Tuple[d] % Cart->size[d];
     } else {
@@ -65,12 +71,14 @@ static inline void ovkCartPeriodicAdjust(const ovk_cart *Cart, const int *Tuple,
 
 static inline void ovkCartPointToCell(const ovk_cart *PointCart, ovk_cart *CellCart) {
 
+  int d;
+
   CellCart->nd = PointCart->nd;
-  for (int d = 0; d < PointCart->nd; ++d) {
+  for (d = 0; d < PointCart->nd; ++d) {
     CellCart->size[d] = PointCart->periodic[d] ? PointCart->size[d] : PointCart->size[d]-1;
     CellCart->periodic[d] = PointCart->periodic[d];
   }
-  for (int d = PointCart->nd; d < OVK_MAX_DIMS; ++d) {
+  for (d = PointCart->nd; d < OVK_MAX_DIMS; ++d) {
     CellCart->size[d] = 1;
     CellCart->periodic[d] = false;
   }

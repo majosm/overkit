@@ -16,12 +16,14 @@ struct ovk_box {
 
 static inline void ovkBoxDefault(ovk_box *Box, int NumDims) {
 
+  int d;
+
   Box->nd = NumDims;
-  for (int d = 0; d < NumDims; ++d) {
+  for (d = 0; d < NumDims; ++d) {
     Box->b[d] = 0.;
     Box->e[d] = -1.;
   }
-  for (int d = NumDims; d < OVK_MAX_DIMS; ++d) {
+  for (d = NumDims; d < OVK_MAX_DIMS; ++d) {
     Box->b[d] = 0.;
     Box->e[d] = 0.;
   }
@@ -30,7 +32,9 @@ static inline void ovkBoxDefault(ovk_box *Box, int NumDims) {
 
 static inline void ovkBoxSize(const ovk_box *Box, double *Size) {
 
-  for (int d = 0; d < Box->nd; ++d) {
+  int d;
+
+  for (d = 0; d < Box->nd; ++d) {
     Size[d] = Box->e[d] - Box->b[d];
   }
 
@@ -38,9 +42,11 @@ static inline void ovkBoxSize(const ovk_box *Box, double *Size) {
 
 static inline void ovkBoxVolume(const ovk_box *Box, double *Volume) {
 
+  int d;
+
   *Volume = 1.;
 
-  for (int d = 0; d < Box->nd; ++d) {
+  for (d = 0; d < Box->nd; ++d) {
     *Volume *= Box->e[d] - Box->b[d];
   }
 
@@ -66,7 +72,9 @@ static inline bool ovkBoxEquals(const ovk_box *LeftBox, const ovk_box *RightBox)
 
 static inline bool ovkBoxContains(const ovk_box *Box, const double *Point) {
 
-  for (int d = 0; d < Box->nd; ++d) {
+  int d;
+
+  for (d = 0; d < Box->nd; ++d) {
     if (Point[d] < Box->b[d] || Point[d] > Box->e[d]) return false;
   }
 
@@ -85,17 +93,19 @@ static inline bool ovkBoxOverlaps(const ovk_box *LeftBox, const ovk_box *RightBo
 
 static inline void ovkBoxUnion(const ovk_box *LeftBox, const ovk_box *RightBox, ovk_box *UnionBox) {
 
+  int d;
+
   if (ovkBoxIsEmpty(LeftBox)) {
     *UnionBox = *RightBox;
   } else if (ovkBoxIsEmpty(RightBox)) {
     *UnionBox = *LeftBox;
   } else {
     UnionBox->nd = LeftBox->nd;
-    for (int d = 0; d < UnionBox->nd; ++d) {
+    for (d = 0; d < UnionBox->nd; ++d) {
       UnionBox->b[d] = ovk_min(LeftBox->b[d], RightBox->b[d]);
       UnionBox->e[d] = ovk_max(LeftBox->e[d], RightBox->e[d]);
     }
-    for (int d = UnionBox->nd; d < OVK_MAX_DIMS; ++d) {
+    for (d = UnionBox->nd; d < OVK_MAX_DIMS; ++d) {
       UnionBox->b[d] = 0.;
       UnionBox->e[d] = 0.;
     }
@@ -106,12 +116,14 @@ static inline void ovkBoxUnion(const ovk_box *LeftBox, const ovk_box *RightBox, 
 static inline void ovkBoxIntersect(const ovk_box *LeftBox, const ovk_box *RightBox,
   ovk_box *IntersectBox) {
 
+  int d;
+
   IntersectBox->nd = LeftBox->nd;
-  for (int d = 0; d < IntersectBox->nd; ++d) {
+  for (d = 0; d < IntersectBox->nd; ++d) {
     IntersectBox->b[d] = ovk_max(LeftBox->b[d], RightBox->b[d]);
     IntersectBox->e[d] = ovk_min(LeftBox->e[d], RightBox->e[d]);
   }
-  for (int d = IntersectBox->nd; d < OVK_MAX_DIMS; ++d) {
+  for (d = IntersectBox->nd; d < OVK_MAX_DIMS; ++d) {
     IntersectBox->b[d] = 0.;
     IntersectBox->e[d] = 0.;
   }
@@ -120,7 +132,9 @@ static inline void ovkBoxIntersect(const ovk_box *LeftBox, const ovk_box *RightB
 
 static inline void ovkBoxClamp(const ovk_box *Box, const double *Point, double *ClampedPoint) {
 
-  for (int d = 0; d < Box->nd; ++d) {
+  int d;
+
+  for (d = 0; d < Box->nd; ++d) {
     if (Point[d] < Box->b[d]) {
       ClampedPoint[d] = Box->b[d];
     } else if (Point[d] > Box->e[d]) {
@@ -134,12 +148,14 @@ static inline void ovkBoxClamp(const ovk_box *Box, const double *Point, double *
 
 static inline void ovkBoxMove(const ovk_box *Box, const double *Amount, ovk_box *MoveBox) {
 
+  int d;
+
   MoveBox->nd = Box->nd;
-  for (int d = 0; d < Box->nd; ++d) {
+  for (d = 0; d < Box->nd; ++d) {
     MoveBox->b[d] = Box->b[d] + Amount[d];
     MoveBox->e[d] = Box->e[d] + Amount[d];
   }
-  for (int d = Box->nd; d < OVK_MAX_DIMS; ++d) {
+  for (d = Box->nd; d < OVK_MAX_DIMS; ++d) {
     MoveBox->b[d] = 0.;
     MoveBox->e[d] = 0.;
   }
@@ -148,15 +164,17 @@ static inline void ovkBoxMove(const ovk_box *Box, const double *Amount, ovk_box 
 
 static inline void ovkBoxGrow(const ovk_box *Box, const double *Amount, ovk_box *GrowBox) {
 
+  int d;
+
   if (ovkBoxIsEmpty(Box)) {
     *GrowBox = *Box;
   } else {
     GrowBox->nd = Box->nd;
-    for (int d = 0; d < Box->nd; ++d) {
+    for (d = 0; d < Box->nd; ++d) {
       GrowBox->b[d] = Box->b[d] - Amount[d];
       GrowBox->e[d] = Box->e[d] + Amount[d];
     }
-    for (int d = Box->nd; d < OVK_MAX_DIMS; ++d) {
+    for (d = Box->nd; d < OVK_MAX_DIMS; ++d) {
       GrowBox->b[d] = 0.;
       GrowBox->e[d] = 0.;
     }
@@ -166,14 +184,16 @@ static inline void ovkBoxGrow(const ovk_box *Box, const double *Amount, ovk_box 
 
 static inline void ovkBoxScale(const ovk_box *Box, const double *Factor, ovk_box *ScaleBox) {
 
+  int d;
+
   ScaleBox->nd = Box->nd;
-  for (int d = 0; d < Box->nd; ++d) {
+  for (d = 0; d < Box->nd; ++d) {
     double Center = 0.5 * (Box->e[d] + Box->b[d]);
     double HalfSize = 0.5 * Factor[d] * (Box->e[d] - Box->b[d]);
     ScaleBox->b[d] = Center - HalfSize;
     ScaleBox->e[d] = Center + HalfSize;
   }
-  for (int d = Box->nd; d < OVK_MAX_DIMS; ++d) {
+  for (d = Box->nd; d < OVK_MAX_DIMS; ++d) {
     ScaleBox->b[d] = 0.;
     ScaleBox->e[d] = 0.;
   }
@@ -182,12 +202,14 @@ static inline void ovkBoxScale(const ovk_box *Box, const double *Factor, ovk_box
 
 static inline void ovkBoxExtend(const ovk_box *Box, const double *Point, ovk_box *ExtendBox) {
 
+  int d;
+
   ExtendBox->nd = Box->nd;
-  for (int d = 0; d < Box->nd; ++d) {
+  for (d = 0; d < Box->nd; ++d) {
     ExtendBox->b[d] = ovk_min(ExtendBox->b[d], Point[d]);
     ExtendBox->e[d] = ovk_max(ExtendBox->e[d], Point[d]);
   }
-  for (int d = Box->nd; d < OVK_MAX_DIMS; ++d) {
+  for (d = Box->nd; d < OVK_MAX_DIMS; ++d) {
     ExtendBox->b[d] = 0.;
     ExtendBox->e[d] = 0.;
   }

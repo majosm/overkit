@@ -16,12 +16,14 @@ struct ovk_range {
 
 static inline void ovkRangeDefault(ovk_range *Range, int NumDims) {
 
+  int d;
+
   Range->nd = NumDims;
-  for (int d = 0; d < NumDims; ++d) {
+  for (d = 0; d < NumDims; ++d) {
     Range->b[d] = 0;
     Range->e[d] = 0;
   }
-  for (int d = NumDims; d < OVK_MAX_DIMS; ++d) {
+  for (d = NumDims; d < OVK_MAX_DIMS; ++d) {
     Range->b[d] = 0;
     Range->e[d] = 1;
   }
@@ -30,7 +32,9 @@ static inline void ovkRangeDefault(ovk_range *Range, int NumDims) {
 
 static inline void ovkRangeSize(const ovk_range *Range, int *Size) {
 
-  for (int d = 0; d < Range->nd; ++d) {
+  int d;
+
+  for (d = 0; d < Range->nd; ++d) {
     Size[d] = Range->e[d] - Range->b[d];
   }
 
@@ -38,9 +42,11 @@ static inline void ovkRangeSize(const ovk_range *Range, int *Size) {
 
 static inline void ovkRangeCount(const ovk_range *Range, size_t *Count) {
 
+  int d;
+
   *Count = 1;
 
-  for (int d = 0; d < Range->nd; ++d) {
+  for (d = 0; d < Range->nd; ++d) {
     *Count *= (size_t)(Range->e[d] - Range->b[d]);
   }
 
@@ -48,9 +54,11 @@ static inline void ovkRangeCount(const ovk_range *Range, size_t *Count) {
 
 static inline void ovkRangeTupleToIndex(const ovk_range *Range, const int *Tuple, size_t *Index) {
 
+  int d;
+
   *Index = 0;
   size_t Stride = 1;
-  for (int d = 0; d < Range->nd; ++d) {
+  for (d = 0; d < Range->nd; ++d) {
     *Index += Stride * (size_t)(Tuple[d] - Range->b[d]);
     Stride *= (size_t)(Range->e[d] - Range->b[d]);
   }
@@ -59,8 +67,10 @@ static inline void ovkRangeTupleToIndex(const ovk_range *Range, const int *Tuple
 
 static inline void ovkRangeIndexToTuple(const ovk_range *Range, size_t Index, int *Tuple) {
 
+  int d;
+
   size_t Stride = 1;
-  for (int d = 0; d < Range->nd; ++d) {
+  for (d = 0; d < Range->nd; ++d) {
     int N = Range->e[d] - Range->b[d];
     Tuple[d] = Range->b[d] + (int)((Index/Stride) % N);
     Stride *= (size_t)N;
@@ -88,7 +98,9 @@ static inline bool ovkRangeEquals(const ovk_range *LeftRange, const ovk_range *R
 
 static inline bool ovkRangeContains(const ovk_range *Range, const int *Point) {
 
-  for (int d = 0; d < Range->nd; ++d) {
+  int d;
+
+  for (d = 0; d < Range->nd; ++d) {
     if (Point[d] < Range->b[d] || Point[d] >= Range->e[d]) return false;
   }
 
@@ -108,17 +120,19 @@ static inline bool ovkRangeOverlaps(const ovk_range *LeftRange, const ovk_range 
 static inline void ovkRangeUnion(const ovk_range *LeftRange, const ovk_range *RightRange,
   ovk_range *UnionRange) {
 
+  int d;
+
   if (ovkRangeIsEmpty(LeftRange)) {
     *UnionRange = *RightRange;
   } else if (ovkRangeIsEmpty(RightRange)) {
     *UnionRange = *LeftRange;
   } else {
     UnionRange->nd = LeftRange->nd;
-    for (int d = 0; d < UnionRange->nd; ++d) {
+    for (d = 0; d < UnionRange->nd; ++d) {
       UnionRange->b[d] = ovk_min(LeftRange->b[d], RightRange->b[d]);
       UnionRange->e[d] = ovk_max(LeftRange->e[d], RightRange->e[d]);
     }
-    for (int d = UnionRange->nd; d < OVK_MAX_DIMS; ++d) {
+    for (d = UnionRange->nd; d < OVK_MAX_DIMS; ++d) {
       UnionRange->b[d] = 0;
       UnionRange->e[d] = 1;
     }
@@ -129,12 +143,14 @@ static inline void ovkRangeUnion(const ovk_range *LeftRange, const ovk_range *Ri
 static inline void ovkRangeIntersect(const ovk_range *LeftRange, const ovk_range *RightRange,
   ovk_range *IntersectRange) {
 
+  int d;
+
   IntersectRange->nd = LeftRange->nd;
-  for (int d = 0; d < IntersectRange->nd; ++d) {
+  for (d = 0; d < IntersectRange->nd; ++d) {
     IntersectRange->b[d] = ovk_max(LeftRange->b[d], RightRange->b[d]);
     IntersectRange->e[d] = ovk_min(LeftRange->e[d], RightRange->e[d]);
   }
-  for (int d = IntersectRange->nd; d < OVK_MAX_DIMS; ++d) {
+  for (d = IntersectRange->nd; d < OVK_MAX_DIMS; ++d) {
     IntersectRange->b[d] = 0;
     IntersectRange->e[d] = 1;
   }
@@ -143,7 +159,9 @@ static inline void ovkRangeIntersect(const ovk_range *LeftRange, const ovk_range
 
 static inline void ovkRangeClamp(const ovk_range *Range, const int *Point, int *ClampedPoint) {
 
-  for (int d = 0; d < Range->nd; ++d) {
+  int d;
+
+  for (d = 0; d < Range->nd; ++d) {
     if (Point[d] < Range->b[d]) {
       ClampedPoint[d] = Range->b[d];
     } else if (Point[d] >= Range->e[d]) {
