@@ -14,13 +14,15 @@
 #define ovk_max(a, b) ((a) > (b) ? (a) : (b))
 
 #ifdef OVERKIT_DEBUG
-  static const bool OVK_DEBUG = true;
+#define OVK_DEBUG true
 #else
-  static const bool OVK_DEBUG = false;
+#define OVK_DEBUG false
 #endif
 
-static const int OVK_MAX_DIMS = 3;
-static const int OVK_NAME_LENGTH = 256;
+enum {
+  OVK_MAX_DIMS = 3,
+  OVK_NAME_LENGTH = 256
+};
 
 typedef enum {
   OVK_LOG_NONE = 0,
@@ -48,7 +50,7 @@ typedef enum {
   OVK_DOMAIN_CONFIG_EXCHANGE = 1 << 3,
 } ovk_domain_config;
 
-static const int OVK_GENERATE_ID = -1;
+enum { OVK_GENERATE_ID = -1 };
 
 typedef enum {
   OVK_NO_OVERLAP_PERIODIC,

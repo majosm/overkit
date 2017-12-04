@@ -10,7 +10,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-static const int LOG_BUFFER_SIZE = 1024;
+enum { LOG_BUFFER_SIZE = 1024 };
 
 typedef struct {
   ovk_log_level level;

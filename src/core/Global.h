@@ -16,9 +16,10 @@
 #define OVK_INTERNAL
 #endif
 
-static const int MAX_DIMS = OVK_MAX_DIMS;
-
-static const int NUMBER_STRING_LENGTH = 32;
+enum {
+  MAX_DIMS = OVK_MAX_DIMS,
+  NUMBER_STRING_LENGTH = 32
+};
 
 #undef min
 #define min(a, b) ovk_min(a, b)
