@@ -75,7 +75,12 @@ void CreateGrid(ovk_grid **Grid_, int ID, const ovk_grid_params *Params, t_logge
 
   ovkCartDefault(&Grid->cart, Grid->properties->num_dims);
   for (i = 0; i < Grid->properties->num_dims; ++i) {
-    Grid->cart.size[i] = Grid->properties->global_size[i];
+    if (Grid->properties->periodic[i] && Grid->properties->periodic_storage ==
+      OVK_OVERLAP_PERIODIC) {
+      Grid->cart.size[i] = Grid->properties->global_size[i]-1;
+    } else {
+      Grid->cart.size[i] = Grid->properties->global_size[i];
+    }
     Grid->cart.periodic[i] = Grid->properties->periodic[i];
   }
 
