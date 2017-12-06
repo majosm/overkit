@@ -40,7 +40,7 @@ ovk_error ovkCreateContext(ovk_context **Context_, const ovk_context_params *Par
 
   MPI_Barrier(Context->properties.comm);
 
-  LogStatus(Context->logger, Context->properties.comm_rank == 0, 0, "Context created.");
+  LogStatus(Context->logger, Context->properties.comm_rank == 0, 0, "Created context.");
 
   return OVK_ERROR_NONE;
 
@@ -74,7 +74,7 @@ void ovkDestroyContext(ovk_context **Context_) {
 
   MPI_Barrier(Comm);
 
-  LogStatus(Logger, IsCoreRank, 0, "Context destroyed.");
+  LogStatus(Logger, IsCoreRank, 0, "Destroyed context.");
   DestroyLogger(&Logger);
 
   MPI_Comm_free(&Comm);
