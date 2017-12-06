@@ -119,7 +119,7 @@ void DestroyGrid(ovk_grid **Grid_) {
 
   MPI_Comm_free(&Comm);
 
-  LogStatus(Logger, IsGridRoot, 0, "Destroyed grid '%s'.", Name);
+  LogStatus(Logger, IsGridRoot, 0, "Destroyed grid %s.", Name);
 
 }
 
@@ -204,12 +204,12 @@ static void PrintGridSummary(const ovk_grid *Grid) {
 
   switch (Grid->properties.num_dims) {
   case 2:
-    LogStatus(Grid->logger, true, 0, "Created grid '%s' (ID=%s): %s x %s (%s) on %s.",
+    LogStatus(Grid->logger, true, 0, "Created grid %s (ID=%s): %s x %s (%s) on %s.",
       Grid->properties.name, IDString, ISizeString, JSizeString, TotalPointsString,
       ProcessesString);
     break;
   case 3:
-    LogStatus(Grid->logger, true, 0, "Created grid '%s' (ID=%s): %s x %s x %s (%s) on %s.",
+    LogStatus(Grid->logger, true, 0, "Created grid %s (ID=%s): %s x %s x %s (%s) on %s.",
       Grid->properties.name, IDString, ISizeString, JSizeString, KSizeString, TotalPointsString,
       ProcessesString);
     break;
@@ -257,7 +257,7 @@ static void PrintGridDecomposition(const ovk_grid *Grid) {
 
     if (Grid->properties.comm_rank == i) {
 
-      LogStatus(Grid->logger, Grid->properties.comm_rank == 0, 0, "Grid '%s' decomposition info:",
+      LogStatus(Grid->logger, Grid->properties.comm_rank == 0, 0, "Grid %s decomposition info:",
         Grid->properties.name);
 
       switch (Grid->properties.num_dims) {

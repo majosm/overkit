@@ -56,7 +56,7 @@ void CreateDomain(ovk_domain **Domain_, const ovk_domain_params *Params, t_logge
   if (Domain->properties.comm_rank == 0) {
     char ProcessesString[32];
     PluralizeLabel(Domain->properties.comm_size, "processes", "process", ProcessesString);
-    LogStatus(Logger, true, 0, "Created %1iD domain '%s' on %s.", Domain->properties.num_dims,
+    LogStatus(Logger, true, 0, "Created %1iD domain %s on %s.", Domain->properties.num_dims,
       Domain->properties.name, ProcessesString);
   }
 
@@ -97,7 +97,7 @@ void DestroyDomain(ovk_domain **Domain_) {
 
   MPI_Comm_free(&Comm);
 
-  LogStatus(Logger, IsDomainRoot, 0, "Destroyed domain '%s'.", Name);
+  LogStatus(Logger, IsDomainRoot, 0, "Destroyed domain %s.", Name);
 
 }
 
