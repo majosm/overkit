@@ -108,9 +108,7 @@ void DestroyGrid(ovk_grid **Grid_) {
   char Name[OVK_NAME_LENGTH];
   strncpy(Name, Grid->properties.name, OVK_NAME_LENGTH);
 
-  if (Grid->properties.num_neighbors > 0) {
-    free(Grid->properties.neighbor_ranks);
-  }
+  free(Grid->properties.neighbor_ranks);
 
   free(*Grid_);
   *Grid_ = NULL;
@@ -320,9 +318,7 @@ void DestroyGridParams(ovk_grid_params **Params_) {
 
   ovk_grid_params *Params = *Params_;
 
-  if (Params->num_neighbors > 0) {
-    free(Params->neighbor_ranks);
-  }
+  free(Params->neighbor_ranks);
 
   free(*Params_);
   *Params_ = NULL;
@@ -523,9 +519,7 @@ void ovkSetGridParamNeighborRanks(ovk_grid_params *Params, int NumNeighbors,
 
   int i;
 
-  if (Params->num_neighbors > 0) {
-    free(Params->neighbor_ranks);
-  }
+  free(Params->neighbor_ranks);
 
   Params->num_neighbors = NumNeighbors;
 
