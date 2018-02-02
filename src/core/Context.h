@@ -12,6 +12,10 @@
 #include "List.h"
 #include "Logger.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct ovk_context_params {
   MPI_Comm comm;
   ovk_log_level log_level;
@@ -32,5 +36,9 @@ struct ovk_context {
   t_error_handler *error_handler;
   t_list *domains;
 };
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

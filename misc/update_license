@@ -10,6 +10,7 @@ files="$files $(find examples -name \*.c)"
 files="$files $(find src -name \*.c)"
 files="$files $(find src -name \*.h)"
 files="$files $(find src -name \*.inl)"
+files="$files $(find src -name \*.F90)"
 files="$files $(find tests -name \*.c)"
 
 name="Matthew J. Smith and Overkit contributors"

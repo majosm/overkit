@@ -3,18 +3,19 @@
 
 #include "Context.h"
 
-#include "Debug.h"
 #include "Domain.h"
 #include "ErrorHandler.h"
 #include "Global.h"
 #include "List.h"
 #include "Logger.h"
+#include "TextUtils.h"
 
-static void DefaultContextProperties(ovk_context_properties *Properties);
+static void DefaultProperties(ovk_context_properties *Properties);
 
 ovk_error ovkCreateContext(ovk_context **Context_, const ovk_context_params *Params) {
 
-  OVK_DEBUG_ASSERT(Params, "Invalid context params pointer.");
+  OVK_DEBUG_ASSERT(Context_, "Invalid context pointer.");
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
 
   MPI_Comm Comm;
   MPI_Comm_dup(Params->comm, &Comm);
@@ -24,14 +25,14 @@ ovk_error ovkCreateContext(ovk_context **Context_, const ovk_context_params *Par
   *Context_ = malloc(sizeof(ovk_context));
   ovk_context *Context = *Context_;
 
-  DefaultContextProperties(&Context->properties);
+  DefaultProperties(&Context->properties);
 
   Context->properties.comm = Comm;
   MPI_Comm_size(Comm, &Context->properties.comm_size);
   MPI_Comm_rank(Comm, &Context->properties.comm_rank);
 
   Context->properties.log_level = Params->log_level;
-  CreateLogger(&Context->logger, Params->log_level);
+  CreateLogger(&Context->logger, Context->properties.comm_rank, Params->log_level);
 
   Context->properties.error_handler_type = Params->error_handler_type;
   CreateErrorHandler(&Context->error_handler, Params->error_handler_type);
@@ -40,7 +41,11 @@ ovk_error ovkCreateContext(ovk_context **Context_, const ovk_context_params *Par
 
   MPI_Barrier(Context->properties.comm);
 
-  LogStatus(Context->logger, Context->properties.comm_rank == 0, 0, "Created context.");
+  if (Context->properties.comm_rank == 0 && (LogLevel(Context->logger) & OVK_LOG_STATUS)) {
+    char ProcessesString[NUMBER_STRING_LENGTH+10];
+    PluralizeLabel(Context->properties.comm_size, "processes", "process", ProcessesString);
+    LogStatus(Context->logger, true, 0, "Created context on %s.", ProcessesString);
+  }
 
   return OVK_ERROR_NONE;
 
@@ -48,9 +53,10 @@ ovk_error ovkCreateContext(ovk_context **Context_, const ovk_context_params *Par
 
 void ovkDestroyContext(ovk_context **Context_) {
 
-  ovk_context *Context = *Context_;
+  OVK_DEBUG_ASSERT(Context_, "Invalid context pointer.");
+  OVK_DEBUG_ASSERT(*Context_, "Invalid context pointer.");
 
-  OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
+  ovk_context *Context = *Context_;
 
   MPI_Barrier(Context->properties.comm);
 
@@ -67,14 +73,13 @@ void ovkDestroyContext(ovk_context **Context_) {
   DestroyErrorHandler(&Context->error_handler);
 
   MPI_Comm Comm = Context->properties.comm;
-  bool IsCoreRank = Context->properties.comm_rank == 0;
+  bool IsRoot = Context->properties.comm_rank == 0;
 
-  free(*Context_);
-  *Context_ = NULL;
+  free_null(Context_);
 
   MPI_Barrier(Comm);
 
-  LogStatus(Logger, IsCoreRank, 0, "Destroyed context.");
+  LogStatus(Logger, IsRoot, 0, "Destroyed context.");
   DestroyLogger(&Logger);
 
   MPI_Comm_free(&Comm);
@@ -84,11 +89,17 @@ void ovkDestroyContext(ovk_context **Context_) {
 void ovkGetContextProperties(const ovk_context *Context, const ovk_context_properties **Properties)
   {
 
+  OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
+  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
+
   *Properties = &Context->properties;
 
 }
 
 void ovkCreateDomainParams(ovk_context *Context, ovk_domain_params **Params) {
+
+  OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
 
   CreateDomainParams(Params, Context->properties.comm);
 
@@ -96,7 +107,9 @@ void ovkCreateDomainParams(ovk_context *Context, ovk_domain_params **Params) {
 
 void ovkDestroyDomainParams(ovk_context *Context, ovk_domain_params **Params) {
 
-  OVK_DEBUG_ASSERT(*Params, "Invalid domain params pointer.");
+  OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
+  OVK_DEBUG_ASSERT(*Params, "Invalid params pointer.");
 
   DestroyDomainParams(Params);
 
@@ -106,7 +119,7 @@ void ovkCreateDomain(ovk_context *Context, ovk_domain **Domain_, const ovk_domai
 
   OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
   OVK_DEBUG_ASSERT(Domain_, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(Params, "Invalid domain params pointer.");
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
 
   ovk_domain *Domain;
   CreateDomain(&Domain, Params, Context->logger, Context->error_handler);
@@ -144,6 +157,8 @@ void ovkDestroyDomain(ovk_context *Context, ovk_domain **Domain_) {
 
 void ovkCreateContextParams(ovk_context_params **Params_) {
 
+  OVK_DEBUG_ASSERT(Params_, "Invalid params pointer.");
+
   *Params_ = malloc(sizeof(ovk_context_params));
   ovk_context_params *Params = *Params_;
 
@@ -159,14 +174,17 @@ void ovkCreateContextParams(ovk_context_params **Params_) {
 
 void ovkDestroyContextParams(ovk_context_params **Params) {
 
-  OVK_DEBUG_ASSERT(*Params, "Invalid context params pointer.");
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
+  OVK_DEBUG_ASSERT(*Params, "Invalid params pointer.");
 
-  free(*Params);
-  *Params = NULL;
+  free_null(Params);
 
 }
 
 void ovkGetContextParamComm(const ovk_context_params *Params, MPI_Comm *Comm) {
+
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
+  OVK_DEBUG_ASSERT(Comm, "Invalid comm pointer.");
 
   *Comm = Params->comm;
 
@@ -174,6 +192,7 @@ void ovkGetContextParamComm(const ovk_context_params *Params, MPI_Comm *Comm) {
 
 void ovkSetContextParamComm(ovk_context_params *Params, MPI_Comm Comm) {
 
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
   OVK_DEBUG_ASSERT(Comm != MPI_COMM_NULL, "Invalid MPI communicator.");
 
   Params->comm = Comm;
@@ -182,12 +201,16 @@ void ovkSetContextParamComm(ovk_context_params *Params, MPI_Comm Comm) {
 
 void ovkGetContextParamLogLevel(const ovk_context_params *Params, ovk_log_level *LogLevel) {
 
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
+  OVK_DEBUG_ASSERT(LogLevel, "Invalid log level pointer.");
+
   *LogLevel = Params->log_level;
 
 }
 
 void ovkSetContextParamLogLevel(ovk_context_params *Params, ovk_log_level LogLevel) {
 
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
   OVK_DEBUG_ASSERT(ValidLogLevel(Params->log_level), "Invalid log level.");
 
   Params->log_level = LogLevel;
@@ -197,6 +220,9 @@ void ovkSetContextParamLogLevel(ovk_context_params *Params, ovk_log_level LogLev
 void ovkGetContextParamErrorHandlerType(const ovk_context_params *Params, ovk_error_handler_type *
   ErrorHandlerType) {
 
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
+  OVK_DEBUG_ASSERT(ErrorHandlerType, "Invalid error handler type pointer.");
+
   *ErrorHandlerType = Params->error_handler_type;
 
 }
@@ -204,13 +230,14 @@ void ovkGetContextParamErrorHandlerType(const ovk_context_params *Params, ovk_er
 void ovkSetContextParamErrorHandlerType(ovk_context_params *Params, ovk_error_handler_type
   ErrorHandlerType) {
 
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
   OVK_DEBUG_ASSERT(ValidErrorHandlerType(Params->error_handler_type), "Invalid error handler type.");
 
   Params->error_handler_type = ErrorHandlerType;
 
 }
 
-static void DefaultContextProperties(ovk_context_properties *Properties) {
+static void DefaultProperties(ovk_context_properties *Properties) {
 
   Properties->comm = MPI_COMM_NULL;
   Properties->comm_size = 0;
@@ -222,6 +249,9 @@ static void DefaultContextProperties(ovk_context_properties *Properties) {
 
 void ovkGetContextPropertyComm(const ovk_context_properties *Properties, MPI_Comm *Comm) {
 
+  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
+  OVK_DEBUG_ASSERT(Comm, "Invalid comm pointer.");
+
   *Comm = Properties->comm;
 
 }
@@ -229,11 +259,16 @@ void ovkGetContextPropertyComm(const ovk_context_properties *Properties, MPI_Com
 void ovkGetContextPropertyLogLevel(const ovk_context_properties *Properties,
   ovk_log_level *LogLevel) {
 
+  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
+  OVK_DEBUG_ASSERT(LogLevel, "Invalid log level pointer.");
+
   *LogLevel = Properties->log_level;
 
 }
 
 void ovkSetContextPropertyLogLevel(ovk_context_properties *Properties, ovk_log_level LogLevel) {
+
+  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
 
   Properties->log_level = LogLevel;
 
@@ -242,12 +277,17 @@ void ovkSetContextPropertyLogLevel(ovk_context_properties *Properties, ovk_log_l
 void ovkGetContextPropertyErrorHandlerType(const ovk_context_properties *Properties,
   ovk_error_handler_type *ErrorHandlerType) {
 
+  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
+  OVK_DEBUG_ASSERT(ErrorHandlerType, "Invalid error handler type pointer.");
+
   *ErrorHandlerType = Properties->error_handler_type;
 
 }
 
 void ovkSetContextPropertyErrorHandlerType(ovk_context_properties *Properties,
   ovk_error_handler_type ErrorHandlerType) {
+
+  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
 
   Properties->error_handler_type = ErrorHandlerType;
 

@@ -13,11 +13,14 @@ set(GLOBAL_WARNING_FLAG FALSE CACHE INTERNAL "")
 
 cmake_minimum_required(VERSION 2.8.12)
 
+include(CheckIncludeFile)
+include(CheckSymbolExists)
+
 #===============
 # Project setup
 #===============
 
-project(Overkit C)
+project(Overkit C CXX)
 set(Overkit_VERSION_MAJOR 0)
 set(Overkit_VERSION_MINOR 1)
 set(Overkit_VERSION_PATCH 0)
@@ -25,9 +28,9 @@ set(Overkit_VERSION ${Overkit_VERSION_MAJOR}.${Overkit_VERSION_MINOR}.${Overkit_
 
 # Module stuff
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/config/modules")
-set(Fortran_ENABLED FALSE)
 set(C_ENABLED TRUE)
-set(CXX_ENABLED FALSE)
+set(CXX_ENABLED TRUE)
+set(Fortran_ENABLED FALSE)
 
 # OS X RPATH for dynamic libraries
 set(CMAKE_MACOSX_RPATH TRUE)
@@ -70,8 +73,8 @@ endif()
 
 # Build options
 option(TESTS "Enable tests" OFF)
-option(EXAMPLES "Build examples" OFF)
-option (BUILD_SHARED_LIBS "" OFF)
+option(EXAMPLES "Enable examples" OFF)
+option(BUILD_SHARED_LIBS "" OFF)
 
 if(NOT DEFINED BUILD_SHARED_LIBS)
   set(BUILD_SHARED_LIBS FALSE)
@@ -81,10 +84,53 @@ endif()
 # External dependencies
 #=======================
 
-# MPI
-find_package(MPI REQUIRED)
+if(NOT BUILT_IN_MPI AND NOT EXTERNAL_MPI)
+  set(BUILT_IN_MPI FALSE CACHE INTERNAL "")
+  set(EXTERNAL_MPI FALSE CACHE INTERNAL "")
+  # If the user specified MPI wrappers as compilers, use them
+  check_include_file("mpi.h" MPI_HEADER_FOUND)
+  if(MPI_HEADER_FOUND)
+    check_symbol_exists(MPI_Init "mpi.h" MPI_WORKS)
+    if(MPI_WORKS)
+      set(BUILT_IN_MPI TRUE CACHE INTERNAL "")
+      set(MPI_INCLUDE_PATH "" CACHE INTERNAL "")
+      set(MPI_C_LIBRARIES "" CACHE INTERNAL "")
+    endif()
+  endif()
+  # Otherwise, try to find an MPI installation
+  if(NOT BUILT_IN_MPI)
+    message(STATUS "Not using MPI compiler wrappers; searching for external MPI installation")
+    find_package(MPI REQUIRED)
+    set(CMAKE_REQUIRED_INCLUDES ${MPI_INCLUDE_PATH})
+    check_include_file(mpi.h FOUND_MPI_HEADER)
+    if(FOUND_MPI_HEADER)
+      set(CMAKE_REQUIRED_LIBRARIES ${MPI_C_LIBRARIES})
+      check_symbol_exists(MPI_Init "mpi.h" MPI_WORKS)
+      if(MPI_WORKS)
+        set(EXTERNAL_MPI TRUE CACHE INTERNAL "")
+      endif()
+    endif()
+    if(NOT EXTERNAL_MPI)
+      message(FATAL_ERROR "Unable to build with detected MPI installation.")
+    endif()
+  endif()
+elseif(EXTERNAL_MPI)
+  find_package(MPI REQUIRED)
+endif()
+
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 link_libraries(${MPI_C_LIBRARIES})
+
+# Check if MPI_Ibarrier is supported
+set(CMAKE_REQUIRED_INCLUDES ${MPI_INCLUDE_PATH})
+set(CMAKE_REQUIRED_LIBRARIES ${MPI_C_LIBRARIES})
+check_symbol_exists(MPI_Ibarrier "mpi.h" IBARRIER_SUPPORTED)
+if(IBARRIER_SUPPORTED)
+  add_definitions(-DHAVE_IBARRIER)
+else()
+  message(WARNING "MPI non-blocking collectives aren't supported. Performance may be degraded for certain operations.")
+  set(GLOBAL_WARNING_FLAG TRUE CACHE INTERNAL "")
+endif()
 
 #======================
 # Extra compiler flags
@@ -189,6 +235,7 @@ message(STATUS "=====================")
 message(STATUS "")
 message(STATUS "Build type:         ${CMAKE_BUILD_TYPE}")
 message(STATUS "C compiler:         ${CMAKE_C_COMPILER}")
+message(STATUS "C++ compiler:       ${CMAKE_CXX_COMPILER}")
 message(STATUS "Shared libraries:   ${BUILD_SHARED_LIBS}")
 message(STATUS "Install prefix:     ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "Examples:           ${EXAMPLES}")

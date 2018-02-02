@@ -14,5 +14,6 @@ include_directories("${CMAKE_SOURCE_DIR}/src/core")
 link_libraries(overkit)
 
 add_executable(Test Test.c)
+# add_executable(Debug Debug.c)
 
 endif()

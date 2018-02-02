@@ -12,6 +12,12 @@
 #define min(a, b) ovk_min(a, b)
 #define max(a, b) ovk_max(a, b)
 
+#define Printf(...) printf(__VA_ARGS__); fflush(stdout)
+
+enum {
+  MAX_DIMS = OVK_MAX_DIMS
+};
+
 typedef struct {
   int id;
   char name[64];
@@ -27,16 +33,16 @@ typedef struct {
   int local_count;
   int is[2], ie[2];
   double *xyz;
-} grid;
+} input_grid;
 
 typedef struct {
   double *values;
-} state;
+} input_state;
 
-void CreateInputs(int *NumGrids, grid **Grids, state **States);
-void DestroyInputs(int NumGrids, grid **Grids, state **States);
+void CreateInputs(int N, int *NumLocalGrids, input_grid **Grids, input_state **States);
+void DestroyInputs(int NumLocalGrids, input_grid **Grids, input_state **States);
 
-int FindLocalGrid(int NumGrids, grid *Grids, int GridID);
+input_grid *FindLocalGrid(int NumLocalGrids, input_grid *Grids, int GridID);
 
 void ExchangeTest(int argc, char **argv);
 void AssembleTest(int argc, char **argv);
@@ -52,7 +58,12 @@ int main(int argc, char **argv) {
 
 void ExchangeTest(int argc, char **argv) {
 
-  int m, p;
+  int OtherRank;
+  int iDim, iCoef;
+  int iGrid, jGrid, iLocalGrid;
+  int iConnectivity, iSend, iReceive;
+  int i, j;
+  size_t iDonor, iReceiver;
 
   MPI_Init(&argc, &argv);
 
@@ -61,20 +72,22 @@ void ExchangeTest(int argc, char **argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &Rank);
 
   if (Rank == 0) {
-    printf("Running with %i processes.\n", NumProcs);
+    Printf("Running with %i processes.\n", NumProcs);
   }
 
-  for (p = 0; p < NumProcs; ++p) {
-    if (p == Rank) {
-      printf("Rank %i reporting for duty.\n", Rank);
+  for (OtherRank = 0; OtherRank < NumProcs; ++OtherRank) {
+    if (OtherRank == Rank) {
+      Printf("Rank %i reporting for duty.\n", Rank);
     }
     MPI_Barrier(MPI_COMM_WORLD);
   }
 
-  int NumGrids;
-  grid *Grids;
-  state *States;
-  CreateInputs(&NumGrids, &Grids, &States);
+  int N = 100;
+
+  int NumLocalGrids;
+  input_grid *InputGrids;
+  input_state *InputStates;
+  CreateInputs(N, &NumLocalGrids, &InputGrids, &InputStates);
 
   ovk_context_params *ContextParams;
   ovkCreateContextParams(&ContextParams);
@@ -97,7 +110,7 @@ void ExchangeTest(int argc, char **argv) {
 
   ovkDestroyDomainParams(Context, &DomainParams);
 
-  ovkConfigureDomain(Domain, OVK_DOMAIN_CONFIG_CONNECTIVITY);
+  ovkConfigureDomain(Domain, OVK_DOMAIN_CONFIG_CONNECTIVITY | OVK_DOMAIN_CONFIG_EXCHANGE);
 
   MPI_Comm SplitComm;
   MPI_Comm_split(MPI_COMM_WORLD, Rank % 2, Rank, &SplitComm);
@@ -115,186 +128,418 @@ void ExchangeTest(int argc, char **argv) {
 
   MPI_Comm_free(&SplitComm);
 
-  for (m = 0; m < 2; ++m) {
-    p = FindLocalGrid(NumGrids, Grids, m+1);
-    if (p != NumGrids) {
+  for (iGrid = 0; iGrid < 2; ++iGrid) {
+    int GridID = iGrid+1;
+    input_grid *InputGrid = FindLocalGrid(NumLocalGrids, InputGrids, GridID);
+    if (InputGrid) {
       ovk_grid_params *GridParams;
       ovkCreateGridParams(Domain, &GridParams);
-      ovkSetGridParamID(GridParams, Grids[p].id);
-      ovkSetGridParamName(GridParams, Grids[p].name);
-      ovkSetGridParamComm(GridParams, Grids[p].comm);
-      ovkSetGridParamSize(GridParams, Grids[p].global_size);
-      ovkSetGridParamLocalBegin(GridParams, Grids[p].is);
-      ovkSetGridParamLocalEnd(GridParams, Grids[p].ie);
-      ovkSetGridParamNeighborRanks(GridParams, Grids[p].num_neighbors, Grids[p].neighbor_ranks);
-      ovkCreateGridLocal(Domain, NULL, GridParams);
+      ovkSetGridParamName(GridParams, InputGrid->name);
+      ovkSetGridParamComm(GridParams, InputGrid->comm);
+      ovkSetGridParamSize(GridParams, InputGrid->global_size);
+      ovkSetGridParamLocalBegin(GridParams, InputGrid->is);
+      ovkSetGridParamLocalEnd(GridParams, InputGrid->ie);
+      ovkSetGridParamNeighborRanks(GridParams, InputGrid->num_neighbors, InputGrid->neighbor_ranks);
+      ovkCreateGridLocal(Domain, GridID, GridParams);
       ovkDestroyGridParams(Domain, &GridParams);
     } else {
-      ovkCreateGridRemote(Domain, NULL);
+      ovkCreateGridRemote(Domain, GridID);
     }
   }
+
+//   for (iGrid = 0; iGrid < 2; ++iGrid) {
+//     int GridID = iGrid+1;
+//     input_grid *InputGrid = FindLocalGrid(NumLocalGrids, InputGrids, GridID);
+//     ovk_grid_params *GridParams = NULL;
+//     if (InputGrid) {
+//       ovkCreateGridParams(Domain, &GridParams);
+//       ovkSetGridParamName(GridParams, InputGrid->name);
+//       ovkSetGridParamComm(GridParams, InputGrid->comm);
+//       ovkSetGridParamSize(GridParams, InputGrid->global_size);
+//       ovkSetGridParamLocalBegin(GridParams, InputGrid->is);
+//       ovkSetGridParamLocalEnd(GridParams, InputGrid->ie);
+//       ovkSetGridParamNeighborRanks(GridParams, InputGrid->num_neighbors, InputGrid->neighbor_ranks);
+//     }
+//     ovkCreateGrid(Domain, GridID, GridParams);
+//     if (InputGrid) {
+//       ovkDestroyGridParams(Domain, &GridParams);
+//     }
+//   }
+
+//   int GridIDs[2] = {1, 2};
+//   ovk_grid_params *GridParams[2] = {NULL, NULL};
+//   for (iGrid = 0; iGrid < 2; ++iGrid) {
+//     input_grid *InputGrid = FindLocalGrid(NumLocalGrids, InputGrids, GridIDs[iGrid]);
+//     if (InputGrid) {
+//       ovkCreateGridParams(Domain, &GridParams[iGrid]);
+//       ovkSetGridParamName(GridParams[iGrid], InputGrid->name);
+//       ovkSetGridParamComm(GridParams[iGrid], InputGrid->comm);
+//       ovkSetGridParamSize(GridParams[iGrid], InputGrid->global_size);
+//       ovkSetGridParamLocalBegin(GridParams[iGrid], InputGrid->is);
+//       ovkSetGridParamLocalEnd(GridParams[iGrid], InputGrid->ie);
+//       ovkSetGridParamNeighborRanks(GridParams[iGrid], InputGrid->num_neighbors,
+//         InputGrid->neighbor_ranks);
+//     }
+//   }
+
+//   ovkCreateGrids(Domain, 2, GridIDs, GridParams);
+
+//   for (iGrid = 0; iGrid < 2; ++iGrid) {
+//     input_grid *InputGrid = FindLocalGrid(NumLocalGrids, InputGrids, GridIDs[iGrid]);
+//     if (InputGrid) {
+//       ovkDestroyGridParams(Domain, &GridParams[iGrid]);
+//     }
+//   }
+
+  ovk_domain_properties *DomainProperties;
+  ovkEditDomainProperties(Domain, &DomainProperties);
+#ifdef NOPE
+  ovkSetDomainPropertyOverlappable(DomainProperties, OVK_ALL_GRIDS, OVK_ALL_GRIDS, true);
+  ovkSetDomainPropertyConnectionType(DomainProperties, OVK_ALL_GRIDS, OVK_ALL_GRIDS,
+    OVK_CONNECTION_MANUAL);
+#endif
+  ovkReleaseDomainProperties(Domain, &DomainProperties);
+
+//   ovk_overlap *Overlap;
+//   ovkEditOverlap(Domain, DonorGridID, ReceiverGridID, &Overlap);
+//   ovk_overlap_d *OverlapD;
+//   ovkEditOverlapDonorSide(Overlap, &OverlapD);
+//   int *OverlappingCells[MAX_DIMS];
+//   double *OverlappingCoords[2];
+//   for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
+//     ovkEditOverlappingCells(OverlapD, iDim, &OverlappingCells[d]);
+//     ovkReleaseOverlappingCells(OverlapD, iDim, &OverlappingCells[d]);
+//   }
+//   for (iDim = 0; iDim < 2; ++iDim) {
+//     ovkEditOverlappingCoords(OverlapD, iDim, &OverlappingCoords[d]);
+//     ovkReleaseOverlappingCoords(OverlapD, iDim, &OverlappingCoords[d]);
+//   }
+//   ovkReleaseOverlapDonorSide(Overlap, &OverlapD);
+//   
+//   ovk_overlap_r *OverlapR;
+//   ovkEditOverlapReceiverSide(Overlap, &OverlapR);
+//   int *OverlappedPoints[MAX_DIMS];
+//   for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
+//     ovkEditOverlappedPoints(OverlapR, iDim, &OverlappedPoints);
+//     ovkReleaseOverlappedPoints(OverlapR, iDim, &OverlappedPoints);
+//   }
+//   ovkReleaseOverlapReceiverSide(Overlap, &OverlapR);
+//   ovkReleaseOverlap(Domain, DonorGridID, ReceiverGridID, &Overlap);
+
+  ovk_connectivity *Connectivities[2] = {NULL, NULL};
+  iConnectivity = 0;
+  for (jGrid = 0; jGrid < 2; ++jGrid) {
+    for (iGrid = 0; iGrid < 2; ++iGrid) {
+      int DonorGridID = iGrid+1;
+      int ReceiverGridID = jGrid+1;
+      if (ovkConnectivityExists(Domain, DonorGridID, ReceiverGridID)) {
+        if (ovkRankHasConnectivity(Domain, DonorGridID, ReceiverGridID)) {
+          ovkEditConnectivityLocal(Domain, DonorGridID, ReceiverGridID,
+            &Connectivities[iConnectivity]);
+          ++iConnectivity;
+        } else {
+          ovkEditConnectivityRemote(Domain, DonorGridID, ReceiverGridID);
+        }
+      }
+    }
+  }
+
+  iConnectivity = 0;
+  for (jGrid = 0; jGrid < 2; ++jGrid) {
+    for (iGrid = 0; iGrid < 2; ++iGrid) {
+      int DonorGridID = iGrid+1;
+      int ReceiverGridID = jGrid+1;
+      if (ovkConnectivityExists(Domain, DonorGridID, ReceiverGridID)) {
+        ovk_connectivity *Connectivity = Connectivities[iConnectivity];
+        ovk_connectivity_d *Donors = NULL;
+        if (ovkRankHasGrid(Domain, DonorGridID)) {
+          ovkEditConnectivityDonorSideLocal(Connectivity, &Donors);
+        } else {
+          ovkEditConnectivityDonorSideRemote(Connectivity);
+        }
+        ovk_connectivity_r *Receivers = NULL;
+        if (ovkRankHasGrid(Domain, ReceiverGridID)) {
+          ovkEditConnectivityReceiverSideLocal(Connectivity, &Receivers);
+        } else {
+          ovkEditConnectivityReceiverSideRemote(Connectivity);
+        }
+        if (Donors) {
+          input_grid *InputGrid = FindLocalGrid(NumLocalGrids, InputGrids, DonorGridID);
+          bool RightEdgeOfLeftGrid = InputGrid->id == 1 && InputGrid->ie[0] == N;
+          bool LeftEdgeOfRightGrid = InputGrid->id == 2 && InputGrid->is[0] == 0;
+          size_t NumDonors = 0;
+          if (RightEdgeOfLeftGrid || LeftEdgeOfRightGrid) {
+            NumDonors = InputGrid->ie[1] - InputGrid->is[1];
+          }
+          ovkResizeDonors(Donors, NumDonors, 1);
+          int *Extents[2][2];
+          double *Coords[2];
+          double *InterpCoefs[2][1];
+          int *Destinations[2];
+          for (iDim = 0; iDim < 2; ++iDim) {
+            ovkEditDonorExtents(Donors, iDim, &Extents[0][iDim], &Extents[1][iDim]);
+          }
+          for (iDim = 0; iDim < 2; ++iDim) {
+            ovkEditDonorCoords(Donors, iDim, &Coords[iDim]);
+          }
+          for (iDim = 0; iDim < 2; ++iDim) {
+            for (iCoef = 0; iCoef < 1; ++iCoef) {
+              ovkEditDonorInterpCoefs(Donors, iDim, iCoef, &InterpCoefs[iDim][iCoef]);
+            }
+          }
+          for (iDim = 0; iDim < 2; ++iDim) {
+            ovkEditDonorDestinations(Donors, iDim, &Destinations[iDim]);
+          }
+          if (RightEdgeOfLeftGrid || LeftEdgeOfRightGrid) {
+            iDonor = 0;
+            for (j = InputGrid->is[1]; j < InputGrid->ie[1]; ++j) {
+              Extents[0][0][iDonor] = RightEdgeOfLeftGrid ? N-1 : 0;
+              Extents[0][1][iDonor] = j;
+              Extents[1][0][iDonor] = Extents[0][0][iDonor]+1;
+              Extents[1][1][iDonor] = Extents[0][1][iDonor]+1;
+              Coords[0][iDonor] = 0.;
+              Coords[1][iDonor] = 0.;
+              InterpCoefs[0][0][iDonor] = 1.;
+              InterpCoefs[1][0][iDonor] = 1.;
+              Destinations[0][iDonor] = RightEdgeOfLeftGrid ? 0 : N-1;
+              Destinations[1][iDonor] = j;
+              ++iDonor;
+            }
+          }
+          for (iDim = 0; iDim < 2; ++iDim) {
+            ovkReleaseDonorExtents(Donors, iDim, &Extents[0][iDim], &Extents[1][iDim]);
+          }
+          for (iDim = 0; iDim < 2; ++iDim) {
+            ovkReleaseDonorCoords(Donors, iDim, &Coords[iDim]);
+          }
+          for (iDim = 0; iDim < 2; ++iDim) {
+            for (iCoef = 0; iCoef < 1; ++iCoef) {
+              ovkReleaseDonorInterpCoefs(Donors, iDim, iCoef, &InterpCoefs[iDim][iCoef]);
+            }
+          }
+          for (iDim = 0; iDim < 2; ++iDim) {
+            ovkReleaseDonorDestinations(Donors, iDim, &Destinations[iDim]);
+          }
+        }
+        if (Receivers) {
+          input_grid *InputGrid = FindLocalGrid(NumLocalGrids, InputGrids, ReceiverGridID);
+          bool RightEdgeOfLeftGrid = InputGrid->id == 1 && InputGrid->ie[0] == N;
+          bool LeftEdgeOfRightGrid = InputGrid->id == 2 && InputGrid->is[0] == 0;
+          size_t NumReceivers = 0;
+          if (RightEdgeOfLeftGrid || LeftEdgeOfRightGrid) {
+            NumReceivers = InputGrid->ie[1] - InputGrid->is[1];
+          }
+          ovkResizeReceivers(Receivers, NumReceivers);
+          int *ReceiverPoints[2];
+          int *Sources[2];
+          for (iDim = 0; iDim < 2; ++iDim) {
+            ovkEditReceiverPoints(Receivers, iDim, &ReceiverPoints[iDim]);
+          }
+          for (iDim = 0; iDim < 2; ++iDim) {
+            ovkEditReceiverSources(Receivers, iDim, &Sources[iDim]);
+          }
+          if (RightEdgeOfLeftGrid || LeftEdgeOfRightGrid) {
+            iReceiver = 0;
+            for (j = InputGrid->is[1]; j < InputGrid->ie[1]; ++j) {
+              ReceiverPoints[0][iReceiver] = RightEdgeOfLeftGrid ? N-1 : 0;
+              ReceiverPoints[1][iReceiver] = j;
+              Sources[0][iReceiver] = RightEdgeOfLeftGrid ? 0 : N-1;
+              Sources[1][iReceiver] = j;
+              ++iReceiver;
+            }
+          }
+          for (iDim = 0; iDim < 2; ++iDim) {
+            ovkReleaseReceiverPoints(Receivers, iDim, &ReceiverPoints[iDim]);
+          }
+          for (iDim = 0; iDim < 2; ++iDim) {
+            ovkReleaseReceiverSources(Receivers, iDim, &Sources[iDim]);
+          }
+        }
+        if (ovkRankHasGrid(Domain, DonorGridID)) {
+          ovkReleaseConnectivityDonorSideLocal(Connectivity, &Donors);
+        } else {
+          ovkReleaseConnectivityDonorSideRemote(Connectivity);
+        }
+        if (ovkRankHasGrid(Domain, ReceiverGridID)) {
+          ovkReleaseConnectivityReceiverSideLocal(Connectivity, &Receivers);
+        } else {
+          ovkReleaseConnectivityReceiverSideRemote(Connectivity);
+        }
+        ++iConnectivity;
+      }
+    }
+  }
+
+  iConnectivity = 0;
+  for (jGrid = 0; jGrid < 2; ++jGrid) {
+    for (iGrid = 0; iGrid < 2; ++iGrid) {
+      int DonorGridID = iGrid+1;
+      int ReceiverGridID = jGrid+1;
+      if (ovkConnectivityExists(Domain, DonorGridID, ReceiverGridID)) {
+        if (ovkRankHasConnectivity(Domain, DonorGridID, ReceiverGridID)) {
+          ovkReleaseConnectivityLocal(Domain, DonorGridID, ReceiverGridID,
+            &Connectivities[iConnectivity]);
+          ++iConnectivity;
+        } else {
+          ovkReleaseConnectivityRemote(Domain, DonorGridID, ReceiverGridID);
+        }
+      }
+    }
+  }
+
+  ovkAssemble(Domain);
+
+  // Exchange variant #1 -- basic exchange
+
+  int NumSends = 0;
+  int NumReceives = 0;
+  for (iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
+    int LocalGridID = InputGrids[iLocalGrid].id;
+    for (iGrid = 0; iGrid < 2; ++iGrid) {
+      int OtherGridID = iGrid+1;
+      if (ovkConnectivityExists(Domain, LocalGridID, OtherGridID)) ++NumSends;
+      if (ovkConnectivityExists(Domain, OtherGridID, LocalGridID)) ++NumReceives;
+    }
+  }
+
+  double **SendBuffers = malloc(NumSends*sizeof(double *));
+  double **ReceiveBuffers = malloc(NumReceives*sizeof(double *));
+  iSend = 0;
+  iReceive = 0;
+  for (iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
+    int LocalGridID = InputGrids[iLocalGrid].id;
+    for (iGrid = 0; iGrid < 2; ++iGrid) {
+      int OtherGridID = iGrid+1;
+      if (ovkConnectivityExists(Domain, LocalGridID, OtherGridID)) {
+        size_t NumDonors;
+        ovkGetLocalDonorCount(Domain, LocalGridID, OtherGridID, &NumDonors);
+        SendBuffers[iSend] = malloc(NumDonors*sizeof(double));
+        ++iSend;
+      }
+      if (ovkConnectivityExists(Domain, OtherGridID, LocalGridID)) {
+        size_t NumReceivers;
+        ovkGetLocalReceiverCount(Domain, OtherGridID, LocalGridID, &NumReceivers);
+        ReceiveBuffers[iReceive] = malloc(NumReceivers*sizeof(double));
+        ++iReceive;
+      }
+    }
+  }
+
+  iSend = 0;
+  for (iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
+    int LocalGridID = InputGrids[iLocalGrid].id;
+    for (iGrid = 0; iGrid < 2; ++iGrid) {
+      int OtherGridID = iGrid+1;
+      if (ovkConnectivityExists(Domain, LocalGridID, OtherGridID)) {
+        const void *GridData = InputStates[iLocalGrid].values;
+        void *DonorData = SendBuffers[iSend];
+        ovkCollect(Domain, LocalGridID, OtherGridID, OVK_DOUBLE, 1, OVK_COLLECT_INTERPOLATE,
+          &GridData, OVK_COLUMN_MAJOR, &DonorData);
+        ++iSend;
+      }
+    }
+  }
+
+  ovk_request **Requests = malloc((NumSends+NumReceives)*sizeof(ovk_request *));
+
+  iReceive = 0;
+  for (iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
+    int LocalGridID = InputGrids[iLocalGrid].id;
+    for (iGrid = 0; iGrid < 2; ++iGrid) {
+      int OtherGridID = iGrid+1;
+      if (ovkConnectivityExists(Domain, OtherGridID, LocalGridID)) {
+        void *ReceiverData = ReceiveBuffers[iReceive];
+        ovkReceive(Domain, OtherGridID, LocalGridID, OVK_DOUBLE, 1, &ReceiverData, 1,
+          &Requests[iReceive]);
+        ++iReceive;
+      }
+    }
+  }
+
+  iSend = 0;
+  for (iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
+    int LocalGridID = InputGrids[iLocalGrid].id;
+    for (iGrid = 0; iGrid < 2; ++iGrid) {
+      int OtherGridID = iGrid+1;
+      if (ovkConnectivityExists(Domain, LocalGridID, OtherGridID)) {
+        const void *DonorData = SendBuffers[iSend];
+        ovkSend(Domain, LocalGridID, OtherGridID, OVK_DOUBLE, 1, &DonorData, 1,
+          &Requests[NumReceives+iSend]);
+        ++iSend;
+      }
+    }
+  }
+
+  ovkWaitAll(NumSends+NumReceives, Requests);
+
+  free(Requests);
+
+  iReceive = 0;
+  for (iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
+    int LocalGridID = InputGrids[iLocalGrid].id;
+    for (iGrid = 0; iGrid < 2; ++iGrid) {
+      int OtherGridID = iGrid+1;
+      if (ovkConnectivityExists(Domain, OtherGridID, LocalGridID)) {
+        const void *ReceiverData = ReceiveBuffers[iReceive];
+        void *GridData = InputStates[iLocalGrid].values;
+        ovkDisperse(Domain, OtherGridID, LocalGridID, OVK_DOUBLE, 1, OVK_DISPERSE_OVERWRITE,
+          &ReceiverData, &GridData, OVK_COLUMN_MAJOR);
+        ++iReceive;
+      }
+    }
+  }
+
+  for (OtherRank = 0; OtherRank < NumProcs; ++OtherRank) {
+    if (OtherRank == Rank) {
+      for (iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
+        input_grid *InputGrid = InputGrids+iLocalGrid;
+        input_state *InputState = InputStates+iLocalGrid;
+        bool RightEdgeOfLeftGrid = InputGrid->id == 1 && InputGrid->ie[0] == N;
+        bool LeftEdgeOfRightGrid = InputGrid->id == 2 && InputGrid->is[0] == 0;
+        if (RightEdgeOfLeftGrid) {
+          i = InputGrid->ie[0]-1;
+          for (j = InputGrid->is[1]; j != InputGrid->ie[1]; ++j) {
+            int iSecondLast = (InputGrid->ie[0]-InputGrid->is[0])*(j-InputGrid->is[1]) +
+              (i-1-InputGrid->is[0]);
+            int iLast = (InputGrid->ie[0]-InputGrid->is[0])*(j-InputGrid->is[1]) +
+              (i-InputGrid->is[0]);
+            Printf("%lf, %lf\n", InputState->values[iSecondLast], InputState->values[iLast]);
+          }
+          Printf("\n");
+        } else if (LeftEdgeOfRightGrid) {
+          i = 0;
+          for (j = InputGrid->is[1]; j != InputGrid->ie[1]; ++j) {
+            int iFirst = (InputGrid->ie[0]-InputGrid->is[0])*(j-InputGrid->is[1]) +
+              (i-InputGrid->is[0]);
+            int iSecond = (InputGrid->ie[0]-InputGrid->is[0])*(j-InputGrid->is[1]) +
+              (i+1-InputGrid->is[0]);
+            Printf("%lf, %lf\n", InputState->values[iFirst], InputState->values[iSecond]);
+          }
+          Printf("\n");
+        }
+      }
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+  }
+
+  for (iSend = 0; iSend < NumSends; ++iSend) {
+    free(SendBuffers[iSend]);
+  }
+  free(SendBuffers);
+
+  for (iReceive = 0; iReceive < NumReceives; ++iReceive) {
+    free(ReceiveBuffers[iReceive]);
+  }
+  free(ReceiveBuffers);
 
 #ifdef NOPE
 
-//   ovk_grid *EditGrid[NumGrids];
-//   for (m = 0; m < 2; ++m) {
-//     int GridID = m+1;
-//     p = FindLocalGrid(NumGrids, Grids, GridID);
-//     if (p != NumGrids) {
-//       ovkEditGridLocal(Domain, GridID, EditGrid[p]);
-//     } else {
-//       ovkEditGridRemote(Domain, GridID);
-//     }
-//   }
+  // Exchange variant #2 -- interleaved receive/disperse
 
-//   for (m = 0; m < NumGrids; ++m) {
-//     ovkEditGridCoords(EditGrid[m], Coords);
-//     // Do stuff
-//     ovkReleaseGridCoords(EditGrid[m], Coords);
-//   }
-
-//   for (m = 0; m < 2; ++m) {
-//     int GridID = m+1;
-//     p = FindLocalGrid(NumGrids, Grids, GridID);
-//     if (p != NumGrids) {
-//       ovkReleaseGridLocal(Domain, GridID, EditGrids[p]);
-//     } else {
-//       ovkReleaseGridRemote(Domain, GridID);
-//     }
-//   }
-
-  for (n = 0; n < 2; ++n) {
-    q = FindLocalGrid(NumGrids, Grids, n+1);
-    for (m = 0; m < 2; ++m) {
-      p = FindLocalGrid(NumGrids, Grids, m+1);
-      ovkEditConnectivity(Domain, m, n, Connectivity);
-      ovkEditConnectivityProperties(Connectivity, ConnectivityProperties);
-      ovkSetConnectivityPropertyMaxDonorSize(Connectivity, 1);
-      ovkReleaseConnectivityProperties(Connectivity, ConnectivityProperties);
-      // Donors
-      if (p != NumGrids) {
-        if ((Grids[p].id == 1 && Grids[p].ie[0] == Grids[p].global_size[0]-1) ||
-          (Grids[p].id == 2 && Grids[p].is[0] == 0)) {
-          ovkResizeConnectivity(Connectivity, Grids[p].ie[1]-Grids[p].is[1]);
-        }
-      }
-      // Receivers (same as donor points in this example)
-      if (q != NumGrids) {
-        if ((Grids[q].id == 1 && Grids[q].ie[0] == Grids[q].global_size[0]-1) ||
-          (Grids[q].id == 2 && Grids[q].is[0] == 0)) {
-        ovkResizeConnectivity(Connectivity, Grids[q].ie[1]-Grids[q].is[1]);
-      }
-      int *ConnectionID;
-      int *DonorCellStart[2], *DonorCellEnd[2];
-      double *DonorCellCoords[2];
-      double *DonorInterpCoefs[2][1];
-      int *DestinationGridID;
-      int *DestinationReceiverID;
-      int *ReceiverPoint[2];
-      int *SourceGridID;
-      int *SourceDonorID;
-      // TODO: Add connectivity data from below here
-      ovkReleaseConnectivity(Domain, Connectivity);
-    }
-  }
-
-//   for (m = 0; m < NumGrids; ++m) {
-//     ovkEditDonors(Domain, Grids[m].id, &Donors);
-//     ovkEditDonorID(Donors, &DonorID);
-//     ovkEditDonorCellStart(Donors, &DonorCellStart);
-//     ovkEditDonorCellEnd(Donors, &DonorCellEnd);
-//     ovkEditDonorCellCoords(Donors, &DonorCellCoords);
-//     ovkEditDonorInterpCoefs(Donors, &DonorInterpCoefs);
-//     ovkEditDonorDestinationGridID(Donors, &DestinationGridID);
-//     ovkEditDonorDestinationReceiverID(Donors, &DestinationReceiverID);
-//     ovkEditReceivers(Domain, Grids[m].id, &Receivers);
-//     ovkEditReceiverID(Receivers, &ReceiverID);
-//     ovkEditReceiverPoint(Receivers, &ReceiverPoint);
-//     ovkEditReceiverSourceGridID(Receivers, &SourceGridID);
-//     ovkEditReceiverSourceDonorID(Receivers, &SourceDonorID);
-//     if ((Grids[m].id == 1 && Grids[m].ie[0] == Grids[m].global_size[0]-1) ||
-//       (Grids[m].id == 2 && Grids[m].is[0] == 0)) {
-//       int OtherGridID;
-//       switch (Grids[m].id) {
-//       case 1:
-//         i = Grids[m].ie[0]-1;
-//         OtherGridID = 2;
-//         break;
-//       case 2:
-//         i = 0;
-//         OtherGridID = 1;
-//         break;
-//       }
-//       for (j = Grids[m].is[1]; j < Grids[m].ie[1]; ++j) {
-//         DonorID[l] = j;
-//         DonorCellStart[0][l] = i;
-//         DonorCellStart[1][l] = j;
-//         DonorCellEnd[0][l] = i;
-//         DonorCellEnd[1][l] = j;
-//         DonorCellCoords[0][l] = 0.;
-//         DonorCellCoords[1][l] = 0.;
-//         DonorInterpCoefs[0][0][l] = 1.;
-//         DonorInterpCoefs[1][0][l] = 1.;
-//         DestinationGridID[l] = OtherGridID;
-//         DestinationReceiverID[l] = j;
-//         ReceiverID[l] = j;
-//         ReceiverPoint[0][l] = i;
-//         ReceiverPoint[1][l] = j;
-//         SourceGridID[l] = OtherGridID;
-//         SourceDonorID[l] = j;
-//         ++l;
-//       }
-//     }
-//     ovkReleaseDonorID(Donors, &DonorID);
-//     ovkReleaseDonorCellStart(Donors, &DonorCellStart);
-//     ovkReleaseDonorCellEnd(Donors, &DonorCellEnd);
-//     ovkReleaseDonorCellCoords(Donors, &DonorCellCoords);
-//     ovkReleaseDonorInterpCoefs(Donors, &DonorInterpCoefs);
-//     ovkReleaseDonorDestinationGridID(Donors, &DestinationGridID);
-//     ovkReleaseDonorDestinationReceiverID(Donors, &DestinationReceiverID);
-//     ovkReleaseDonors(Domain, &Donors);
-//     ovkReleaseReceiverID(Receivers, &ReceiverID);
-//     ovkReleaseReceiverPoints(Receivers, &ReceiverPoints);
-//     ovkReleaseReceiverSourceGridID(Receivers, &SourceGridID);
-//     ovkReleaseReceiverSourceDonorID(Receivers, &SourceDonorID);
-//     ovkReleaseReceivers(Domain, &Receivers);
-//   }
-
-  // Exchange variant #1 -- simple two-way exchange
-
-  ovk_request *Requests = malloc(2*NumGrids*sizeof(ovk_request));
+  double **SendBuffers = malloc(2*NumLocalGrids*sizeof(double *));
+  double **ReceiveBuffers = malloc(2*NumLocalGrids*sizeof(double *));
   l = 0;
-  for (n = 0; n < NumGrids; ++n) {
-    for (m = 0; m < 2; ++m) {
-      ovkExchange(Domain, Grids[n].id, m+1, 1, OVK_DOUBLE, OVK_COLLECT_INTERPOLATE,
-        OVK_DISPERSE_OVERWRITE, States[n]->values, 1, Requests[l]);
-      ++l;
-    }
-  }
-  ovkWaitAll(Domain, Requests);
-
-  // Exchange variant #2 -- one-way exchange
-
-  ovk_request *Requests = malloc(2*NumGrids*sizeof(ovk_request));
-  l = 0;
-  for (n = 0; n < NumGrids; ++n) {
-    if (Grids[n].id == 1) {
-      ovkDonate(Domain, Grids[n].id, 2, 1, OVK_DOUBLE, OVK_COLLECT_INTERPOLATE,
-        OVK_DISPERSE_OVERWRITE, States[n]->values, 1, Requests[l]);
-    } else {
-      ovkReceive(Domain, Grids[n].id, 1, 1, OVK_DOUBLE, OVK_COLLECT_INTERPOLATE,
-        OVK_DISPERSE_OVERWRITE, States[n]->values, 1, Requests[l]);
-    }
-    ++l;
-  }
-  ovkWaitAll(Domain, Requests);
-
-  // Exchange variant #3 -- manual collect-send-receive-disperse
-
-  double **SendBuffers = malloc(2*NumGrids*sizeof(double *));
-  double **ReceiveBuffers = malloc(2*NumGrids*sizeof(double *));
-  l = 0;
-  for (n = 0; n < NumGrids; ++n) {
+  for (n = 0; n < NumLocalGrids; ++n) {
     for (m = 0; m < 2; ++m) {
       size_t NumDonors = ovkGetDonorCount(Domain, Grids[n].id, m+1);
       size_t NumReceivers = ovkGetReceiverCount(Domain, Grids[n].id, m+1);
@@ -305,36 +550,37 @@ void ExchangeTest(int argc, char **argv) {
   }
 
   l = 0;
-  for (n = 0; n < NumGrids; ++n) {
+  for (n = 0; n < NumLocalGrids; ++n) {
     for (m = 0; m < 2; ++m) {
       ovkCollect(Domain, Grids[n].id, m+1, OVK_DOUBLE, 1, OVK_COLLECT_INTERPOLATE,
-        States[n]->values, SendBuffers[l]);
+        InputStates[n]->values, SendBuffers[l]);
       ++l;
     }
   }
 
-  ovk_request *Requests = malloc(4*NumGrids*sizeof(ovk_request));
+  ovk_request *SendRequests = malloc(2*NumLocalGrids*sizeof(ovk_request *));
+  ovk_request *ReceiveRequests = malloc(2*NumLocalGrids*sizeof(ovk_request *));
   l = 0;
-  for (n = 0; n < NumGrids; ++n) {
+  for (n = 0; n < NumLocalGrids; ++n) {
     for (m = 0; m < 2; ++m) {
-      ovkTake(Domain, Grids[n].id, m+1, OVK_DOUBLE, 1, ReceiveBuffers[l], 1, Requests[2*l]);
-      ovkGive(Domain, Grids[n].id, m+1, OVK_DOUBLE, 1, SendBuffers[l], 1, Requests[2*l+1]);
-      l += 2;
-    }
-  }
-  ovkWaitAll(Domain, 4*NumGrids, Requests);
-
-  l = 0;
-  for (n = 0; n < NumGrids; ++n) {
-    for (m = 0; m < 2; ++m) {
-      ovkDisperse(Domain, Grids[n].id, m+1, OVK_DOUBLE, 1, OVK_DISPERSE_OVERWRITE,
-        ReceiveBuffers[l], State[n]->values);
+      ovkReceive(Domain, Grids[n].id, m+1, OVK_DOUBLE, 1, &ReceiveBuffers[l], 1, ReceiveRequests[l]);
+      ovkSend(Domain, Grids[n].id, m+1, OVK_DOUBLE, 1, &SendBuffers[l], 1, SendRequests[l]);
       ++l;
     }
   }
 
+  while (true) {
+    ovkWaitAny(Domain, 2*NumLocalGrids, ReceiveRequests, &l);
+    if (l < 0) break;
+    m = l % 2;
+    n = l/2 % NumLocalGrids;
+    ovkDisperse(Domain, Grids[n].id, m+1, OVK_DOUBLE, 1, OVK_DISPERSE_OVERWRITE, ReceiveBuffers[l],
+      InputState[n]->values);
+  }
+  ovkWaitAll(2*NumLocalGrids, SendRequests);
+
   l = 0;
-  for (n = 0; n < NumGrids; ++n) {
+  for (n = 0; n < NumLocalGrids; ++n) {
     for (m = 0; m < 2; ++m) {
       free(SendBuffers[l]);
       free(ReceiveBuffers[l]);
@@ -344,53 +590,46 @@ void ExchangeTest(int argc, char **argv) {
   free(SendBuffers);
   free(ReceiverBuffers);
 
-  // Exchange variant #4 -- manual collect-send-receive-disperse with interleaved receive/disperse
+  // Exchange variant #3 -- most efficient way?
 
-  double **SendBuffers = malloc(2*NumGrids*sizeof(double *));
-  double **ReceiveBuffers = malloc(2*NumGrids*sizeof(double *));
+  double **ReceiveBuffers = malloc(2*NumLocalGrids*sizeof(double *));
+  ovk_request *ReceiveRequests = malloc(2*NumLocalGrids*sizeof(ovk_request *));
   l = 0;
-  for (n = 0; n < NumGrids; ++n) {
+  for (n = 0; n < NumLocalGrids; ++n) {
+    for (m = 0; m < 2; ++m) {
+      size_t NumReceivers = ovkGetReceiverCount(Domain, Grids[n].id, m+1);
+      ReceiveBuffers[l] = malloc(NumReceivers*sizeof(double));
+      ovkReceive(Domain, Grids[n].id, m+1, OVK_DOUBLE, 1, &ReceiveBuffers[l], 1, ReceiveRequests[l]);
+      ++l;
+    }
+  }
+
+  double **SendBuffers = malloc(2*NumLocalGrids*sizeof(double *));
+  ovk_request *SendRequests = malloc(2*NumLocalGrids*sizeof(ovk_request *));
+  l = 0;
+  for (n = 0; n < NumLocalGrids; ++n) {
     for (m = 0; m < 2; ++m) {
       size_t NumDonors = ovkGetDonorCount(Domain, Grids[n].id, m+1);
-      size_t NumReceivers = ovkGetReceiverCount(Domain, Grids[n].id, m+1);
       SendBuffers[l] = malloc(NumDonors*sizeof(double));
-      ReceiveBuffers[l] = malloc(NumReceivers*sizeof(double));
-      ++l;
-    }
-  }
-
-  l = 0;
-  for (n = 0; n < NumGrids; ++n) {
-    for (m = 0; m < 2; ++m) {
       ovkCollect(Domain, Grids[n].id, m+1, OVK_DOUBLE, 1, OVK_COLLECT_INTERPOLATE,
-        States[n]->values, SendBuffers[l]);
+        InputStates[n]->values, SendBuffers[l]);
+      ovkSend(Domain, Grids[n].id, m+1, OVK_DOUBLE, 1, &SendBuffers[l], 1, SendRequests[l]);
       ++l;
     }
   }
 
-  ovk_request *SendRequests = malloc(2*NumGrids*sizeof(ovk_request));
-  ovk_request *ReceiveRequests = malloc(2*NumGrids*sizeof(ovk_request));
-  l = 0;
-  for (n = 0; n < NumGrids; ++n) {
-    for (m = 0; m < 2; ++m) {
-      ovkTake(Domain, Grids[n].id, m+1, OVK_DOUBLE, 1, ReceiveBuffers[l], 1, ReceiveRequests[l]);
-      ovkGive(Domain, Grids[n].id, m+1, OVK_DOUBLE, 1, SendBuffers[l], 1, SendRequests[l]);
-      ++l;
-    }
-  }
-
-  ovkWaitAny(Domain, 2*NumGrids, ReceiveRequests, &l);
-  while (l != OVK_UNDEFINED_INDEX) {
-    ovkWait(Domain, SendRequests[l]);
+  while (true) {
+    ovkWaitAny(Domain, 2*NumLocalGrids, ReceiveRequests, &l);
+    if (l < 0) break;
     m = l % 2;
-    n = l/2 % NumGrids;
+    n = l/2 % NumLocalGrids;
     ovkDisperse(Domain, Grids[n].id, m+1, OVK_DOUBLE, 1, OVK_DISPERSE_OVERWRITE, ReceiveBuffers[l],
-      State[n]->values);
-    ovkWaitAny(Domain, 2*NumGrids, ReceiveRequests, &l);
+      InputState[n]->values);
   }
+  ovkWaitAll(2*NumLocalGrids, SendRequests);
 
   l = 0;
-  for (n = 0; n < NumGrids; ++n) {
+  for (n = 0; n < NumLocalGrids; ++n) {
     for (m = 0; m < 2; ++m) {
       free(SendBuffers[l]);
       free(ReceiveBuffers[l]);
@@ -404,7 +643,7 @@ void ExchangeTest(int argc, char **argv) {
 
   ovkDestroyContext(&Context);
 
-  DestroyInputs(NumGrids, &Grids, &States);
+  DestroyInputs(NumLocalGrids, &InputGrids, &InputStates);
 
   MPI_Finalize();
 
@@ -412,7 +651,11 @@ void ExchangeTest(int argc, char **argv) {
 
 void AssembleTest(int argc, char **argv) {
 
-  int p;
+  int OtherRank;
+//   int iDim;
+  int iGrid, iLocalGrid;
+//   size_t iPoint;
+//   int i, j;
 
   MPI_Init(&argc, &argv);
 
@@ -421,96 +664,143 @@ void AssembleTest(int argc, char **argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &Rank);
 
   if (Rank == 0) {
-    printf("Running with %i processes.\n", NumProcs);
+    Printf("Running with %i processes.\n", NumProcs);
   }
 
-  for (p = 0; p < NumProcs; ++p) {
-    if (p == Rank) {
-      printf("Rank %i reporting for duty.\n", Rank);
+  for (OtherRank = 0; OtherRank < NumProcs; ++OtherRank) {
+    if (OtherRank == Rank) {
+      Printf("Rank %i reporting for duty.\n", Rank);
     }
     MPI_Barrier(MPI_COMM_WORLD);
   }
 
-  int NumGrids;
-  grid *Grids;
-  state *States;
-  CreateInputs(&NumGrids, &Grids, &States);
+  int N = 100;
 
-#ifdef NOPE
+  int NumLocalGrids;
+  input_grid *InputGrids;
+  input_state *InputStates;
+  CreateInputs(N, &NumLocalGrids, &InputGrids, &InputStates);
+
+  ovk_context_params *ContextParams;
+  ovkCreateContextParams(&ContextParams);
+  ovkSetContextParamComm(ContextParams, MPI_COMM_WORLD);
+  ovkSetContextParamLogLevel(ContextParams, OVK_LOG_ALL);
+  ovkSetContextParamErrorHandlerType(ContextParams, OVK_ERROR_HANDLER_ABORT);
+
+  ovk_context *Context;
+  ovkCreateContext(&Context, ContextParams);
+
+  ovkDestroyContextParams(&ContextParams);
 
   ovk_domain_params *DomainParams;
-  ovkCreateDomainParam(&DomainParams, 2);
+  ovkCreateDomainParams(Context, &DomainParams);
+  ovkSetDomainParamDimension(DomainParams, 2);
   ovkSetDomainParamComm(DomainParams, MPI_COMM_WORLD);
-  ovkSetDomainParamLogLevel(DomainParams, OVK_LOG_ALL);
-  ovkSetDomainParamErrorHandler(DomainParams, OVK_ERROR_HANDLER_ABORT);
 
   ovk_domain *Domain;
-  ovkCreateDomain(&Domain, DomainParams);
+  ovkCreateDomain(Context, &Domain, DomainParams);
 
-  ovkDestroyDomainParams(&DomainParams);
+  ovkDestroyDomainParams(Context, &DomainParams);
 
   ovkConfigureDomain(Domain, OVK_DOMAIN_CONFIG_GEOMETRY | OVK_DOMAIN_CONFIG_OVERLAP |
     OVK_DOMAIN_CONFIG_CONNECTIVITY);
 
-  for (m = 0; m < NumGrids; ++m) {
-    ovk_grid_params *GridParams;
-    ovkCreateGridParams(&GridParams, 2);
-    ovkSetGridParamComm(GridParams, Grids[m].comm);
-    ovkSetGridParamSize(GridParams, Grids[m].global_size);
-    ovkSetGridParamLocalStart(GridParams, Grids[m].is);
-    ovkSetGridParamLocalEnd(GridParams, Grids[m].ie);
-    ovkSetGridParamNeighborRanks(GridParams, Grids[m].num_neighbors, Grids[m].neighbor_ranks);
-    ovkCreateGrid(Domain, OVK_ID_MANUAL, &Grids[m].id, GridParams);
-    ovkDestroyGridParams(&GridParams);
+  for (iGrid = 0; iGrid < 2; ++iGrid) {
+    int GridID = iGrid+1;
+    input_grid *InputGrid = FindLocalGrid(NumLocalGrids, InputGrids, GridID);
+    if (InputGrid) {
+      ovk_grid_params *GridParams;
+      ovkCreateGridParams(Domain, &GridParams);
+      ovkSetGridParamName(GridParams, InputGrid->name);
+      ovkSetGridParamComm(GridParams, InputGrid->comm);
+      ovkSetGridParamSize(GridParams, InputGrid->global_size);
+      ovkSetGridParamLocalBegin(GridParams, InputGrid->is);
+      ovkSetGridParamLocalEnd(GridParams, InputGrid->ie);
+      ovkSetGridParamNeighborRanks(GridParams, InputGrid->num_neighbors,
+        InputGrid->neighbor_ranks);
+      ovkCreateGridLocal(Domain, GridID, GridParams);
+      ovkDestroyGridParams(Domain, &GridParams);
+    } else {
+      ovkCreateGridRemote(Domain, GridID);
+    }
   }
 
   ovk_domain_properties *Properties;
   ovkEditDomainProperties(Domain, &Properties);
-  ovkSetDomainPropertyInferBoundaries(Properties, OVK_ALL_GRIDS, true);
+#ifdef NOPE
   ovkSetDomainPropertyOverlappable(Properties, OVK_ALL_GRIDS, OVK_ALL_GRIDS, true);
   ovkSetDomainPropertyOverlapTolerance(Properties, OVK_ALL_GRIDS, OVK_ALL_GRIDS, 1.e-10);
+  ovkSetDomainPropertyInferBoundaries(Properties, OVK_ALL_GRIDS, true);
   ovkSetDomainPropertyBoundaryHoleCutting(Properties, OVK_ALL_GRIDS, OVK_ALL_GRIDS, false);
   ovkSetDomainPropertyOverlapHoleCutting(Properties, OVK_ALL_GRIDS, OVK_ALL_GRIDS, false);
   ovkSetDomainPropertyConnectionType(Properties, OVK_ALL_GRIDS, OVK_ALL_GRIDS, OVK_CONNECTION_FRINGE);
   ovkSetDomainPropertyFringeSize(Properties, OVK_ALL_GRIDS, OVK_ALL_GRIDS, 1);
   ovkSetDomainPropertyFringePadding(Properties, OVK_ALL_GRIDS, OVK_ALL_GRIDS, 0);
+#endif
   ovkReleaseDomainProperties(Domain, &Properties);
 
-  for (m = 0; m < NumGrids; ++m) {
-    ovk_grid *Grid;
-    ovkEditGrid(Domain, Grids[m].id, &Grid);
-    ovk_range LocalRange;
-    ovkGetGridLocalRange(Grid, &LocalRange);
-    double *XYZ[2];
-    ovkEditGridCoords(Grid, &XYZ);
-    for (j = LocalRange.b[1]; j < LocalRange.e[1]; ++j) {
-      for (i = LocalRange.b[0]; i < LocalRange.e[0]; ++i) {
-        int Point[2] = {i,j};
-        l = (i-Grids[m].is[0]) + (j-Grids[m].is[1]) * Grids[m].local_size[0];
-        p = ovkRangeTupleToIndex(&LocalRange, Point);
-        XYZ[0][p] = Grids[m].xyz[l];
-        YYZ[1][p] = Grids[m].xyz[l+Grids[m].local_count];
-      }
+  ovk_grid **Grids = malloc(NumLocalGrids*sizeof(ovk_grid *));
+  iLocalGrid = 0;
+  for (iGrid = 0; iGrid < 2; ++iGrid) {
+    int GridID = iGrid+1;
+    if (ovkRankHasGrid(Domain, GridID)) {
+      ovkEditGridLocal(Domain, GridID, &Grids[iLocalGrid]);
+      ++iLocalGrid;
+    } else {
+      ovkEditGridRemote(Domain, GridID);
     }
-    ovkReleaseGridCoords(Grid, &XYZ);
-    ovkReleaseGrid(Domain, &Grid);
   }
 
-  ovkDetectOverlap(Domain);
-  ovkCutHoles(Domain);
-  ovkGenerateConnectivity(Domain);
-
-  ovkDestroyDomain(&Domain);
-
+#ifdef NOPE
+  for (iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
+    input_grid *InputGrid = InputGrids + iLocalGrid;
+    ovk_grid *Grid = Grids[iLocalGrid];
+    const ovk_grid_properties *GridProperties;
+    ovkGetGridProperties(Grid, &GridProperties);
+    ovk_range LocalRange;
+    ovkGetGridPropertyLocalRange(GridProperties, &LocalRange);
+    double *XYZ[2];
+    for (iDim = 0; iDim < 2; ++iDim) {
+      ovkEditGridCoords(Grid, iDim, &XYZ[iDim]);
+    }
+    for (j = Grid->is[1]; j < Grid->ie[1]; ++j) {
+      for (i = Grid->is[0]; i < Grid->ie[0]; ++i) {
+        int Point[2] = {i, j};
+        size_t iInputPoint = (i-Grid->is[0]) + (j-Grid->is[1]) * Grid->local_size[0];
+        ovkRangeTupleToIndex(&LocalRange, OVK_GRID_LAYOUT, Point, &iPoint);
+        XYZ[0][iPoint] = Grid->xyz[iInputPoint];
+        YYZ[1][iPoint] = Grid->xyz[iInputPoint+Grid->local_count];
+      }
+    }
+    for (iDim = 0; iDim < 2; ++iDim) {
+      ovkReleaseGridCoords(Grid, iDim, &XYZ[iDim]);
+    }
+  }
 #endif
 
-  DestroyInputs(NumGrids, &Grids, &States);
+  iLocalGrid = 0;
+  for (iGrid = 0; iGrid < 2; ++iGrid) {
+    int GridID = iGrid+1;
+    if (ovkRankHasGrid(Domain, GridID)) {
+      ovkReleaseGridLocal(Domain, GridID, &Grids[iLocalGrid]);
+      ++iLocalGrid;
+    } else {
+      ovkReleaseGridRemote(Domain, GridID);
+    }
+  }
+  free(Grids);
+
+  ovkAssemble(Domain);
+
+  ovkDestroyContext(&Context);
+
+  DestroyInputs(NumLocalGrids, &InputGrids, &InputStates);
 
   MPI_Finalize();
 
 }
 
-void CreateInputs(int *NumGrids, grid **Grids, state **States) {
+void CreateInputs(int N, int *NumLocalGrids, input_grid **Grids, input_state **States) {
 
   int d, i, j, l, m, n, p;
 
@@ -537,16 +827,16 @@ void CreateInputs(int *NumGrids, grid **Grids, state **States) {
     GridToProcMap[3] = 1;
   }
 
-  *NumGrids = 0;
+  *NumLocalGrids = 0;
   for (m = 0; m < 2; ++m) {
     if (Rank >= GridToProcMap[2*m] && Rank < GridToProcMap[2*m+1]) {
-      *NumGrids += 1;
+      *NumLocalGrids += 1;
     }
   }
 
-  *Grids = malloc((*NumGrids)*sizeof(**Grids));
+  *Grids = malloc((*NumLocalGrids)*sizeof(input_grid));
 
-  grid *Grids_ = *Grids;
+  input_grid *Grids_ = *Grids;
 
   for (m = 0, n = 0; m < 2; ++m) {
     if (Rank >= GridToProcMap[2*m] && Rank < GridToProcMap[2*m+1]) {
@@ -555,7 +845,7 @@ void CreateInputs(int *NumGrids, grid **Grids, state **States) {
     }
   }
 
-  for (n = 0; n < *NumGrids; ++n) {
+  for (n = 0; n < *NumLocalGrids; ++n) {
     if (Grids_[n].id == 1) {
       strcpy(Grids_[n].name, "Left");
     } else {
@@ -576,8 +866,8 @@ void CreateInputs(int *NumGrids, grid **Grids, state **States) {
     MPI_Group_incl(WorldGroup, NumProcsPerGrid[m], Ranks, &GridGroup);
     MPI_Comm_create(MPI_COMM_WORLD, GridGroup, &GridComm);
     if (GridComm != MPI_COMM_NULL) {
-      for (n = 0; n < *NumGrids; ++n) {
-        grid *Grid = &Grids_[n];
+      for (n = 0; n < *NumLocalGrids; ++n) {
+        input_grid *Grid = &Grids_[n];
         if (Grid->id == m+1) {
           int Dims[2] = {0, 0};
           MPI_Dims_create(NumProcsPerGrid[m], 2, Dims);
@@ -610,22 +900,22 @@ void CreateInputs(int *NumGrids, grid **Grids, state **States) {
 
   MPI_Group_free(&WorldGroup);
 
-  for (n = 0; n < *NumGrids; ++n) {
-    grid *Grid = &Grids_[n];
-    Grid->global_size[0] = 100;
-    Grid->global_size[1] = 100;
+  for (n = 0; n < *NumLocalGrids; ++n) {
+    input_grid *Grid = &Grids_[n];
+    Grid->global_size[0] = N;
+    Grid->global_size[1] = N;
     for (d = 0; d < 2; ++d) {
-      int N = Grid->global_size[d]/Grid->comm_dims[d];
-      int R = Grid->global_size[d] - Grid->comm_dims[d] * N;
-      Grid->is[d] = N*Grid->comm_coords[d] + min(R, Grid->comm_coords[d]);
-      Grid->ie[d] = N*(Grid->comm_coords[d]+1) + min(R, (Grid->comm_coords[d]+1));
+      int NumPerRank = N/Grid->comm_dims[d];
+      int Remainder = N - Grid->comm_dims[d] * NumPerRank;
+      Grid->is[d] = NumPerRank*Grid->comm_coords[d] + min(Remainder, Grid->comm_coords[d]);
+      Grid->ie[d] = NumPerRank*(Grid->comm_coords[d]+1) + min(Remainder, (Grid->comm_coords[d]+1));
       Grid->local_size[d] = Grid->ie[d] - Grid->is[d];
     }
     Grid->local_count = Grid->local_size[0] * Grid->local_size[1];
   }
 
-  for (n = 0; n < *NumGrids; ++n) {
-    grid *Grid = &Grids_[n];
+  for (n = 0; n < *NumLocalGrids; ++n) {
+    input_grid *Grid = &Grids_[n];
     Grid->xyz = malloc(Grid->local_count*2*sizeof(double));
     double xs, xe, ys, ye;
     switch (Grid->id) {
@@ -638,24 +928,24 @@ void CreateInputs(int *NumGrids, grid **Grids, state **States) {
       ys = -1.; ye = 1.;
       break;
     }
-    for (j = Grid->is[1]; j < Grid->is[1]; ++j) {
+    for (j = Grid->is[1]; j < Grid->ie[1]; ++j) {
       for (i = Grid->is[0]; i < Grid->ie[0]; ++i) {
         l = (i-Grid->is[0]) + (j-Grid->is[1]) * Grid->local_size[0];
-        double u = (double)i/(double)(Grid->global_size[0]-1);
-        double v = (double)j/(double)(Grid->global_size[1]-1);
+        double u = (double)i/(double)(N-1);
+        double v = (double)j/(double)(N-1);
         Grid->xyz[l] = (1.-u)*xs + u*xe;
         Grid->xyz[l+Grid->local_count] = (1.-v)*ys + v*ye;
       }
     }
   }
 
-  *States = malloc((*NumGrids)*sizeof(**States));
+  *States = malloc((*NumLocalGrids)*sizeof(input_state));
 
-  state *States_ = *States;
+  input_state *States_ = *States;
 
-  for (n = 0; n < *NumGrids; ++n) {
-    grid *Grid = &Grids_[n];
-    state *State = &States_[n];
+  for (n = 0; n < *NumLocalGrids; ++n) {
+    input_grid *Grid = &Grids_[n];
+    input_state *State = &States_[n];
     State->values = malloc(Grid->local_count*sizeof(double));
     double fs, fe;
     switch (Grid->id) {
@@ -666,10 +956,10 @@ void CreateInputs(int *NumGrids, grid **Grids, state **States) {
       fs = 1.; fe = -1.;
       break;
     }
-    for (j = Grid->is[1]; j < Grid->is[1]; ++j) {
+    for (j = Grid->is[1]; j < Grid->ie[1]; ++j) {
       for (i = Grid->is[0]; i < Grid->ie[0]; ++i) {
         l = (i-Grid->is[0]) + (j-Grid->is[1]) * Grid->local_size[0];
-        double v = (double)j/(double)(Grid->global_size[1]-1);
+        double v = (double)j/(double)(N-1);
         State->values[l] = (1.-v)*fs + v*fe;
       }
     }
@@ -677,12 +967,12 @@ void CreateInputs(int *NumGrids, grid **Grids, state **States) {
 
 }
 
-void DestroyInputs(int NumGrids, grid **Grids, state **States) {
+void DestroyInputs(int NumLocalGrids, input_grid **Grids, input_state **States) {
 
   int n;
 
-  for (n = 0; n < NumGrids; ++n) {
-    grid *Grid = &(*Grids)[n];
+  for (n = 0; n < NumLocalGrids; ++n) {
+    input_grid *Grid = (*Grids) + n;
     free(Grid->xyz);
     Grid->xyz = NULL;
     MPI_Comm_free(&Grid->comm);
@@ -690,8 +980,8 @@ void DestroyInputs(int NumGrids, grid **Grids, state **States) {
   free(*Grids);
   *Grids = NULL;
 
-  for (n = 0; n < NumGrids; ++n) {
-    state *State = &(*States)[n];
+  for (n = 0; n < NumLocalGrids; ++n) {
+    input_state *State = (*States) + n;
     free(State->values);
     State->values = NULL;
   }
@@ -700,14 +990,14 @@ void DestroyInputs(int NumGrids, grid **Grids, state **States) {
 
 }
 
-int FindLocalGrid(int NumGrids, grid *Grids, int GridID) {
+input_grid *FindLocalGrid(int NumLocalGrids, input_grid *Grids, int GridID) {
 
-  int LocalIndex;
+  int n;
 
-  for (LocalIndex = 0; LocalIndex < NumGrids; ++LocalIndex) {
-    if (Grids[LocalIndex].id == GridID) break;
+  for (n = 0; n < NumLocalGrids; ++n) {
+    if (Grids[n].id == GridID) return Grids + n;
   }
 
-  return LocalIndex;
+  return NULL;
 
 }

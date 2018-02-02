@@ -4,16 +4,16 @@
 #ifndef OVK_CORE_OVERKIT_INCLUDED
 #define OVK_CORE_OVERKIT_INCLUDED
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <ovkBox.h>
 #include <ovkBox.inl>
 #include <ovkCart.h>
 #include <ovkCart.inl>
+#include <ovkConnectivityD.h>
+#include <ovkConnectivityR.h>
+#include <ovkConnectivity.h>
 #include <ovkContext.h>
 #include <ovkDomain.h>
+#include <ovkExchange.h>
 #include <ovkGlobal.h>
 #include <ovkGrid.h>
 #include <ovkRange.h>
@@ -22,10 +22,6 @@ extern "C" {
 // Make sure internal headers weren't accidentally included into any public headers
 #ifdef OVK_INTERNAL
 #error Overkit internal error: leaked internal header.
-#endif
-
-#ifdef __cplusplus
-}
 #endif
 
 #endif

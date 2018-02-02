@@ -9,9 +9,13 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 static inline void SizeToString(size_t N, char *NString) {
 
-  int i, j;
+  int iInput, iOutput;
 
   char UnformattedNString[32];
 
@@ -22,17 +26,17 @@ static inline void SizeToString(size_t N, char *NString) {
 
   strncpy(NString, UnformattedNString, NumBeforeComma);
 
-  j = NumBeforeComma;
-  for (i = NumBeforeComma; i < NumDigits; ++i) {
-    if ((i-NumBeforeComma) % 3 == 0) {
-      NString[j] = ',';
-      ++j;
+  iOutput = NumBeforeComma;
+  for (iInput = NumBeforeComma; iInput < NumDigits; ++iInput) {
+    if ((iInput-NumBeforeComma) % 3 == 0) {
+      NString[iOutput] = ',';
+      ++iOutput;
     }
-    NString[j] = UnformattedNString[i];
-    ++j;
+    NString[iOutput] = UnformattedNString[iInput];
+    ++iOutput;
   }
 
-  NString[j] = '\0';
+  NString[iOutput] = '\0';
 
 }
 
@@ -60,5 +64,9 @@ static inline void PluralizeLabel(size_t Count, const char *PluralLabel, const c
   }
 
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -4,8 +4,11 @@
 #ifndef OVK_CORE_LIST_INCLUDED
 #define OVK_CORE_LIST_INCLUDED
 
-#include "Debug.h"
 #include "Global.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct t_list_entry {
   void *data;
@@ -43,6 +46,8 @@ static inline const t_list_entry *ListNextC(const t_list_entry *Entry) { return 
 
 static inline void *ListData(t_list_entry *Entry) { return Entry->data; }
 static inline const void *ListDataC(const t_list_entry *Entry) { return Entry->data; }
+
+static inline void ListSetData(t_list_entry *Entry, void *Data) { Entry->data = Data; }
 
 static inline void ListCreate(t_list **List_) {
 
@@ -191,5 +196,9 @@ static inline void *ListPopBack(t_list *List) {
   return ListRemove(List, &Back);
 
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

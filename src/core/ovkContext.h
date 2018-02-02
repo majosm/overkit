@@ -7,6 +7,10 @@
 #include <ovkGlobal.h>
 #include <ovkDomain.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct ovk_context_params;
 typedef struct ovk_context_params ovk_context_params;
 
@@ -47,5 +51,9 @@ void ovkGetContextPropertyErrorHandlerType(const ovk_context_properties *Propert
   ovk_error_handler_type *ErrorHandlerType);
 void ovkSetContextPropertyErrorHandlerType(ovk_context_properties *Properties,
   ovk_error_handler_type ErrorHandlerType);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

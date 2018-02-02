@@ -4,8 +4,11 @@
 #ifndef OVK_CORE_ORDERED_MAP_INCLUDED
 #define OVK_CORE_ORDERED_MAP_INCLUDED
 
-#include "Debug.h"
 #include "Global.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct t_ordered_map_entry {
   int key;
@@ -32,6 +35,8 @@ static inline int OMKey(const t_ordered_map_entry *Entry) { return Entry->key; }
 
 static inline void *OMData(t_ordered_map_entry *Entry) { return Entry->data; }
 static inline const void *OMDataC(const t_ordered_map_entry *Entry) { return Entry->data; }
+
+static inline void OMSetData(t_ordered_map_entry *Entry, void *Data) { Entry->data = Data; }
 
 static inline void OMCreate(t_ordered_map **Map_) {
 
@@ -184,5 +189,24 @@ static inline void *OMRemove(t_ordered_map *Map, int Key) {
   return Data;
 
 }
+
+static inline void OMClear(t_ordered_map *Map) {
+
+  t_ordered_map_entry *Entry = OMBegin(Map);
+
+  while (Entry != OMEnd(Map)) {
+    t_ordered_map_entry *NextEntry = OMNext(Entry);
+    free(Entry);
+    Entry = NextEntry;
+  }
+
+  Map->head = NULL;
+  Map->size = 0;
+
+}
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

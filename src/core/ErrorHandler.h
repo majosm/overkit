@@ -6,6 +6,10 @@
 
 #include "Global.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct t_error_handler {
   ovk_error_handler_type type;
 } t_error_handler;
@@ -58,32 +62,14 @@ typedef struct t_error_handler {
     } \
   } while (0)
 
-static inline bool ValidErrorHandlerType(ovk_error_handler_type Type) {
+void PRIVATE(CreateErrorHandler)(t_error_handler **Handler, ovk_error_handler_type Type);
+#define CreateErrorHandler(...) PRIVATE(CreateErrorHandler)(__VA_ARGS__)
 
-  switch (Type) {
-  case OVK_ERROR_HANDLER_ABORT:
-  case OVK_ERROR_HANDLER_RETURN:
-    return true;
-  default:
-    return false;
-  }
+void PRIVATE(DestroyErrorHandler)(t_error_handler **Handler);
+#define DestroyErrorHandler(...) PRIVATE(DestroyErrorHandler)(__VA_ARGS__)
 
+#ifdef __cplusplus
 }
-
-static inline void CreateErrorHandler(t_error_handler **Handler_, ovk_error_handler_type Type) {
-
-  *Handler_ = malloc(sizeof(t_error_handler));
-  t_error_handler *Handler = *Handler_;
-
-  Handler->type = Type;
-
-}
-
-static inline void DestroyErrorHandler(t_error_handler **Handler_) {
-
-  free(*Handler_);
-  *Handler_ = NULL;
-
-}
+#endif
 
 #endif

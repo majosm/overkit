@@ -6,13 +6,26 @@
 #=================
 
 set(OVERKIT_SOURCES
+  Connectivity.c
+  ConnectivityD.c
+  ConnectivityR.c
   Context.c
   Domain.c
+  ErrorHandler.c
+  Exchange.c
+  Global.c
   Grid.c
+  Logger.c
+  MiscUtils.cpp
+  MPIUtils.c
+  PartitionHash.c
 )
 
 add_library(overkit ${OVERKIT_SOURCES})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
+# Link C math library
+target_link_libraries(overkit m)
 
 #================
 # Compiler flags

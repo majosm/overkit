@@ -12,8 +12,11 @@
 #include "Logger.h"
 #include "Range.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct ovk_grid_params {
-  int id;
   char name[OVK_NAME_LENGTH];
   int num_dims;
   MPI_Comm comm;
@@ -34,11 +37,11 @@ struct ovk_grid_properties {
   MPI_Comm comm;
   int comm_size;
   int comm_rank;
-  int size[MAX_DIMS];
   bool periodic[MAX_DIMS];
   ovk_periodic_storage periodic_storage;
   double periodic_length[MAX_DIMS];
   ovk_geometry_type geometry_type;
+  ovk_range global_range;
   ovk_range local_range;
   int num_neighbors;
   int *neighbor_ranks;
@@ -47,21 +50,51 @@ struct ovk_grid_properties {
 typedef struct {
   int comm_rank;
   ovk_range local_range;
-} t_grid_neighbor_info;
+} t_grid_neighbor;
 
 struct ovk_grid {
   ovk_grid_properties properties;
   t_logger *logger;
   t_error_handler *error_handler;
-  t_grid_neighbor_info *neighbors;
   ovk_cart cart;
+  t_grid_neighbor *neighbors;
 };
 
-void CreateGridParams(ovk_grid_params **Params, int NumDims, MPI_Comm DefaultComm);
-void DestroyGridParams(ovk_grid_params **Params);
+struct ovk_grid_info {
+  int id;
+  char name[OVK_NAME_LENGTH];
+  int num_dims;
+  int root_rank;
+  ovk_range global_range;
+  ovk_cart cart;
+  double periodic_length[MAX_DIMS];
+  ovk_geometry_type geometry_type;
+};
 
-void CreateGrid(ovk_grid **Grid, int ID, const ovk_grid_params *Params, t_logger *Logger,
+void PRIVATE(CreateGrid)(ovk_grid **Grid, int ID, const ovk_grid_params *Params, t_logger *Logger,
   t_error_handler *ErrorHandler);
-void DestroyGrid(ovk_grid **Grid);
+#define CreateGrid(...) PRIVATE(CreateGrid)(__VA_ARGS__)
+void PRIVATE(DestroyGrid)(ovk_grid **Grid);
+#define DestroyGrid(...) PRIVATE(DestroyGrid)(__VA_ARGS__)
+
+void PRIVATE(GetGridNeighborRange)(const ovk_grid *Grid, int iNeighbor, ovk_range *NeighborRange);
+#define GetGridNeighborRange(...) PRIVATE(GetGridNeighborRange)(__VA_ARGS__)
+void PRIVATE(GetGridNeighborRank)(const ovk_grid *Grid, int iNeighbor, int *NeighborRank);
+#define GetGridNeighborRank(...) PRIVATE(GetGridNeighborRank)(__VA_ARGS__)
+
+void PRIVATE(CreateGridParams)(ovk_grid_params **Params, int NumDims, MPI_Comm DefaultComm);
+#define CreateGridParams(...) PRIVATE(CreateGridParams)(__VA_ARGS__)
+void PRIVATE(DestroyGridParams)(ovk_grid_params **Params);
+#define DestroyGridParams(...) PRIVATE(DestroyGridParams)(__VA_ARGS__)
+
+void PRIVATE(CreateGridInfo)(ovk_grid_info **Info, const ovk_grid *Grid, MPI_Comm Comm,
+  int CommRank);
+#define CreateGridInfo(...) PRIVATE(CreateGridInfo)(__VA_ARGS__)
+void PRIVATE(DestroyGridInfo)(ovk_grid_info **Info);
+#define DestroyGridInfo(...) PRIVATE(DestroyGridInfo)(__VA_ARGS__)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
