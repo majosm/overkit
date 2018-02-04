@@ -507,8 +507,8 @@ void ovkGetGrid(const ovk_domain *Domain, int GridID, const ovk_grid **Grid) {
 
   const t_domain_grid_container *Container = FindGridC(Domain, GridID);
   OVK_DEBUG_ASSERT(Container, "Grid %i does not exist.", GridID);
-  OVK_DEBUG_ASSERT(Container->has_local_data, "Grid %s does not have local data on rank %i.",
-    Container->info->name, LogRank(Domain->logger));
+  OVK_DEBUG_ASSERT(Container->has_local_data, "Grid %s does not have local data on rank @rank@.",
+    Container->info->name);
 
   *Grid = Container->grid;
 
@@ -548,8 +548,8 @@ static void EditGridGlobal(ovk_domain *Domain, int GridID, ovk_grid **Grid) {
   t_domain_grid_container *Container = FindGrid(Domain, GridID);
 
   if (IsLocal) {
-    OVK_DEBUG_ASSERT(Container->has_local_data, "Grid %s does not have local data on rank %i.",
-      Container->info->name, LogRank(Domain->logger));
+    OVK_DEBUG_ASSERT(Container->has_local_data, "Grid %s does not have local data on rank @rank@.",
+      Container->info->name);
   }
 
 //   bool StartEditAll = Domain->grids_edit_ref_count == 0;
@@ -599,8 +599,8 @@ static void ReleaseGridGlobal(ovk_domain *Domain, int GridID, ovk_grid **Grid) {
     "edited.", Container->info->name);
 
   if (IsLocal) {
-    OVK_DEBUG_ASSERT(Container->has_local_data, "Grid %s does not have local data on rank %i.",
-      Container->info->name, LogRank(Domain->logger));
+    OVK_DEBUG_ASSERT(Container->has_local_data, "Grid %s does not have local data on rank @rank@.",
+      Container->info->name);
     OVK_DEBUG_ASSERT(*Grid == Container->grid, "Invalid grid pointer.");
   }
 
@@ -887,7 +887,7 @@ void ovkGetConnectivity(const ovk_domain *Domain, int DonorGridID, int ReceiverG
     ReceiverGridID);
   OVK_DEBUG_ASSERT(Container, "Connectivity (%i,%i) does not exist.", DonorGridID, ReceiverGridID);
   OVK_DEBUG_ASSERT(Container->has_local_data, "Connectivity %s does not have local data on "
-    "rank %i.", Container->info->name, LogRank(Domain->logger));
+    "rank @rank@.", Container->info->name);
 
   *Connectivity = Container->connectivity;
 
@@ -939,7 +939,7 @@ static void EditConnectivityGlobal(ovk_domain *Domain, int DonorGridID, int Rece
 
   if (IsLocal) {
     OVK_DEBUG_ASSERT(Container->has_local_data, "Connectivity %s does not have local data on "
-      "rank %i.", Container->info->name, LogRank(Domain->logger));
+      "rank @rank@.", Container->info->name);
   }
 
 //   bool StartEditAll = Domain->connectivities_edit_ref_count == 0;
@@ -1000,7 +1000,7 @@ static void ReleaseConnectivityGlobal(ovk_domain *Domain, int DonorGridID, int R
 
   if (IsLocal) {
     OVK_DEBUG_ASSERT(Container->has_local_data, "Connectivity %s does not have local data on "
-      "rank %i.", Container->info->name, LogRank(Domain->logger));
+      "rank @rank@.", Container->info->name);
     OVK_DEBUG_ASSERT(*Connectivity == Container->connectivity, "Invalid connectivity pointer.");
   }
 
@@ -1274,8 +1274,8 @@ void ovkGetExchange(const ovk_domain *Domain, int DonorGridID, int ReceiverGridI
 
   const t_domain_exchange_container *Container = FindExchangeC(Domain, DonorGridID, ReceiverGridID);
   OVK_DEBUG_ASSERT(Container, "Exchange (%i,%i) does not exist.", DonorGridID, ReceiverGridID);
-  OVK_DEBUG_ASSERT(Container->has_local_data, "Exchange %s does not have local data on rank %i.",
-    Container->info->name, LogRank(Domain->logger));
+  OVK_DEBUG_ASSERT(Container->has_local_data, "Exchange %s does not have local data on rank @rank@.",
+    Container->info->name);
 
   *Exchange = Container->exchange;
 
@@ -1442,13 +1442,13 @@ void ovkCollect(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
 
   const t_domain_exchange_container *Container = FindExchangeC(Domain, DonorGridID, ReceiverGridID);
   OVK_DEBUG_ASSERT(Container, "Exchange (%i,%i) does not exist.", DonorGridID, ReceiverGridID);
-  OVK_DEBUG_ASSERT(Container->has_local_data, "Exchange %s does not have local data on rank %i.",
-    Container->info->name, LogRank(Domain->logger));
+  OVK_DEBUG_ASSERT(Container->has_local_data, "Exchange %s does not have local data on rank @rank@.",
+    Container->info->name);
 
   const ovk_exchange *Exchange = Container->exchange;
 
   OVK_DEBUG_ASSERT(ovkRankHasExchangeDonorSide(Exchange), "Exchange %s does not have "
-    "donor-side data on rank %i.", Container->info->name, LogRank(Domain->logger));
+    "donor-side data on rank @rank@.", Container->info->name);
 
   ExchangeCollect(Exchange, DataType, Count, CollectOp, GridData, GridDataLayout, DonorData);
 
@@ -1472,13 +1472,13 @@ void ovkSend(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, ovk_
 
   const t_domain_exchange_container *Container = FindExchangeC(Domain, DonorGridID, ReceiverGridID);
   OVK_DEBUG_ASSERT(Container, "Exchange (%i,%i) does not exist.", DonorGridID, ReceiverGridID);
-  OVK_DEBUG_ASSERT(Container->has_local_data, "Exchange %s does not have local data on rank %i.",
-    Container->info->name, LogRank(Domain->logger));
+  OVK_DEBUG_ASSERT(Container->has_local_data, "Exchange %s does not have local data on rank @rank@.",
+    Container->info->name);
 
   const ovk_exchange *Exchange = Container->exchange;
 
   OVK_DEBUG_ASSERT(ovkRankHasExchangeDonorSide(Exchange), "Exchange %s does not have "
-    "donor-side data on rank %i.", Container->info->name, LogRank(Domain->logger));
+    "donor-side data on rank @rank@.", Container->info->name);
 
   ExchangeSend(Exchange, DataType, Count, DonorData, Tag, Request);
 
@@ -1502,13 +1502,13 @@ void ovkReceive(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
 
   const t_domain_exchange_container *Container = FindExchangeC(Domain, DonorGridID, ReceiverGridID);
   OVK_DEBUG_ASSERT(Container, "Exchange (%i,%i) does not exist.", DonorGridID, ReceiverGridID);
-  OVK_DEBUG_ASSERT(Container->has_local_data, "Exchange %s does not have local data on rank %i.",
-    Container->info->name, LogRank(Domain->logger));
+  OVK_DEBUG_ASSERT(Container->has_local_data, "Exchange %s does not have local data on rank @rank@.",
+    Container->info->name);
 
   const ovk_exchange *Exchange = Container->exchange;
 
   OVK_DEBUG_ASSERT(ovkRankHasExchangeReceiverSide(Exchange), "Exchange %s does not have "
-    "receiver-side data on rank %i.", Container->info->name, LogRank(Domain->logger));
+    "receiver-side data on rank @rank@.", Container->info->name);
 
   ExchangeReceive(Exchange, DataType, Count, ReceiverData, Tag, Request);
 
@@ -1557,13 +1557,13 @@ void ovkDisperse(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
 
   const t_domain_exchange_container *Container = FindExchangeC(Domain, DonorGridID, ReceiverGridID);
   OVK_DEBUG_ASSERT(Container, "Exchange (%i,%i) does not exist.", DonorGridID, ReceiverGridID);
-  OVK_DEBUG_ASSERT(Container->has_local_data, "Exchange %s does not have local data on rank %i.",
-    Container->info->name, LogRank(Domain->logger));
+  OVK_DEBUG_ASSERT(Container->has_local_data, "Exchange %s does not have local data on rank @rank@.",
+    Container->info->name);
 
   const ovk_exchange *Exchange = Container->exchange;
 
   OVK_DEBUG_ASSERT(ovkRankHasExchangeReceiverSide(Exchange), "Exchange %s does not have "
-    "receiver-side data on rank %i.", Container->info->name, LogRank(Domain->logger));
+    "receiver-side data on rank @rank@.", Container->info->name);
 
   ExchangeDisperse(Exchange, DataType, Count, DisperseOp, ReceiverData, GridData, GridDataLayout);
 

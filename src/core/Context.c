@@ -37,7 +37,7 @@ ovk_error ovkCreateContext(ovk_context **Context_, const ovk_context_params *Par
   MPI_Comm_rank(Comm, &Context->properties.comm_rank);
 
   Context->properties.log_level = Params->log_level;
-  CreateLogger(&Context->logger, Context->properties.comm_rank, Params->log_level);
+  CreateLogger(&Context->logger, Params->log_level, Context->properties.comm_rank);
 
   Context->properties.error_handler_type = Params->error_handler_type;
   CreateErrorHandler(&Context->error_handler, Params->error_handler_type);
@@ -55,7 +55,7 @@ ovk_error ovkCreateContext(ovk_context **Context_, const ovk_context_params *Par
 
   MPI_Barrier(Context->properties.comm);
 
-  if (Context->properties.comm_rank == 0 && (LogLevel(Context->logger) & OVK_LOG_STATUS)) {
+  if (Context->properties.comm_rank == 0 && LoggingStatus(Context->logger)) {
     char ProcessesString[NUMBER_STRING_LENGTH+10];
     PluralizeLabel(Context->properties.comm_size, "processes", "process", ProcessesString);
     LogStatus(Context->logger, true, 0, "Created context on %s.", ProcessesString);

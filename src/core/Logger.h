@@ -10,30 +10,34 @@
 extern "C" {
 #endif
 
-enum { LOG_BUFFER_SIZE = 1024 };
+enum { LOG_BUFFER_LENGTH = 1024 };
 
 typedef struct {
-  int rank;
   ovk_log_level level;
-  char buffer[LOG_BUFFER_SIZE];
+  int write_rank;
 } t_logger;
 
-static inline int LogRank(const t_logger *Logger) { return Logger->rank; }
-static inline ovk_log_level LogLevel(const t_logger *Logger) { return Logger->level; }
-
-void PRIVATE(CreateLogger)(t_logger **Logger, int Rank, ovk_log_level LogLevel);
+void PRIVATE(CreateLogger)(t_logger **Logger, ovk_log_level LogLevel, int WriteRank);
 #define CreateLogger(...) PRIVATE(CreateLogger)(__VA_ARGS__)
 
 void PRIVATE(DestroyLogger)(t_logger **Logger);
 #define DestroyLogger(...) PRIVATE(DestroyLogger)(__VA_ARGS__)
 
+static inline bool LoggingStatus(const t_logger *Logger) {
+  return (Logger->level & OVK_LOG_STATUS) != 0;
+}
+static inline bool LoggingWarnings(const t_logger *Logger) {
+  return (Logger->level & OVK_LOG_WARNINGS) != 0;
+}
+static inline bool LoggingErrors(const t_logger *Logger) {
+  return (Logger->level & OVK_LOG_ERRORS) != 0;
+}
+
 void PRIVATE(LogStatus)(t_logger *Logger, bool WriteCondition, int IncrementLevel,
   const char *Format, ...);
 #define LogStatus(...) PRIVATE(LogStatus)(__VA_ARGS__)
-
 void PRIVATE(LogWarning)(t_logger *Logger, bool WriteCondition, const char *Format, ...);
 #define LogWarning(...) PRIVATE(LogWarning)(__VA_ARGS__)
-
 void PRIVATE(LogError)(t_logger *Logger, bool WriteCondition, const char *Format, ...);
 #define LogError(...) PRIVATE(LogError)(__VA_ARGS__)
 

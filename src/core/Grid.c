@@ -339,8 +339,8 @@ static void PrintGridDecomposition(const ovk_grid *Grid) {
   int OtherRank;
   for (OtherRank = 0; OtherRank < Grid->properties.comm_size; ++OtherRank) {
     if (OtherRank == Grid->properties.comm_rank) {
-      LogStatus(Grid->logger, true, 1, "Rank %i (global rank %i) contains %s (%s).",
-        Grid->properties.comm_rank, LogRank(Grid->logger), LocalRangeString, TotalLocalPointsString);
+      LogStatus(Grid->logger, true, 1, "Rank %i (global rank @rank@) contains %s (%s).",
+        Grid->properties.comm_rank, LocalRangeString, TotalLocalPointsString);
       if (Grid->properties.num_neighbors > 0) {
         LogStatus(Grid->logger, true, 1, "Rank %i has neighbors: %s", Grid->properties.comm_rank,
           NeighborRanksString);

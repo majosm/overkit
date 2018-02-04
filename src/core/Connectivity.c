@@ -262,7 +262,7 @@ void ovkGetConnectivityDonorSide(const ovk_connectivity *Connectivity,
 
   const t_connectivity_donor_side_container *Container = Connectivity->donors_container;
   OVK_DEBUG_ASSERT(Container->has_local_data, "Connectivity %s does not have donor-side data on "
-    "rank %i.", Connectivity->properties.name, LogRank(Connectivity->logger));
+    "rank @rank@.", Connectivity->properties.name);
 
   *Donors = Container->donors;
 
@@ -299,7 +299,7 @@ static void EditDonorSideGlobal(ovk_connectivity *Connectivity, ovk_connectivity
 
   if (IsLocal) {
     OVK_DEBUG_ASSERT(Container->has_local_data, "Connectivity %s does not have donor-side data on "
-      "rank %i.", Connectivity->properties.name, LogRank(Connectivity->logger));
+      "rank @rank@.", Connectivity->properties.name);
   }
 
   ++Container->edit_ref_count;
@@ -344,7 +344,7 @@ static void ReleaseDonorSideGlobal(ovk_connectivity *Connectivity, ovk_connectiv
 
   if (IsLocal) {
     OVK_DEBUG_ASSERT(Container->has_local_data, "Connectivity %s does not have donor-side data on "
-      "rank %i.", Connectivity->properties.name, LogRank(Connectivity->logger));
+      "rank @rank@.", Connectivity->properties.name);
     OVK_DEBUG_ASSERT(*Donors_ == Container->donors, "Invalid donors pointer.");
   }
 
@@ -415,7 +415,7 @@ void ovkGetConnectivityReceiverSide(const ovk_connectivity *Connectivity,
 
   const t_connectivity_receiver_side_container *Container = Connectivity->receivers_container;
   OVK_DEBUG_ASSERT(Container->has_local_data, "Connectivity %s does not have receiver-side data on "
-    "rank %i.", Connectivity->properties.name, LogRank(Connectivity->logger));
+    "rank @rank@.", Connectivity->properties.name);
 
   *Receivers = Container->receivers;
 
@@ -452,7 +452,7 @@ static void EditReceiverSideGlobal(ovk_connectivity *Connectivity, ovk_connectiv
 
   if (IsLocal) {
     OVK_DEBUG_ASSERT(Container->has_local_data, "Connectivity %s does not have receiver-side data "
-      "on rank %i.", Connectivity->properties.name, LogRank(Connectivity->logger));
+      "on rank @rank@.", Connectivity->properties.name);
   }
 
   ++Container->edit_ref_count;
@@ -498,7 +498,7 @@ static void ReleaseReceiverSideGlobal(ovk_connectivity *Connectivity,
 
   if (IsLocal) {
     OVK_DEBUG_ASSERT(Container->has_local_data, "Connectivity %s does not have receiver-side data "
-      "on rank %i.", Connectivity->properties.name, LogRank(Connectivity->logger));
+      "on rank @rank@.", Connectivity->properties.name);
     OVK_DEBUG_ASSERT(*Receivers_ == Container->receivers, "Invalid receivers pointer.");
   }
 
