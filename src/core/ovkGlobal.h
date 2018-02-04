@@ -17,7 +17,7 @@
 // Apply prefix to names of internal functions that can't be defined as static due to being
 // shared between multiple source files
 #ifndef OVK_PRIVATE_PREFIX
-#define OVK_PRIVATE_PREFIX ovk_INTERNAL_
+#define OVK_PRIVATE_PREFIX ovkINTERNAL
 #endif
 // Hack to force evaluation of prefix before concatenating tokens
 #define OVK_CONCAT_(Left, Right) Left ## Right

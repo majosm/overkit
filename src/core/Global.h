@@ -26,7 +26,7 @@
 
 #define PRIVATE(func) OVK_PRIVATE(func)
 
-#define free_null(ptr) do { free(*ptr); *ptr = NULL; } while (0)
+#define free_null(ptr) do { free(*ptr); *ptr = NULL; } while (false)
 
 #ifdef __cplusplus
 extern "C" {
