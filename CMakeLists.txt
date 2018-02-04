@@ -48,6 +48,12 @@ endif()
 add_custom_target(distclean COMMAND "${CMAKE_COMMAND}" -DBINARY_DIR="${CMAKE_BINARY_DIR}"
   -P "${CMAKE_SOURCE_DIR}/config/scripts/distclean.cmake")
 
+# Include top level source directory
+include_directories(${CMAKE_SOURCE_DIR})
+
+# Include 'include' directory
+include_directories(${CMAKE_SOURCE_DIR}/include)
+
 #=========================
 # Build types and options
 #=========================
@@ -74,16 +80,24 @@ endif()
 # Build options
 option(TESTS "Enable tests" OFF)
 option(EXAMPLES "Enable examples" OFF)
-option(BUILD_SHARED_LIBS "" OFF)
+option(BUILD_SHARED_LIBS "Build libraries as shared" OFF)
+option(XPACC "Enable XPACC-specific extras" OFF)
 
+# Not entirely sure why this is here
 if(NOT DEFINED BUILD_SHARED_LIBS)
   set(BUILD_SHARED_LIBS FALSE)
+endif()
+
+# Extra code for XPACC purposes
+if(XPACC)
+  add_definitions(-DOVERKIT_XPACC)
 endif()
 
 #=======================
 # External dependencies
 #=======================
 
+# MPI
 if(NOT BUILT_IN_MPI AND NOT EXTERNAL_MPI)
   set(BUILT_IN_MPI FALSE CACHE INTERNAL "")
   set(EXTERNAL_MPI FALSE CACHE INTERNAL "")
@@ -190,8 +204,10 @@ endif()
 #================
 
 add_subdirectory(examples)
-add_subdirectory(src)
+add_subdirectory(ovk)
+add_subdirectory(support)
 add_subdirectory(tests)
+add_subdirectory(utils)
 
 #==============
 # Installation
@@ -223,6 +239,8 @@ install(
 install(EXPORT OverkitTargets
   DESTINATION lib/Overkit/CMake
 )
+
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/" DESTINATION include FILES_MATCHING PATTERN "*.h")
 
 #=============================
 # Write configuration summary

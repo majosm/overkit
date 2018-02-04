@@ -8,8 +8,8 @@
 if(EXAMPLES)
 
 # Link to overkit and overkit-support
-include_directories("${CMAKE_SOURCE_DIR}/src/core")
-# include_directories("${CMAKE_SOURCE_DIR}/src/support")
+include_directories("${CMAKE_SOURCE_DIR}/ovk/core")
+# include_directories("${CMAKE_SOURCE_DIR}/support")
 # link_libraries(overkit-support overkit)
 link_libraries(overkit)
 
