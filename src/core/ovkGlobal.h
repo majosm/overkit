@@ -59,6 +59,7 @@ typedef enum {
 
 typedef enum {
   OVK_ERROR_NONE = 0,
+  OVK_ERROR_NO_MPI = 1,
   OVK_MAX_ERROR
 } ovk_error;
 

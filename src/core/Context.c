@@ -17,6 +17,11 @@ ovk_error ovkCreateContext(ovk_context **Context_, const ovk_context_params *Par
   OVK_DEBUG_ASSERT(Context_, "Invalid context pointer.");
   OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
 
+  int MPIInitialized;
+  MPI_Initialized(&MPIInitialized);
+  OVK_DEBUG_ASSERT(MPIInitialized, "MPI not initialized.");
+  if (!MPIInitialized) return OVK_ERROR_NO_MPI;
+
   MPI_Comm Comm;
   MPI_Comm_dup(Params->comm, &Comm);
 
