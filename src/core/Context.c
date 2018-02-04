@@ -42,6 +42,15 @@ ovk_error ovkCreateContext(ovk_context **Context_, const ovk_context_params *Par
   Context->properties.error_handler_type = Params->error_handler_type;
   CreateErrorHandler(&Context->error_handler, Params->error_handler_type);
 
+  switch (Params->error_handler_type) {
+  case OVK_ERROR_HANDLER_ABORT:
+    MPI_Comm_set_errhandler(Context->properties.comm, MPI_ERRORS_ARE_FATAL);
+    break;
+  case OVK_ERROR_HANDLER_RETURN:
+    MPI_Comm_set_errhandler(Context->properties.comm, MPI_ERRORS_RETURN);
+    break;
+  }
+
   ListCreate(&Context->domains);
 
   MPI_Barrier(Context->properties.comm);
