@@ -222,6 +222,15 @@ void ovkConfigureDomain(ovk_domain *Domain, ovk_domain_config Config) {
 
 }
 
+void ovkGetDomainConfiguration(ovk_domain *Domain, ovk_domain_config *Config) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+  OVK_DEBUG_ASSERT(Config, "Invalid config pointer.");
+
+  *Config = Domain->config;
+
+}
+
 void ovkGetDomainProperties(const ovk_domain *Domain, const ovk_domain_properties **Properties) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");

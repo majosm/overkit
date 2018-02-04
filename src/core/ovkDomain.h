@@ -23,6 +23,7 @@ struct ovk_domain_properties;
 typedef struct ovk_domain_properties ovk_domain_properties;
 
 void ovkConfigureDomain(ovk_domain *Domain, ovk_domain_config Config);
+void ovkGetDomainConfiguration(ovk_domain *Domain, ovk_domain_config *Config);
 
 void ovkGetDomainProperties(const ovk_domain *Domain, const ovk_domain_properties **Properties);
 void ovkEditDomainProperties(ovk_domain *Domain, ovk_domain_properties **Properties);
