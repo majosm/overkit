@@ -24,9 +24,9 @@
 #define OVK_INTERNAL
 #endif
 
-#define PRIVATE(func) OVK_PRIVATE(func)
+#define PRIVATE(Func) OVK_PRIVATE(Func)
 
-#define free_null(ptr) do { free(*ptr); *ptr = NULL; } while (false)
+#define free_null(Ptr) do { free(*Ptr); *Ptr = NULL; } while (false)
 
 #ifdef __cplusplus
 extern "C" {
