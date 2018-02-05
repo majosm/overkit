@@ -1,7 +1,7 @@
 // Copyright (c) 2018 Matthew J. Smith and Overkit contributors
 // License: MIT (http://opensource.org/licenses/MIT)
 
-#include "overkit.h"
+#include <overkit.h>
 #include "Global.h"
 // #include "Grid.h"
 // #include "Connectivity.h"
