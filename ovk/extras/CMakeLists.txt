@@ -9,6 +9,13 @@ set(OVERKIT_EXTRAS_SOURCES
   Global.c
 )
 
+if(XPACC)
+  set(XPACC_EXTRAS_SOURCES
+    XINTOUT.c
+  )
+  list(APPEND OVERKIT_EXTRAS_SOURCES ${XPACC_EXTRAS_SOURCES})
+endif()
+
 add_library(overkit-extras ${OVERKIT_EXTRAS_SOURCES})
 
 # Link to Overkit

@@ -6,6 +6,10 @@
 
 #include <ovk/extras/ovkGlobal.h>
 
+#ifdef OVERKIT_XPACC
+#include <ovk/extras/ovkXINTOUT.h>
+#endif
+
 // Make sure internal headers weren't accidentally included into any public headers
 #ifdef OVK_INTERNAL
 #error Overkit internal error: leaked internal header.
