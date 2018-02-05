@@ -32,7 +32,7 @@ extern "C" {
 #define OVK_DEBUG true
 void OVK_PRIVATE(DebugAssert)(const char *File, int Line, const char *Format, ...);
 #define OVK_DEBUG_ASSERT(Condition, ...) \
-  if (!(Condition)) OVK_PRIVATE(DebugAssert)(__FILE__, __LINE__, __VA_ARGS__);
+  if (!(Condition)) OVK_PRIVATE(DebugAssert)(__FILE__, __LINE__, __VA_ARGS__)
 #else
 #define OVK_DEBUG false
 #define OVK_DEBUG_ASSERT(...)
