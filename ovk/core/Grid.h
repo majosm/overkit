@@ -77,6 +77,13 @@ void PRIVATE(CreateGrid)(ovk_grid **Grid, int ID, const ovk_grid_params *Params,
 void PRIVATE(DestroyGrid)(ovk_grid **Grid);
 #define DestroyGrid(...) PRIVATE(DestroyGrid)(__VA_ARGS__)
 
+static inline void GetGridLogger(const ovk_grid *Grid, t_logger **Logger) {
+  *Logger = (t_logger *)Grid->logger;
+}
+static inline void GetGridErrorHandler(const ovk_grid *Grid, t_error_handler **ErrorHandler) {
+  *ErrorHandler = (t_error_handler *)Grid->error_handler;
+}
+
 void PRIVATE(GetGridNeighborRange)(const ovk_grid *Grid, int iNeighbor, ovk_range *NeighborRange);
 #define GetGridNeighborRange(...) PRIVATE(GetGridNeighborRange)(__VA_ARGS__)
 void PRIVATE(GetGridNeighborRank)(const ovk_grid *Grid, int iNeighbor, int *NeighborRank);

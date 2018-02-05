@@ -72,6 +72,13 @@ void PRIVATE(CreateDomain)(ovk_domain **Domain, const ovk_domain_params *Params,
 void PRIVATE(DestroyDomain)(ovk_domain **Domain);
 #define DestroyDomain(...) PRIVATE(DestroyDomain)(__VA_ARGS__)
 
+static inline void GetDomainLogger(const ovk_domain *Domain, t_logger **Logger) {
+  *Logger = (t_logger *)Domain->logger;
+}
+static inline void GetDomainErrorHandler(const ovk_domain *Domain, t_error_handler **ErrorHandler) {
+  *ErrorHandler = (t_error_handler *)Domain->error_handler;
+}
+
 void PRIVATE(CreateDomainParams)(ovk_domain_params **Params, MPI_Comm DefaultComm);
 #define CreateDomainParams(...) PRIVATE(CreateDomainParams)(__VA_ARGS__)
 void PRIVATE(DestroyDomainParams)(ovk_domain_params **Params);
