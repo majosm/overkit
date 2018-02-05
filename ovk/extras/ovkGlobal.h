@@ -8,13 +8,6 @@
 
 #include <mpi.h>
 
-// Apply prefix to names of internal functions that can't be defined as static due to being
-// shared between multiple source files
-#ifndef OVK_EXTRAS_PRIVATE_PREFIX
-#define OVK_EXTRAS_PRIVATE_PREFIX ovkEXT_INTERNAL_
-#endif
-#define OVK_EXTRAS_PRIVATE(Func) OVK_CONCAT(OVK_EXTRAS_PRIVATE_PREFIX, Func)
-
 #ifdef __cplusplus
 extern "C" {
 #endif

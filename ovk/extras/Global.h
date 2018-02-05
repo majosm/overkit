@@ -18,9 +18,6 @@
 #define OVK_EXTRAS_INTERNAL
 #endif
 
-#undef PRIVATE
-#define PRIVATE(Func) OVK_EXTRAS_PRIVATE(Func)
-
 #ifdef __cplusplus
 extern "C" {
 #endif
