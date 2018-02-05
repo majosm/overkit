@@ -14,13 +14,19 @@ static void DefaultProperties(ovk_context_properties *Properties);
 
 ovk_error ovkCreateContext(ovk_context **Context_, const ovk_context_params *Params) {
 
-  OVK_DEBUG_ASSERT(Context_, "Invalid context pointer.");
-  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
-
   int MPIInitialized;
   MPI_Initialized(&MPIInitialized);
-  OVK_DEBUG_ASSERT(MPIInitialized, "MPI not initialized.");
-  if (!MPIInitialized) return OVK_ERROR_NO_MPI;
+  if (!MPIInitialized) {
+    if (OVK_DEBUG) {
+      printf("ERROR: MPI not initialized.");
+      exit(OVK_ERROR_NO_MPI);
+    } else {
+      return OVK_ERROR_NO_MPI;
+    }
+  }
+
+  OVK_DEBUG_ASSERT(Context_, "Invalid context pointer.");
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
 
   MPI_Comm Comm;
   MPI_Comm_dup(Params->comm, &Comm);
@@ -61,7 +67,7 @@ ovk_error ovkCreateContext(ovk_context **Context_, const ovk_context_params *Par
     LogStatus(Context->logger, true, 0, "Created context on %s.", ProcessesString);
   }
 
-  return OVK_ERROR_NONE;
+  return OVK_NO_ERROR;
 
 }
 

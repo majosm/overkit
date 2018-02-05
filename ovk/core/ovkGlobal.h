@@ -58,7 +58,7 @@ typedef enum {
 } ovk_error_handler_type;
 
 typedef enum {
-  OVK_ERROR_NONE = 0,
+  OVK_NO_ERROR = 0,
   OVK_ERROR_NO_MPI,
   OVK_ERROR_FILE_OPEN,
   OVK_ERROR_FILE_READ,

@@ -57,7 +57,7 @@ static inline bool ValidErrorHandlerType(ovk_error_handler_type ErrorHandlerType
 
 static inline bool ValidError(ovk_error Error) {
 
-  return Error >= OVK_ERROR_NONE && Error < OVK_MAX_ERROR;
+  return Error >= OVK_NO_ERROR && Error < OVK_MAX_ERROR;
 
 }
 
