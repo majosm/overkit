@@ -4,6 +4,7 @@
 #include "ovk/core/MPIUtils.h"
 
 #include "ovk/core/Global.h"
+#include "ovk/core/OrderedMap.h"
 
 void PRIVATE(BroadcastAnySource)(void *Data, int Count, MPI_Datatype DataType, bool IsSource,
   MPI_Comm Comm) {
@@ -128,5 +129,49 @@ void PRIVATE(DestroySignal)(t_signal **Signal) {
 #endif
 
   free_null(Signal);
+
+}
+
+void PRIVATE(DynamicHandshake)(MPI_Comm Comm, int NumDestRanks, const int *DestRanks,
+  t_ordered_map *SourceRanks) {
+
+  int iDestRank;
+
+  char SendBuffer[1], RecvBuffer[1];
+
+  MPI_Request *SendRequests = malloc(NumDestRanks*sizeof(MPI_Request));
+  for (iDestRank = 0; iDestRank < NumDestRanks; ++iDestRank) {
+    MPI_Issend(SendBuffer, 1, MPI_CHAR, DestRanks[iDestRank], 0, Comm, SendRequests+iDestRank);
+  }
+
+  t_signal *AllSendsDoneSignal;
+  CreateSignal(&AllSendsDoneSignal, Comm);
+
+  bool Done = false;
+  int SendsDone = false;
+  while (!Done) {
+    while (true) {
+      int IncomingMessage;
+      MPI_Status Status;
+      MPI_Iprobe(MPI_ANY_SOURCE, 0, Comm, &IncomingMessage, &Status);
+      if (!IncomingMessage) break;
+      int SourceRank = Status.MPI_SOURCE;
+      MPI_Recv(RecvBuffer, 1, MPI_CHAR, SourceRank, 0, Comm, MPI_STATUS_IGNORE);
+      OMInsert(SourceRanks, SourceRank, NULL);
+    }
+    if (SendsDone) {
+      CheckSignal(AllSendsDoneSignal, &Done);
+    } else {
+      MPI_Testall(NumDestRanks, SendRequests, &SendsDone, MPI_STATUSES_IGNORE);
+      if (SendsDone) {
+        StartSignal(AllSendsDoneSignal);
+        free(SendRequests);
+      }
+    }
+  }
+
+  MPI_Barrier(Comm);
+
+  DestroySignal(&AllSendsDoneSignal);
 
 }

@@ -136,54 +136,16 @@ void PRIVATE(CreatePartitionHash)(t_partition_hash **Hash_, int NumDims, MPI_Com
     LocalRangeFlat[MAX_DIMS+iDim] = Hash->local_range.e[iDim];
   }
 
-  char SendBuffer[1], RecvBuffer[1];
+  t_ordered_map *Partitions;
+  OMCreate(&Partitions);
+
+  DynamicHandshake(Hash->comm, NumOverlappedBins, OverlappedBinIndices, Partitions);
+
+  int NumPartitions = OMSize(Partitions);
 
   MPI_Request *SendRequests = malloc(NumOverlappedBins*sizeof(MPI_Request));
-  for (iBin = 0; iBin < NumOverlappedBins; ++iBin) {
-    MPI_Issend(SendBuffer, 1, MPI_CHAR, OverlappedBinIndices[iBin], 0, Hash->comm,
-      SendRequests+iBin);
-  }
-
-  t_ordered_map *Partitions;
-  if (Hash->rank_has_bin) {
-    OMCreate(&Partitions);
-  }
-
-  t_signal *AllSendsDoneSignal;
-  CreateSignal(&AllSendsDoneSignal, Hash->comm);
-
-  bool Done = false;
-  int SendsDone = false;
-  while (!Done) {
-    while (true) {
-      int IncomingMessage;
-      MPI_Status Status;
-      MPI_Iprobe(MPI_ANY_SOURCE, 0, Hash->comm, &IncomingMessage, &Status);
-      if (!IncomingMessage) break;
-      int PartitionRank = Status.MPI_SOURCE;
-      MPI_Recv(RecvBuffer, 1, MPI_CHAR, PartitionRank, 0, Hash->comm, MPI_STATUS_IGNORE);
-      OMInsert(Partitions, PartitionRank, NULL);
-    }
-    if (SendsDone) {
-      CheckSignal(AllSendsDoneSignal, &Done);
-    } else {
-      MPI_Testall(NumOverlappedBins, SendRequests, &SendsDone, MPI_STATUSES_IGNORE);
-      if (SendsDone) {
-        StartSignal(AllSendsDoneSignal);
-      }
-    }
-  }
-
-  MPI_Barrier(Hash->comm);
-
-  DestroySignal(&AllSendsDoneSignal);
-
-  int NumPartitions = 0;
-  if (Hash->rank_has_bin) {
-    NumPartitions = OMSize(Partitions);
-  }
-
   MPI_Request *RecvRequests = malloc(NumPartitions*sizeof(MPI_Request));
+
   if (Hash->rank_has_bin) {
     t_ordered_map_entry *Entry = OMBegin(Partitions);
     iPartition = 0;
@@ -239,9 +201,9 @@ void PRIVATE(CreatePartitionHash)(t_partition_hash **Hash_, int NumDims, MPI_Com
       ++iPartition;
     }
 
-    OMDestroy(&Partitions);
-
   }
+
+  OMDestroy(&Partitions);
 
   OMCreate(&Hash->retrieved_bins);
   if (Hash->rank_has_bin) {
@@ -301,47 +263,10 @@ void PRIVATE(RetrievePartitionBins)(t_partition_hash *Hash, int NumBins, int *Bi
     }
   }
 
-  char SendBuffer[1], RecvBuffer[1];
-
-  MPI_Request *HandshakeSendRequests = malloc(NumUnretrievedBins*sizeof(MPI_Request));
-  for (iBin = 0; iBin < NumUnretrievedBins; ++iBin) {
-    MPI_Issend(SendBuffer, 1, MPI_CHAR, UnretrievedBinIndices[iBin], 0, Hash->comm,
-      HandshakeSendRequests+iBin);
-  }
-
   t_ordered_map *RetrieveRanks;
   OMCreate(&RetrieveRanks);
 
-  t_signal *AllSendsDoneSignal;
-  CreateSignal(&AllSendsDoneSignal, Hash->comm);
-
-  bool Done = false;
-  int SendsDone = false;
-  while (!Done) {
-    while (true) {
-      int IncomingMessage;
-      MPI_Status Status;
-      MPI_Iprobe(MPI_ANY_SOURCE, 0, Hash->comm, &IncomingMessage, &Status);
-      if (!IncomingMessage) break;
-      int RetrieveRank = Status.MPI_SOURCE;
-      MPI_Recv(&RecvBuffer, 1, MPI_CHAR, RetrieveRank, 0, Hash->comm, MPI_STATUS_IGNORE);
-      OMInsert(RetrieveRanks, RetrieveRank, NULL);
-    }
-    if (SendsDone) {
-      CheckSignal(AllSendsDoneSignal, &Done);
-    } else {
-      MPI_Testall(NumUnretrievedBins, HandshakeSendRequests, &SendsDone, MPI_STATUSES_IGNORE);
-      if (SendsDone) {
-        StartSignal(AllSendsDoneSignal);
-      }
-    }
-  }
-
-  MPI_Barrier(Hash->comm);
-
-  DestroySignal(&AllSendsDoneSignal);
-
-  free(HandshakeSendRequests);
+  DynamicHandshake(Hash->comm, NumUnretrievedBins, UnretrievedBinIndices, RetrieveRanks);
 
   int *NumPartitions = malloc(NumUnretrievedBins*sizeof(int));
   int **PartitionRangesFlat = malloc(NumUnretrievedBins*sizeof(int *));

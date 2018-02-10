@@ -5,6 +5,7 @@
 #define OVK_CORE_PARALLEL_UTILS_INCLUDED
 
 #include "ovk/core/Global.h"
+#include "ovk/core/OrderedMap.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,6 +29,10 @@ void PRIVATE(CheckSignal)(t_signal *Signal, bool *Done);
 
 void PRIVATE(DestroySignal)(t_signal **Signal);
 #define DestroySignal(...) PRIVATE(DestroySignal)(__VA_ARGS__)
+
+void PRIVATE(DynamicHandshake)(MPI_Comm Comm, int NumDestRanks, const int *DestRanks,
+  t_ordered_map *SourceRanks);
+#define DynamicHandshake(...) PRIVATE(DynamicHandshake)(__VA_ARGS__)
 
 #ifdef __cplusplus
 }
