@@ -9,6 +9,7 @@
 #include "ovk/core/Logger.h"
 #include "ovk/core/MPIUtils.h"
 #include "ovk/core/OrderedMap.h"
+#include "ovk/core/PartitionHash.h"
 #include "ovk/core/Range.h"
 #include "ovk/core/TextUtils.h"
 
@@ -93,6 +94,9 @@ void PRIVATE(CreateGrid)(ovk_grid **Grid_, int ID, const ovk_grid_params *Params
 
   CreateNeighbors(Grid);
 
+  CreatePartitionHash(&Grid->partition_hash, Grid->properties.num_dims, Grid->properties.comm,
+    &Grid->properties.global_range, &Grid->properties.local_range);
+
   if (Grid->properties.comm_rank == 0) {
     PrintGridSummary(Grid);
   }
@@ -110,6 +114,8 @@ void PRIVATE(DestroyGrid)(ovk_grid **Grid_) {
   ovk_grid *Grid = *Grid_;
 
   MPI_Barrier(Grid->properties.comm);
+
+  DestroyPartitionHash(&Grid->partition_hash);
 
   DestroyNeighbors(Grid);
 

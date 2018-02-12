@@ -10,6 +10,7 @@
 #include "ovk/core/ErrorHandler.h"
 #include "ovk/core/Global.h"
 #include "ovk/core/Logger.h"
+#include "ovk/core/PartitionHash.h"
 #include "ovk/core/Range.h"
 
 #ifdef __cplusplus
@@ -58,6 +59,7 @@ struct ovk_grid {
   t_error_handler *error_handler;
   ovk_cart cart;
   t_grid_neighbor *neighbors;
+  t_partition_hash *partition_hash;
 };
 
 struct ovk_grid_info {
@@ -88,6 +90,10 @@ void PRIVATE(GetGridNeighborRange)(const ovk_grid *Grid, int iNeighbor, ovk_rang
 #define GetGridNeighborRange(...) PRIVATE(GetGridNeighborRange)(__VA_ARGS__)
 void PRIVATE(GetGridNeighborRank)(const ovk_grid *Grid, int iNeighbor, int *NeighborRank);
 #define GetGridNeighborRank(...) PRIVATE(GetGridNeighborRank)(__VA_ARGS__)
+
+static inline void GetGridPartitionHash(const ovk_grid *Grid, const t_partition_hash **Hash) {
+  *Hash = Grid->partition_hash;
+}
 
 void PRIVATE(CreateGridParams)(ovk_grid_params **Params, int NumDims, MPI_Comm DefaultComm);
 #define CreateGridParams(...) PRIVATE(CreateGridParams)(__VA_ARGS__)
