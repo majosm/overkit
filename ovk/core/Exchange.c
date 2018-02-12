@@ -1225,7 +1225,6 @@ static void UpdateReceiversSorted(ovk_exchange *Exchange) {
 
 static void UpdateSourceRanks(ovk_exchange *Exchange) {
 
-  int iBin;
   size_t iReceiver;
 
   const ovk_connectivity *Connectivity = Exchange->connectivity;
@@ -1241,49 +1240,37 @@ static void UpdateSourceRanks(ovk_exchange *Exchange) {
     ovkGetConnectivityReceiverSidePropertyReceiverCount(ReceiversProperties, &NumReceivers);
   }
 
-  ClearRetrievedPartitionBins(Exchange->source_hash);
+  t_ordered_map *Bins;
+  OMCreate(&Bins);
 
   int *SourceToBinIndex = NULL;
-  int NumSourceBins = 0;
-  int *SourceBinIndices = NULL;
   if (ReceiverGridIsLocal) {
     SourceToBinIndex = malloc(NumReceivers*sizeof(int));
     MapToPartitionBins(Exchange->source_hash, NumReceivers, (const int **)Receivers->sources,
       SourceToBinIndex);
-    t_ordered_map *SourceBinIndicesMap;
-    OMCreate(&SourceBinIndicesMap);
     for (iReceiver = 0; iReceiver < NumReceivers; ++iReceiver) {
-      t_ordered_map_entry *Entry = OMFind(SourceBinIndicesMap, SourceToBinIndex[iReceiver]);
-      if (Entry == OMEnd(SourceBinIndicesMap)) {
-        OMInsert(SourceBinIndicesMap, SourceToBinIndex[iReceiver], NULL);
+      t_ordered_map_entry *Entry = OMFind(Bins, SourceToBinIndex[iReceiver]);
+      if (Entry == OMEnd(Bins)) {
+        OMInsert(Bins, SourceToBinIndex[iReceiver], NULL);
       }
     }
-    NumSourceBins = OMSize(SourceBinIndicesMap);
-    SourceBinIndices = malloc(NumSourceBins*sizeof(int));
-    t_ordered_map_entry *Entry = OMBegin(SourceBinIndicesMap);
-    iBin = 0;
-    while (Entry != OMEnd(SourceBinIndicesMap)) {
-      SourceBinIndices[iBin] = OMKey(Entry);
-      Entry = OMNext(Entry);
-      ++iBin;
-    }
-    OMDestroy(&SourceBinIndicesMap);
   }
 
-  RetrievePartitionBins(Exchange->source_hash, NumSourceBins, SourceBinIndices);
+  RetrievePartitionBins(Exchange->source_hash, Bins);
 
   if (ReceiverGridIsLocal) {
-    FindPartitions(Exchange->source_hash, NumReceivers, (const int **)Receivers->sources,
+    FindPartitions(Exchange->source_hash, Bins, NumReceivers, (const int **)Receivers->sources,
       SourceToBinIndex, Exchange->receiver_source_ranks);
     free(SourceToBinIndex);
-    free(SourceBinIndices);
   }
+
+  ClearPartitionBins(Bins);
+  OMDestroy(&Bins);
 
 }
 
 static void UpdateDestRanks(ovk_exchange *Exchange) {
 
-  int iBin;
   size_t iDonor;
 
   const ovk_connectivity *Connectivity = Exchange->connectivity;
@@ -1299,43 +1286,32 @@ static void UpdateDestRanks(ovk_exchange *Exchange) {
     ovkGetConnectivityDonorSidePropertyDonorCount(DonorsProperties, &NumDonors);
   }
 
-  ClearRetrievedPartitionBins(Exchange->destination_hash);
+  t_ordered_map *Bins;
+  OMCreate(&Bins);
 
   int *DestinationToBinIndex = NULL;
-  int NumDestinationBins = 0;
-  int *DestinationBinIndices = NULL;
   if (DonorGridIsLocal) {
     DestinationToBinIndex = malloc(NumDonors*sizeof(int));
     MapToPartitionBins(Exchange->destination_hash, NumDonors, (const int **)Donors->destinations,
       DestinationToBinIndex);
-    t_ordered_map *DestinationBinIndicesMap;
-    OMCreate(&DestinationBinIndicesMap);
     for (iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      t_ordered_map_entry *Entry = OMFind(DestinationBinIndicesMap, DestinationToBinIndex[iDonor]);
-      if (Entry == OMEnd(DestinationBinIndicesMap)) {
-        OMInsert(DestinationBinIndicesMap, DestinationToBinIndex[iDonor], NULL);
+      t_ordered_map_entry *Entry = OMFind(Bins, DestinationToBinIndex[iDonor]);
+      if (Entry == OMEnd(Bins)) {
+        OMInsert(Bins, DestinationToBinIndex[iDonor], NULL);
       }
     }
-    NumDestinationBins = OMSize(DestinationBinIndicesMap);
-    DestinationBinIndices = malloc(NumDestinationBins*sizeof(int));
-    t_ordered_map_entry *Entry = OMBegin(DestinationBinIndicesMap);
-    iBin = 0;
-    while (Entry != OMEnd(DestinationBinIndicesMap)) {
-      DestinationBinIndices[iBin] = OMKey(Entry);
-      Entry = OMNext(Entry);
-      ++iBin;
-    }
-    OMDestroy(&DestinationBinIndicesMap);
   }
 
-  RetrievePartitionBins(Exchange->destination_hash, NumDestinationBins, DestinationBinIndices);
+  RetrievePartitionBins(Exchange->destination_hash, Bins);
 
   if (DonorGridIsLocal) {
-    FindPartitions(Exchange->destination_hash, NumDonors, (const int **)Donors->destinations,
+    FindPartitions(Exchange->destination_hash, Bins, NumDonors, (const int **)Donors->destinations,
       DestinationToBinIndex, Exchange->donor_dest_ranks);
     free(DestinationToBinIndex);
-    free(DestinationBinIndices);
   }
+
+  ClearPartitionBins(Bins);
+  OMDestroy(&Bins);
 
 }
 

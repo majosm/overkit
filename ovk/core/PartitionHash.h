@@ -32,7 +32,6 @@ typedef struct {
   int max_bin_partitions;
   bool rank_has_bin;
   t_partition_bin *bin;
-  t_ordered_map *retrieved_bins;
 } t_partition_hash;
 
 void PRIVATE(CreatePartitionHash)(t_partition_hash **Hash, int NumDims, MPI_Comm Comm,
@@ -45,13 +44,13 @@ void PRIVATE(MapToPartitionBins)(const t_partition_hash *Hash, size_t NumPoints,
   int *BinIndices);
 #define MapToPartitionBins(...) PRIVATE(MapToPartitionBins)(__VA_ARGS__)
 
-void PRIVATE(RetrievePartitionBins)(t_partition_hash *Hash, int NumBins, int *BinIndices);
+void PRIVATE(RetrievePartitionBins)(const t_partition_hash *Hash, t_ordered_map *Bins);
 #define RetrievePartitionBins(...) PRIVATE(RetrievePartitionBins)(__VA_ARGS__)
-void PRIVATE(ClearRetrievedPartitionBins)(t_partition_hash *Hash);
-#define ClearRetrievedPartitionBins(...) PRIVATE(ClearRetrievedPartitionBins)(__VA_ARGS__)
+void PRIVATE(ClearPartitionBins)(t_ordered_map *Bins);
+#define ClearPartitionBins(...) PRIVATE(ClearPartitionBins)(__VA_ARGS__)
 
-void PRIVATE(FindPartitions)(const t_partition_hash *Hash, size_t NumPoints, const int **Points,
-  const int *BinIndices, int *PartitionRanks);
+void PRIVATE(FindPartitions)(const t_partition_hash *Hash, const t_ordered_map *RetrievedBins,
+  size_t NumPoints, const int **Points, const int *BinIndices, int *PartitionRanks);
 #define FindPartitions(...) PRIVATE(FindPartitions)(__VA_ARGS__)
 
 #ifdef __cplusplus

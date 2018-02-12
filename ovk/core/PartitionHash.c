@@ -205,11 +205,6 @@ void PRIVATE(CreatePartitionHash)(t_partition_hash **Hash_, int NumDims, MPI_Com
 
   OMDestroy(&Partitions);
 
-  OMCreate(&Hash->retrieved_bins);
-  if (Hash->rank_has_bin) {
-    OMInsert(Hash->retrieved_bins, Hash->bin->index, Hash->bin);
-  }
-
   MPI_Allreduce(&NumPartitions, &Hash->max_bin_partitions, 1, MPI_INT, MPI_MAX, Hash->comm);
 
 }
@@ -217,10 +212,6 @@ void PRIVATE(CreatePartitionHash)(t_partition_hash **Hash_, int NumDims, MPI_Com
 void PRIVATE(DestroyPartitionHash)(t_partition_hash **Hash_) {
 
   t_partition_hash *Hash = *Hash_;
-
-  ClearRetrievedPartitionBins(Hash);
-
-  OMDestroy(&Hash->retrieved_bins);
 
   if (Hash->rank_has_bin) {
     DestroyPartitionBin(&Hash->bin);
@@ -245,22 +236,31 @@ void PRIVATE(MapToPartitionBins)(const t_partition_hash *Hash, size_t NumPoints,
 
 }
 
-void PRIVATE(RetrievePartitionBins)(t_partition_hash *Hash, int NumBins, int *BinIndices) {
+void PRIVATE(RetrievePartitionBins)(const t_partition_hash *Hash, t_ordered_map *Bins) {
 
   int iDim;
   int iBin;
   int iPartition;
+  t_ordered_map_entry *Entry;
 
   int NumDims = Hash->num_dims;
 
-  int *UnretrievedBinIndices = malloc(NumBins*sizeof(int));
   int NumUnretrievedBins = 0;
-  for (iBin = 0; iBin < NumBins; ++iBin) {
-    t_ordered_map_entry *Entry = OMFind(Hash->retrieved_bins, BinIndices[iBin]);
-    if (Entry == OMEnd(Hash->retrieved_bins)) {
-      UnretrievedBinIndices[NumUnretrievedBins] = BinIndices[iBin];
-      ++NumUnretrievedBins;
+  Entry = OMBegin(Bins);
+  while (Entry != OMEnd(Bins)) {
+    if (!OMData(Entry)) ++NumUnretrievedBins;
+    Entry = OMNext(Entry);
+  }
+
+  int *UnretrievedBinIndices = malloc(NumUnretrievedBins*sizeof(int));
+  Entry = OMBegin(Bins);
+  iBin = 0;
+  while (Entry != OMEnd(Bins)) {
+    if (!OMData(Entry)) {
+      UnretrievedBinIndices[iBin] = OMKey(Entry);
+      ++iBin;
     }
+    Entry = OMNext(Entry);
   }
 
   t_ordered_map *RetrieveRanks;
@@ -304,7 +304,7 @@ void PRIVATE(RetrievePartitionBins)(t_partition_hash *Hash, int NumBins, int *Bi
   int NumRetrieves = OMSize(RetrieveRanks);
   MPI_Request *SendRequests = malloc(3*NumRetrieves*sizeof(MPI_Request));
 
-  t_ordered_map_entry *Entry = OMBegin(RetrieveRanks);
+  Entry = OMBegin(RetrieveRanks);
   int iRetrieve = 0;
   while (Entry != OMEnd(RetrieveRanks)) {
     int RetrieveRank = OMKey(Entry);
@@ -343,7 +343,8 @@ void PRIVATE(RetrievePartitionBins)(t_partition_hash *Hash, int NumBins, int *Bi
         2*MAX_DIMS*iPartition, PartitionRangesFlat[iBin]+2*MAX_DIMS*iPartition+MAX_DIMS);
       Bin->partition_ranks[iPartition] = PartitionRanks[iBin][iPartition];
     }
-    OMInsert(Hash->retrieved_bins, UnretrievedBinIndices[iBin], Bin);
+    Entry = OMFind(Bins, UnretrievedBinIndices[iBin]);
+    OMSetData(Entry, Bin);
   }
 
   free(NumPartitions);
@@ -362,27 +363,21 @@ void PRIVATE(RetrievePartitionBins)(t_partition_hash *Hash, int NumBins, int *Bi
 
 }
 
-void PRIVATE(ClearRetrievedPartitionBins)(t_partition_hash *Hash) {
+void PRIVATE(ClearPartitionBins)(t_ordered_map *Bins) {
 
-  t_ordered_map_entry *Entry = OMBegin(Hash->retrieved_bins);
-  while (Entry != OMEnd(Hash->retrieved_bins)) {
+  t_ordered_map_entry *Entry = OMBegin(Bins);
+  while (Entry != OMEnd(Bins)) {
     t_partition_bin *Bin = OMData(Entry);
-    if (!Hash->rank_has_bin || Bin != Hash->bin) {
-      DestroyPartitionBin(&Bin);
-    }
+    DestroyPartitionBin(&Bin);
     Entry = OMNext(Entry);
   }
 
-  OMClear(Hash->retrieved_bins);
-
-  if (Hash->rank_has_bin) {
-    OMInsert(Hash->retrieved_bins, Hash->bin->index, Hash->bin);
-  }
+  OMClear(Bins);
 
 }
 
-void PRIVATE(FindPartitions)(const t_partition_hash *Hash, size_t NumPoints, const int **Points,
-  const int *BinIndices, int *PartitionRanks) {
+void PRIVATE(FindPartitions)(const t_partition_hash *Hash, const t_ordered_map *RetrievedBins,
+  size_t NumPoints, const int **Points, const int *BinIndices, int *PartitionRanks) {
 
   size_t iPoint;
   int iPartition;
@@ -390,8 +385,8 @@ void PRIVATE(FindPartitions)(const t_partition_hash *Hash, size_t NumPoints, con
   for (iPoint = 0; iPoint < NumPoints; ++iPoint) {
     int Point[MAX_DIMS] = {Points[0][iPoint], Points[1][iPoint], Points[2][iPoint]};
     PartitionRanks[iPoint] = -1;
-    const t_ordered_map_entry *Entry = OMFindC(Hash->retrieved_bins, BinIndices[iPoint]);
-    if (Entry != OMEndC(Hash->retrieved_bins)) {
+    const t_ordered_map_entry *Entry = OMFindC(RetrievedBins, BinIndices[iPoint]);
+    if (Entry != OMEndC(RetrievedBins)) {
       const t_partition_bin *Bin = OMDataC(Entry);
       for (iPartition = 0; iPartition < Bin->num_partitions; ++iPartition) {
         if (ovkRangeContains(Bin->partition_ranges+iPartition, Point)) {
