@@ -348,13 +348,13 @@ void ovkReleaseDonorCoords(ovk_connectivity_d *Donors, int Dimension, double **C
 
 }
 
-void ovkEditDonorInterpCoefs(ovk_connectivity_d *Donors, int Dimension, int Index,
+void ovkEditDonorInterpCoefs(ovk_connectivity_d *Donors, int Dimension, int Point,
   double **InterpCoefs) {
 
   OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < Donors->properties.num_dims,
     "Invalid dimension.");
-  OVK_DEBUG_ASSERT(Index >= 0 && Index < Donors->properties.max_donor_size, "Invalid index.");
+  OVK_DEBUG_ASSERT(Point >= 0 && Point < Donors->properties.max_donor_size, "Invalid point.");
   OVK_DEBUG_ASSERT(InterpCoefs, "Invalid interp coefs pointer.");
   OVK_DEBUG_ASSERT(!EditingProperties(Donors), "Cannot edit interp coefs while editing properties.");
 
@@ -365,19 +365,19 @@ void ovkEditDonorInterpCoefs(ovk_connectivity_d *Donors, int Dimension, int Inde
     MPI_Barrier(Donors->properties.comm);
   }
 
-  *InterpCoefs = Donors->interp_coefs[Dimension][Index];
+  *InterpCoefs = Donors->interp_coefs[Dimension][Point];
 
 }
 
-void ovkReleaseDonorInterpCoefs(ovk_connectivity_d *Donors, int Dimension, int Index,
+void ovkReleaseDonorInterpCoefs(ovk_connectivity_d *Donors, int Dimension, int Point,
   double **InterpCoefs) {
 
   OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < Donors->properties.num_dims,
     "Invalid dimension.");
-  OVK_DEBUG_ASSERT(Index >= 0 && Index < Donors->properties.max_donor_size, "Invalid index.");
+  OVK_DEBUG_ASSERT(Point >= 0 && Point < Donors->properties.max_donor_size, "Invalid point.");
   OVK_DEBUG_ASSERT(InterpCoefs, "Invalid donor coefs pointer.");
-  OVK_DEBUG_ASSERT(*InterpCoefs == Donors->interp_coefs[Dimension][Index], "Invalid interp coefs "
+  OVK_DEBUG_ASSERT(*InterpCoefs == Donors->interp_coefs[Dimension][Point], "Invalid interp coefs "
     "pointer.");
   OVK_DEBUG_ASSERT(EditingInterpCoefs(Donors), "Unable to release interp coefs; not currently "
     "being edited.");

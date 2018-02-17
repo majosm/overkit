@@ -383,10 +383,12 @@ static void CreateGridGlobal(t_domain_grid_container **GridContainer, int GridID
 
   bool IsLocal = Params != NULL;
 
-  int IsLocalInt = IsLocal ? 1 : 0;
-  int AtLeastOneLocal;
-  MPI_Allreduce(&IsLocalInt, &AtLeastOneLocal, 1, MPI_INT, MPI_LOR, Comm);
-  OVK_DEBUG_ASSERT(AtLeastOneLocal, "Grid must exist on at least one process.");
+  if (OVK_DEBUG) {
+    int IsLocalInt = IsLocal ? 1 : 0;
+    int AtLeastOneLocal;
+    MPI_Allreduce(&IsLocalInt, &AtLeastOneLocal, 1, MPI_INT, MPI_LOR, Comm);
+    OVK_DEBUG_ASSERT(AtLeastOneLocal, "Grid must exist on at least one process.");
+  }
 
   ovk_grid *Grid = NULL;
   if (IsLocal) {
@@ -545,7 +547,7 @@ static void EditGridGlobal(ovk_domain *Domain, int GridID, ovk_grid **Grid) {
 
   t_domain_grid_container *Container = FindGrid(Domain, GridID);
 
-  if (IsLocal) {
+  if (OVK_DEBUG && IsLocal) {
     OVK_DEBUG_ASSERT(Container->has_local_data, "Grid %s does not have local data on rank @rank@.",
       Container->info->name);
   }
@@ -596,7 +598,7 @@ static void ReleaseGridGlobal(ovk_domain *Domain, int GridID, ovk_grid **Grid) {
   OVK_DEBUG_ASSERT(EditingGrid(Domain, GridID), "Unable to release grid %s; not currently being "
     "edited.", Container->info->name);
 
-  if (IsLocal) {
+  if (OVK_DEBUG && IsLocal) {
     OVK_DEBUG_ASSERT(Container->has_local_data, "Grid %s does not have local data on rank @rank@.",
       Container->info->name);
     OVK_DEBUG_ASSERT(*Grid == Container->grid, "Invalid grid pointer.");
@@ -935,7 +937,7 @@ static void EditConnectivityGlobal(ovk_domain *Domain, int DonorGridID, int Rece
   t_domain_connectivity_container *Container = FindConnectivity(Domain, DonorGridID,
     ReceiverGridID);
 
-  if (IsLocal) {
+  if (OVK_DEBUG && IsLocal) {
     OVK_DEBUG_ASSERT(Container->has_local_data, "Connectivity %s does not have local data on "
       "rank @rank@.", Container->info->name);
   }
@@ -996,7 +998,7 @@ static void ReleaseConnectivityGlobal(ovk_domain *Domain, int DonorGridID, int R
   OVK_DEBUG_ASSERT(EditingConnectivity(Domain, DonorGridID, ReceiverGridID), "Unable to release "
     "connectivity %s; not currently being edited.", Container->info->name);
 
-  if (IsLocal) {
+  if (OVK_DEBUG && IsLocal) {
     OVK_DEBUG_ASSERT(Container->has_local_data, "Connectivity %s does not have local data on "
       "rank @rank@.", Container->info->name);
     OVK_DEBUG_ASSERT(*Connectivity == Container->connectivity, "Invalid connectivity pointer.");

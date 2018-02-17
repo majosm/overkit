@@ -295,7 +295,7 @@ static void EditDonorSideGlobal(ovk_connectivity *Connectivity, ovk_connectivity
 
   t_connectivity_donor_side_container *Container = Connectivity->donors_container;
 
-  if (IsLocal) {
+  if (OVK_DEBUG && IsLocal) {
     OVK_DEBUG_ASSERT(Container->has_local_data, "Connectivity %s does not have donor-side data on "
       "rank @rank@.", Connectivity->properties.name);
   }
@@ -341,7 +341,7 @@ static void ReleaseDonorSideGlobal(ovk_connectivity *Connectivity, ovk_connectiv
 
   t_connectivity_donor_side_container *Container = Connectivity->donors_container;
 
-  if (IsLocal) {
+  if (OVK_DEBUG && IsLocal) {
     OVK_DEBUG_ASSERT(Container->has_local_data, "Connectivity %s does not have donor-side data on "
       "rank @rank@.", Connectivity->properties.name);
     OVK_DEBUG_ASSERT(*Donors_ == Container->donors, "Invalid donors pointer.");
@@ -449,7 +449,7 @@ static void EditReceiverSideGlobal(ovk_connectivity *Connectivity, ovk_connectiv
 
   t_connectivity_receiver_side_container *Container = Connectivity->receivers_container;
 
-  if (IsLocal) {
+  if (OVK_DEBUG && IsLocal) {
     OVK_DEBUG_ASSERT(Container->has_local_data, "Connectivity %s does not have receiver-side data "
       "on rank @rank@.", Connectivity->properties.name);
   }

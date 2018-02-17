@@ -25,9 +25,9 @@ void ovkEditDonorExtents(ovk_connectivity_d *Donors, int Dimension, int **Begins
 void ovkReleaseDonorExtents(ovk_connectivity_d *Donors, int Dimension, int **Begins, int **Ends);
 void ovkEditDonorCoords(ovk_connectivity_d *Donors, int Dimension, double **Coords);
 void ovkReleaseDonorCoords(ovk_connectivity_d *Donors, int Dimension, double **Coords);
-void ovkEditDonorInterpCoefs(ovk_connectivity_d *Donors, int Dimension, int Index,
+void ovkEditDonorInterpCoefs(ovk_connectivity_d *Donors, int Dimension, int Point,
   double **InterpCoefs);
-void ovkReleaseDonorInterpCoefs(ovk_connectivity_d *Donors, int Dimension, int Index,
+void ovkReleaseDonorInterpCoefs(ovk_connectivity_d *Donors, int Dimension, int Point,
   double **InterpCoefs);
 void ovkEditDonorDestinations(ovk_connectivity_d *Donors, int Dimension, int **Destinations);
 void ovkReleaseDonorDestinations(ovk_connectivity_d *Donors, int Dimension, int **Destinations);
