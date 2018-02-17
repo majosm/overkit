@@ -59,13 +59,11 @@ void PRIVATE(CreateConnectivityReceiverSide)(ovk_connectivity_r **Receivers_, co
 
   DefaultEdits(&Receivers->edits);
 
-  Receivers->points = malloc(MAX_DIMS*sizeof(int *));
   for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
     Receivers->points[iDim] = NULL;
   }
   Receivers->points_edit_ref_count = 0;
 
-  Receivers->sources = malloc(MAX_DIMS*sizeof(int *));
   for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
     Receivers->sources[iDim] = NULL;
   }
@@ -80,22 +78,12 @@ void PRIVATE(CreateConnectivityReceiverSide)(ovk_connectivity_r **Receivers_, co
 
 void PRIVATE(DestroyConnectivityReceiverSide)(ovk_connectivity_r **Receivers_) {
 
-  int iDim;
-
   ovk_connectivity_r *Receivers = *Receivers_;
 
   MPI_Barrier(Receivers->properties.comm);
 
-  for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    free(Receivers->points[iDim]);
-  }
-  free(Receivers->points);
-
-  for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    free(Receivers->sources[iDim]);
-  }
-  free(Receivers->sources);
-
+  free(Receivers->points[0]);
+  free(Receivers->sources[0]);
   free(Receivers->source_ranks);
 
   MPI_Comm Comm = Receivers->properties.comm;
@@ -133,11 +121,13 @@ void ovkResizeReceivers(ovk_connectivity_r *Receivers, size_t NumReceivers) {
   int iDim;
   size_t iReceiver;
 
+  free(Receivers->points[0]);
   for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    free_null(&Receivers->points[iDim]);
+    Receivers->points[iDim] = NULL;
   }
+  free(Receivers->sources[0]);
   for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    free_null(&Receivers->sources[iDim]);
+    Receivers->sources[iDim] = NULL;
   }
   free_null(&Receivers->source_ranks);
 
@@ -145,12 +135,12 @@ void ovkResizeReceivers(ovk_connectivity_r *Receivers, size_t NumReceivers) {
 
   if (NumReceivers > 0) {
 
-    for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      Receivers->points[iDim] = malloc(NumReceivers*sizeof(int));
-    }
-    for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      Receivers->sources[iDim] = malloc(NumReceivers*sizeof(int));
-    }
+    Receivers->points[0] = malloc(MAX_DIMS*NumReceivers*sizeof(int));
+    Receivers->points[1] = Receivers->points[0] + NumReceivers;
+    Receivers->points[2] = Receivers->points[1] + NumReceivers;
+    Receivers->sources[0] = malloc(MAX_DIMS*NumReceivers*sizeof(int));
+    Receivers->sources[1] = Receivers->sources[0] + NumReceivers;
+    Receivers->sources[2] = Receivers->sources[1] + NumReceivers;
     Receivers->source_ranks = malloc(NumReceivers*sizeof(int));
 
     for (iReceiver = 0; iReceiver < NumReceivers; ++iReceiver) {

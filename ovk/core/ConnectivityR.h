@@ -37,9 +37,9 @@ struct ovk_connectivity_r {
   t_error_handler *error_handler;
   const ovk_grid *grid;
   t_connectivity_r_edits edits;
-  int **points;
+  int *points[MAX_DIMS];
   int points_edit_ref_count;
-  int **sources;
+  int *sources[MAX_DIMS];
   int sources_edit_ref_count;
   int *source_ranks;
   int source_ranks_edit_ref_count;

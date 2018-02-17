@@ -40,16 +40,16 @@ struct ovk_connectivity_d {
   t_error_handler *error_handler;
   const ovk_grid *grid;
   t_connectivity_d_edits edits;
-  int ***extents;
+  int *extents[2][MAX_DIMS];
   int extents_edit_ref_count;
-  double **coords;
+  double *coords[MAX_DIMS];
   int coords_edit_ref_count;
-  double ***interp_coefs;
+  double **interp_coefs[MAX_DIMS];
   int interp_coefs_edit_ref_count;
-  int **destinations;
+  int *destinations[MAX_DIMS];
   int destinations_edit_ref_count;
-  int *dest_ranks;
-  int dest_ranks_edit_ref_count;
+  int *destination_ranks;
+  int destination_ranks_edit_ref_count;
 };
 
 void PRIVATE(CreateConnectivityDonorSide)(ovk_connectivity_d **Donors, const ovk_grid *Grid,

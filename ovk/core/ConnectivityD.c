@@ -62,35 +62,29 @@ void PRIVATE(CreateConnectivityDonorSide)(ovk_connectivity_d **Donors_, const ov
 
   DefaultEdits(&Donors->edits);
 
-  Donors->extents = malloc(2*sizeof(int **));
-  Donors->extents[0] = malloc(MAX_DIMS*sizeof(int *));
-  Donors->extents[1] = malloc(MAX_DIMS*sizeof(int *));
   for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
     Donors->extents[0][iDim] = NULL;
     Donors->extents[1][iDim] = NULL;
   }
   Donors->extents_edit_ref_count = 0;
 
-  Donors->coords = malloc(NumDims*sizeof(double *));
-  for (iDim = 0; iDim < NumDims; ++iDim) {
+  for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
     Donors->coords[iDim] = NULL;
   }
   Donors->coords_edit_ref_count = 0;
 
-  Donors->interp_coefs = malloc(NumDims*sizeof(double **));
-  for (iDim = 0; iDim < NumDims; ++iDim) {
+  for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
     Donors->interp_coefs[iDim] = NULL;
   }
   Donors->interp_coefs_edit_ref_count = 0;
 
-  Donors->destinations = malloc(MAX_DIMS*sizeof(int *));
   for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
     Donors->destinations[iDim] = NULL;
   }
   Donors->destinations_edit_ref_count = 0;
 
-  Donors->dest_ranks = NULL;
-  Donors->dest_ranks_edit_ref_count = 0;
+  Donors->destination_ranks = NULL;
+  Donors->destination_ranks_edit_ref_count = 0;
 
   MPI_Barrier(Donors->properties.comm);
 
@@ -98,42 +92,18 @@ void PRIVATE(CreateConnectivityDonorSide)(ovk_connectivity_d **Donors_, const ov
 
 void PRIVATE(DestroyConnectivityDonorSide)(ovk_connectivity_d **Donors_) {
 
-  int iDim, iCoef;
-
   ovk_connectivity_d *Donors = *Donors_;
 
   MPI_Barrier(Donors->properties.comm);
 
-  int NumDims = Donors->properties.num_dims;
-  int MaxDonorSize = Donors->properties.max_donor_size;
-
-  for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    free(Donors->extents[0][iDim]);
-    free(Donors->extents[1][iDim]);
+  free(Donors->extents[0][0]);
+  free(Donors->coords[0]);
+  if (Donors->properties.max_donor_size > 0) {
+    free(Donors->interp_coefs[0][0]);
   }
-  free(Donors->extents[0]);
-  free(Donors->extents[1]);
-  free(Donors->extents);
-
-  for (iDim = 0; iDim < NumDims; ++iDim) {
-    free(Donors->coords[iDim]);
-  }
-  free(Donors->coords);
-
-  for (iDim = 0; iDim < NumDims; ++iDim) {
-    for (iCoef = 0; iCoef < MaxDonorSize; ++iCoef) {
-      free(Donors->interp_coefs[iDim][iCoef]);
-    }
-    free(Donors->interp_coefs[iDim]);
-  }
-  free(Donors->interp_coefs);
-
-  for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    free(Donors->destinations[iDim]);
-  }
-  free(Donors->destinations);
-
-  free(Donors->dest_ranks);
+  free(Donors->interp_coefs[0]);
+  free(Donors->destinations[0]);
+  free(Donors->destination_ranks);
 
   MPI_Comm Comm = Donors->properties.comm;
 
@@ -179,78 +149,96 @@ void ovkResizeDonors(ovk_connectivity_d *Donors, size_t NumDonors, int MaxDonorS
       "connectivity processes.");
   }
 
-  int iDim, iCoef;
+  int iDim, iPoint;
   size_t iDonor;
 
   int NumDims = Donors->properties.num_dims;
 
   int PrevMaxDonorSize = Donors->properties.max_donor_size;
 
+  free(Donors->extents[0][0]);
   for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    free_null(&Donors->extents[0][iDim]);
-    free_null(&Donors->extents[1][iDim]);
+    Donors->extents[0][iDim] = NULL;
+    Donors->extents[1][iDim] = NULL;
   }
-  for (iDim = 0; iDim < NumDims; ++iDim) {
-    free_null(&Donors->coords[iDim]);
-  }
-  for (iDim = 0; iDim < NumDims; ++iDim) {
-    for (iCoef = 0; iCoef < PrevMaxDonorSize; ++iCoef) {
-      free_null(&Donors->interp_coefs[iDim][iCoef]);
-    }
-    if (MaxDonorSize != PrevMaxDonorSize) {
-      free_null(&Donors->interp_coefs[iDim]);
-      Donors->interp_coefs[iDim] = malloc(MaxDonorSize*sizeof(double *));
-      for (iCoef = 0; iCoef < MaxDonorSize; ++iCoef) {
-        Donors->interp_coefs[iDim][iCoef] = NULL;
-      }
-    }
-  }
+  free(Donors->coords[0]);
   for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    free_null(&Donors->destinations[iDim]);
+    Donors->coords[iDim] = NULL;
   }
-  free_null(&Donors->dest_ranks);
+  if (PrevMaxDonorSize > 0) {
+    free(Donors->interp_coefs[0][0]);
+  }
+  free(Donors->interp_coefs[0]);
+  for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
+    Donors->interp_coefs[iDim] = NULL;
+  }
+  free(Donors->destinations[0]);
+  for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
+    Donors->destinations[iDim] = NULL;
+  }
+  free_null(&Donors->destination_ranks);
 
   Donors->properties.num_donors = NumDonors;
   Donors->properties.max_donor_size = MaxDonorSize;
 
+  if (MaxDonorSize > 0) {
+    Donors->interp_coefs[0] = malloc(MAX_DIMS*MaxDonorSize*sizeof(double *));
+    Donors->interp_coefs[1] = Donors->interp_coefs[0] + MaxDonorSize;
+    Donors->interp_coefs[2] = Donors->interp_coefs[1] + MaxDonorSize;
+    for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
+      for (iPoint = 0; iPoint < MaxDonorSize; ++iPoint) {
+        Donors->interp_coefs[iDim][iPoint] = NULL;
+      }
+    }
+  }
+
   if (NumDonors > 0) {
 
-    for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      Donors->extents[0][iDim] = malloc(NumDonors*sizeof(int));
-      Donors->extents[1][iDim] = malloc(NumDonors*sizeof(int));
+    Donors->extents[0][0] = malloc(2*MAX_DIMS*NumDonors*sizeof(int));
+    Donors->extents[1][0] = Donors->extents[0][0] + MAX_DIMS*NumDonors;
+    for (iDim = 1; iDim < MAX_DIMS; ++iDim) {
+      Donors->extents[0][iDim] = Donors->extents[0][iDim-1] + NumDonors;
+      Donors->extents[1][iDim] = Donors->extents[1][iDim-1] + NumDonors;
     }
-    for (iDim = 0; iDim < NumDims; ++iDim) {
-      Donors->coords[iDim] = malloc(NumDonors*sizeof(double));
-    }
-    for (iDim = 0; iDim < NumDims; ++iDim) {
-      for (iCoef = 0; iCoef < MaxDonorSize; ++iCoef) {
-        Donors->interp_coefs[iDim][iCoef] = malloc(NumDonors*sizeof(double));
+    Donors->coords[0] = malloc(MAX_DIMS*NumDonors*sizeof(double));
+    Donors->coords[1] = Donors->coords[0] + NumDonors;
+    Donors->coords[2] = Donors->coords[1] + NumDonors;
+    if (MaxDonorSize > 0) {
+      Donors->interp_coefs[0][0] = malloc(MAX_DIMS*MaxDonorSize*NumDonors*sizeof(double));
+      Donors->interp_coefs[1][0] = Donors->interp_coefs[0][0] + MaxDonorSize*NumDonors;
+      Donors->interp_coefs[2][0] = Donors->interp_coefs[1][0] + MaxDonorSize*NumDonors;
+      for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
+        for (iPoint = 1; iPoint < MaxDonorSize; ++iPoint) {
+          Donors->interp_coefs[iDim][iPoint] = Donors->interp_coefs[iDim][iPoint-1] + NumDonors;
+        }
       }
     }
-    for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      Donors->destinations[iDim] = malloc(NumDonors*sizeof(int));
-    }
-    Donors->dest_ranks = malloc(NumDonors*sizeof(int));
+    Donors->destinations[0] = malloc(MAX_DIMS*NumDonors*sizeof(int));
+    Donors->destinations[1] = Donors->destinations[0] + NumDonors;
+    Donors->destinations[2] = Donors->destinations[1] + NumDonors;
+    Donors->destination_ranks = malloc(NumDonors*sizeof(int));
 
     for (iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      ovk_range EmptyRange;
-      ovkDefaultRange(&EmptyRange, NumDims);
-      for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        Donors->extents[0][iDim][iDonor] = EmptyRange.b[iDim];
-        Donors->extents[1][iDim][iDonor] = EmptyRange.e[iDim];
-      }
       for (iDim = 0; iDim < NumDims; ++iDim) {
+        Donors->extents[0][iDim][iDonor] = 0;
+        Donors->extents[1][iDim][iDonor] = 0;
+      }
+      for (iDim = NumDims; iDim < MAX_DIMS; ++iDim) {
+        Donors->extents[0][iDim][iDonor] = 0;
+        Donors->extents[1][iDim][iDonor] = 1;
+      }
+      for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
         Donors->coords[iDim][iDonor] = 0.;
       }
-      for (iDim = 0; iDim < NumDims; ++iDim) {
-        for (iCoef = 0; iCoef < MaxDonorSize; ++iCoef) {
-          Donors->interp_coefs[iDim][iCoef][iDonor] = 0.;
+      for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
+        for (iPoint = 0; iPoint < MaxDonorSize; ++iPoint) {
+          Donors->interp_coefs[iDim][iPoint][iDonor] = 0.;
         }
       }
       for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
         Donors->destinations[iDim][iDonor] = 0;
       }
-      Donors->dest_ranks[iDonor] = -1;
+      Donors->destination_ranks[iDonor] = -1;
     }
 
   }
@@ -311,8 +299,7 @@ void ovkReleaseDonorExtents(ovk_connectivity_d *Donors, int Dimension, int **Beg
 void ovkEditDonorCoords(ovk_connectivity_d *Donors, int Dimension, double **Coords) {
 
   OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
-  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < Donors->properties.num_dims,
-    "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Coords, "Invalid coords pointer.");
   OVK_DEBUG_ASSERT(!EditingProperties(Donors), "Cannot edit coords while editing properties.");
 
@@ -330,8 +317,7 @@ void ovkEditDonorCoords(ovk_connectivity_d *Donors, int Dimension, double **Coor
 void ovkReleaseDonorCoords(ovk_connectivity_d *Donors, int Dimension, double **Coords) {
 
   OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
-  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < Donors->properties.num_dims,
-    "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Coords, "Invalid coords pointer.");
   OVK_DEBUG_ASSERT(*Coords == Donors->coords[Dimension], "Invalid coords pointer.");
   OVK_DEBUG_ASSERT(EditingCoords(Donors), "Unable to release coords; not currently being edited.");
@@ -352,8 +338,7 @@ void ovkEditDonorInterpCoefs(ovk_connectivity_d *Donors, int Dimension, int Poin
   double **InterpCoefs) {
 
   OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
-  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < Donors->properties.num_dims,
-    "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Point >= 0 && Point < Donors->properties.max_donor_size, "Invalid point.");
   OVK_DEBUG_ASSERT(InterpCoefs, "Invalid interp coefs pointer.");
   OVK_DEBUG_ASSERT(!EditingProperties(Donors), "Cannot edit interp coefs while editing properties.");
@@ -373,8 +358,7 @@ void ovkReleaseDonorInterpCoefs(ovk_connectivity_d *Donors, int Dimension, int P
   double **InterpCoefs) {
 
   OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
-  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < Donors->properties.num_dims,
-    "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Point >= 0 && Point < Donors->properties.max_donor_size, "Invalid point.");
   OVK_DEBUG_ASSERT(InterpCoefs, "Invalid donor coefs pointer.");
   OVK_DEBUG_ASSERT(*InterpCoefs == Donors->interp_coefs[Dimension][Point], "Invalid interp coefs "
@@ -441,14 +425,14 @@ void ovkEditDonorDestinationRanks(ovk_connectivity_d *Donors, int **DestinationR
   OVK_DEBUG_ASSERT(!EditingProperties(Donors), "Cannot edit destination ranks while editing "
     "properties.");
 
-  bool StartEdit = Donors->dest_ranks_edit_ref_count == 0;
-  ++Donors->dest_ranks_edit_ref_count;
+  bool StartEdit = Donors->destination_ranks_edit_ref_count == 0;
+  ++Donors->destination_ranks_edit_ref_count;
 
   if (StartEdit) {
     MPI_Barrier(Donors->properties.comm);
   }
 
-  *DestinationRanks = Donors->dest_ranks;
+  *DestinationRanks = Donors->destination_ranks;
 
 }
 
@@ -456,12 +440,13 @@ void ovkReleaseDonorDestinationRanks(ovk_connectivity_d *Donors, int **Destinati
 
   OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
   OVK_DEBUG_ASSERT(DestinationRanks, "Invalid destination ranks pointer.");
-  OVK_DEBUG_ASSERT(*DestinationRanks == Donors->dest_ranks, "Invalid destination ranks pointer.");
+  OVK_DEBUG_ASSERT(*DestinationRanks == Donors->destination_ranks, "Invalid destination ranks "
+    "pointer.");
   OVK_DEBUG_ASSERT(EditingDestinationRanks(Donors), "Unable to release destination ranks; not "
     "currently being edited.");
 
-  --Donors->dest_ranks_edit_ref_count;
-  bool EndEdit = Donors->dest_ranks_edit_ref_count == 0;
+  --Donors->destination_ranks_edit_ref_count;
+  bool EndEdit = Donors->destination_ranks_edit_ref_count == 0;
 
   *DestinationRanks = NULL;
 
@@ -513,7 +498,7 @@ static bool EditingDestinations(const ovk_connectivity_d *Donors) {
 
 static bool EditingDestinationRanks(const ovk_connectivity_d *Donors) {
 
-  return Donors->dest_ranks_edit_ref_count > 0;
+  return Donors->destination_ranks_edit_ref_count > 0;
 
 }
 
