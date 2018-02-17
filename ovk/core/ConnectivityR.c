@@ -178,16 +178,16 @@ void ovkEditReceiverPoints(ovk_connectivity_r *Receivers, int Dimension, int **P
   OVK_DEBUG_ASSERT(Receivers, "Invalid receivers pointer.");
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Points, "Invalid points pointer.");
-
-  MPI_Barrier(Receivers->properties.comm);
-
   OVK_DEBUG_ASSERT(!EditingProperties(Receivers), "Cannot edit points while editing properties.");
 
+  bool StartEdit = Receivers->points_edit_ref_count == 0;
   ++Receivers->points_edit_ref_count;
 
-  *Points = Receivers->points[Dimension];
+  if (StartEdit) {
+    MPI_Barrier(Receivers->properties.comm);
+  }
 
-  MPI_Barrier(Receivers->properties.comm);
+  *Points = Receivers->points[Dimension];
 
 }
 
@@ -197,9 +197,6 @@ void ovkReleaseReceiverPoints(ovk_connectivity_r *Receivers, int Dimension, int 
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Points, "Invalid points pointer.");
   OVK_DEBUG_ASSERT(*Points == Receivers->points[Dimension], "Invalid points pointer.");
-
-  MPI_Barrier(Receivers->properties.comm);
-
   OVK_DEBUG_ASSERT(EditingPoints(Receivers), "Unable to release points; not currently being "
     "edited.");
 
@@ -210,9 +207,8 @@ void ovkReleaseReceiverPoints(ovk_connectivity_r *Receivers, int Dimension, int 
 
   if (EndEdit) {
     Receivers->edits.points = true;
+    MPI_Barrier(Receivers->properties.comm);
   }
-
-  MPI_Barrier(Receivers->properties.comm);
 
 }
 
@@ -221,16 +217,16 @@ void ovkEditReceiverSources(ovk_connectivity_r *Receivers, int Dimension, int **
   OVK_DEBUG_ASSERT(Receivers, "Invalid receivers pointer.");
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Sources, "Invalid sources pointer.");
-
-  MPI_Barrier(Receivers->properties.comm);
-
   OVK_DEBUG_ASSERT(!EditingProperties(Receivers), "Cannot edit sources while editing properties.");
 
+  bool StartEdit = Receivers->sources_edit_ref_count == 0;
   ++Receivers->sources_edit_ref_count;
 
-  *Sources = Receivers->sources[Dimension];
+  if (StartEdit) {
+    MPI_Barrier(Receivers->properties.comm);
+  }
 
-  MPI_Barrier(Receivers->properties.comm);
+  *Sources = Receivers->sources[Dimension];
 
 }
 
@@ -240,9 +236,6 @@ void ovkReleaseReceiverSources(ovk_connectivity_r *Receivers, int Dimension, int
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Sources, "Invalid sources pointer.");
   OVK_DEBUG_ASSERT(*Sources == Receivers->sources[Dimension], "Invalid sources pointer.");
-
-  MPI_Barrier(Receivers->properties.comm);
-
   OVK_DEBUG_ASSERT(EditingSources(Receivers), "Unable to release sources; not currently being "
     "edited.");
 
@@ -253,9 +246,8 @@ void ovkReleaseReceiverSources(ovk_connectivity_r *Receivers, int Dimension, int
 
   if (EndEdit) {
     Receivers->edits.sources = true;
+    MPI_Barrier(Receivers->properties.comm);
   }
-
-  MPI_Barrier(Receivers->properties.comm);
 
 }
 
@@ -263,17 +255,17 @@ void ovkEditReceiverSourceRanks(ovk_connectivity_r *Receivers, int **SourceRanks
 
   OVK_DEBUG_ASSERT(Receivers, "Invalid receivers pointer.");
   OVK_DEBUG_ASSERT(SourceRanks, "Invalid source ranks pointer.");
-
-  MPI_Barrier(Receivers->properties.comm);
-
   OVK_DEBUG_ASSERT(!EditingProperties(Receivers), "Cannot edit source ranks while editing "
     "properties.");
 
+  bool StartEdit = Receivers->source_ranks_edit_ref_count == 0;
   ++Receivers->source_ranks_edit_ref_count;
 
-  *SourceRanks = Receivers->source_ranks;
+  if (StartEdit) {
+    MPI_Barrier(Receivers->properties.comm);
+  }
 
-  MPI_Barrier(Receivers->properties.comm);
+  *SourceRanks = Receivers->source_ranks;
 
 }
 
@@ -282,9 +274,6 @@ void ovkReleaseReceiverSourceRanks(ovk_connectivity_r *Receivers, int **SourceRa
   OVK_DEBUG_ASSERT(Receivers, "Invalid receivers pointer.");
   OVK_DEBUG_ASSERT(SourceRanks, "Invalid source ranks pointer.");
   OVK_DEBUG_ASSERT(*SourceRanks == Receivers->source_ranks, "Invalid source ranks pointer.");
-
-  MPI_Barrier(Receivers->properties.comm);
-
   OVK_DEBUG_ASSERT(EditingSourceRanks(Receivers), "Unable to release source ranks; not currently "
     "being edited.");
 
@@ -295,9 +284,8 @@ void ovkReleaseReceiverSourceRanks(ovk_connectivity_r *Receivers, int **SourceRa
 
   if (EndEdit) {
     Receivers->edits.sources = true;
+    MPI_Barrier(Receivers->properties.comm);
   }
-
-  MPI_Barrier(Receivers->properties.comm);
 
 }
 

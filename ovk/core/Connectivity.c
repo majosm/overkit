@@ -288,8 +288,6 @@ void ovkEditConnectivityDonorSideRemote(ovk_connectivity *Connectivity) {
 
 static void EditDonorSideGlobal(ovk_connectivity *Connectivity, ovk_connectivity_d **Donors) {
 
-  MPI_Barrier(Connectivity->properties.comm);
-
   bool IsLocal = Donors != NULL;
 
   OVK_DEBUG_ASSERT(!EditingProperties(Connectivity), "Cannot edit donor-side data while editing "
@@ -302,13 +300,16 @@ static void EditDonorSideGlobal(ovk_connectivity *Connectivity, ovk_connectivity
       "rank @rank@.", Connectivity->properties.name);
   }
 
+  bool StartEdit = Container->edit_ref_count == 0;
   ++Container->edit_ref_count;
+
+  if (StartEdit) {
+    MPI_Barrier(Connectivity->properties.comm);
+  }
 
   if (IsLocal) {
     *Donors = Container->donors;
   }
-
-  MPI_Barrier(Connectivity->properties.comm);
 
 }
 
@@ -333,8 +334,6 @@ void ovkReleaseConnectivityDonorSideRemote(ovk_connectivity *Connectivity) {
 
 static void ReleaseDonorSideGlobal(ovk_connectivity *Connectivity, ovk_connectivity_d **Donors_) {
 
-  MPI_Barrier(Connectivity->properties.comm);
-
   OVK_DEBUG_ASSERT(EditingDonorSide(Connectivity), "Unable to release connectivity %s donor-side "
     "data; not currently being edited.", Connectivity->properties.name);
 
@@ -356,6 +355,8 @@ static void ReleaseDonorSideGlobal(ovk_connectivity *Connectivity, ovk_connectiv
   }
 
   if (EndEdit) {
+
+    MPI_Barrier(Connectivity->properties.comm);
 
     const t_connectivity_d_edits *DonorsEdits;
     if (IsLocal) {
@@ -441,8 +442,6 @@ void ovkEditConnectivityReceiverSideRemote(ovk_connectivity *Connectivity) {
 
 static void EditReceiverSideGlobal(ovk_connectivity *Connectivity, ovk_connectivity_r **Receivers) {
 
-  MPI_Barrier(Connectivity->properties.comm);
-
   bool IsLocal = Receivers != NULL;
 
   OVK_DEBUG_ASSERT(!EditingProperties(Connectivity), "Cannot edit receiver-side data while editing "
@@ -455,13 +454,16 @@ static void EditReceiverSideGlobal(ovk_connectivity *Connectivity, ovk_connectiv
       "on rank @rank@.", Connectivity->properties.name);
   }
 
+  bool StartEdit = Container->edit_ref_count == 0;
   ++Container->edit_ref_count;
+
+  if (StartEdit) {
+    MPI_Barrier(Connectivity->properties.comm);
+  }
 
   if (IsLocal) {
     *Receivers = Container->receivers;
   }
-
-  MPI_Barrier(Connectivity->properties.comm);
 
 }
 
@@ -487,8 +489,6 @@ void ovkReleaseConnectivityReceiverSideRemote(ovk_connectivity *Connectivity) {
 static void ReleaseReceiverSideGlobal(ovk_connectivity *Connectivity,
   ovk_connectivity_r **Receivers_) {
 
-  MPI_Barrier(Connectivity->properties.comm);
-
   OVK_DEBUG_ASSERT(EditingReceiverSide(Connectivity), "Unable to release connectivity %s "
     "receiver-side data; not currently being edited.", Connectivity->properties.name);
 
@@ -510,6 +510,8 @@ static void ReleaseReceiverSideGlobal(ovk_connectivity *Connectivity,
   }
 
   if (EndEdit) {
+
+    MPI_Barrier(Connectivity->properties.comm);
 
     const t_connectivity_r_edits *ReceiversEdits;
     if (IsLocal) {

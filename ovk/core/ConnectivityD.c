@@ -169,6 +169,16 @@ void ovkResizeDonors(ovk_connectivity_d *Donors, size_t NumDonors, int MaxDonorS
   OVK_DEBUG_ASSERT(!EditingDestinationRanks(Donors), "Cannot resize donors while editing "
     "destination ranks.");
 
+  if (OVK_DEBUG) {
+    // Needed because editing interp coefs blocks on comm -- if max size was 0 on some ranks,
+    // calling the edit function in a loop from 0 to max size would result in it not being called
+    // on those ranks
+    int GlobalMaxDonorSize;
+    MPI_Allreduce(&MaxDonorSize, &GlobalMaxDonorSize, 1, MPI_INT, MPI_MAX, Donors->properties.comm);
+    OVK_DEBUG_ASSERT(MaxDonorSize == GlobalMaxDonorSize, "Max donor size must be the same on all "
+      "connectivity processes.");
+  }
+
   int iDim, iCoef;
   size_t iDonor;
 
@@ -261,17 +271,17 @@ void ovkEditDonorExtents(ovk_connectivity_d *Donors, int Dimension, int **Begins
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Begins, "Invalid begins pointer.");
   OVK_DEBUG_ASSERT(Ends, "Invalid ends pointer.");
-
-  MPI_Barrier(Donors->properties.comm);
-
   OVK_DEBUG_ASSERT(!EditingProperties(Donors), "Cannot edit extents while editing properties.");
 
+  bool StartEdit = Donors->extents_edit_ref_count == 0;
   ++Donors->extents_edit_ref_count;
+
+  if (StartEdit) {
+    MPI_Barrier(Donors->properties.comm);
+  }
 
   *Begins = Donors->extents[0][Dimension];
   *Ends = Donors->extents[1][Dimension];
-
-  MPI_Barrier(Donors->properties.comm);
 
 }
 
@@ -283,9 +293,6 @@ void ovkReleaseDonorExtents(ovk_connectivity_d *Donors, int Dimension, int **Beg
   OVK_DEBUG_ASSERT(Ends, "Invalid ends pointer.");
   OVK_DEBUG_ASSERT(*Begins == Donors->extents[0][Dimension], "Invalid begins pointer.");
   OVK_DEBUG_ASSERT(*Ends == Donors->extents[1][Dimension], "Invalid ends pointer.");
-
-  MPI_Barrier(Donors->properties.comm);
-
   OVK_DEBUG_ASSERT(EditingExtents(Donors), "Unable to release extents; not currently being edited.");
 
   --Donors->extents_edit_ref_count;
@@ -296,9 +303,8 @@ void ovkReleaseDonorExtents(ovk_connectivity_d *Donors, int Dimension, int **Beg
 
   if (EndEdit) {
     Donors->edits.extents = true;
+    MPI_Barrier(Donors->properties.comm);
   }
-
-  MPI_Barrier(Donors->properties.comm);
 
 }
 
@@ -308,16 +314,16 @@ void ovkEditDonorCoords(ovk_connectivity_d *Donors, int Dimension, double **Coor
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < Donors->properties.num_dims,
     "Invalid dimension.");
   OVK_DEBUG_ASSERT(Coords, "Invalid coords pointer.");
-
-  MPI_Barrier(Donors->properties.comm);
-
   OVK_DEBUG_ASSERT(!EditingProperties(Donors), "Cannot edit coords while editing properties.");
 
+  bool StartEdit = Donors->coords_edit_ref_count == 0;
   ++Donors->coords_edit_ref_count;
 
-  *Coords = Donors->coords[Dimension];
+  if (StartEdit) {
+    MPI_Barrier(Donors->properties.comm);
+  }
 
-  MPI_Barrier(Donors->properties.comm);
+  *Coords = Donors->coords[Dimension];
 
 }
 
@@ -328,9 +334,6 @@ void ovkReleaseDonorCoords(ovk_connectivity_d *Donors, int Dimension, double **C
     "Invalid dimension.");
   OVK_DEBUG_ASSERT(Coords, "Invalid coords pointer.");
   OVK_DEBUG_ASSERT(*Coords == Donors->coords[Dimension], "Invalid coords pointer.");
-
-  MPI_Barrier(Donors->properties.comm);
-
   OVK_DEBUG_ASSERT(EditingCoords(Donors), "Unable to release coords; not currently being edited.");
 
   --Donors->coords_edit_ref_count;
@@ -340,9 +343,8 @@ void ovkReleaseDonorCoords(ovk_connectivity_d *Donors, int Dimension, double **C
 
   if (EndEdit) {
     Donors->edits.coords = true;
+    MPI_Barrier(Donors->properties.comm);
   }
-
-  MPI_Barrier(Donors->properties.comm);
 
 }
 
@@ -354,16 +356,16 @@ void ovkEditDonorInterpCoefs(ovk_connectivity_d *Donors, int Dimension, int Inde
     "Invalid dimension.");
   OVK_DEBUG_ASSERT(Index >= 0 && Index < Donors->properties.max_donor_size, "Invalid index.");
   OVK_DEBUG_ASSERT(InterpCoefs, "Invalid interp coefs pointer.");
-
-  MPI_Barrier(Donors->properties.comm);
-
   OVK_DEBUG_ASSERT(!EditingProperties(Donors), "Cannot edit interp coefs while editing properties.");
 
+  bool StartEdit = Donors->interp_coefs_edit_ref_count == 0;
   ++Donors->interp_coefs_edit_ref_count;
 
-  *InterpCoefs = Donors->interp_coefs[Dimension][Index];
+  if (StartEdit) {
+    MPI_Barrier(Donors->properties.comm);
+  }
 
-  MPI_Barrier(Donors->properties.comm);
+  *InterpCoefs = Donors->interp_coefs[Dimension][Index];
 
 }
 
@@ -377,9 +379,6 @@ void ovkReleaseDonorInterpCoefs(ovk_connectivity_d *Donors, int Dimension, int I
   OVK_DEBUG_ASSERT(InterpCoefs, "Invalid donor coefs pointer.");
   OVK_DEBUG_ASSERT(*InterpCoefs == Donors->interp_coefs[Dimension][Index], "Invalid interp coefs "
     "pointer.");
-
-  MPI_Barrier(Donors->properties.comm);
-
   OVK_DEBUG_ASSERT(EditingInterpCoefs(Donors), "Unable to release interp coefs; not currently "
     "being edited.");
 
@@ -390,9 +389,8 @@ void ovkReleaseDonorInterpCoefs(ovk_connectivity_d *Donors, int Dimension, int I
 
   if (EndEdit) {
     Donors->edits.interp_coefs = true;
+    MPI_Barrier(Donors->properties.comm);
   }
-
-  MPI_Barrier(Donors->properties.comm);
 
 }
 
@@ -401,16 +399,16 @@ void ovkEditDonorDestinations(ovk_connectivity_d *Donors, int Dimension, int **D
   OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Destinations, "Invalid destinations pointer.");
-
-  MPI_Barrier(Donors->properties.comm);
-
   OVK_DEBUG_ASSERT(!EditingProperties(Donors), "Cannot edit destinations while editing properties.");
 
+  bool StartEdit = Donors->destinations_edit_ref_count == 0;
   ++Donors->destinations_edit_ref_count;
 
-  *Destinations = Donors->destinations[Dimension];
+  if (StartEdit) {
+    MPI_Barrier(Donors->properties.comm);
+  }
 
-  MPI_Barrier(Donors->properties.comm);
+  *Destinations = Donors->destinations[Dimension];
 
 }
 
@@ -420,9 +418,6 @@ void ovkReleaseDonorDestinations(ovk_connectivity_d *Donors, int Dimension, int 
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Destinations, "Invalid destinations pointer.");
   OVK_DEBUG_ASSERT(*Destinations == Donors->destinations[Dimension], "Invalid destinations pointer.");
-
-  MPI_Barrier(Donors->properties.comm);
-
   OVK_DEBUG_ASSERT(EditingDestinations(Donors), "Unable to release destinations; not currently "
     "being edited.");
 
@@ -432,12 +427,10 @@ void ovkReleaseDonorDestinations(ovk_connectivity_d *Donors, int Dimension, int 
   *Destinations = NULL;
 
   if (EndEdit) {
-
     Donors->edits.destinations = true;
-
+    MPI_Barrier(Donors->properties.comm);
   }
 
-  MPI_Barrier(Donors->properties.comm);
 
 }
 
@@ -445,17 +438,17 @@ void ovkEditDonorDestinationRanks(ovk_connectivity_d *Donors, int **DestinationR
 
   OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
   OVK_DEBUG_ASSERT(DestinationRanks, "Invalid destination ranks pointer.");
-
-  MPI_Barrier(Donors->properties.comm);
-
   OVK_DEBUG_ASSERT(!EditingProperties(Donors), "Cannot edit destination ranks while editing "
     "properties.");
 
+  bool StartEdit = Donors->dest_ranks_edit_ref_count == 0;
   ++Donors->dest_ranks_edit_ref_count;
 
-  *DestinationRanks = Donors->dest_ranks;
+  if (StartEdit) {
+    MPI_Barrier(Donors->properties.comm);
+  }
 
-  MPI_Barrier(Donors->properties.comm);
+  *DestinationRanks = Donors->dest_ranks;
 
 }
 
@@ -464,9 +457,6 @@ void ovkReleaseDonorDestinationRanks(ovk_connectivity_d *Donors, int **Destinati
   OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
   OVK_DEBUG_ASSERT(DestinationRanks, "Invalid destination ranks pointer.");
   OVK_DEBUG_ASSERT(*DestinationRanks == Donors->dest_ranks, "Invalid destination ranks pointer.");
-
-  MPI_Barrier(Donors->properties.comm);
-
   OVK_DEBUG_ASSERT(EditingDestinationRanks(Donors), "Unable to release destination ranks; not "
     "currently being edited.");
 
@@ -477,9 +467,8 @@ void ovkReleaseDonorDestinationRanks(ovk_connectivity_d *Donors, int **Destinati
 
   if (EndEdit) {
     Donors->edits.destinations = true;
+    MPI_Barrier(Donors->properties.comm);
   }
-
-  MPI_Barrier(Donors->properties.comm);
 
 }
 

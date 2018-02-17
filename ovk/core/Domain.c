@@ -220,6 +220,8 @@ void ovkConfigureDomain(ovk_domain *Domain, ovk_domain_config Config) {
     DisableExchangeComponent(Domain);
   }
 
+  MPI_Barrier(Domain->properties.comm);
+
 }
 
 void ovkGetDomainConfiguration(ovk_domain *Domain, ovk_domain_config *Config) {
@@ -243,41 +245,39 @@ void ovkGetDomainProperties(const ovk_domain *Domain, const ovk_domain_propertie
 void ovkEditDomainProperties(ovk_domain *Domain, ovk_domain_properties **Properties) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-
-  MPI_Barrier(Domain->properties.comm);
-
   OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
   OVK_DEBUG_ASSERT(!EditingGrid(Domain, OVK_ALL_GRIDS), "Cannot edit properties while editing "
     "grids.");
   OVK_DEBUG_ASSERT(!EditingConnectivity(Domain, OVK_ALL_GRIDS, OVK_ALL_GRIDS), "Cannot edit "
     "grid while editing connectivities.");
 
-//   bool StartEdit = Domain->properties_edit_ref_count == 0;
+  bool StartEdit = Domain->properties_edit_ref_count == 0;
   ++Domain->properties_edit_ref_count;
 
-  *Properties = &Domain->properties;
+  if (StartEdit) {
+    MPI_Barrier(Domain->properties.comm);
+  }
 
-  MPI_Barrier(Domain->properties.comm);
+  *Properties = &Domain->properties;
 
 }
 
 void ovkReleaseDomainProperties(ovk_domain *Domain, ovk_domain_properties **Properties) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-
-  MPI_Barrier(Domain->properties.comm);
-
   OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
   OVK_DEBUG_ASSERT(*Properties == &Domain->properties, "Invalid properties pointer.");
   OVK_DEBUG_ASSERT(EditingProperties(Domain), "Unable to release properties; not currently being "
     "edited.");
 
   --Domain->properties_edit_ref_count;
-//   bool EndEdit = Domain->properties_edit_ref_count == 0;
+  bool EndEdit = Domain->properties_edit_ref_count == 0;
 
   *Properties = NULL;
 
-  MPI_Barrier(Domain->properties.comm);
+  if (EndEdit) {
+    MPI_Barrier(Domain->properties.comm);
+  }
 
 }
 
@@ -537,8 +537,6 @@ void ovkEditGridRemote(ovk_domain *Domain, int GridID) {
 
 static void EditGridGlobal(ovk_domain *Domain, int GridID, ovk_grid **Grid) {
 
-  MPI_Barrier(Domain->properties.comm);
-
   OVK_DEBUG_ASSERT(!EditingProperties(Domain), "Cannot edit grid while editing properties.");
   OVK_DEBUG_ASSERT(!EditingConnectivity(Domain, OVK_ALL_GRIDS, OVK_ALL_GRIDS), "Cannot edit "
     "grid while editing connectivities.");
@@ -554,14 +552,16 @@ static void EditGridGlobal(ovk_domain *Domain, int GridID, ovk_grid **Grid) {
 
 //   bool StartEditAll = Domain->grids_edit_ref_count == 0;
   ++Domain->grids_edit_ref_count;
-//   bool StartEdit = Container->edit_ref_count == 0;
+  bool StartEdit = Container->edit_ref_count == 0;
   ++Container->edit_ref_count;
+
+  if (StartEdit) {
+    MPI_Barrier(Domain->properties.comm);
+  }
 
   if (IsLocal) {
     *Grid = Container->grid;
   }
-
-  MPI_Barrier(Domain->properties.comm);
 
 }
 
@@ -589,8 +589,6 @@ void ovkReleaseGridRemote(ovk_domain *Domain, int GridID) {
 
 static void ReleaseGridGlobal(ovk_domain *Domain, int GridID, ovk_grid **Grid) {
 
-  MPI_Barrier(Domain->properties.comm);
-
   bool IsLocal = Grid != NULL;
 
   t_domain_grid_container *Container = FindGrid(Domain, GridID);
@@ -605,7 +603,7 @@ static void ReleaseGridGlobal(ovk_domain *Domain, int GridID, ovk_grid **Grid) {
   }
 
   --Container->edit_ref_count;
-//   bool EndEdit = Container->edit_ref_count == 0;
+  bool EndEdit = Container->edit_ref_count == 0;
   --Domain->grids_edit_ref_count;
 //   bool EndEditAll = Domain->grids_edit_ref_count == 0;
 
@@ -613,7 +611,9 @@ static void ReleaseGridGlobal(ovk_domain *Domain, int GridID, ovk_grid **Grid) {
     *Grid = NULL;
   }
 
-  MPI_Barrier(Domain->properties.comm);
+  if (EndEdit) {
+    MPI_Barrier(Domain->properties.comm);
+  }
 
 }
 
@@ -926,8 +926,6 @@ void ovkEditConnectivityRemote(ovk_domain *Domain, int DonorGridID, int Receiver
 static void EditConnectivityGlobal(ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
   ovk_connectivity **Connectivity) {
 
-  MPI_Barrier(Domain->properties.comm);
-
   OVK_DEBUG_ASSERT(!EditingProperties(Domain), "Cannot edit connectivity while editing properties.");
   OVK_DEBUG_ASSERT(!EditingGrid(Domain, OVK_ALL_GRIDS), "Cannot edit connectivity while editing "
     "grids.");
@@ -944,14 +942,16 @@ static void EditConnectivityGlobal(ovk_domain *Domain, int DonorGridID, int Rece
 
 //   bool StartEditAll = Domain->connectivities_edit_ref_count == 0;
   ++Domain->connectivities_edit_ref_count;
-//   bool StartEdit = Container->edit_ref_count == 0;
+  bool StartEdit = Container->edit_ref_count == 0;
   ++Container->edit_ref_count;
+
+  if (StartEdit) {
+    MPI_Barrier(Domain->properties.comm);
+  }
 
   if (IsLocal) {
     *Connectivity = Container->connectivity;
   }
-
-  MPI_Barrier(Domain->properties.comm);
 
 }
 
@@ -988,8 +988,6 @@ void ovkReleaseConnectivityRemote(ovk_domain *Domain, int DonorGridID, int Recei
 static void ReleaseConnectivityGlobal(ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
   ovk_connectivity **Connectivity) {
 
-  MPI_Barrier(Domain->properties.comm);
-
   bool IsLocal = Connectivity != NULL;
 
   t_domain_connectivity_container *Container = FindConnectivity(Domain, DonorGridID,
@@ -1005,7 +1003,7 @@ static void ReleaseConnectivityGlobal(ovk_domain *Domain, int DonorGridID, int R
   }
 
   --Container->edit_ref_count;
-//   bool EndEdit = Container->edit_ref_count == 0;
+  bool EndEdit = Container->edit_ref_count == 0;
   --Domain->connectivities_edit_ref_count;
 //   bool EndEditAll = Domain->connectivities_edit_ref_count == 0;
 
@@ -1013,7 +1011,9 @@ static void ReleaseConnectivityGlobal(ovk_domain *Domain, int DonorGridID, int R
     *Connectivity = NULL;
   }
 
-  MPI_Barrier(Domain->properties.comm);
+  if (EndEdit) {
+    MPI_Barrier(Domain->properties.comm);
+  }
 
 }
 
