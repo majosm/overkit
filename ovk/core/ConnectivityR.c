@@ -17,7 +17,7 @@ static void DefaultProperties(ovk_connectivity_r_properties *Properties);
 static void DefaultEdits(t_connectivity_r_edits *Edits);
 
 void PRIVATE(CreateConnectivityReceiverSide)(ovk_connectivity_r **Receivers_, const ovk_grid *Grid,
-  t_logger *Logger, t_error_handler *ErrorHandler) {
+  int SourceGridID, t_logger *Logger, t_error_handler *ErrorHandler) {
 
   int iDim;
 
@@ -45,6 +45,7 @@ void PRIVATE(CreateConnectivityReceiverSide)(ovk_connectivity_r **Receivers_, co
   DefaultProperties(&Receivers->properties);
 
   Receivers->properties.grid_id = GridID;
+  Receivers->properties.source_grid_id = SourceGridID;
   Receivers->properties.num_dims = NumDims;
   Receivers->properties.comm = Comm;
   Receivers->properties.comm_size = CommSize;
@@ -333,6 +334,7 @@ void PRIVATE(ResetConnectivityReceiverSideEdits)(ovk_connectivity_r *Receivers) 
 static void DefaultProperties(ovk_connectivity_r_properties *Properties) {
 
   Properties->grid_id = -1;
+  Properties->source_grid_id = -1;
   Properties->num_dims = 2;
   Properties->comm = MPI_COMM_NULL;
   Properties->comm_size = 0;
@@ -348,6 +350,16 @@ void ovkGetConnectivityReceiverSidePropertyGridID(const ovk_connectivity_r_prope
   OVK_DEBUG_ASSERT(GridID, "Invalid grid ID pointer.");
 
   *GridID = Properties->grid_id;
+
+}
+
+void ovkGetConnectivityReceiverSidePropertySourceGridID(const ovk_connectivity_r_properties
+  *Properties, int *SourceGridID) {
+
+  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
+  OVK_DEBUG_ASSERT(SourceGridID, "Invalid source grid ID pointer.");
+
+  *SourceGridID = Properties->source_grid_id;
 
 }
 
@@ -391,8 +403,8 @@ void ovkGetConnectivityReceiverSidePropertyCommRank(const ovk_connectivity_r_pro
 
 }
 
-void ovkGetConnectivityReceiverSidePropertyReceiverCount(const ovk_connectivity_r_properties *Properties,
-  size_t *NumReceivers) {
+void ovkGetConnectivityReceiverSidePropertyReceiverCount(const ovk_connectivity_r_properties
+  *Properties, size_t *NumReceivers) {
 
   OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
   OVK_DEBUG_ASSERT(NumReceivers, "Invalid num receivers pointer.");

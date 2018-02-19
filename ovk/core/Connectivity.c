@@ -19,12 +19,12 @@ static bool EditingDonorSide(const ovk_connectivity *Connectivity);
 static bool EditingReceiverSide(const ovk_connectivity *Connectivity);
 
 static void CreateDonorSideGlobal(t_connectivity_donor_side_container **DonorsContainer,
-  const ovk_grid *DonorGrid, MPI_Comm Comm, int CommRank, t_logger *Logger,
+  const ovk_grid *DonorGrid, int DestinationGridID, MPI_Comm Comm, int CommRank, t_logger *Logger,
   t_error_handler *ErrorHandler);
 static void DestroyDonorSideGlobal(t_connectivity_donor_side_container **DonorsContainer);
 
 static void CreateReceiverSideGlobal(t_connectivity_receiver_side_container **ReceiversContainer,
-  const ovk_grid *ReceiverGrid, MPI_Comm Comm, int CommRank, t_logger *Logger,
+  const ovk_grid *ReceiverGrid, int SourceGridID, MPI_Comm Comm, int CommRank, t_logger *Logger,
   t_error_handler *ErrorHandler);
 static void DestroyReceiverSideGlobal(t_connectivity_receiver_side_container **ReceiversContainer);
 
@@ -60,16 +60,46 @@ void PRIVATE(CreateConnectivity)(ovk_connectivity **Connectivity_, int NumDims, 
   *Connectivity_ = malloc(sizeof(ovk_connectivity));
   ovk_connectivity *Connectivity = *Connectivity_;
 
+  int DonorGridID;
+  bool IsDonorGridRoot = false;
+  if (DonorGrid) {
+    const ovk_grid_properties *GridProperties;
+    ovkGetGridProperties(DonorGrid, &GridProperties);
+    int GridCommRank;
+    ovkGetGridPropertyCommRank(GridProperties, &GridCommRank);
+    IsDonorGridRoot = GridCommRank == 0;
+    if (IsDonorGridRoot) {
+      ovkGetGridPropertyID(GridProperties, &DonorGridID);
+    }
+  }
+  BroadcastAnySource(&DonorGridID, 1, MPI_INT, IsDonorGridRoot, Comm);
+
+  int ReceiverGridID;
+  bool IsReceiverGridRoot = false;
+  if (ReceiverGrid) {
+    const ovk_grid_properties *GridProperties;
+    ovkGetGridProperties(ReceiverGrid, &GridProperties);
+    int GridCommRank;
+    ovkGetGridPropertyCommRank(GridProperties, &GridCommRank);
+    IsReceiverGridRoot = GridCommRank == 0;
+    if (IsReceiverGridRoot) {
+      ovkGetGridPropertyID(GridProperties, &ReceiverGridID);
+    }
+  }
+  BroadcastAnySource(&ReceiverGridID, 1, MPI_INT, IsReceiverGridRoot, Comm);
+
   t_connectivity_donor_side_container *DonorsContainer;
-  CreateDonorSideGlobal(&DonorsContainer, DonorGrid, Comm, CommRank, Logger, ErrorHandler);
+  CreateDonorSideGlobal(&DonorsContainer, DonorGrid, ReceiverGridID, Comm, CommRank, Logger,
+    ErrorHandler);
 
   t_connectivity_receiver_side_container *ReceiversContainer;
-  CreateReceiverSideGlobal(&ReceiversContainer, ReceiverGrid, Comm, CommRank, Logger, ErrorHandler);
+  CreateReceiverSideGlobal(&ReceiversContainer, ReceiverGrid, DonorGridID, Comm, CommRank, Logger,
+    ErrorHandler);
 
   DefaultProperties(&Connectivity->properties);
 
-  Connectivity->properties.donor_grid_id = DonorsContainer->grid_info->id;
-  Connectivity->properties.receiver_grid_id = ReceiversContainer->grid_info->id;
+  Connectivity->properties.donor_grid_id = DonorGridID;
+  Connectivity->properties.receiver_grid_id = ReceiverGridID;
 
   sprintf(Connectivity->properties.name, "(%s,%s)", DonorsContainer->grid_info->name,
     ReceiversContainer->grid_info->name);
@@ -160,12 +190,12 @@ void PRIVATE(DestroyConnectivityInfo)(ovk_connectivity_info **Info) {
 }
 
 static void CreateDonorSideGlobal(t_connectivity_donor_side_container **DonorsContainer,
-  const ovk_grid *DonorGrid, MPI_Comm Comm, int CommRank, t_logger *Logger,
+  const ovk_grid *DonorGrid, int DestinationGridID, MPI_Comm Comm, int CommRank, t_logger *Logger,
   t_error_handler *ErrorHandler) {
 
   ovk_connectivity_d *Donors = NULL;
   if (DonorGrid) {
-    CreateConnectivityDonorSide(&Donors, DonorGrid, Logger, ErrorHandler);
+    CreateConnectivityDonorSide(&Donors, DonorGrid, DestinationGridID, Logger, ErrorHandler);
   }
 
   CreateDonorSideContainer(DonorsContainer, DonorGrid, Donors, Comm, CommRank);
@@ -185,12 +215,12 @@ static void DestroyDonorSideGlobal(t_connectivity_donor_side_container **DonorsC
 }
 
 static void CreateReceiverSideGlobal(t_connectivity_receiver_side_container **ReceiversContainer,
-  const ovk_grid *ReceiverGrid, MPI_Comm Comm, int CommRank, t_logger *Logger,
+  const ovk_grid *ReceiverGrid, int SourceGridID, MPI_Comm Comm, int CommRank, t_logger *Logger,
   t_error_handler *ErrorHandler) {
 
   ovk_connectivity_r *Receivers = NULL;
   if (ReceiverGrid) {
-    CreateConnectivityReceiverSide(&Receivers, ReceiverGrid, Logger, ErrorHandler);
+    CreateConnectivityReceiverSide(&Receivers, ReceiverGrid, SourceGridID, Logger, ErrorHandler);
   }
 
   CreateReceiverSideContainer(ReceiversContainer, ReceiverGrid, Receivers, Comm, CommRank);

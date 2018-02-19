@@ -38,6 +38,8 @@ void ovkGetConnectivityDonorSideGrid(const ovk_connectivity_d *Donors, const ovk
 
 void ovkGetConnectivityDonorSidePropertyGridID(const ovk_connectivity_d_properties *Properties,
   int *GridID);
+void ovkGetConnectivityDonorSidePropertyDestinationGridID(const ovk_connectivity_d_properties
+  *Properties, int *GridID);
 void ovkGetConnectivityDonorSidePropertyDimension(const ovk_connectivity_d_properties *Properties,
   int *NumDims);
 void ovkGetConnectivityDonorSidePropertyComm(const ovk_connectivity_d_properties *Properties,

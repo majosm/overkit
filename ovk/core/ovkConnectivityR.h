@@ -33,6 +33,8 @@ void ovkGetConnectivityReceiverSideGrid(const ovk_connectivity_r *Receivers,
 
 void ovkGetConnectivityReceiverSidePropertyGridID(const ovk_connectivity_r_properties *Properties,
   int *GridID);
+void ovkGetConnectivityReceiverSidePropertySourceGridID(const ovk_connectivity_r_properties
+  *Properties, int *SourceGridID);
 void ovkGetConnectivityReceiverSidePropertyDimension(const ovk_connectivity_r_properties *Properties,
   int *NumDims);
 void ovkGetConnectivityReceiverSidePropertyComm(const ovk_connectivity_r_properties *Properties,
@@ -41,8 +43,8 @@ void ovkGetConnectivityReceiverSidePropertyCommSize(const ovk_connectivity_r_pro
   int *CommSize);
 void ovkGetConnectivityReceiverSidePropertyCommRank(const ovk_connectivity_r_properties *Properties,
   int *CommRank);
-void ovkGetConnectivityReceiverSidePropertyReceiverCount(const ovk_connectivity_r_properties *Properties,
-  size_t *NumReceivers);
+void ovkGetConnectivityReceiverSidePropertyReceiverCount(const ovk_connectivity_r_properties 
+  *Properties, size_t *NumReceivers);
 
 #ifdef __cplusplus
 }

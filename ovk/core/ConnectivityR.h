@@ -17,6 +17,7 @@ extern "C" {
 
 struct ovk_connectivity_r_properties {
   int grid_id;
+  int source_grid_id;
   int num_dims;
   MPI_Comm comm;
   int comm_size;
@@ -46,7 +47,7 @@ struct ovk_connectivity_r {
 };
 
 void PRIVATE(CreateConnectivityReceiverSide)(ovk_connectivity_r **Receivers,
-  const ovk_grid *Grid, t_logger *Logger, t_error_handler *ErrorHandler);
+  const ovk_grid *Grid, int SourceGridID, t_logger *Logger, t_error_handler *ErrorHandler);
 #define CreateConnectivityReceiverSide(...) PRIVATE(CreateConnectivityReceiverSide)(__VA_ARGS__)
 void PRIVATE(DestroyConnectivityReceiverSide)(ovk_connectivity_r **Receivers);
 #define DestroyConnectivityReceiverSide(...) PRIVATE(DestroyConnectivityReceiverSide)(__VA_ARGS__)

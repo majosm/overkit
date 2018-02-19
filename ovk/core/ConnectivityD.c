@@ -20,7 +20,7 @@ static void DefaultProperties(ovk_connectivity_d_properties *Properties);
 static void DefaultEdits(t_connectivity_d_edits *Edits);
 
 void PRIVATE(CreateConnectivityDonorSide)(ovk_connectivity_d **Donors_, const ovk_grid *Grid,
-  t_logger *Logger, t_error_handler *ErrorHandler) {
+  int DestinationGridID, t_logger *Logger, t_error_handler *ErrorHandler) {
 
   int iDim;
 
@@ -48,6 +48,7 @@ void PRIVATE(CreateConnectivityDonorSide)(ovk_connectivity_d **Donors_, const ov
   DefaultProperties(&Donors->properties);
 
   Donors->properties.grid_id = GridID;
+  Donors->properties.destination_grid_id = DestinationGridID;
   Donors->properties.num_dims = NumDims;
   Donors->properties.comm = Comm;
   Donors->properties.comm_size = CommSize;
@@ -522,6 +523,7 @@ void PRIVATE(ResetConnectivityDonorSideEdits)(ovk_connectivity_d *Donors) {
 static void DefaultProperties(ovk_connectivity_d_properties *Properties) {
 
   Properties->grid_id = -1;
+  Properties->destination_grid_id = -1;
   Properties->num_dims = 2;
   Properties->comm = MPI_COMM_NULL;
   Properties->comm_size = 0;
@@ -538,6 +540,16 @@ void ovkGetConnectivityDonorSidePropertyGridID(const ovk_connectivity_d_properti
   OVK_DEBUG_ASSERT(GridID, "Invalid grid ID pointer.");
 
   *GridID = Properties->grid_id;
+
+}
+
+void ovkGetConnectivityDonorSidePropertyDestinationGridID(const ovk_connectivity_d_properties
+  *Properties, int *DestinationGridID) {
+
+  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
+  OVK_DEBUG_ASSERT(DestinationGridID, "Invalid destination grid ID pointer.");
+
+  *DestinationGridID = Properties->destination_grid_id;
 
 }
 
