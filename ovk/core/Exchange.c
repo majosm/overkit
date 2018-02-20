@@ -1329,14 +1329,34 @@ static void UpdateSendInfo(ovk_exchange *Exchange) {
 
   const ovk_connectivity_d *Donors;
   size_t NumDonors = 0;
+  ovk_range LocalRange;
   if (ovkRankHasConnectivityDonorSide(Connectivity)) {
     ovkGetConnectivityDonorSide(Connectivity, &Donors);
     const ovk_connectivity_d_properties *DonorsProperties;
     ovkGetConnectivityDonorSideProperties(Donors, &DonorsProperties);
-    ovkGetConnectivityDonorSidePropertyDonorCount(DonorsProperties, &NumDonors);
+    ovkGetConnectivityDonorSidePropertyCount(DonorsProperties, &NumDonors);
+    const ovk_grid *DonorGrid;
+    ovkGetConnectivityDonorSideGrid(Donors, &DonorGrid);
+    const ovk_grid_properties *DonorGridProperties;
+    ovkGetGridProperties(DonorGrid, &DonorGridProperties);
+    ovkGetGridPropertyLocalRange(DonorGridProperties, &LocalRange);
   }
 
   if (NumDonors > 0) {
+
+    bool *DonorCommunicates = malloc(NumDonors*sizeof(bool));
+    for (iDonor = 0; iDonor < NumDonors; ++iDonor) {
+      bool Communicates = Exchange->donor_dest_ranks[iDonor] >= 0;
+      if (Communicates) {
+        int DonorCell[MAX_DIMS] = {
+          Donors->extents[0][0][iDonor],
+          Donors->extents[0][1][iDonor],
+          Donors->extents[0][2][iDonor]
+        };
+        Communicates = ovkRangeContains(&LocalRange, DonorCell);
+      }
+      DonorCommunicates[iDonor] = Communicates;
+    }
 
     t_ordered_map *SendCounts;
     OMCreate(&SendCounts);
@@ -1344,7 +1364,7 @@ static void UpdateSendInfo(ovk_exchange *Exchange) {
     t_ordered_map_entry *Entry;
 
     for (iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      if (Exchange->donor_dest_ranks[iDonor] >= 0) {
+      if (DonorCommunicates[iDonor]) {
         Entry = OMFind(SendCounts, Exchange->donor_dest_ranks[iDonor]);
         if (Entry != OMEnd(SendCounts)) {
           size_t *SendCount = OMData(Entry);
@@ -1388,7 +1408,7 @@ static void UpdateSendInfo(ovk_exchange *Exchange) {
     }
 
     for (iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      if (Exchange->donor_dest_ranks[iDonor] >= 0) {
+      if (DonorCommunicates[iDonor]) {
         int *SendIndex = OMData(OMFind(RankToSendIndex, Exchange->donor_dest_ranks[iDonor]));
         Exchange->donor_send_indices[iDonor] = *SendIndex;
       } else {
@@ -1404,6 +1424,8 @@ static void UpdateSendInfo(ovk_exchange *Exchange) {
     }
 
     OMDestroy(&RankToSendIndex);
+
+    free(DonorCommunicates);
 
   }
 
@@ -1734,7 +1756,7 @@ void PRIVATE(ExchangeCollect)(const ovk_exchange *Exchange, ovk_data_type DataTy
 
   }
 
-  for (iRecv = 0; iRecv < NumCollectRecvs; ++iSend) {
+  for (iRecv = 0; iRecv < NumCollectRecvs; ++iRecv) {
     for (iCount = 0; iCount < Count; ++iCount) {
       free(CollectRecvBuffers[iRecv][iCount]);
     }
