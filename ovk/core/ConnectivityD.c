@@ -254,6 +254,19 @@ void ovkResizeDonors(ovk_connectivity_d *Donors, size_t NumDonors, int MaxDonorS
 
 }
 
+void ovkGetDonorExtents(const ovk_connectivity_d *Donors, int Dimension, const int **Begins,
+  const int **Ends) {
+
+  OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Begins, "Invalid begins pointer.");
+  OVK_DEBUG_ASSERT(Ends, "Invalid ends pointer.");
+
+  *Begins = Donors->extents[0][Dimension];
+  *Ends = Donors->extents[1][Dimension];
+
+}
+
 void ovkEditDonorExtents(ovk_connectivity_d *Donors, int Dimension, int **Begins, int **Ends) {
 
   OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
@@ -297,6 +310,16 @@ void ovkReleaseDonorExtents(ovk_connectivity_d *Donors, int Dimension, int **Beg
 
 }
 
+void ovkGetDonorCoords(const ovk_connectivity_d *Donors, int Dimension, const double **Coords) {
+
+  OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Coords, "Invalid coords pointer.");
+
+  *Coords = Donors->coords[Dimension];
+
+}
+
 void ovkEditDonorCoords(ovk_connectivity_d *Donors, int Dimension, double **Coords) {
 
   OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
@@ -332,6 +355,18 @@ void ovkReleaseDonorCoords(ovk_connectivity_d *Donors, int Dimension, double **C
     Donors->edits.coords = true;
     MPI_Barrier(Donors->properties.comm);
   }
+
+}
+
+void ovkGetDonorInterpCoefs(const ovk_connectivity_d *Donors, int Dimension, int Point,
+  const double **InterpCoefs) {
+
+  OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Point >= 0 && Point < Donors->properties.max_donor_size, "Invalid point.");
+  OVK_DEBUG_ASSERT(InterpCoefs, "Invalid interp coefs pointer.");
+
+  *InterpCoefs = Donors->interp_coefs[Dimension][Point];
 
 }
 
@@ -379,6 +414,17 @@ void ovkReleaseDonorInterpCoefs(ovk_connectivity_d *Donors, int Dimension, int P
 
 }
 
+void ovkGetDonorDestinations(const ovk_connectivity_d *Donors, int Dimension,
+  const int **Destinations) {
+
+  OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Destinations, "Invalid destinations pointer.");
+
+  *Destinations = Donors->destinations[Dimension];
+
+}
+
 void ovkEditDonorDestinations(ovk_connectivity_d *Donors, int Dimension, int **Destinations) {
 
   OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
@@ -416,6 +462,15 @@ void ovkReleaseDonorDestinations(ovk_connectivity_d *Donors, int Dimension, int 
     MPI_Barrier(Donors->properties.comm);
   }
 
+
+}
+
+void ovkGetDonorDestinationRanks(const ovk_connectivity_d *Donors, const int **DestinationRanks) {
+
+  OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
+  OVK_DEBUG_ASSERT(DestinationRanks, "Invalid destination ranks pointer.");
+
+  *DestinationRanks = Donors->destination_ranks;
 
 }
 

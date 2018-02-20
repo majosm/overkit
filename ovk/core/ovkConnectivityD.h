@@ -21,16 +21,29 @@ void ovkGetConnectivityDonorSideProperties(const ovk_connectivity_d *Donors,
   const ovk_connectivity_d_properties **Properties);
 
 void ovkResizeDonors(ovk_connectivity_d *Donors, size_t NumDonors, int MaxDonorSize);
+
+void ovkGetDonorExtents(const ovk_connectivity_d *Donors, int Dimension, const int **Begins,
+  const int **Ends);
 void ovkEditDonorExtents(ovk_connectivity_d *Donors, int Dimension, int **Begins, int **Ends);
 void ovkReleaseDonorExtents(ovk_connectivity_d *Donors, int Dimension, int **Begins, int **Ends);
+
+void ovkGetDonorCoords(const ovk_connectivity_d *Donors, int Dimension, const double **Coords);
 void ovkEditDonorCoords(ovk_connectivity_d *Donors, int Dimension, double **Coords);
 void ovkReleaseDonorCoords(ovk_connectivity_d *Donors, int Dimension, double **Coords);
+
+void ovkGetDonorInterpCoefs(const ovk_connectivity_d *Donors, int Dimension, int Point,
+  const double **InterpCoefs);
 void ovkEditDonorInterpCoefs(ovk_connectivity_d *Donors, int Dimension, int Point,
   double **InterpCoefs);
 void ovkReleaseDonorInterpCoefs(ovk_connectivity_d *Donors, int Dimension, int Point,
   double **InterpCoefs);
+
+void ovkGetDonorDestinations(const ovk_connectivity_d *Donors, int Dimension,
+  const int **Destinations);
 void ovkEditDonorDestinations(ovk_connectivity_d *Donors, int Dimension, int **Destinations);
 void ovkReleaseDonorDestinations(ovk_connectivity_d *Donors, int Dimension, int **Destinations);
+
+void ovkGetDonorDestinationRanks(const ovk_connectivity_d *Donors, const int **DestinationRanks);
 void ovkEditDonorDestinationRanks(ovk_connectivity_d *Donors, int **DestinationRanks);
 void ovkReleaseDonorDestinationRanks(ovk_connectivity_d *Donors, int **DestinationRanks);
 

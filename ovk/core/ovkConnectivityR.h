@@ -21,10 +21,16 @@ void ovkGetConnectivityReceiverSideProperties(const ovk_connectivity_r *Receiver
   const ovk_connectivity_r_properties **Properties);
 
 void ovkResizeReceivers(ovk_connectivity_r *Receivers, size_t NumReceivers);
+
+void ovkGetReceiverPoints(const ovk_connectivity_r *Receivers, int Dimension, const int **Points);
 void ovkEditReceiverPoints(ovk_connectivity_r *Receivers, int Dimension, int **Points);
 void ovkReleaseReceiverPoints(ovk_connectivity_r *Receivers, int Dimension, int **Points);
+
+void ovkGetReceiverSources(const ovk_connectivity_r *Receivers, int iDim, const int **Sources);
 void ovkEditReceiverSources(ovk_connectivity_r *Receivers, int iDim, int **Sources);
 void ovkReleaseReceiverSources(ovk_connectivity_r *Receivers, int iDim, int **Sources);
+
+void ovkGetReceiverSourceRanks(const ovk_connectivity_r *Receivers, const int **SourceRanks);
 void ovkEditReceiverSourceRanks(ovk_connectivity_r *Receivers, int **SourceRanks);
 void ovkReleaseReceiverSourceRanks(ovk_connectivity_r *Receivers, int **SourceRanks);
 

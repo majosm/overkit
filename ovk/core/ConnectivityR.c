@@ -164,6 +164,16 @@ void ovkResizeReceivers(ovk_connectivity_r *Receivers, size_t NumReceivers) {
 
 }
 
+void ovkGetReceiverPoints(const ovk_connectivity_r *Receivers, int Dimension, const int **Points) {
+
+  OVK_DEBUG_ASSERT(Receivers, "Invalid receivers pointer.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Points, "Invalid points pointer.");
+
+  *Points = Receivers->points[Dimension];
+
+}
+
 void ovkEditReceiverPoints(ovk_connectivity_r *Receivers, int Dimension, int **Points) {
 
   OVK_DEBUG_ASSERT(Receivers, "Invalid receivers pointer.");
@@ -203,6 +213,17 @@ void ovkReleaseReceiverPoints(ovk_connectivity_r *Receivers, int Dimension, int 
 
 }
 
+void ovkGetReceiverSources(const ovk_connectivity_r *Receivers, int Dimension, const int **Sources)
+  {
+
+  OVK_DEBUG_ASSERT(Receivers, "Invalid receivers pointer.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Sources, "Invalid sources pointer.");
+
+  *Sources = Receivers->sources[Dimension];
+
+}
+
 void ovkEditReceiverSources(ovk_connectivity_r *Receivers, int Dimension, int **Sources) {
 
   OVK_DEBUG_ASSERT(Receivers, "Invalid receivers pointer.");
@@ -239,6 +260,15 @@ void ovkReleaseReceiverSources(ovk_connectivity_r *Receivers, int Dimension, int
     Receivers->edits.sources = true;
     MPI_Barrier(Receivers->properties.comm);
   }
+
+}
+
+void ovkGetReceiverSourceRanks(const ovk_connectivity_r *Receivers, const int **SourceRanks) {
+
+  OVK_DEBUG_ASSERT(Receivers, "Invalid receivers pointer.");
+  OVK_DEBUG_ASSERT(SourceRanks, "Invalid source ranks pointer.");
+
+  *SourceRanks = Receivers->source_ranks;
 
 }
 
