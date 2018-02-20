@@ -1329,7 +1329,7 @@ void ovkGetLocalDonorCount(const ovk_domain *Domain, int DonorGridID, int Receiv
   const ovk_connectivity_d_properties *DonorsProperties;
   ovkGetConnectivityDonorSideProperties(Donors, &DonorsProperties);
 
-  ovkGetConnectivityDonorSidePropertyDonorCount(DonorsProperties, NumDonors);
+  ovkGetConnectivityDonorSidePropertyCount(DonorsProperties, NumDonors);
 
 }
 
@@ -1350,7 +1350,7 @@ void ovkGetLocalReceiverCount(const ovk_domain *Domain, int DonorGridID, int Rec
   const ovk_connectivity_r_properties *ReceiversProperties;
   ovkGetConnectivityReceiverSideProperties(Receivers, &ReceiversProperties);
 
-  ovkGetConnectivityReceiverSidePropertyReceiverCount(ReceiversProperties, NumReceivers);
+  ovkGetConnectivityReceiverSidePropertyCount(ReceiversProperties, NumReceivers);
 
 }
 

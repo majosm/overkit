@@ -20,7 +20,7 @@ typedef struct ovk_connectivity_d ovk_connectivity_d;
 void ovkGetConnectivityDonorSideProperties(const ovk_connectivity_d *Donors,
   const ovk_connectivity_d_properties **Properties);
 
-void ovkResizeDonors(ovk_connectivity_d *Donors, size_t NumDonors, int MaxDonorSize);
+void ovkResizeDonors(ovk_connectivity_d *Donors, size_t NumDonors, int MaxSize);
 
 void ovkGetDonorExtents(const ovk_connectivity_d *Donors, int Dimension, const int **Begins,
   const int **Ends);
@@ -61,10 +61,10 @@ void ovkGetConnectivityDonorSidePropertyCommSize(const ovk_connectivity_d_proper
   int *CommSize);
 void ovkGetConnectivityDonorSidePropertyCommRank(const ovk_connectivity_d_properties *Properties,
   int *CommRank);
-void ovkGetConnectivityDonorSidePropertyDonorCount(const ovk_connectivity_d_properties *Properties,
+void ovkGetConnectivityDonorSidePropertyCount(const ovk_connectivity_d_properties *Properties,
   size_t *NumDonors);
-void ovkGetConnectivityDonorSidePropertyMaxDonorSize(const ovk_connectivity_d_properties *Properties,
-  int *MaxDonorSize);
+void ovkGetConnectivityDonorSidePropertyMaxSize(const ovk_connectivity_d_properties *Properties,
+  int *MaxSize);
 
 #ifdef __cplusplus
 }

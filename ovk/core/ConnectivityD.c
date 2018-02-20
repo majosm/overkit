@@ -99,7 +99,7 @@ void PRIVATE(DestroyConnectivityDonorSide)(ovk_connectivity_d **Donors_) {
 
   free(Donors->extents[0][0]);
   free(Donors->coords[0]);
-  if (Donors->properties.max_donor_size > 0) {
+  if (Donors->properties.max_size > 0) {
     free(Donors->interp_coefs[0][0]);
   }
   free(Donors->interp_coefs[0]);
@@ -124,11 +124,11 @@ void ovkGetConnectivityDonorSideProperties(const ovk_connectivity_d *Donors,
 
 }
 
-void ovkResizeDonors(ovk_connectivity_d *Donors, size_t NumDonors, int MaxDonorSize) {
+void ovkResizeDonors(ovk_connectivity_d *Donors, size_t NumDonors, int MaxSize) {
 
   OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
   OVK_DEBUG_ASSERT(NumDonors >= 0, "Invalid donor count.");
-  OVK_DEBUG_ASSERT(MaxDonorSize >= 0, "Invalid max donor size.");
+  OVK_DEBUG_ASSERT(MaxSize >= 0, "Invalid max size.");
 
   MPI_Barrier(Donors->properties.comm);
 
@@ -144,10 +144,10 @@ void ovkResizeDonors(ovk_connectivity_d *Donors, size_t NumDonors, int MaxDonorS
     // Needed because editing interp coefs blocks on comm -- if max size was 0 on some ranks,
     // calling the edit function in a loop from 0 to max size would result in it not being called
     // on those ranks
-    int GlobalMaxDonorSize;
-    MPI_Allreduce(&MaxDonorSize, &GlobalMaxDonorSize, 1, MPI_INT, MPI_MAX, Donors->properties.comm);
-    OVK_DEBUG_ASSERT(MaxDonorSize == GlobalMaxDonorSize, "Max donor size must be the same on all "
-      "connectivity processes.");
+    int GlobalMaxSize;
+    MPI_Allreduce(&MaxSize, &GlobalMaxSize, 1, MPI_INT, MPI_MAX, Donors->properties.comm);
+    OVK_DEBUG_ASSERT(MaxSize == GlobalMaxSize, "Max size must be the same on all connectivity "
+      "processes.");
   }
 
   int iDim, iPoint;
@@ -155,7 +155,7 @@ void ovkResizeDonors(ovk_connectivity_d *Donors, size_t NumDonors, int MaxDonorS
 
   int NumDims = Donors->properties.num_dims;
 
-  int PrevMaxDonorSize = Donors->properties.max_donor_size;
+  int PrevMaxSize = Donors->properties.max_size;
 
   free(Donors->extents[0][0]);
   for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
@@ -166,7 +166,7 @@ void ovkResizeDonors(ovk_connectivity_d *Donors, size_t NumDonors, int MaxDonorS
   for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
     Donors->coords[iDim] = NULL;
   }
-  if (PrevMaxDonorSize > 0) {
+  if (PrevMaxSize > 0) {
     free(Donors->interp_coefs[0][0]);
   }
   free(Donors->interp_coefs[0]);
@@ -180,14 +180,14 @@ void ovkResizeDonors(ovk_connectivity_d *Donors, size_t NumDonors, int MaxDonorS
   free_null(&Donors->destination_ranks);
 
   Donors->properties.num_donors = NumDonors;
-  Donors->properties.max_donor_size = MaxDonorSize;
+  Donors->properties.max_size = MaxSize;
 
-  if (MaxDonorSize > 0) {
-    Donors->interp_coefs[0] = malloc(MAX_DIMS*MaxDonorSize*sizeof(double *));
-    Donors->interp_coefs[1] = Donors->interp_coefs[0] + MaxDonorSize;
-    Donors->interp_coefs[2] = Donors->interp_coefs[1] + MaxDonorSize;
+  if (MaxSize > 0) {
+    Donors->interp_coefs[0] = malloc(MAX_DIMS*MaxSize*sizeof(double *));
+    Donors->interp_coefs[1] = Donors->interp_coefs[0] + MaxSize;
+    Donors->interp_coefs[2] = Donors->interp_coefs[1] + MaxSize;
     for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      for (iPoint = 0; iPoint < MaxDonorSize; ++iPoint) {
+      for (iPoint = 0; iPoint < MaxSize; ++iPoint) {
         Donors->interp_coefs[iDim][iPoint] = NULL;
       }
     }
@@ -204,12 +204,12 @@ void ovkResizeDonors(ovk_connectivity_d *Donors, size_t NumDonors, int MaxDonorS
     Donors->coords[0] = malloc(MAX_DIMS*NumDonors*sizeof(double));
     Donors->coords[1] = Donors->coords[0] + NumDonors;
     Donors->coords[2] = Donors->coords[1] + NumDonors;
-    if (MaxDonorSize > 0) {
-      Donors->interp_coefs[0][0] = malloc(MAX_DIMS*MaxDonorSize*NumDonors*sizeof(double));
-      Donors->interp_coefs[1][0] = Donors->interp_coefs[0][0] + MaxDonorSize*NumDonors;
-      Donors->interp_coefs[2][0] = Donors->interp_coefs[1][0] + MaxDonorSize*NumDonors;
+    if (MaxSize > 0) {
+      Donors->interp_coefs[0][0] = malloc(MAX_DIMS*MaxSize*NumDonors*sizeof(double));
+      Donors->interp_coefs[1][0] = Donors->interp_coefs[0][0] + MaxSize*NumDonors;
+      Donors->interp_coefs[2][0] = Donors->interp_coefs[1][0] + MaxSize*NumDonors;
       for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        for (iPoint = 1; iPoint < MaxDonorSize; ++iPoint) {
+        for (iPoint = 1; iPoint < MaxSize; ++iPoint) {
           Donors->interp_coefs[iDim][iPoint] = Donors->interp_coefs[iDim][iPoint-1] + NumDonors;
         }
       }
@@ -232,7 +232,7 @@ void ovkResizeDonors(ovk_connectivity_d *Donors, size_t NumDonors, int MaxDonorS
         Donors->coords[iDim][iDonor] = 0.;
       }
       for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        for (iPoint = 0; iPoint < MaxDonorSize; ++iPoint) {
+        for (iPoint = 0; iPoint < MaxSize; ++iPoint) {
           Donors->interp_coefs[iDim][iPoint][iDonor] = 0.;
         }
       }
@@ -363,7 +363,7 @@ void ovkGetDonorInterpCoefs(const ovk_connectivity_d *Donors, int Dimension, int
 
   OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
-  OVK_DEBUG_ASSERT(Point >= 0 && Point < Donors->properties.max_donor_size, "Invalid point.");
+  OVK_DEBUG_ASSERT(Point >= 0 && Point < Donors->properties.max_size, "Invalid point.");
   OVK_DEBUG_ASSERT(InterpCoefs, "Invalid interp coefs pointer.");
 
   *InterpCoefs = Donors->interp_coefs[Dimension][Point];
@@ -375,7 +375,7 @@ void ovkEditDonorInterpCoefs(ovk_connectivity_d *Donors, int Dimension, int Poin
 
   OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
-  OVK_DEBUG_ASSERT(Point >= 0 && Point < Donors->properties.max_donor_size, "Invalid point.");
+  OVK_DEBUG_ASSERT(Point >= 0 && Point < Donors->properties.max_size, "Invalid point.");
   OVK_DEBUG_ASSERT(InterpCoefs, "Invalid interp coefs pointer.");
   OVK_DEBUG_ASSERT(!EditingProperties(Donors), "Cannot edit interp coefs while editing properties.");
 
@@ -395,7 +395,7 @@ void ovkReleaseDonorInterpCoefs(ovk_connectivity_d *Donors, int Dimension, int P
 
   OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
-  OVK_DEBUG_ASSERT(Point >= 0 && Point < Donors->properties.max_donor_size, "Invalid point.");
+  OVK_DEBUG_ASSERT(Point >= 0 && Point < Donors->properties.max_size, "Invalid point.");
   OVK_DEBUG_ASSERT(InterpCoefs, "Invalid donor coefs pointer.");
   OVK_DEBUG_ASSERT(*InterpCoefs == Donors->interp_coefs[Dimension][Point], "Invalid interp coefs "
     "pointer.");
@@ -584,7 +584,7 @@ static void DefaultProperties(ovk_connectivity_d_properties *Properties) {
   Properties->comm_size = 0;
   Properties->comm_rank = 0;
   Properties->num_donors = 0;
-  Properties->max_donor_size = 0;
+  Properties->max_size = 0;
 
 }
 
@@ -648,7 +648,7 @@ void ovkGetConnectivityDonorSidePropertyCommRank(const ovk_connectivity_d_proper
 
 }
 
-void ovkGetConnectivityDonorSidePropertyDonorCount(const ovk_connectivity_d_properties *Properties,
+void ovkGetConnectivityDonorSidePropertyCount(const ovk_connectivity_d_properties *Properties,
   size_t *NumDonors) {
 
   OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
@@ -658,13 +658,13 @@ void ovkGetConnectivityDonorSidePropertyDonorCount(const ovk_connectivity_d_prop
 
 }
 
-void ovkGetConnectivityDonorSidePropertyMaxDonorSize(const ovk_connectivity_d_properties *Properties,
-  int *MaxDonorSize) {
+void ovkGetConnectivityDonorSidePropertyMaxSize(const ovk_connectivity_d_properties *Properties,
+  int *MaxSize) {
 
   OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
-  OVK_DEBUG_ASSERT(MaxDonorSize, "Invalid max donor size pointer.");
+  OVK_DEBUG_ASSERT(MaxSize, "Invalid max size pointer.");
 
-  *MaxDonorSize = Properties->max_donor_size;
+  *MaxSize = Properties->max_size;
 
 }
 

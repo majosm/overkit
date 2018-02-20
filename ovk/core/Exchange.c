@@ -408,7 +408,7 @@ static void ResizeDonors(ovk_exchange *Exchange) {
     ovkGetConnectivityDonorSide(Connectivity, &Donors);
     const ovk_connectivity_d_properties *DonorsProperties;
     ovkGetConnectivityDonorSideProperties(Donors, &DonorsProperties);
-    ovkGetConnectivityDonorSidePropertyDonorCount(DonorsProperties, &NumDonors);
+    ovkGetConnectivityDonorSidePropertyCount(DonorsProperties, &NumDonors);
   }
 
   if (NumDonors > 0) {
@@ -454,7 +454,7 @@ static void ResizeReceivers(ovk_exchange *Exchange) {
     ovkGetConnectivityReceiverSide(Connectivity, &Receivers);
     const ovk_connectivity_r_properties *ReceiversProperties;
     ovkGetConnectivityReceiverSideProperties(Receivers, &ReceiversProperties);
-    ovkGetConnectivityReceiverSidePropertyReceiverCount(ReceiversProperties, &NumReceivers);
+    ovkGetConnectivityReceiverSidePropertyCount(ReceiversProperties, &NumReceivers);
   }
 
   if (NumReceivers > 0) {
@@ -495,13 +495,13 @@ static void UpdateCollectSendInfo(ovk_exchange *Exchange) {
 
   const ovk_connectivity_d *Donors;
   size_t NumDonors = 0;
-  int MaxDonorSize = 0;
+  int MaxSize = 0;
   if (ovkRankHasConnectivityDonorSide(Connectivity)) {
     ovkGetConnectivityDonorSide(Connectivity, &Donors);
     const ovk_connectivity_d_properties *DonorsProperties;
     ovkGetConnectivityDonorSideProperties(Donors, &DonorsProperties);
-    ovkGetConnectivityDonorSidePropertyDonorCount(DonorsProperties, &NumDonors);
-    ovkGetConnectivityDonorSidePropertyMaxDonorSize(DonorsProperties, &MaxDonorSize);
+    ovkGetConnectivityDonorSidePropertyCount(DonorsProperties, &NumDonors);
+    ovkGetConnectivityDonorSidePropertyMaxSize(DonorsProperties, &MaxSize);
   }
 
   if (NumDonors > 0) {
@@ -757,13 +757,13 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
 
   const ovk_connectivity_d *Donors;
   size_t NumDonors = 0;
-  int MaxDonorSize = 0;
+  int MaxSize = 0;
   if (ovkRankHasConnectivityDonorSide(Connectivity)) {
     ovkGetConnectivityDonorSide(Connectivity, &Donors);
     const ovk_connectivity_d_properties *DonorsProperties;
     ovkGetConnectivityDonorSideProperties(Donors, &DonorsProperties);
-    ovkGetConnectivityDonorSidePropertyDonorCount(DonorsProperties, &NumDonors);
-    ovkGetConnectivityDonorSidePropertyMaxDonorSize(DonorsProperties, &MaxDonorSize);
+    ovkGetConnectivityDonorSidePropertyCount(DonorsProperties, &NumDonors);
+    ovkGetConnectivityDonorSidePropertyMaxSize(DonorsProperties, &MaxSize);
   }
 
   if (NumDonors > 0) {
@@ -1020,15 +1020,15 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
       RemoteDonorPointOffset += NumRemoteDonorPoints;
     }
 
-    int MaxDonorPoints = 1;
+    int MaxPointsInCell = 1;
     for (iDim = 0; iDim <= NumDims; ++iDim) {
-      MaxDonorPoints *= MaxDonorSize;
+      MaxPointsInCell *= MaxSize;
     }
-    int *CellCollectRecvIndices = malloc(MaxDonorPoints*sizeof(int));
-    int *CellCollectRecvOffsets = malloc(MaxDonorPoints*sizeof(size_t));
+    int *CellCollectRecvIndices = malloc(MaxPointsInCell*sizeof(int));
+    int *CellCollectRecvOffsets = malloc(MaxPointsInCell*sizeof(size_t));
 
     for (iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      for (iDonorPoint = 0; iDonorPoint < MaxDonorPoints; ++iDonorPoint) {
+      for (iDonorPoint = 0; iDonorPoint < MaxPointsInCell; ++iDonorPoint) {
         CellCollectRecvIndices[iDonorPoint] = -1;
       }
       int DonorBegin[MAX_DIMS] = {
@@ -1114,7 +1114,7 @@ static void UpdateDonorsSorted(ovk_exchange *Exchange) {
     ovkGetConnectivityDonorSideProperties(Donors, &DonorsProperties);
 
     size_t NumDonors;
-    ovkGetConnectivityDonorSidePropertyDonorCount(DonorsProperties, &NumDonors);
+    ovkGetConnectivityDonorSidePropertyCount(DonorsProperties, &NumDonors);
 
     const ovk_grid_info *ReceiverGridInfo;
     ovkGetConnectivityReceiverGridInfo(Connectivity, &ReceiverGridInfo);
@@ -1175,7 +1175,7 @@ static void UpdateReceiversSorted(ovk_exchange *Exchange) {
     ovkGetConnectivityReceiverSideProperties(Receivers, &ReceiversProperties);
 
     size_t NumReceivers = 0;
-    ovkGetConnectivityReceiverSidePropertyReceiverCount(ReceiversProperties, &NumReceivers);
+    ovkGetConnectivityReceiverSidePropertyCount(ReceiversProperties, &NumReceivers);
 
     const ovk_grid *ReceiverGrid;
     ovkGetConnectivityReceiverSideGrid(Receivers, &ReceiverGrid);
@@ -1237,7 +1237,7 @@ static void UpdateSourceRanks(ovk_exchange *Exchange) {
     ovkGetConnectivityReceiverSide(Connectivity, &Receivers);
     const ovk_connectivity_r_properties *ReceiversProperties;
     ovkGetConnectivityReceiverSideProperties(Receivers, &ReceiversProperties);
-    ovkGetConnectivityReceiverSidePropertyReceiverCount(ReceiversProperties, &NumReceivers);
+    ovkGetConnectivityReceiverSidePropertyCount(ReceiversProperties, &NumReceivers);
   }
 
   t_ordered_map *Bins;
@@ -1283,7 +1283,7 @@ static void UpdateDestRanks(ovk_exchange *Exchange) {
     ovkGetConnectivityDonorSide(Connectivity, &Donors);
     const ovk_connectivity_d_properties *DonorsProperties;
     ovkGetConnectivityDonorSideProperties(Donors, &DonorsProperties);
-    ovkGetConnectivityDonorSidePropertyDonorCount(DonorsProperties, &NumDonors);
+    ovkGetConnectivityDonorSidePropertyCount(DonorsProperties, &NumDonors);
   }
 
   t_ordered_map *Bins;
@@ -1449,7 +1449,7 @@ static void UpdateReceiveInfo(ovk_exchange *Exchange) {
     ovkGetConnectivityReceiverSide(Connectivity, &Receivers);
     const ovk_connectivity_r_properties *ReceiversProperties;
     ovkGetConnectivityReceiverSideProperties(Receivers, &ReceiversProperties);
-    ovkGetConnectivityReceiverSidePropertyReceiverCount(ReceiversProperties, &NumReceivers);
+    ovkGetConnectivityReceiverSidePropertyCount(ReceiversProperties, &NumReceivers);
   }
 
   if (NumReceivers > 0) {
@@ -1552,10 +1552,10 @@ void PRIVATE(ExchangeCollect)(const ovk_exchange *Exchange, ovk_data_type DataTy
   ovkGetConnectivityDonorSideProperties(Donors, &DonorsProperties);
 
   size_t NumDonors;
-  ovkGetConnectivityDonorSidePropertyDonorCount(DonorsProperties, &NumDonors);
+  ovkGetConnectivityDonorSidePropertyCount(DonorsProperties, &NumDonors);
 
-  int MaxDonorSize;
-  ovkGetConnectivityDonorSidePropertyMaxDonorSize(DonorsProperties, &MaxDonorSize);
+  int MaxSize;
+  ovkGetConnectivityDonorSidePropertyMaxSize(DonorsProperties, &MaxSize);
 
   const ovk_grid *DonorGrid;
   ovkGetConnectivityDonorSideGrid(Donors, &DonorGrid);
@@ -1654,14 +1654,14 @@ void PRIVATE(ExchangeCollect)(const ovk_exchange *Exchange, ovk_data_type DataTy
 
   free(Requests);
 
-  int MaxDonorPoints = 1;
+  int MaxPointsInCell = 1;
   for (iDim = 0; iDim < NumDims; ++iDim) {
-    MaxDonorPoints *= MaxDonorSize;
+    MaxPointsInCell *= MaxSize;
   }
 
   void **DonorPointData = malloc(Count*sizeof(void *));
   for (iCount = 0; iCount < Count; ++iCount) {
-    DonorPointData[iCount] = malloc(MaxDonorPoints*DataSize);
+    DonorPointData[iCount] = malloc(MaxPointsInCell*DataSize);
   }
 
   for (iDonor = 0; iDonor < NumDonors; ++iDonor) {
@@ -1786,7 +1786,7 @@ void PRIVATE(ExchangeSend)(const ovk_exchange *Exchange, ovk_data_type DataType,
   ovkGetConnectivityDonorSideProperties(Donors, &DonorsProperties);
 
   size_t NumDonors;
-  ovkGetConnectivityDonorSidePropertyDonorCount(DonorsProperties, &NumDonors);
+  ovkGetConnectivityDonorSidePropertyCount(DonorsProperties, &NumDonors);
 
   int NumSends = Exchange->num_sends;
 
@@ -1858,7 +1858,7 @@ void PRIVATE(ExchangeReceive)(const ovk_exchange *Exchange, ovk_data_type DataTy
   ovkGetConnectivityReceiverSideProperties(Receivers, &ReceiversProperties);
 
   size_t NumReceivers;
-  ovkGetConnectivityReceiverSidePropertyReceiverCount(ReceiversProperties, &NumReceivers);
+  ovkGetConnectivityReceiverSidePropertyCount(ReceiversProperties, &NumReceivers);
 
   int NumRecvs = Exchange->num_recvs;
 
@@ -1904,7 +1904,7 @@ static void CompleteReceive(t_recv_request_data *RequestData) {
   ovkGetConnectivityReceiverSideProperties(Receivers, &ReceiversProperties);
 
   size_t NumReceivers;
-  ovkGetConnectivityReceiverSidePropertyReceiverCount(ReceiversProperties, &NumReceivers);
+  ovkGetConnectivityReceiverSidePropertyCount(ReceiversProperties, &NumReceivers);
 
   int NumRecvs = Exchange->num_recvs;
 
@@ -2040,7 +2040,7 @@ void PRIVATE(ExchangeDisperse)(const ovk_exchange *Exchange, ovk_data_type DataT
   ovkGetConnectivityReceiverSideProperties(Receivers, &ReceiversProperties);
 
   size_t NumReceivers;
-  ovkGetConnectivityReceiverSidePropertyReceiverCount(ReceiversProperties, &NumReceivers);
+  ovkGetConnectivityReceiverSidePropertyCount(ReceiversProperties, &NumReceivers);
 
   const ovk_grid *ReceiverGrid;
   ovkGetConnectivityReceiverSideGrid(Receivers, &ReceiverGrid);

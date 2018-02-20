@@ -433,8 +433,8 @@ void ovkGetConnectivityReceiverSidePropertyCommRank(const ovk_connectivity_r_pro
 
 }
 
-void ovkGetConnectivityReceiverSidePropertyReceiverCount(const ovk_connectivity_r_properties
-  *Properties, size_t *NumReceivers) {
+void ovkGetConnectivityReceiverSidePropertyCount(const ovk_connectivity_r_properties *Properties,
+  size_t *NumReceivers) {
 
   OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
   OVK_DEBUG_ASSERT(NumReceivers, "Invalid num receivers pointer.");

@@ -23,7 +23,7 @@ struct ovk_connectivity_d_properties {
   int comm_size;
   int comm_rank;
   size_t num_donors;
-  int max_donor_size;
+  int max_size;
 };
 
 typedef struct {

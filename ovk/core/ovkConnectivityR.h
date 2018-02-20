@@ -49,8 +49,8 @@ void ovkGetConnectivityReceiverSidePropertyCommSize(const ovk_connectivity_r_pro
   int *CommSize);
 void ovkGetConnectivityReceiverSidePropertyCommRank(const ovk_connectivity_r_properties *Properties,
   int *CommRank);
-void ovkGetConnectivityReceiverSidePropertyReceiverCount(const ovk_connectivity_r_properties 
-  *Properties, size_t *NumReceivers);
+void ovkGetConnectivityReceiverSidePropertyCount(const ovk_connectivity_r_properties *Properties,
+  size_t *NumReceivers);
 
 #ifdef __cplusplus
 }
