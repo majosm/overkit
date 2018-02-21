@@ -534,47 +534,53 @@ static void UpdateCollectSendInfo(ovk_exchange *Exchange) {
     }
 
     for (iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      int DonorBegin[MAX_DIMS] = {
-        Donors->extents[0][0][iDonor],
-        Donors->extents[0][1][iDonor],
-        Donors->extents[0][2][iDonor]
-      };
-      int DonorEnd[MAX_DIMS] = {
-        Donors->extents[1][0][iDonor],
-        Donors->extents[1][1][iDonor],
-        Donors->extents[1][2][iDonor]
-      };
       ovk_range DonorRange;
-      ovkSetRange(&DonorRange, NumDims, DonorBegin, DonorEnd);
+      ovkDefaultRange(&DonorRange, NumDims);
+      for (iDim = 0; iDim < NumDims; ++iDim) {
+        DonorRange.b[iDim] = Donors->extents[0][iDim][iDonor];
+        DonorRange.e[iDim] = Donors->extents[1][iDim][iDonor];
+      }
       bool AwayFromEdge = ovkRangeIncludes(&GlobalRange, &DonorRange);
       for (iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
         ovk_range NeighborRange;
         GetGridNeighborRange(Grid, iNeighbor, &NeighborRange);
-        bool Overlaps;
         if (AwayFromEdge) {
-          Overlaps = ovkRangeOverlaps(&NeighborRange, &DonorRange);
+          bool Overlaps = ovkRangeOverlaps(&NeighborRange, &DonorRange);
+          if (Overlaps) {
+            ovk_range IntersectRange;
+            ovkRangeIntersect(&LocalRange, &DonorRange, &IntersectRange);
+            ovkRangeUnion(&SendToNeighborDataRanges[iNeighbor], &IntersectRange,
+              &SendToNeighborDataRanges[iNeighbor]);
+          }
         } else {
-          Overlaps = false;
+          bool Overlaps = false;
           for (k = DonorRange.b[2]; k < DonorRange.e[2]; ++k) {
             for (j = DonorRange.b[1]; j < DonorRange.e[1]; ++j) {
               for (i = DonorRange.b[0]; i < DonorRange.e[0]; ++i) {
                 int Point[MAX_DIMS] = {i, j, k};
-                int AdjustedPoint[MAX_DIMS];
-                ovkCartPeriodicAdjust(&Cart, Point, AdjustedPoint);
-                if (ovkRangeContains(&NeighborRange, AdjustedPoint)) {
+                ovkCartPeriodicAdjust(&Cart, Point, Point);
+                if (ovkRangeContains(&NeighborRange, Point)) {
                   Overlaps = true;
-                  goto endloop1;
+                  goto done_checking_for_overlap1;
                 }
               }
             }
           }
-          endloop1: ;
-        }
-        if (Overlaps) {
-          ovk_range IntersectRange;
-          ovkRangeIntersect(&LocalRange, &DonorRange, &IntersectRange);
-          ovkRangeUnion(&SendToNeighborDataRanges[iNeighbor], &IntersectRange,
-            &SendToNeighborDataRanges[iNeighbor]);
+          done_checking_for_overlap1:;
+          if (Overlaps) {
+            for (k = DonorRange.b[2]; k < DonorRange.e[2]; ++k) {
+              for (j = DonorRange.b[1]; j < DonorRange.e[1]; ++j) {
+                for (i = DonorRange.b[0]; i < DonorRange.e[0]; ++i) {
+                  int Point[MAX_DIMS] = {i, j, k};
+                  ovkCartPeriodicAdjust(&Cart, Point, Point);
+                  if (ovkRangeContains(&LocalRange, Point)) {
+                    ovkRangeExtend(&SendToNeighborDataRanges[iNeighbor], Point,
+                      &SendToNeighborDataRanges[iNeighbor]);
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -618,53 +624,60 @@ static void UpdateCollectSendInfo(ovk_exchange *Exchange) {
     }
 
     for (iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      int DonorBegin[MAX_DIMS] = {
-        Donors->extents[0][0][iDonor],
-        Donors->extents[0][1][iDonor],
-        Donors->extents[0][2][iDonor]
-      };
-      int DonorEnd[MAX_DIMS] = {
-        Donors->extents[1][0][iDonor],
-        Donors->extents[1][1][iDonor],
-        Donors->extents[1][2][iDonor]
-      };
       ovk_range DonorRange;
-      ovkSetRange(&DonorRange, NumDims, DonorBegin, DonorEnd);
+      ovkDefaultRange(&DonorRange, NumDims);
+      for (iDim = 0; iDim < NumDims; ++iDim) {
+        DonorRange.b[iDim] = Donors->extents[0][iDim][iDonor];
+        DonorRange.e[iDim] = Donors->extents[1][iDim][iDonor];
+      }
       bool AwayFromEdge = ovkRangeIncludes(&GlobalRange, &DonorRange);
       for (iCollectSend = 0; iCollectSend < NumCollectSends; ++iCollectSend) {
         iNeighbor = CollectSendIndexToNeighbor[iCollectSend];
         ovk_range NeighborRange;
         GetGridNeighborRange(Grid, iNeighbor, &NeighborRange);
-        bool Overlaps;
         if (AwayFromEdge) {
-          Overlaps = ovkRangeOverlaps(&NeighborRange, &DonorRange);
-        } else {
-          Overlaps = false;
-          for (k = DonorRange.b[2]; k < DonorRange.e[2]; ++k) {
-            for (j = DonorRange.b[1]; j < DonorRange.e[1]; ++j) {
-              for (i = DonorRange.b[0]; i < DonorRange.e[0]; ++i) {
-                int Point[MAX_DIMS] = {i, j, k};
-                int AdjustedPoint[MAX_DIMS];
-                ovkCartPeriodicAdjust(&Cart, Point, AdjustedPoint);
-                if (ovkRangeContains(&NeighborRange, AdjustedPoint)) {
-                  Overlaps = true;
-                  goto endloop2;
+          bool Overlaps = ovkRangeOverlaps(&NeighborRange, &DonorRange);
+          if (Overlaps) {
+            ovk_range IntersectRange;
+            ovkRangeIntersect(&LocalRange, &DonorRange, &IntersectRange);
+            for (k = IntersectRange.b[2]; k < IntersectRange.e[2]; ++k) {
+              for (j = IntersectRange.b[1]; j < IntersectRange.e[1]; ++j) {
+                for (i = IntersectRange.b[0]; i < IntersectRange.e[0]; ++i) {
+                  int Point[MAX_DIMS] = {i, j, k};
+                  ovkRangeTupleToIndex(&SendToNeighborDataRanges[iNeighbor], OVK_COLUMN_MAJOR, Point,
+                    &iPoint);
+                  CollectSendMasks[iCollectSend][iPoint] = true;
                 }
               }
             }
           }
-          endloop2: ;
-        }
-        if (Overlaps) {
-          ovk_range IntersectRange;
-          ovkRangeIntersect(&LocalRange, &DonorRange, &IntersectRange);
-          for (k = IntersectRange.b[2]; k < IntersectRange.e[2]; ++k) {
-            for (j = IntersectRange.b[1]; j < IntersectRange.e[1]; ++j) {
-              for (i = IntersectRange.b[0]; i < IntersectRange.e[0]; ++i) {
+        } else {
+          bool Overlaps = false;
+          for (k = DonorRange.b[2]; k < DonorRange.e[2]; ++k) {
+            for (j = DonorRange.b[1]; j < DonorRange.e[1]; ++j) {
+              for (i = DonorRange.b[0]; i < DonorRange.e[0]; ++i) {
                 int Point[MAX_DIMS] = {i, j, k};
-                ovkRangeTupleToIndex(&SendToNeighborDataRanges[iNeighbor], OVK_COLUMN_MAJOR, Point,
-                  &iPoint);
-                CollectSendMasks[iCollectSend][iPoint] = true;
+                ovkCartPeriodicAdjust(&Cart, Point, Point);
+                if (ovkRangeContains(&NeighborRange, Point)) {
+                  Overlaps = true;
+                  goto done_checking_for_overlap2;
+                }
+              }
+            }
+          }
+          done_checking_for_overlap2:;
+          if (Overlaps) {
+            for (k = DonorRange.b[2]; k < DonorRange.e[2]; ++k) {
+              for (j = DonorRange.b[1]; j < DonorRange.e[1]; ++j) {
+                for (i = DonorRange.b[0]; i < DonorRange.e[0]; ++i) {
+                  int Point[MAX_DIMS] = {i, j, k};
+                  ovkCartPeriodicAdjust(&Cart, Point, Point);
+                  if (ovkRangeContains(&LocalRange, Point)) {
+                    ovkRangeTupleToIndex(&SendToNeighborDataRanges[iNeighbor], OVK_COLUMN_MAJOR,
+                      Point, &iPoint);
+                    CollectSendMasks[iCollectSend][iPoint] = true;
+                  }
+                }
               }
             }
           }
@@ -725,7 +738,7 @@ static void UpdateCollectSendInfo(ovk_exchange *Exchange) {
 static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
 
   int iDim, iCollectRecv;
-  int iDonorPoint;
+  int iPointInCell;
 
   free_null(&Exchange->collect_recv_source_ranks);
   free_null(&Exchange->num_collect_recv_points);
@@ -796,18 +809,12 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
     }
 
     for (iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      int DonorBegin[MAX_DIMS] = {
-        Donors->extents[0][0][iDonor],
-        Donors->extents[0][1][iDonor],
-        Donors->extents[0][2][iDonor]
-      };
-      int DonorEnd[MAX_DIMS] = {
-        Donors->extents[1][0][iDonor],
-        Donors->extents[1][1][iDonor],
-        Donors->extents[1][2][iDonor]
-      };
       ovk_range DonorRange;
-      ovkSetRange(&DonorRange, NumDims, DonorBegin, DonorEnd);
+      ovkDefaultRange(&DonorRange, NumDims);
+      for (iDim = 0; iDim < NumDims; ++iDim) {
+        DonorRange.b[iDim] = Donors->extents[0][iDim][iDonor];
+        DonorRange.e[iDim] = Donors->extents[1][iDim][iDonor];
+      }
       bool AwayFromEdge = ovkRangeIncludes(&GlobalRange, &DonorRange);
       for (iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
         ovk_range NeighborRange;
@@ -822,10 +829,9 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
             for (j = DonorRange.b[1]; j < DonorRange.e[1]; ++j) {
               for (i = DonorRange.b[0]; i < DonorRange.e[0]; ++i) {
                 int Point[MAX_DIMS] = {i, j, k};
-                int AdjustedPoint[MAX_DIMS];
-                ovkCartPeriodicAdjust(&Cart, Point, AdjustedPoint);
-                if (ovkRangeContains(&NeighborRange, AdjustedPoint)) {
-                  ovkRangeExtend(&RecvFromNeighborDataRanges[iNeighbor], AdjustedPoint,
+                ovkCartPeriodicAdjust(&Cart, Point, Point);
+                if (ovkRangeContains(&NeighborRange, Point)) {
+                  ovkRangeExtend(&RecvFromNeighborDataRanges[iNeighbor], Point,
                     &RecvFromNeighborDataRanges[iNeighbor]);
                 }
               }
@@ -874,18 +880,12 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
     }
 
     for (iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      int DonorBegin[MAX_DIMS] = {
-        Donors->extents[0][0][iDonor],
-        Donors->extents[0][1][iDonor],
-        Donors->extents[0][2][iDonor]
-      };
-      int DonorEnd[MAX_DIMS] = {
-        Donors->extents[1][0][iDonor],
-        Donors->extents[1][1][iDonor],
-        Donors->extents[1][2][iDonor]
-      };
       ovk_range DonorRange;
-      ovkSetRange(&DonorRange, NumDims, DonorBegin, DonorEnd);
+      ovkDefaultRange(&DonorRange, NumDims);
+      for (iDim = 0; iDim < NumDims; ++iDim) {
+        DonorRange.b[iDim] = Donors->extents[0][iDim][iDonor];
+        DonorRange.e[iDim] = Donors->extents[1][iDim][iDonor];
+      }
       bool AwayFromEdge = ovkRangeIncludes(&GlobalRange, &DonorRange);
       for (iCollectRecv = 0; iCollectRecv < NumCollectRecvs; ++iCollectRecv) {
         iNeighbor = CollectRecvIndexToNeighbor[iCollectRecv];
@@ -898,8 +898,8 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
             for (j = IntersectRange.b[1]; j < IntersectRange.e[1]; ++j) {
               for (i = IntersectRange.b[0]; i < IntersectRange.e[0]; ++i) {
                 int Point[MAX_DIMS] = {i, j, k};
-                ovkRangeTupleToIndex(&RecvFromNeighborDataRanges[iNeighbor], OVK_COLUMN_MAJOR, Point,
-                  &iPoint);
+                ovkRangeTupleToIndex(&RecvFromNeighborDataRanges[iNeighbor], OVK_COLUMN_MAJOR,
+                  Point, &iPoint);
                 CollectRecvMasks[iCollectRecv][iPoint] = true;
               }
             }
@@ -909,11 +909,10 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
             for (j = DonorRange.b[1]; j < DonorRange.e[1]; ++j) {
               for (i = DonorRange.b[0]; i < DonorRange.e[0]; ++i) {
                 int Point[MAX_DIMS] = {i, j, k};
-                int AdjustedPoint[MAX_DIMS];
-                ovkCartPeriodicAdjust(&Cart, Point, AdjustedPoint);
-                if (ovkRangeContains(&NeighborRange, AdjustedPoint)) {
+                ovkCartPeriodicAdjust(&Cart, Point, Point);
+                if (ovkRangeContains(&NeighborRange, Point)) {
                   ovkRangeTupleToIndex(&RecvFromNeighborDataRanges[iNeighbor], OVK_COLUMN_MAJOR,
-                    AdjustedPoint, &iPoint);
+                    Point, &iPoint);
                   CollectRecvMasks[iCollectRecv][iPoint] = true;
                 }
               }
@@ -981,24 +980,36 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
 
     size_t TotalRemoteDonorPoints = 0;
     for (iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      int DonorBegin[MAX_DIMS] = {
-        Donors->extents[0][0][iDonor],
-        Donors->extents[0][1][iDonor],
-        Donors->extents[0][2][iDonor]
-      };
-      int DonorEnd[MAX_DIMS] = {
-        Donors->extents[1][0][iDonor],
-        Donors->extents[1][1][iDonor],
-        Donors->extents[1][2][iDonor]
-      };
       ovk_range DonorRange;
-      ovkSetRange(&DonorRange, NumDims, DonorBegin, DonorEnd);
-      ovk_range IntersectRange;
-      ovkRangeIntersect(&LocalRange, &DonorRange, &IntersectRange);
-      size_t NumDonorPoints, NumLocalDonorPoints, NumRemoteDonorPoints;
-      ovkRangeCount(&DonorRange, &NumDonorPoints);
-      ovkRangeCount(&IntersectRange, &NumLocalDonorPoints);
-      NumRemoteDonorPoints = NumDonorPoints - NumLocalDonorPoints;
+      ovkDefaultRange(&DonorRange, NumDims);
+      for (iDim = 0; iDim < NumDims; ++iDim) {
+        DonorRange.b[iDim] = Donors->extents[0][iDim][iDonor];
+        DonorRange.e[iDim] = Donors->extents[1][iDim][iDonor];
+      }
+      bool AwayFromEdge = ovkRangeIncludes(&GlobalRange, &DonorRange);
+      int NumRemoteDonorPoints;
+      if (AwayFromEdge) {
+        int NumDonorPoints;
+        ovkRangeCountSmall(&DonorRange, &NumDonorPoints);
+        ovk_range IntersectRange;
+        ovkRangeIntersect(&LocalRange, &DonorRange, &IntersectRange);
+        int NumLocalDonorPoints;
+        ovkRangeCountSmall(&IntersectRange, &NumLocalDonorPoints);
+        NumRemoteDonorPoints = NumDonorPoints - NumLocalDonorPoints;
+      } else {
+        NumRemoteDonorPoints = 0;
+        for (k = DonorRange.b[2]; k < DonorRange.e[2]; ++k) {
+          for (j = DonorRange.b[1]; j < DonorRange.e[1]; ++j) {
+            for (i = DonorRange.b[0]; i < DonorRange.e[0]; ++i) {
+              int Point[MAX_DIMS] = {i, j, k};
+              ovkCartPeriodicAdjust(&Cart, Point, Point);
+              if (!ovkRangeContains(&LocalRange, Point)) {
+                ++NumRemoteDonorPoints;
+              }
+            }
+          }
+        }
+      }
       Exchange->num_remote_donor_points[iDonor] = (int)NumRemoteDonorPoints;
       TotalRemoteDonorPoints += NumRemoteDonorPoints;
     }
@@ -1028,54 +1039,68 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
     int *CellCollectRecvOffsets = malloc(MaxPointsInCell*sizeof(size_t));
 
     for (iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      for (iDonorPoint = 0; iDonorPoint < MaxPointsInCell; ++iDonorPoint) {
-        CellCollectRecvIndices[iDonorPoint] = -1;
+      for (iPointInCell = 0; iPointInCell < MaxPointsInCell; ++iPointInCell) {
+        CellCollectRecvIndices[iPointInCell] = -1;
       }
-      int DonorBegin[MAX_DIMS] = {
-        Donors->extents[0][0][iDonor],
-        Donors->extents[0][1][iDonor],
-        Donors->extents[0][2][iDonor]
-      };
-      int DonorEnd[MAX_DIMS] = {
-        Donors->extents[1][0][iDonor],
-        Donors->extents[1][1][iDonor],
-        Donors->extents[1][2][iDonor]
-      };
       ovk_range DonorRange;
-      ovkSetRange(&DonorRange, NumDims, DonorBegin, DonorEnd);
+      ovkDefaultRange(&DonorRange, NumDims);
+      for (iDim = 0; iDim < NumDims; ++iDim) {
+        DonorRange.b[iDim] = Donors->extents[0][iDim][iDonor];
+        DonorRange.e[iDim] = Donors->extents[1][iDim][iDonor];
+      }
+      bool AwayFromEdge = ovkRangeIncludes(&GlobalRange, &DonorRange);
       for (iCollectRecv = 0; iCollectRecv < NumCollectRecvs; ++iCollectRecv) {
         iNeighbor = CollectRecvIndexToNeighbor[iCollectRecv];
         ovk_range NeighborRange;
         GetGridNeighborRange(Grid, iNeighbor, &NeighborRange);
-        ovk_range IntersectRange;
-        ovkRangeIntersect(&NeighborRange, &DonorRange, &IntersectRange);
-        for (k = IntersectRange.b[2]; k < IntersectRange.e[2]; ++k) {
-          for (j = IntersectRange.b[1]; j < IntersectRange.e[1]; ++j) {
-            for (i = IntersectRange.b[0]; i < IntersectRange.e[0]; ++i) {
-              int Point[MAX_DIMS] = {i, j, k};
-              ovkRangeTupleToIndexSmall(&DonorRange, OVK_COLUMN_MAJOR, Point, &iDonorPoint);
-              ovkRangeTupleToIndex(&RecvFromNeighborDataRanges[iNeighbor], OVK_COLUMN_MAJOR, Point,
-                &iPoint);
-              CellCollectRecvIndices[iDonorPoint] = iCollectRecv;
-              CellCollectRecvOffsets[iDonorPoint] = CollectRecvOffsets[iCollectRecv][iPoint];
+        if (AwayFromEdge) {
+          ovk_range IntersectRange;
+          ovkRangeIntersect(&NeighborRange, &DonorRange, &IntersectRange);
+          for (k = IntersectRange.b[2]; k < IntersectRange.e[2]; ++k) {
+            for (j = IntersectRange.b[1]; j < IntersectRange.e[1]; ++j) {
+              for (i = IntersectRange.b[0]; i < IntersectRange.e[0]; ++i) {
+                int Point[MAX_DIMS] = {i, j, k};
+                ovkRangeTupleToIndexSmall(&DonorRange, OVK_COLUMN_MAJOR, Point, &iPointInCell);
+                ovkRangeTupleToIndex(&RecvFromNeighborDataRanges[iNeighbor], OVK_COLUMN_MAJOR,
+                  Point, &iPoint);
+                CellCollectRecvIndices[iPointInCell] = iCollectRecv;
+                CellCollectRecvOffsets[iPointInCell] = CollectRecvOffsets[iCollectRecv][iPoint];
+              }
+            }
+          }
+        } else {
+          iPointInCell = 0;
+          for (k = DonorRange.b[2]; k < DonorRange.e[2]; ++k) {
+            for (j = DonorRange.b[1]; j < DonorRange.e[1]; ++j) {
+              for (i = DonorRange.b[0]; i < DonorRange.e[0]; ++i) {
+                int Point[MAX_DIMS] = {i, j, k};
+                ovkCartPeriodicAdjust(&Cart, Point, Point);
+                if (ovkRangeContains(&NeighborRange, Point)) {
+                  ovkRangeTupleToIndex(&RecvFromNeighborDataRanges[iNeighbor], OVK_COLUMN_MAJOR,
+                    Point, &iPoint);
+                  CellCollectRecvIndices[iPointInCell] = iCollectRecv;
+                  CellCollectRecvOffsets[iPointInCell] = CollectRecvOffsets[iCollectRecv][iPoint];
+                }
+                ++iPointInCell;
+              }
             }
           }
         }
       }
       int iRemoteDonorPoint = 0;
-      iDonorPoint = 0;
+      iPointInCell = 0;
       for (k = DonorRange.b[2]; k < DonorRange.e[2]; ++k) {
         for (j = DonorRange.b[1]; j < DonorRange.e[1]; ++j) {
           for (i = DonorRange.b[0]; i < DonorRange.e[0]; ++i) {
-            if (CellCollectRecvIndices[iDonorPoint] >= 0) {
-              Exchange->remote_donor_points[iDonor][iRemoteDonorPoint] = iDonorPoint;
+            if (CellCollectRecvIndices[iPointInCell] >= 0) {
+              Exchange->remote_donor_points[iDonor][iRemoteDonorPoint] = iPointInCell;
               Exchange->remote_donor_point_collect_recv_indices[iDonor][iRemoteDonorPoint] =
-                CellCollectRecvIndices[iDonorPoint];
+                CellCollectRecvIndices[iPointInCell];
               Exchange->remote_donor_point_collect_recv_buffer_offsets[iDonor][iRemoteDonorPoint]
-                = CellCollectRecvOffsets[iDonorPoint];
+                = CellCollectRecvOffsets[iPointInCell];
               ++iRemoteDonorPoint;
             }
-            ++iDonorPoint;
+            ++iPointInCell;
           }
         }
       }
@@ -1330,6 +1355,7 @@ static void UpdateSendInfo(ovk_exchange *Exchange) {
   const ovk_connectivity_d *Donors;
   size_t NumDonors = 0;
   ovk_range LocalRange;
+  ovk_cart Cart;
   if (ovkRankHasConnectivityDonorSide(Connectivity)) {
     ovkGetConnectivityDonorSide(Connectivity, &Donors);
     const ovk_connectivity_d_properties *DonorsProperties;
@@ -1340,6 +1366,7 @@ static void UpdateSendInfo(ovk_exchange *Exchange) {
     const ovk_grid_properties *DonorGridProperties;
     ovkGetGridProperties(DonorGrid, &DonorGridProperties);
     ovkGetGridPropertyLocalRange(DonorGridProperties, &LocalRange);
+    ovkGetGridCart(DonorGrid, &Cart);
   }
 
   if (NumDonors > 0) {
@@ -1353,6 +1380,7 @@ static void UpdateSendInfo(ovk_exchange *Exchange) {
           Donors->extents[0][1][iDonor],
           Donors->extents[0][2][iDonor]
         };
+        ovkCartPeriodicAdjust(&Cart, DonorCell, DonorCell);
         Communicates = ovkRangeContains(&LocalRange, DonorCell);
       }
       DonorCommunicates[iDonor] = Communicates;
@@ -1566,8 +1594,14 @@ void PRIVATE(ExchangeCollect)(const ovk_exchange *Exchange, ovk_data_type DataTy
   MPI_Comm DonorGridComm;
   ovkGetGridPropertyComm(DonorGridProperties, &DonorGridComm);
 
+  ovk_range GlobalRange;
+  ovkGetGridPropertyGlobalRange(DonorGridProperties, &GlobalRange);
+
   ovk_range LocalRange;
   ovkGetGridPropertyLocalRange(DonorGridProperties, &LocalRange);
+
+  ovk_cart Cart;
+  ovkGetGridCart(DonorGrid, &Cart);
 
   int NumCollectSends = Exchange->num_collect_sends;
   int NumCollectRecvs = Exchange->num_collect_recvs;
@@ -1666,50 +1700,73 @@ void PRIVATE(ExchangeCollect)(const ovk_exchange *Exchange, ovk_data_type DataTy
 
   for (iDonor = 0; iDonor < NumDonors; ++iDonor) {
 
-    int DonorBegin[MAX_DIMS] = {
-      Donors->extents[0][0][iDonor],
-      Donors->extents[0][1][iDonor],
-      Donors->extents[0][2][iDonor]
-    };
-    int DonorEnd[MAX_DIMS] = {
-      Donors->extents[1][0][iDonor],
-      Donors->extents[1][1][iDonor],
-      Donors->extents[1][2][iDonor]
-    };
-
     ovk_range DonorRange;
-    ovkSetRange(&DonorRange, NumDims, DonorBegin, DonorEnd);
+    ovkDefaultRange(&DonorRange, NumDims);
+    for (iDim = 0; iDim < NumDims; ++iDim) {
+      DonorRange.b[iDim] = Donors->extents[0][iDim][iDonor];
+      DonorRange.e[iDim] = Donors->extents[1][iDim][iDonor];
+    }
 
-    ovk_range LocalDonorRange;
-    ovkRangeIntersect(&LocalRange, &DonorRange, &LocalDonorRange);
+    bool AwayFromEdge = ovkRangeIncludes(&GlobalRange, &DonorRange);
 
     int NumRemotePoints;
-    int iDonorPoint, iRemotePoint;
+    int iPointInCell;
+    int iRemotePoint;
 
+    // Fill in the local data
     switch (DataType) {
     case OVK_DOUBLE:
-      // Fill in the local data
-      for (k = LocalDonorRange.b[2]; k < LocalDonorRange.e[2]; ++k) {
-        for (j = LocalDonorRange.b[1]; j < LocalDonorRange.e[1]; ++j) {
-          for (i = LocalDonorRange.b[0]; i < LocalDonorRange.e[0]; ++i) {
-            int Point[MAX_DIMS] = {i, j, k};
-            ovkRangeTupleToIndexSmall(&DonorRange, OVK_COLUMN_MAJOR, Point, &iDonorPoint);
-            ovkRangeTupleToIndex(&LocalRange, GridDataLayout, Point, &iGridPoint);
-            for (iCount = 0; iCount < Count; ++iCount) {
-              ((double *)DonorPointData[iCount])[iDonorPoint] =
-                ((const double *)GridData[iCount])[iGridPoint];
+      if (AwayFromEdge) {
+        ovk_range IntersectRange;
+        ovkRangeIntersect(&LocalRange, &DonorRange, &IntersectRange);
+        for (k = IntersectRange.b[2]; k < IntersectRange.e[2]; ++k) {
+          for (j = IntersectRange.b[1]; j < IntersectRange.e[1]; ++j) {
+            for (i = IntersectRange.b[0]; i < IntersectRange.e[0]; ++i) {
+              int Point[MAX_DIMS] = {i, j, k};
+              ovkRangeTupleToIndexSmall(&DonorRange, OVK_COLUMN_MAJOR, Point, &iPointInCell);
+              ovkRangeTupleToIndex(&LocalRange, GridDataLayout, Point, &iGridPoint);
+              for (iCount = 0; iCount < Count; ++iCount) {
+                ((double *)DonorPointData[iCount])[iPointInCell] =
+                  ((const double *)GridData[iCount])[iGridPoint];
+              }
+            }
+          }
+        }
+      } else {
+        iPointInCell = 0;
+        for (k = DonorRange.b[2]; k < DonorRange.e[2]; ++k) {
+          for (j = DonorRange.b[1]; j < DonorRange.e[1]; ++j) {
+            for (i = DonorRange.b[0]; i < DonorRange.e[0]; ++i) {
+              int Point[MAX_DIMS] = {i, j, k};
+              ovkCartPeriodicAdjust(&Cart, Point, Point);
+              if (ovkRangeContains(&LocalRange, Point)) {
+                ovkRangeTupleToIndex(&LocalRange, GridDataLayout, Point, &iGridPoint);
+                for (iCount = 0; iCount < Count; ++iCount) {
+                  ((double *)DonorPointData[iCount])[iPointInCell] =
+                    ((const double *)GridData[iCount])[iGridPoint];
+                }
+              }
+              ++iPointInCell;
             }
           }
         }
       }
-      // Fill in the remote data from recv buffers
+      break;
+    default:
+      OVK_DEBUG_ASSERT(false, "Data type not yet implemented.");
+      break;
+    }
+
+    // Fill in the remote data from recv buffers
+    switch (DataType) {
+    case OVK_DOUBLE:
       NumRemotePoints = Exchange->num_remote_donor_points[iDonor];
       for (iRemotePoint = 0; iRemotePoint < NumRemotePoints; ++iRemotePoint) {
-        iDonorPoint = Exchange->remote_donor_points[iDonor][iRemotePoint];
+        iPointInCell = Exchange->remote_donor_points[iDonor][iRemotePoint];
         iRecv = Exchange->remote_donor_point_collect_recv_indices[iDonor][iRemotePoint];
         iBuffer = Exchange->remote_donor_point_collect_recv_buffer_offsets[iDonor][iRemotePoint];
         for (iCount = 0; iCount < Count; ++iCount) {
-          ((double *)DonorPointData[iCount])[iDonorPoint] =
+          ((double *)DonorPointData[iCount])[iPointInCell] =
             ((const double *)CollectRecvBuffers[iRecv][iCount])[iBuffer];
         }
       }
@@ -1723,23 +1780,23 @@ void PRIVATE(ExchangeCollect)(const ovk_exchange *Exchange, ovk_data_type DataTy
     case OVK_COLLECT_INTERPOLATE:
       switch (DataType) {
       case OVK_DOUBLE:
-        iDonorPoint = 0;
+        iPointInCell = 0;
         for (iCount = 0; iCount < Count; ++iCount) {
           ((double *)DonorData[iCount])[iDonor] = 0.;
         }
-        for (k = DonorBegin[2]; k < DonorEnd[2]; ++k) {
-          for (j = DonorBegin[1]; j < DonorEnd[1]; ++j) {
-            for (i = DonorBegin[0]; i < DonorEnd[0]; ++i) {
+        for (k = DonorRange.b[2]; k < DonorRange.e[2]; ++k) {
+          for (j = DonorRange.b[1]; j < DonorRange.e[1]; ++j) {
+            for (i = DonorRange.b[0]; i < DonorRange.e[0]; ++i) {
               int Point[MAX_DIMS] = {i, j, k};
               double Coef = 1.;
               for (iDim = 0; iDim < NumDims; ++iDim) {
-                Coef *= Donors->interp_coefs[iDim][Point[iDim]-DonorBegin[iDim]][iDonor];
+                Coef *= Donors->interp_coefs[iDim][Point[iDim]-DonorRange.b[iDim]][iDonor];
               }
               for (iCount = 0; iCount < Count; ++iCount) {
                 ((double *)DonorData[iCount])[iDonor] += Coef *
-                  ((double *)DonorPointData[iCount])[iDonorPoint];
+                  ((double *)DonorPointData[iCount])[iPointInCell];
               }
-              ++iDonorPoint;
+              ++iPointInCell;
             }
           }
         }
