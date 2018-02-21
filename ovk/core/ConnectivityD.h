@@ -22,12 +22,12 @@ struct ovk_connectivity_d_properties {
   MPI_Comm comm;
   int comm_size;
   int comm_rank;
-  size_t num_donors;
+  size_t count;
   int max_size;
 };
 
 typedef struct {
-  bool num_donors;
+  bool count;
   bool extents;
   bool coords;
   bool interp_coefs;

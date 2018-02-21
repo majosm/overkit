@@ -400,7 +400,7 @@ static void ReleaseDonorSideGlobal(ovk_connectivity *Connectivity, ovk_connectiv
     bool IsGridRoot = Connectivity->properties.comm_rank == RootRank;
 
     int EditedNumDonors = 0;
-    if (IsGridRoot) EditedNumDonors = DonorsEdits->num_donors;
+    if (IsGridRoot) EditedNumDonors = DonorsEdits->count;
     MPI_Bcast(&EditedNumDonors, 1, MPI_INT, RootRank, Connectivity->properties.comm);
     Edits->num_donors = Edits->num_donors || EditedNumDonors;
 
@@ -555,7 +555,7 @@ static void ReleaseReceiverSideGlobal(ovk_connectivity *Connectivity,
     bool IsGridRoot = Connectivity->properties.comm_rank == RootRank;
 
     int EditedNumReceivers = 0;
-    if (IsGridRoot) EditedNumReceivers = ReceiversEdits->num_receivers;
+    if (IsGridRoot) EditedNumReceivers = ReceiversEdits->count;
     MPI_Bcast(&EditedNumReceivers, 1, MPI_INT, RootRank, Connectivity->properties.comm);
     Edits->num_receivers = Edits->num_receivers || EditedNumReceivers;
 

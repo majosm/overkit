@@ -179,7 +179,7 @@ void ovkResizeDonors(ovk_connectivity_d *Donors, size_t NumDonors, int MaxSize) 
   }
   free_null(&Donors->destination_ranks);
 
-  Donors->properties.num_donors = NumDonors;
+  Donors->properties.count = NumDonors;
   Donors->properties.max_size = MaxSize;
 
   if (MaxSize > 0) {
@@ -244,7 +244,7 @@ void ovkResizeDonors(ovk_connectivity_d *Donors, size_t NumDonors, int MaxSize) 
 
   }
 
-  Donors->edits.num_donors = true;
+  Donors->edits.count = true;
   Donors->edits.extents = true;
   Donors->edits.coords = true;
   Donors->edits.interp_coefs = true;
@@ -583,7 +583,7 @@ static void DefaultProperties(ovk_connectivity_d_properties *Properties) {
   Properties->comm = MPI_COMM_NULL;
   Properties->comm_size = 0;
   Properties->comm_rank = 0;
-  Properties->num_donors = 0;
+  Properties->count = 0;
   Properties->max_size = 0;
 
 }
@@ -654,7 +654,7 @@ void ovkGetConnectivityDonorSidePropertyCount(const ovk_connectivity_d_propertie
   OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
   OVK_DEBUG_ASSERT(NumDonors, "Invalid num donors pointer.");
 
-  *NumDonors = Properties->num_donors;
+  *NumDonors = Properties->count;
 
 }
 
@@ -670,7 +670,7 @@ void ovkGetConnectivityDonorSidePropertyMaxSize(const ovk_connectivity_d_propert
 
 static void DefaultEdits(t_connectivity_d_edits *Edits) {
 
-  Edits->num_donors = false;
+  Edits->count = false;
   Edits->extents = false;
   Edits->coords = false;
   Edits->interp_coefs = false;

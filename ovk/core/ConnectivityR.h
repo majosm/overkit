@@ -22,11 +22,11 @@ struct ovk_connectivity_r_properties {
   MPI_Comm comm;
   int comm_size;
   int comm_rank;
-  size_t num_receivers;
+  size_t count;
 };
 
 typedef struct {
-  bool num_receivers;
+  bool count;
   bool points;
   bool sources;
 } t_connectivity_r_edits;

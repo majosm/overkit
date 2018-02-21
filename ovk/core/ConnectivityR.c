@@ -132,7 +132,7 @@ void ovkResizeReceivers(ovk_connectivity_r *Receivers, size_t NumReceivers) {
   }
   free_null(&Receivers->source_ranks);
 
-  Receivers->properties.num_receivers = NumReceivers;
+  Receivers->properties.count = NumReceivers;
 
   if (NumReceivers > 0) {
 
@@ -156,7 +156,7 @@ void ovkResizeReceivers(ovk_connectivity_r *Receivers, size_t NumReceivers) {
 
   }
 
-  Receivers->edits.num_receivers = true;
+  Receivers->edits.count = true;
   Receivers->edits.points = true;
   Receivers->edits.sources = true;
 
@@ -369,7 +369,7 @@ static void DefaultProperties(ovk_connectivity_r_properties *Properties) {
   Properties->comm = MPI_COMM_NULL;
   Properties->comm_size = 0;
   Properties->comm_rank = 0;
-  Properties->num_receivers = 0;
+  Properties->count = 0;
 
 }
 
@@ -439,13 +439,13 @@ void ovkGetConnectivityReceiverSidePropertyCount(const ovk_connectivity_r_proper
   OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
   OVK_DEBUG_ASSERT(NumReceivers, "Invalid num receivers pointer.");
 
-  *NumReceivers = Properties->num_receivers;
+  *NumReceivers = Properties->count;
 
 }
 
 static void DefaultEdits(t_connectivity_r_edits *Edits) {
 
-  Edits->num_receivers = false;
+  Edits->count = false;
   Edits->points = false;
   Edits->sources = false;
 
