@@ -527,10 +527,10 @@ static void UpdateCollectSendInfo(ovk_exchange *Exchange) {
     ovk_cart Cart;
     ovkGetGridCart(Grid, &Cart);
 
-    ovk_range *NeighborSendDataRanges = malloc(NumNeighbors*sizeof(ovk_range));
+    ovk_range *SendToNeighborDataRanges = malloc(NumNeighbors*sizeof(ovk_range));
 
     for (iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
-      ovkDefaultRange(&NeighborSendDataRanges[iNeighbor], NumDims);
+      ovkDefaultRange(&SendToNeighborDataRanges[iNeighbor], NumDims);
     }
 
     for (iDonor = 0; iDonor < NumDonors; ++iDonor) {
@@ -573,15 +573,15 @@ static void UpdateCollectSendInfo(ovk_exchange *Exchange) {
         if (Overlaps) {
           ovk_range IntersectRange;
           ovkRangeIntersect(&LocalRange, &DonorRange, &IntersectRange);
-          ovkRangeUnion(&NeighborSendDataRanges[iNeighbor], &IntersectRange,
-            &NeighborSendDataRanges[iNeighbor]);
+          ovkRangeUnion(&SendToNeighborDataRanges[iNeighbor], &IntersectRange,
+            &SendToNeighborDataRanges[iNeighbor]);
         }
       }
     }
 
     int NumCollectSends = 0;
     for (iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
-      if (!ovkRangeIsEmpty(&NeighborSendDataRanges[iNeighbor])) {
+      if (!ovkRangeIsEmpty(&SendToNeighborDataRanges[iNeighbor])) {
         ++NumCollectSends;
       }
     }
@@ -589,7 +589,7 @@ static void UpdateCollectSendInfo(ovk_exchange *Exchange) {
     int *CollectSendIndexToNeighbor = malloc(NumCollectSends*sizeof(int));
     iCollectSend = 0;
     for (iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
-      if (!ovkRangeIsEmpty(&NeighborSendDataRanges[iNeighbor])) {
+      if (!ovkRangeIsEmpty(&SendToNeighborDataRanges[iNeighbor])) {
         CollectSendIndexToNeighbor[iCollectSend] = iNeighbor;
         ++iCollectSend;
       }
@@ -606,14 +606,14 @@ static void UpdateCollectSendInfo(ovk_exchange *Exchange) {
       Exchange->collect_send_dest_ranks[iCollectSend] = NeighborRank;
     }
 
-    bool **CollectSendPointMasks = malloc(NumCollectSends*sizeof(bool *));
+    bool **CollectSendMasks = malloc(NumCollectSends*sizeof(bool *));
     for (iCollectSend = 0; iCollectSend < NumCollectSends; ++iCollectSend) {
       iNeighbor = CollectSendIndexToNeighbor[iCollectSend];
       size_t NumPoints;
-      ovkRangeCount(&NeighborSendDataRanges[iNeighbor], &NumPoints);
-      CollectSendPointMasks[iCollectSend] = malloc(NumPoints*sizeof(bool));
+      ovkRangeCount(&SendToNeighborDataRanges[iNeighbor], &NumPoints);
+      CollectSendMasks[iCollectSend] = malloc(NumPoints*sizeof(bool));
       for (iPoint = 0; iPoint < NumPoints; ++iPoint) {
-        CollectSendPointMasks[iCollectSend][iPoint] = false;
+        CollectSendMasks[iCollectSend][iPoint] = false;
       }
     }
 
@@ -662,9 +662,9 @@ static void UpdateCollectSendInfo(ovk_exchange *Exchange) {
             for (j = IntersectRange.b[1]; j < IntersectRange.e[1]; ++j) {
               for (i = IntersectRange.b[0]; i < IntersectRange.e[0]; ++i) {
                 int Point[MAX_DIMS] = {i, j, k};
-                ovkRangeTupleToIndex(&NeighborSendDataRanges[iNeighbor], OVK_COLUMN_MAJOR, Point,
+                ovkRangeTupleToIndex(&SendToNeighborDataRanges[iNeighbor], OVK_COLUMN_MAJOR, Point,
                   &iPoint);
-                CollectSendPointMasks[iCollectSend][iPoint] = true;
+                CollectSendMasks[iCollectSend][iPoint] = true;
               }
             }
           }
@@ -677,10 +677,10 @@ static void UpdateCollectSendInfo(ovk_exchange *Exchange) {
     for (iCollectSend = 0; iCollectSend < NumCollectSends; ++iCollectSend) {
       iNeighbor = CollectSendIndexToNeighbor[iCollectSend];
       size_t NumPoints;
-      ovkRangeCount(&NeighborSendDataRanges[iNeighbor], &NumPoints);
+      ovkRangeCount(&SendToNeighborDataRanges[iNeighbor], &NumPoints);
       size_t NumCollectSendPoints = 0;
       for (iPoint = 0; iPoint < NumPoints; ++iPoint) {
-        if (CollectSendPointMasks[iCollectSend][iPoint]) {
+        if (CollectSendMasks[iCollectSend][iPoint]) {
           ++NumCollectSendPoints;
         }
       }
@@ -697,12 +697,12 @@ static void UpdateCollectSendInfo(ovk_exchange *Exchange) {
       }
       iNeighbor = CollectSendIndexToNeighbor[iCollectSend];
       size_t NumPoints;
-      ovkRangeCount(&NeighborSendDataRanges[iNeighbor], &NumPoints);
+      ovkRangeCount(&SendToNeighborDataRanges[iNeighbor], &NumPoints);
       iCollectSendPoint = 0;
       for (iPoint = 0; iPoint < NumPoints; ++iPoint) {
-        if (CollectSendPointMasks[iCollectSend][iPoint]) {
+        if (CollectSendMasks[iCollectSend][iPoint]) {
           int Point[MAX_DIMS];
-          ovkRangeIndexToTuple(&NeighborSendDataRanges[iNeighbor], OVK_COLUMN_MAJOR, iPoint, Point);
+          ovkRangeIndexToTuple(&SendToNeighborDataRanges[iNeighbor], OVK_COLUMN_MAJOR, iPoint, Point);
           for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
             Exchange->collect_send_points[iCollectSend][iDim][iCollectSendPoint] = Point[iDim];
           }
@@ -711,12 +711,12 @@ static void UpdateCollectSendInfo(ovk_exchange *Exchange) {
       }
     }
 
-    free(NeighborSendDataRanges);
+    free(SendToNeighborDataRanges);
     free(CollectSendIndexToNeighbor);
     for (iCollectSend = 0; iCollectSend < NumCollectSends; ++iCollectSend) {
-      free(CollectSendPointMasks[iCollectSend]);
+      free(CollectSendMasks[iCollectSend]);
     }
-    free(CollectSendPointMasks);
+    free(CollectSendMasks);
 
   }
 
@@ -789,10 +789,10 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
     ovk_cart Cart;
     ovkGetGridCart(Grid, &Cart);
 
-    ovk_range *NeighborRecvDataRanges = malloc(NumNeighbors*sizeof(ovk_range));
+    ovk_range *RecvFromNeighborDataRanges = malloc(NumNeighbors*sizeof(ovk_range));
 
     for (iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
-      ovkDefaultRange(&NeighborRecvDataRanges[iNeighbor], NumDims);
+      ovkDefaultRange(&RecvFromNeighborDataRanges[iNeighbor], NumDims);
     }
 
     for (iDonor = 0; iDonor < NumDonors; ++iDonor) {
@@ -815,8 +815,8 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
         if (AwayFromEdge) {
           ovk_range IntersectRange;
           ovkRangeIntersect(&NeighborRange, &DonorRange, &IntersectRange);
-          ovkRangeUnion(&NeighborRecvDataRanges[iNeighbor], &IntersectRange,
-            &NeighborRecvDataRanges[iNeighbor]);
+          ovkRangeUnion(&RecvFromNeighborDataRanges[iNeighbor], &IntersectRange,
+            &RecvFromNeighborDataRanges[iNeighbor]);
         } else {
           for (k = DonorRange.b[2]; k < DonorRange.e[2]; ++k) {
             for (j = DonorRange.b[1]; j < DonorRange.e[1]; ++j) {
@@ -825,8 +825,8 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
                 int AdjustedPoint[MAX_DIMS];
                 ovkCartPeriodicAdjust(&Cart, Point, AdjustedPoint);
                 if (ovkRangeContains(&NeighborRange, AdjustedPoint)) {
-                  ovkRangeExtend(&NeighborRecvDataRanges[iNeighbor], Point,
-                    &NeighborRecvDataRanges[iNeighbor]);
+                  ovkRangeExtend(&RecvFromNeighborDataRanges[iNeighbor], AdjustedPoint,
+                    &RecvFromNeighborDataRanges[iNeighbor]);
                 }
               }
             }
@@ -837,7 +837,7 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
 
     int NumCollectRecvs = 0;
     for (iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
-      if (!ovkRangeIsEmpty(&NeighborRecvDataRanges[iNeighbor])) {
+      if (!ovkRangeIsEmpty(&RecvFromNeighborDataRanges[iNeighbor])) {
         ++NumCollectRecvs;
       }
     }
@@ -845,7 +845,7 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
     int *CollectRecvIndexToNeighbor = malloc(NumCollectRecvs*sizeof(int));
     iCollectRecv = 0;
     for (iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
-      if (!ovkRangeIsEmpty(&NeighborRecvDataRanges[iNeighbor])) {
+      if (!ovkRangeIsEmpty(&RecvFromNeighborDataRanges[iNeighbor])) {
         CollectRecvIndexToNeighbor[iCollectRecv] = iNeighbor;
         ++iCollectRecv;
       }
@@ -866,7 +866,7 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
     for (iCollectRecv = 0; iCollectRecv < NumCollectRecvs; ++iCollectRecv) {
       iNeighbor = CollectRecvIndexToNeighbor[iCollectRecv];
       size_t NumPoints;
-      ovkRangeCount(&NeighborRecvDataRanges[iNeighbor], &NumPoints);
+      ovkRangeCount(&RecvFromNeighborDataRanges[iNeighbor], &NumPoints);
       CollectRecvMasks[iCollectRecv] = malloc(NumPoints*sizeof(bool));
       for (iPoint = 0; iPoint < NumPoints; ++iPoint) {
         CollectRecvMasks[iCollectRecv][iPoint] = false;
@@ -898,7 +898,7 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
             for (j = IntersectRange.b[1]; j < IntersectRange.e[1]; ++j) {
               for (i = IntersectRange.b[0]; i < IntersectRange.e[0]; ++i) {
                 int Point[MAX_DIMS] = {i, j, k};
-                ovkRangeTupleToIndex(&NeighborRecvDataRanges[iNeighbor], OVK_COLUMN_MAJOR, Point,
+                ovkRangeTupleToIndex(&RecvFromNeighborDataRanges[iNeighbor], OVK_COLUMN_MAJOR, Point,
                   &iPoint);
                 CollectRecvMasks[iCollectRecv][iPoint] = true;
               }
@@ -912,7 +912,7 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
                 int AdjustedPoint[MAX_DIMS];
                 ovkCartPeriodicAdjust(&Cart, Point, AdjustedPoint);
                 if (ovkRangeContains(&NeighborRange, AdjustedPoint)) {
-                  ovkRangeTupleToIndex(&NeighborRecvDataRanges[iNeighbor], OVK_COLUMN_MAJOR,
+                  ovkRangeTupleToIndex(&RecvFromNeighborDataRanges[iNeighbor], OVK_COLUMN_MAJOR,
                     AdjustedPoint, &iPoint);
                   CollectRecvMasks[iCollectRecv][iPoint] = true;
                 }
@@ -927,7 +927,7 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
     for (iCollectRecv = 0; iCollectRecv < NumCollectRecvs; ++iCollectRecv) {
       iNeighbor = CollectRecvIndexToNeighbor[iCollectRecv];
       size_t NumPoints;
-      ovkRangeCount(&NeighborRecvDataRanges[iNeighbor], &NumPoints);
+      ovkRangeCount(&RecvFromNeighborDataRanges[iNeighbor], &NumPoints);
       CollectRecvOffsets[iCollectRecv] = malloc(NumPoints*sizeof(size_t));
       size_t iRemotePoint = 0;
       for (iPoint = 0; iPoint < NumPoints; ++iPoint) {
@@ -943,7 +943,7 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
     for (iCollectRecv = 0; iCollectRecv < NumCollectRecvs; ++iCollectRecv) {
       iNeighbor = CollectRecvIndexToNeighbor[iCollectRecv];
       size_t NumPoints;
-      ovkRangeCount(&NeighborRecvDataRanges[iNeighbor], &NumPoints);
+      ovkRangeCount(&RecvFromNeighborDataRanges[iNeighbor], &NumPoints);
       size_t NumCollectRecvPoints = 0;
       for (iPoint = 0; iPoint < NumPoints; ++iPoint) {
         if (CollectRecvMasks[iCollectRecv][iPoint]) {
@@ -963,12 +963,12 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
       }
       iNeighbor = CollectRecvIndexToNeighbor[iCollectRecv];
       size_t NumPoints;
-      ovkRangeCount(&NeighborRecvDataRanges[iNeighbor], &NumPoints);
+      ovkRangeCount(&RecvFromNeighborDataRanges[iNeighbor], &NumPoints);
       iCollectRecvPoint = 0;
       for (iPoint = 0; iPoint < NumPoints; ++iPoint) {
         if (CollectRecvMasks[iCollectRecv][iPoint]) {
           int Point[MAX_DIMS];
-          ovkRangeIndexToTuple(&NeighborRecvDataRanges[iNeighbor], OVK_COLUMN_MAJOR, iPoint,
+          ovkRangeIndexToTuple(&RecvFromNeighborDataRanges[iNeighbor], OVK_COLUMN_MAJOR, iPoint,
             Point);
           for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
             Exchange->collect_recv_points[iCollectRecv][iDim][iCollectRecvPoint] = Point[iDim];
@@ -1054,7 +1054,7 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
             for (i = IntersectRange.b[0]; i < IntersectRange.e[0]; ++i) {
               int Point[MAX_DIMS] = {i, j, k};
               ovkRangeTupleToIndexSmall(&DonorRange, OVK_COLUMN_MAJOR, Point, &iDonorPoint);
-              ovkRangeTupleToIndex(&NeighborRecvDataRanges[iNeighbor], OVK_COLUMN_MAJOR, Point,
+              ovkRangeTupleToIndex(&RecvFromNeighborDataRanges[iNeighbor], OVK_COLUMN_MAJOR, Point,
                 &iPoint);
               CellCollectRecvIndices[iDonorPoint] = iCollectRecv;
               CellCollectRecvOffsets[iDonorPoint] = CollectRecvOffsets[iCollectRecv][iPoint];
@@ -1082,7 +1082,7 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
       Exchange->num_remote_donor_points[iDonor] = iRemoteDonorPoint;
     }
 
-    free(NeighborRecvDataRanges);
+    free(RecvFromNeighborDataRanges);
     free(CollectRecvIndexToNeighbor);
     for (iCollectRecv = 0; iCollectRecv < NumCollectRecvs; ++iCollectRecv) {
       free(CollectRecvMasks[iCollectRecv]);
