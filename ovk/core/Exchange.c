@@ -912,8 +912,8 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
                 int AdjustedPoint[MAX_DIMS];
                 ovkCartPeriodicAdjust(&Cart, Point, AdjustedPoint);
                 if (ovkRangeContains(&NeighborRange, AdjustedPoint)) {
-                  ovkRangeTupleToIndex(&NeighborRecvDataRanges[iNeighbor], OVK_COLUMN_MAJOR, Point,
-                    &iPoint);
+                  ovkRangeTupleToIndex(&NeighborRecvDataRanges[iNeighbor], OVK_COLUMN_MAJOR,
+                    AdjustedPoint, &iPoint);
                   CollectRecvMasks[iCollectRecv][iPoint] = true;
                 }
               }
