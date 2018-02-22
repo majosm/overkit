@@ -518,6 +518,9 @@ void ovkSetGridParamPeriodicStorage(ovk_grid_params *Params, ovk_periodic_storag
   OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
   OVK_DEBUG_ASSERT(ValidPeriodicStorage(PeriodicStorage), "Invalid periodic storage.");
 
+  OVK_DEBUG_ASSERT(PeriodicStorage == OVK_NO_OVERLAP_PERIODIC, "Overlap periodic is not currently "
+    "supported.");
+
   Params->periodic_storage = PeriodicStorage;
 
 }
