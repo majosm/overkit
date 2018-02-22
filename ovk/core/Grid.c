@@ -471,7 +471,7 @@ void ovkGetGridParamPeriodic(const ovk_grid_params *Params, bool *Periodic) {
 
   int iDim;
 
-  for (iDim = 0; iDim < Params->num_dims; ++iDim) {
+  for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
     Periodic[iDim] = Params->periodic[iDim];
   }
 
@@ -516,7 +516,7 @@ void ovkGetGridParamPeriodicLength(const ovk_grid_params *Params, double *Period
 
   int iDim;
 
-  for (iDim = 0; iDim < Params->num_dims; ++iDim) {
+  for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
     PeriodicLength[iDim] = Params->periodic_length[iDim];
   }
 
@@ -561,7 +561,7 @@ void ovkGetGridParamLocalBegin(const ovk_grid_params *Params, int *LocalBegin) {
 
   int iDim;
 
-  for (iDim = 0; iDim < Params->num_dims; ++iDim) {
+  for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
     LocalBegin[iDim] = Params->local_range.b[iDim];
   }
 
@@ -587,7 +587,7 @@ void ovkGetGridParamLocalEnd(const ovk_grid_params *Params, int *LocalEnd) {
 
   int iDim;
 
-  for (iDim = 0; iDim < Params->num_dims; ++iDim) {
+  for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
     LocalEnd[iDim] = Params->local_range.e[iDim];
   }
 
@@ -758,7 +758,7 @@ void ovkGetGridPropertySize(const ovk_grid_properties *Properties, int *Size) {
 
   int iDim;
 
-  for (iDim = 0; iDim < Properties->num_dims; ++iDim) {
+  for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
     Size[iDim] = Properties->global_range.e[iDim];
   }
 
@@ -771,7 +771,7 @@ void ovkGetGridPropertyPeriodic(const ovk_grid_properties *Properties, bool *Per
 
   int iDim;
 
-  for (iDim = 0; iDim < Properties->num_dims; ++iDim) {
+  for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
     Periodic[iDim] = Properties->periodic[iDim];
   }
 
@@ -795,7 +795,7 @@ void ovkGetGridPropertyPeriodicLength(const ovk_grid_properties *Properties,
 
   int iDim;
 
-  for (iDim = 0; iDim < Properties->num_dims; ++iDim) {
+  for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
     PeriodicLength[iDim] = Properties->periodic_length[iDim];
   }
 
@@ -913,7 +913,7 @@ void ovkGetGridInfoPeriodicLength(const ovk_grid_info *Info, double *PeriodicLen
 
   int iDim;
 
-  for (iDim = 0; iDim < Info->num_dims; ++iDim) {
+  for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
     PeriodicLength[iDim] = Info->periodic_length[iDim];
   }
 
