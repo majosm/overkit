@@ -226,6 +226,12 @@ void ExchangeTest(int argc, char **argv) {
 //   ovkReleaseOverlapReceiverSide(Overlap, &OverlapR);
 //   ovkReleaseOverlap(Domain, DonorGridID, ReceiverGridID, &Overlap);
 
+
+
+//   ovkGetLocalConnectivityCount(Domain, &NumLocalConnectivities);
+//   ovk_connectivity **Connectivities = malloc(NumLocalConnectivities*sizeof(ovk_connectivity *));
+//   ovkEditAllConnectivities(Domain, Connectivities);
+
   ovk_connectivity *Connectivities[2] = {NULL, NULL};
   iConnectivity = 0;
   for (jGrid = 0; jGrid < 2; ++jGrid) {
