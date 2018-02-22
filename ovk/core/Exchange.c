@@ -1243,15 +1243,15 @@ static void UpdateSourceRanks(ovk_exchange *Exchange) {
   t_ordered_map *Bins;
   OMCreate(&Bins);
 
-  int *SourceToBinIndex = NULL;
+  int *SourceBinIndices = NULL;
   if (ReceiverGridIsLocal) {
-    SourceToBinIndex = malloc(NumReceivers*sizeof(int));
+    SourceBinIndices = malloc(NumReceivers*sizeof(int));
     MapToPartitionBins(Exchange->source_hash, NumReceivers, (const int **)Receivers->sources,
-      SourceToBinIndex);
+      SourceBinIndices);
     for (iReceiver = 0; iReceiver < NumReceivers; ++iReceiver) {
-      t_ordered_map_entry *Entry = OMFind(Bins, SourceToBinIndex[iReceiver]);
+      t_ordered_map_entry *Entry = OMFind(Bins, SourceBinIndices[iReceiver]);
       if (Entry == OMEnd(Bins)) {
-        OMInsert(Bins, SourceToBinIndex[iReceiver], NULL);
+        OMInsert(Bins, SourceBinIndices[iReceiver], NULL);
       }
     }
   }
@@ -1260,8 +1260,8 @@ static void UpdateSourceRanks(ovk_exchange *Exchange) {
 
   if (ReceiverGridIsLocal) {
     FindPartitions(Exchange->source_hash, Bins, NumReceivers, (const int **)Receivers->sources,
-      SourceToBinIndex, Exchange->receiver_source_ranks);
-    free(SourceToBinIndex);
+      SourceBinIndices, Exchange->receiver_source_ranks);
+    free(SourceBinIndices);
   }
 
   ClearPartitionBins(Bins);
@@ -1289,15 +1289,15 @@ static void UpdateDestRanks(ovk_exchange *Exchange) {
   t_ordered_map *Bins;
   OMCreate(&Bins);
 
-  int *DestinationToBinIndex = NULL;
+  int *DestinationBinIndices = NULL;
   if (DonorGridIsLocal) {
-    DestinationToBinIndex = malloc(NumDonors*sizeof(int));
+    DestinationBinIndices = malloc(NumDonors*sizeof(int));
     MapToPartitionBins(Exchange->destination_hash, NumDonors, (const int **)Donors->destinations,
-      DestinationToBinIndex);
+      DestinationBinIndices);
     for (iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      t_ordered_map_entry *Entry = OMFind(Bins, DestinationToBinIndex[iDonor]);
+      t_ordered_map_entry *Entry = OMFind(Bins, DestinationBinIndices[iDonor]);
       if (Entry == OMEnd(Bins)) {
-        OMInsert(Bins, DestinationToBinIndex[iDonor], NULL);
+        OMInsert(Bins, DestinationBinIndices[iDonor], NULL);
       }
     }
   }
@@ -1306,8 +1306,8 @@ static void UpdateDestRanks(ovk_exchange *Exchange) {
 
   if (DonorGridIsLocal) {
     FindPartitions(Exchange->destination_hash, Bins, NumDonors, (const int **)Donors->destinations,
-      DestinationToBinIndex, Exchange->donor_dest_ranks);
-    free(DestinationToBinIndex);
+      DestinationBinIndices, Exchange->donor_dest_ranks);
+    free(DestinationBinIndices);
   }
 
   ClearPartitionBins(Bins);
