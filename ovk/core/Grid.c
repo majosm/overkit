@@ -371,6 +371,8 @@ void PRIVATE(GetGridNeighborRank)(const ovk_grid *Grid, int iNeighbor, int *Neig
 
 void PRIVATE(CreateGridParams)(ovk_grid_params **Params_, int NumDims, MPI_Comm DefaultComm) {
 
+  int iDim;
+
   *Params_ = malloc(sizeof(ovk_grid_params));
   ovk_grid_params *Params = *Params_;
 
@@ -378,9 +380,14 @@ void PRIVATE(CreateGridParams)(ovk_grid_params **Params_, int NumDims, MPI_Comm 
 
   Params->num_dims = NumDims;
   Params->comm = DefaultComm;
-  Params->size[0] = 0;
-  Params->size[1] = 0;
-  Params->size[2] = 1;
+
+  for (iDim = 0; iDim < NumDims; ++iDim) {
+    Params->size[iDim] = 0;
+  }
+  for (iDim = NumDims; iDim < MAX_DIMS; ++iDim) {
+    Params->size[iDim] = 1;
+  }
+
   Params->periodic[0] = false;
   Params->periodic[1] = false;
   Params->periodic[2] = false;
@@ -450,7 +457,7 @@ void ovkGetGridParamSize(const ovk_grid_params *Params, int *Size) {
 
   int iDim;
 
-  for (iDim = 0; iDim < Params->num_dims; ++iDim) {
+  for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
     Size[iDim] = Params->size[iDim];
   }
 
