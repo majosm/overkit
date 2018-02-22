@@ -256,12 +256,12 @@ static inline void ovkRangeExtend(const ovk_range *Range, const int *Point, ovk_
   if (ovkRangeIsEmpty(Range)) {
     for (iDim = 0; iDim < Range->nd; ++iDim) {
       ExtendRange->b[iDim] = Point[iDim];
-      ExtendRange->e[iDim] = Point[iDim];
+      ExtendRange->e[iDim] = Point[iDim]+1;
     }
   } else {
     for (iDim = 0; iDim < Range->nd; ++iDim) {
       ExtendRange->b[iDim] = ovk_min(Range->b[iDim], Point[iDim]);
-      ExtendRange->e[iDim] = ovk_max(Range->e[iDim], Point[iDim]);
+      ExtendRange->e[iDim] = ovk_max(Range->e[iDim], Point[iDim]+1);
     }
   }
   for (iDim = Range->nd; iDim < OVK_MAX_DIMS; ++iDim) {
