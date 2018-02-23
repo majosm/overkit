@@ -25,8 +25,6 @@ struct ovk_grid_info;
 typedef struct ovk_grid_info ovk_grid_info;
 
 void ovkGetGridProperties(const ovk_grid *Grid, const ovk_grid_properties **Properties);
-// void ovkEditGridProperties(ovk_grid *Grid, ovk_grid_properties **Properties);
-// void ovkReleaseGridProperties(ovk_grid *Grid, ovk_grid_properties **Properties);
 
 void ovkGetGridCart(const ovk_grid *Grid, ovk_cart *Cart);
 
@@ -51,10 +49,6 @@ void ovkGetGridParamLocalEnd(const ovk_grid_params *Params, int *LocalEnd);
 void ovkSetGridParamLocalEnd(ovk_grid_params *Params, const int *LocalEnd);
 void ovkSetGridParamLocalRange(ovk_grid_params *Params, const ovk_range *LocalRange);
 void ovkGetGridParamLocalRange(const ovk_grid_params *Params, ovk_range *LocalRange);
-void ovkGetGridParamNumNeighbors(const ovk_grid_params *Params, int *NumNeighbors);
-void ovkGetGridParamNeighborRanks(const ovk_grid_params *Params, int *NeighborRanks);
-void ovkSetGridParamNeighborRanks(ovk_grid_params *Params, int NumNeighbors,
-  const int *NeighborRanks);
 
 void ovkGetGridPropertyID(const ovk_grid_properties *Properties, int *ID);
 void ovkGetGridPropertyName(const ovk_grid_properties *Properties, char *Name);
@@ -72,8 +66,6 @@ void ovkGetGridPropertyGeometryType(const ovk_grid_properties *Properties,
   ovk_geometry_type *GeometryType);
 void ovkGetGridPropertyGlobalRange(const ovk_grid_properties *Properties, ovk_range *GlobalRange);
 void ovkGetGridPropertyLocalRange(const ovk_grid_properties *Properties, ovk_range *LocalRange);
-void ovkGetGridPropertyNumNeighbors(const ovk_grid_properties *Properties, int *NumNeighbors);
-void ovkGetGridPropertyNeighborRanks(const ovk_grid_properties *Properties, int *NeighborRanks);
 
 void ovkGetGridInfoID(const ovk_grid_info *Info, int *ID);
 void ovkGetGridInfoName(const ovk_grid_info *Info, char *Name);

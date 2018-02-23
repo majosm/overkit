@@ -27,8 +27,6 @@ struct ovk_grid_params {
   double periodic_length[MAX_DIMS];
   ovk_geometry_type geometry_type;
   ovk_range local_range;
-  int num_neighbors;
-  int *neighbor_ranks;
 };
 
 struct ovk_grid_properties {
@@ -44,8 +42,6 @@ struct ovk_grid_properties {
   ovk_geometry_type geometry_type;
   ovk_range global_range;
   ovk_range local_range;
-  int num_neighbors;
-  int *neighbor_ranks;
 };
 
 typedef struct {
@@ -58,6 +54,7 @@ struct ovk_grid {
   t_logger *logger;
   t_error_handler *error_handler;
   ovk_cart cart;
+  int num_neighbors;
   t_grid_neighbor *neighbors;
   t_partition_hash *partition_hash;
 };
@@ -86,6 +83,8 @@ static inline void GetGridErrorHandler(const ovk_grid *Grid, t_error_handler **E
   *ErrorHandler = (t_error_handler *)Grid->error_handler;
 }
 
+void PRIVATE(GetGridNeighborCount)(const ovk_grid *Grid, int *NumNeighbors);
+#define GetGridNeighborCount(...) PRIVATE(GetGridNeighborCount)(__VA_ARGS__)
 void PRIVATE(GetGridNeighborRange)(const ovk_grid *Grid, int iNeighbor, ovk_range *NeighborRange);
 #define GetGridNeighborRange(...) PRIVATE(GetGridNeighborRange)(__VA_ARGS__)
 void PRIVATE(GetGridNeighborRank)(const ovk_grid *Grid, int iNeighbor, int *NeighborRank);

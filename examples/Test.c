@@ -26,8 +26,6 @@ typedef struct {
   int comm_rank;
   int comm_dims[2];
   int comm_coords[2];
-  int num_neighbors;
-  int neighbor_ranks[8];
   int global_size[2];
   int local_size[2];
   int local_count;
@@ -139,7 +137,6 @@ void ExchangeTest(int argc, char **argv) {
       ovkSetGridParamSize(GridParams, InputGrid->global_size);
       ovkSetGridParamLocalBegin(GridParams, InputGrid->is);
       ovkSetGridParamLocalEnd(GridParams, InputGrid->ie);
-      ovkSetGridParamNeighborRanks(GridParams, InputGrid->num_neighbors, InputGrid->neighbor_ranks);
       ovkCreateGridLocal(Domain, GridID, GridParams);
       ovkDestroyGridParams(Domain, &GridParams);
     } else {
@@ -158,7 +155,6 @@ void ExchangeTest(int argc, char **argv) {
 //       ovkSetGridParamSize(GridParams, InputGrid->global_size);
 //       ovkSetGridParamLocalBegin(GridParams, InputGrid->is);
 //       ovkSetGridParamLocalEnd(GridParams, InputGrid->ie);
-//       ovkSetGridParamNeighborRanks(GridParams, InputGrid->num_neighbors, InputGrid->neighbor_ranks);
 //     }
 //     ovkCreateGrid(Domain, GridID, GridParams);
 //     if (InputGrid) {
@@ -177,8 +173,6 @@ void ExchangeTest(int argc, char **argv) {
 //       ovkSetGridParamSize(GridParams[iGrid], InputGrid->global_size);
 //       ovkSetGridParamLocalBegin(GridParams[iGrid], InputGrid->is);
 //       ovkSetGridParamLocalEnd(GridParams[iGrid], InputGrid->ie);
-//       ovkSetGridParamNeighborRanks(GridParams[iGrid], InputGrid->num_neighbors,
-//         InputGrid->neighbor_ranks);
 //     }
 //   }
 
@@ -722,8 +716,6 @@ void AssembleTest(int argc, char **argv) {
       ovkSetGridParamSize(GridParams, InputGrid->global_size);
       ovkSetGridParamLocalBegin(GridParams, InputGrid->is);
       ovkSetGridParamLocalEnd(GridParams, InputGrid->ie);
-      ovkSetGridParamNeighborRanks(GridParams, InputGrid->num_neighbors,
-        InputGrid->neighbor_ranks);
       ovkCreateGridLocal(Domain, GridID, GridParams);
       ovkDestroyGridParams(Domain, &GridParams);
     } else {
@@ -883,19 +875,6 @@ void CreateInputs(int N, int *NumLocalGrids, input_grid **Grids, input_state **S
           MPI_Comm_size(Grid->comm, &Grid->comm_size);
           MPI_Comm_rank(Grid->comm, &Grid->comm_rank);
           MPI_Cart_get(Grid->comm, 2, Grid->comm_dims, Periods, Grid->comm_coords);
-          Grid->num_neighbors = 0;
-          for (j = -1; j <= 1; ++j) {
-            for (i = -1; i <= 1; ++i) {
-              int Coords[2] = {Grid->comm_coords[0]+i,Grid->comm_coords[1]+j};
-              bool ValidNeighbor = i != 0 || j != 0;
-              ValidNeighbor = ValidNeighbor && Coords[0] >= 0 && Coords[0] < Grid->comm_dims[0];
-              ValidNeighbor = ValidNeighbor && Coords[1] >= 0 && Coords[1] < Grid->comm_dims[1];
-              if (ValidNeighbor) {
-                MPI_Cart_rank(Grid->comm, Coords, &Grid->neighbor_ranks[Grid->num_neighbors]);
-                ++Grid->num_neighbors;
-              }
-            }
-          }
         }
       }
       MPI_Comm_free(&GridComm);

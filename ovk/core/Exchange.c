@@ -522,7 +522,7 @@ static void UpdateCollectSendInfo(ovk_exchange *Exchange) {
     ovkGetGridPropertyLocalRange(GridProperties, &LocalRange);
 
     int NumNeighbors;
-    ovkGetGridPropertyNumNeighbors(GridProperties, &NumNeighbors);
+    GetGridNeighborCount(Grid, &NumNeighbors);
 
     ovk_cart Cart;
     ovkGetGridCart(Grid, &Cart);
@@ -797,7 +797,7 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
     ovkGetGridPropertyLocalRange(GridProperties, &LocalRange);
 
     int NumNeighbors;
-    ovkGetGridPropertyNumNeighbors(GridProperties, &NumNeighbors);
+    GetGridNeighborCount(Grid, &NumNeighbors);
 
     ovk_cart Cart;
     ovkGetGridCart(Grid, &Cart);

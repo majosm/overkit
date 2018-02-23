@@ -23,7 +23,6 @@ void PRIVATE(CreateGrid)(ovk_grid **Grid_, int ID, const ovk_grid_params *Params
   t_error_handler *ErrorHandler) {
 
   int iDim;
-  int iNeighbor;
 
   int NumDims = Params->num_dims;
 
@@ -69,15 +68,6 @@ void PRIVATE(CreateGrid)(ovk_grid **Grid_, int ID, const ovk_grid_params *Params
 
   Grid->properties.local_range = Params->local_range;
 
-  Grid->properties.num_neighbors = Params->num_neighbors;
-  if (Params->num_neighbors > 0) {
-    Grid->properties.neighbor_ranks = malloc(Params->num_neighbors*sizeof(int));
-  }
-
-  for (iNeighbor = 0; iNeighbor < Params->num_neighbors; ++iNeighbor) {
-    Grid->properties.neighbor_ranks[iNeighbor] = Params->neighbor_ranks[iNeighbor];
-  }
-
   Grid->logger = Logger;
   Grid->error_handler = ErrorHandler;
 
@@ -92,10 +82,10 @@ void PRIVATE(CreateGrid)(ovk_grid **Grid_, int ID, const ovk_grid_params *Params
     Grid->cart.periodic[iDim] = Grid->properties.periodic[iDim];
   }
 
-  CreateNeighbors(Grid);
-
   CreatePartitionHash(&Grid->partition_hash, Grid->properties.num_dims, Grid->properties.comm,
     &Grid->properties.global_range, &Grid->properties.local_range);
+
+  CreateNeighbors(Grid);
 
   if (Grid->properties.comm_rank == 0) {
     PrintGridSummary(Grid);
@@ -124,8 +114,6 @@ void PRIVATE(DestroyGrid)(ovk_grid **Grid_) {
   bool IsRoot = Grid->properties.comm_rank == 0;
   char Name[OVK_NAME_LENGTH];
   strncpy(Name, Grid->properties.name, OVK_NAME_LENGTH);
-
-  free(Grid->properties.neighbor_ranks);
 
   free_null(Grid_);
 
@@ -224,44 +212,178 @@ void ovkGetGridCart(const ovk_grid *Grid, ovk_cart *Cart) {
 
 static void CreateNeighbors(ovk_grid *Grid) {
 
-  int iDim;
+  int iDim, jDim;
+  int iFace;
+  int i, j, k;
+  size_t iPoint;
   int iNeighbor;
+  t_ordered_map_entry *Entry;
 
-  int NumNeighbors = Grid->properties.num_neighbors;
-  int *NeighborRanks = Grid->properties.neighbor_ranks;
+  int NumDims = Grid->properties.num_dims;
 
+  ovk_range GlobalRange = Grid->properties.global_range;
+  ovk_range LocalRange = Grid->properties.local_range;
+  int Periodic[MAX_DIMS] = {
+    Grid->properties.periodic[0],
+    Grid->properties.periodic[1],
+    Grid->properties.periodic[2]
+  };
+
+  bool HasNeighborsBefore[MAX_DIMS];
+  bool HasNeighborsAfter[MAX_DIMS];
+  for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
+    bool HasPartitionBefore = LocalRange.b[iDim] > GlobalRange.b[iDim];
+    bool HasPartitionAfter = LocalRange.e[iDim] < GlobalRange.e[iDim];
+    if (Periodic[iDim]) {
+      HasNeighborsBefore[iDim] = HasPartitionBefore || HasPartitionAfter;
+      HasNeighborsAfter[iDim] = HasPartitionBefore || HasPartitionAfter;
+    } else {
+      HasNeighborsBefore[iDim] = HasPartitionBefore;
+      HasNeighborsAfter[iDim] = HasPartitionAfter;
+    }
+  }
+
+  int NumNeighborFaces = 0;
+  ovk_range NeighborFaces[2*MAX_DIMS];
+  for (iDim = 0; iDim < NumDims; ++iDim) {
+    if (HasNeighborsBefore[iDim]) {
+      ovk_range *Face = NeighborFaces+NumNeighborFaces;
+      *Face = LocalRange;
+      Face->b[iDim] -= 1;
+      Face->e[iDim] = Face->b[iDim]+1;
+      for (jDim = iDim+1; jDim < NumDims; ++jDim) {
+        Face->b[jDim] -= (int)HasNeighborsBefore[jDim];
+        Face->e[jDim] += (int)HasNeighborsAfter[jDim];
+      }
+      ++NumNeighborFaces;
+    }
+    if (HasNeighborsAfter[iDim]) {
+      ovk_range *Face = NeighborFaces+NumNeighborFaces;
+      *Face = LocalRange;
+      Face->e[iDim] += 1;
+      Face->b[iDim] = Face->e[iDim]-1;
+      for (jDim = iDim+1; jDim < NumDims; ++jDim) {
+        Face->b[jDim] -= (int)HasNeighborsBefore[jDim];
+        Face->e[jDim] += (int)HasNeighborsAfter[jDim];
+      }
+      ++NumNeighborFaces;
+    }
+  }
+
+  size_t NumNeighborPoints = 0;
+  for (iFace = 0; iFace < NumNeighborFaces; ++iFace) {
+    size_t NumPoints;
+    ovkRangeCount(NeighborFaces+iFace, &NumPoints);
+    NumNeighborPoints += NumPoints;
+  }
+
+  int *NeighborPoints[MAX_DIMS];
+  NeighborPoints[0] = malloc(MAX_DIMS*NumNeighborPoints*sizeof(int));
+  NeighborPoints[1] = NeighborPoints[0] + NumNeighborPoints;
+  NeighborPoints[2] = NeighborPoints[1] + NumNeighborPoints;
+
+  iPoint = 0;
+  for (iFace = 0; iFace < NumNeighborFaces; ++iFace) {
+    ovk_range *Face = NeighborFaces+iFace;
+    for (k = Face->b[2]; k < Face->e[2]; ++k) {
+      for (j = Face->b[1]; j < Face->e[1]; ++j) {
+        for (i = Face->b[0]; i < Face->e[0]; ++i) {
+          int Point[MAX_DIMS] = {i, j, k};
+          ovkCartPeriodicAdjust(&Grid->cart, Point, Point);
+          for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
+            NeighborPoints[iDim][iPoint] = Point[iDim];
+          }
+          ++iPoint;
+        }
+      }
+    }
+  }
+
+  int *NeighborPointBinIndices = malloc(NumNeighborPoints*sizeof(int));
+
+  MapToPartitionBins(Grid->partition_hash, NumNeighborPoints, (const int **)NeighborPoints,
+    NeighborPointBinIndices);
+
+  t_ordered_map *Bins;
+  OMCreate(&Bins);
+
+  for (iPoint = 0; iPoint < NumNeighborPoints; ++iPoint) {
+    int BinIndex = NeighborPointBinIndices[iPoint];
+    if (!OMExists(Bins, BinIndex)) {
+      OMInsert(Bins, BinIndex, NULL);
+    }
+  }
+
+  RetrievePartitionBins(Grid->partition_hash, Bins);
+
+  int *NeighborPointRanks = malloc(NumNeighborPoints*sizeof(int));
+
+  FindPartitions(Grid->partition_hash, Bins, NumNeighborPoints, (const int **)NeighborPoints,
+    NeighborPointBinIndices, NeighborPointRanks);
+
+  ClearPartitionBins(Bins);
+  OMDestroy(&Bins);
+
+  t_ordered_map *NeighborRanks;
+  OMCreate(&NeighborRanks);
+
+  for (iPoint = 0; iPoint < NumNeighborPoints; ++iPoint) {
+    int Rank = NeighborPointRanks[iPoint];
+    if (!OMExists(NeighborRanks, Rank)) {
+      OMInsert(NeighborRanks, Rank, NULL);
+    }
+  }
+
+  free(NeighborPoints[0]);
+  free(NeighborPointBinIndices);
+  free(NeighborPointRanks);
+
+  int NumNeighbors = OMSize(NeighborRanks);
+
+  Grid->num_neighbors = NumNeighbors;
   Grid->neighbors = malloc(NumNeighbors*sizeof(t_grid_neighbor));
 
   int *NeighborRangesFlat = malloc(2*MAX_DIMS*NumNeighbors*sizeof(int));
 
   int LocalRangeFlat[2*MAX_DIMS];
   for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    LocalRangeFlat[iDim] = Grid->properties.local_range.b[iDim];
-    LocalRangeFlat[MAX_DIMS+iDim] = Grid->properties.local_range.e[iDim];
+    LocalRangeFlat[iDim] = LocalRange.b[iDim];
+    LocalRangeFlat[MAX_DIMS+iDim] = LocalRange.e[iDim];
   }
 
   MPI_Request *Requests = malloc(2*NumNeighbors*sizeof(MPI_Request));
-  for (iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
-    MPI_Request *NeighborRequests = Requests + 2*iNeighbor;
-    MPI_Irecv(NeighborRangesFlat+2*MAX_DIMS*iNeighbor, 2*MAX_DIMS, MPI_INT,
-      NeighborRanks[iNeighbor], 0, Grid->properties.comm, NeighborRequests);
-    MPI_Isend(LocalRangeFlat, 2*MAX_DIMS, MPI_INT, NeighborRanks[iNeighbor], 0,
-      Grid->properties.comm, NeighborRequests+1);
+  Entry = OMBegin(NeighborRanks);
+  iNeighbor = 0;
+  while (Entry != OMEnd(NeighborRanks)) {
+    int Rank = OMKey(Entry);
+    MPI_Irecv(NeighborRangesFlat+2*MAX_DIMS*iNeighbor, 2*MAX_DIMS, MPI_INT, Rank, 0,
+      Grid->properties.comm, Requests+2*iNeighbor);
+    MPI_Isend(LocalRangeFlat, 2*MAX_DIMS, MPI_INT, Rank, 0, Grid->properties.comm,
+      Requests+2*iNeighbor+1);
+    Entry = OMNext(Entry);
+    ++iNeighbor;
   }
   MPI_Waitall(2*NumNeighbors, Requests, MPI_STATUSES_IGNORE);
 
-  for (iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
-    Grid->neighbors[iNeighbor].comm_rank = NeighborRanks[iNeighbor];
+  Entry = OMBegin(NeighborRanks);
+  iNeighbor = 0;
+  while (Entry != OMEnd(NeighborRanks)) {
+    int Rank = OMKey(Entry);
+    Grid->neighbors[iNeighbor].comm_rank = Rank;
     ovkDefaultRange(&Grid->neighbors[iNeighbor].local_range, Grid->properties.num_dims);
     int *NeighborRangeFlat = NeighborRangesFlat+2*MAX_DIMS*iNeighbor;
     for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
       Grid->neighbors[iNeighbor].local_range.b[iDim] = NeighborRangeFlat[iDim];
       Grid->neighbors[iNeighbor].local_range.e[iDim] = NeighborRangeFlat[MAX_DIMS+iDim];
     }
+    Entry = OMNext(Entry);
+    ++iNeighbor;
   }
 
   free(Requests);
   free(NeighborRangesFlat);
+
+  OMDestroy(&NeighborRanks);
 
 }
 
@@ -330,9 +452,9 @@ static void PrintGridDecomposition(const ovk_grid *Grid) {
 
   char NeighborRanksString[256];
   Offset = 0;
-  for (iNeighbor = 0; iNeighbor < Grid->properties.num_neighbors; ++iNeighbor) {
-    Offset += sprintf(NeighborRanksString+Offset, "%i", Grid->properties.neighbor_ranks[iNeighbor]);
-    if (iNeighbor != Grid->properties.num_neighbors-1) {
+  for (iNeighbor = 0; iNeighbor < Grid->num_neighbors; ++iNeighbor) {
+    Offset += sprintf(NeighborRanksString+Offset, "%i", Grid->neighbors[iNeighbor].comm_rank);
+    if (iNeighbor != Grid->num_neighbors-1) {
       Offset += sprintf(NeighborRanksString+Offset, ", ");
     }
   }
@@ -347,13 +469,19 @@ static void PrintGridDecomposition(const ovk_grid *Grid) {
     if (OtherRank == Grid->properties.comm_rank) {
       LogStatus(Grid->logger, true, 1, "Rank %i (global rank @rank@) contains %s (%s).",
         Grid->properties.comm_rank, LocalRangeString, TotalLocalPointsString);
-      if (Grid->properties.num_neighbors > 0) {
+      if (Grid->num_neighbors > 0) {
         LogStatus(Grid->logger, true, 1, "Rank %i has neighbors: %s", Grid->properties.comm_rank,
           NeighborRanksString);
       }
     }
     MPI_Barrier(Grid->properties.comm);
   }
+
+}
+
+void PRIVATE(GetGridNeighborCount)(const ovk_grid *Grid, int *NumNeighbors) {
+
+  *NumNeighbors = Grid->num_neighbors;
 
 }
 
@@ -399,18 +527,11 @@ void PRIVATE(CreateGridParams)(ovk_grid_params **Params_, int NumDims, MPI_Comm 
 
   ovkDefaultRange(&Params->local_range, NumDims);
 
-  Params->num_neighbors = 0;
-  Params->neighbor_ranks = NULL;
-
 }
 
-void PRIVATE(DestroyGridParams)(ovk_grid_params **Params_) {
+void PRIVATE(DestroyGridParams)(ovk_grid_params **Params) {
 
-  ovk_grid_params *Params = *Params_;
-
-  free(Params->neighbor_ranks);
-
-  free_null(Params_);
+  free_null(Params);
 
 }
 
@@ -640,52 +761,6 @@ void ovkSetGridParamLocalRange(ovk_grid_params *Params, const ovk_range *LocalRa
 
 }
 
-void ovkGetGridParamNumNeighborRanks(const ovk_grid_params *Params, int *NumNeighbors) {
-
-  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
-  OVK_DEBUG_ASSERT(NumNeighbors, "Invalid num neighbors pointer.");
-
-  *NumNeighbors = Params->num_neighbors;
-
-}
-
-void ovkGetGridParamNeighborRanks(const ovk_grid_params *Params, int *NeighborRanks) {
-
-  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
-  OVK_DEBUG_ASSERT(NeighborRanks, "Invalid neighbor ranks pointer.");
-
-  int iNeighbor;
-
-  for (iNeighbor = 0; iNeighbor < Params->num_neighbors; ++iNeighbor) {
-    NeighborRanks[iNeighbor] = Params->neighbor_ranks[iNeighbor];
-  }
-
-}
-
-void ovkSetGridParamNeighborRanks(ovk_grid_params *Params, int NumNeighbors,
-  const int *NeighborRanks) {
-
-  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
-  OVK_DEBUG_ASSERT(NumNeighbors >= 0, "Invalid number of neighbors.");
-  OVK_DEBUG_ASSERT(NeighborRanks, "Invalid neighbor ranks pointer.");
-
-  int iNeighbor;
-
-  free_null(&Params->neighbor_ranks);
-
-  Params->num_neighbors = NumNeighbors;
-
-  if (NumNeighbors > 0) {
-    Params->neighbor_ranks = malloc(NumNeighbors*sizeof(int));
-    for (iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
-      Params->neighbor_ranks[iNeighbor] = NeighborRanks[iNeighbor];
-    }
-  } else {
-    Params->neighbor_ranks = NULL;
-  }
-
-}
-
 static void DefaultProperties(ovk_grid_properties *Properties, int NumDims) {
 
   Properties->id = -1;
@@ -707,9 +782,6 @@ static void DefaultProperties(ovk_grid_properties *Properties, int NumDims) {
 
   ovkDefaultRange(&Properties->global_range, NumDims);
   ovkDefaultRange(&Properties->local_range, NumDims);
-
-  Properties->num_neighbors = 0;
-  Properties->neighbor_ranks = NULL;
 
 }
 
@@ -842,28 +914,6 @@ void ovkGetGridPropertyLocalRange(const ovk_grid_properties *Properties, ovk_ran
   OVK_DEBUG_ASSERT(LocalRange, "Invalid local range pointer.");
 
   *LocalRange = Properties->local_range;
-
-}
-
-void ovkGetGridPropertyNumNeighbors(const ovk_grid_properties *Properties, int *NumNeighbors) {
-
-  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
-  OVK_DEBUG_ASSERT(NumNeighbors, "Invalid num neighbors pointer.");
-
-  *NumNeighbors = Properties->num_neighbors;
-
-}
-
-void ovkGetGridPropertyNeighborRanks(const ovk_grid_properties *Properties, int *NeighborRanks) {
-
-  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
-  OVK_DEBUG_ASSERT(NeighborRanks, "Invalid neighbor ranks pointer.");
-
-  int iNeighbor;
-
-  for (iNeighbor = 0; iNeighbor < Properties->num_neighbors; ++iNeighbor) {
-    NeighborRanks[iNeighbor] = Properties->neighbor_ranks[iNeighbor];
-  }
 
 }
 
