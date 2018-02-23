@@ -89,7 +89,8 @@ static inline void ovkCartPeriodicAdjust(const ovk_cart *Cart, const int *Tuple,
 
   for (iDim = 0; iDim < OVK_MAX_DIMS; ++iDim) {
     if (Cart->periodic[iDim]) {
-      AdjustedTuple[iDim] = Tuple[iDim] % Cart->size[iDim];
+      int Mod = Tuple[iDim] % Cart->size[iDim];
+      AdjustedTuple[iDim] = Mod + Cart->size[iDim] * (Mod < 0);
     } else {
       AdjustedTuple[iDim] = Tuple[iDim];
     }
