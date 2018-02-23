@@ -1274,9 +1274,9 @@ static void UpdateSourceRanks(ovk_exchange *Exchange) {
     MapToPartitionBins(Exchange->source_hash, NumReceivers, (const int **)Receivers->sources,
       SourceBinIndices);
     for (iReceiver = 0; iReceiver < NumReceivers; ++iReceiver) {
-      t_ordered_map_entry *Entry = OMFind(Bins, SourceBinIndices[iReceiver]);
-      if (Entry == OMEnd(Bins)) {
-        OMInsert(Bins, SourceBinIndices[iReceiver], NULL);
+      int BinIndex = SourceBinIndices[iReceiver];
+      if (!OMExists(Bins, BinIndex)) {
+        OMInsert(Bins, BinIndex, NULL);
       }
     }
   }
@@ -1320,9 +1320,9 @@ static void UpdateDestRanks(ovk_exchange *Exchange) {
     MapToPartitionBins(Exchange->destination_hash, NumDonors, (const int **)Donors->destinations,
       DestinationBinIndices);
     for (iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      t_ordered_map_entry *Entry = OMFind(Bins, DestinationBinIndices[iDonor]);
-      if (Entry == OMEnd(Bins)) {
-        OMInsert(Bins, DestinationBinIndices[iDonor], NULL);
+      int BinIndex = DestinationBinIndices[iDonor];
+      if (!OMExists(Bins, BinIndex)) {
+        OMInsert(Bins, BinIndex, NULL);
       }
     }
   }
