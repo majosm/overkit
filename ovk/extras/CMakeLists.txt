@@ -21,7 +21,10 @@ target_link_libraries(overkit-extras m)
 # Compiler flags
 #================
 
-# Nothing here at the moment
+# Define OVERKIT_DEBUG flag in debug & coverage build types
+set_property(TARGET overkit-extras APPEND PROPERTY COMPILE_DEFINITIONS
+  $<$<OR:$<CONFIG:Debug>,$<CONFIG:Coverage>>:OVERKIT_DEBUG>
+)
 
 #==============
 # Installation
