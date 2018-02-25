@@ -1608,9 +1608,9 @@ void PRIVATE(ExchangeCollect)(const ovk_exchange *Exchange, ovk_data_type DataTy
 
   int DataSize = DataTypeSize(DataType);
 
-  MPI_Datatype MPIDataType;
+  MPI_Datatype MPIDataType = DataTypeToMPI(DataType);
   int MPIDataSize;
-  DataTypeToMPI(DataType, &MPIDataType, &MPIDataSize);
+  MPI_Type_size(MPIDataType, &MPIDataSize);
 
   void ***CollectSendBuffers = malloc(NumCollectSends*sizeof(void **));
   for (iSend = 0; iSend < NumCollectSends; ++iSend) {
@@ -1847,9 +1847,9 @@ void PRIVATE(ExchangeSend)(const ovk_exchange *Exchange, ovk_data_type DataType,
 
   int NumSends = Exchange->num_sends;
 
-  MPI_Datatype MPIDataType;
+  MPI_Datatype MPIDataType = DataTypeToMPI(DataType);
   int MPIDataSize;
-  DataTypeToMPI(DataType, &MPIDataType, &MPIDataSize);
+  MPI_Type_size(MPIDataType, &MPIDataSize);
 
   CreateSendRequest(Exchange, MPIDataSize, Count, Request);
   t_send_request_data *RequestData = (*Request)->data;
@@ -1919,9 +1919,9 @@ void PRIVATE(ExchangeReceive)(const ovk_exchange *Exchange, ovk_data_type DataTy
 
   int NumRecvs = Exchange->num_recvs;
 
-  MPI_Datatype MPIDataType;
+  MPI_Datatype MPIDataType = DataTypeToMPI(DataType);
   int MPIDataSize;
-  DataTypeToMPI(DataType, &MPIDataType, &MPIDataSize);
+  MPI_Type_size(MPIDataType, &MPIDataSize);
 
   CreateReceiveRequest(Exchange, DataType, MPIDataSize, Count, ReceiverData, Request);
   t_recv_request_data *RequestData = (*Request)->data;

@@ -10,6 +10,7 @@
 #include <mpi.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <limits.h>
 
 #ifndef __cplusplus
 #undef min
@@ -36,6 +37,17 @@ enum {
   MAX_DIMS = OVK_MAX_DIMS,
   NUMBER_STRING_LENGTH = 32
 };
+
+// Define MPI datatype for size_t
+#if SIZE_MAX == UINT_MAX
+  static const MPI_Datatype KMPI_UNSIGNED_SIZE = MPI_UNSIGNED;
+#elif SIZE_MAX == ULONG_MAX
+  static const MPI_Datatype KMPI_UNSIGNED_SIZE = MPI_UNSIGNED_LONG;
+#elif SIZE_MAX == ULLONG_MAX
+  static const MPI_Datatype KMPI_UNSIGNED_SIZE = MPI_UNSIGNED_LONG_LONG;
+#else
+#error "Failed to detect MPI datatype corresponding to size_t."
+#endif
 
 static inline bool ValidLogLevel(ovk_log_level LogLevel) {
 
@@ -121,57 +133,45 @@ static inline bool ValidDataType(ovk_data_type DataType) {
 static inline int DataTypeSize(ovk_data_type DataType) {
 
   switch (DataType) {
-    case OVK_BOOL: return 1;
-    case OVK_BYTE: return 1;
+    case OVK_BOOL: return sizeof(unsigned char);
+    case OVK_BYTE: return sizeof(unsigned char);
+    case OVK_INT: return sizeof(int);
+    case OVK_LONG: return sizeof(long);
+    case OVK_LONG_LONG: return sizeof(long long);
     case OVK_INT32: return 4;
     case OVK_INT64: return 8;
+    case OVK_UNSIGNED_INT: return sizeof(unsigned int);
+    case OVK_UNSIGNED_LONG: return sizeof(unsigned long);
+    case OVK_UNSIGNED_LONG_LONG: return sizeof(unsigned long long);
+    case OVK_UNSIGNED_SIZE: return sizeof(size_t);
     case OVK_UINT32: return 4;
     case OVK_UINT64: return 8;
-    case OVK_FLOAT: return 4;
-    case OVK_DOUBLE: return 8;
+    case OVK_FLOAT: return sizeof(float);
+    case OVK_DOUBLE: return sizeof(double);
     default: return 0;
   };
 
 }
 
-static inline void DataTypeToMPI(ovk_data_type DataType, MPI_Datatype *MPIDataType,
-  int *MPIDataSize) {
+static inline MPI_Datatype DataTypeToMPI(ovk_data_type DataType) {
 
   switch (DataType) {
-  case OVK_BOOL:
-    *MPIDataType = MPI_BYTE;
-    *MPIDataSize = 1;
-    return;
-  case OVK_BYTE:
-    *MPIDataType = MPI_BYTE;
-    *MPIDataSize = 1;
-    return;
-  case OVK_INT32:
-    *MPIDataType = MPI_INT;
-    *MPIDataSize = 4;
-    return;
-  case OVK_INT64:
-    *MPIDataType = MPI_LONG_LONG;
-    *MPIDataSize = 8;
-    return;
-  case OVK_UINT32:
-    *MPIDataType = MPI_UNSIGNED;
-    *MPIDataSize = 4;
-    return;
-  case OVK_UINT64:
-  // TODO: Make this work (may need to create new MPI datatype in domain and pass it in)
-//     *MPIDataType = MY_MPI_UNSIGNED_LONG_LONG;
-//     *MPIDataSize = 8;
-    OVK_DEBUG_ASSERT(false, "OVK_UINT64 not implemented yet.");
-    return;
-  case OVK_FLOAT:
-    *MPIDataType = MPI_FLOAT;
-    *MPIDataSize = 4;
-    return;
-  case OVK_DOUBLE:
-    *MPIDataType = MPI_DOUBLE;
-    *MPIDataSize = 8;
-    return;
+  case OVK_BOOL: return MPI_BYTE;
+  case OVK_BYTE: return MPI_BYTE;
+  case OVK_INT: return MPI_INT;
+  case OVK_LONG: return MPI_LONG;
+  case OVK_LONG_LONG: return MPI_LONG_LONG;
+  case OVK_INT32: return MPI_INT;
+  case OVK_INT64: return MPI_LONG_LONG;
+  case OVK_UNSIGNED_INT: return MPI_UNSIGNED;
+  case OVK_UNSIGNED_LONG: return MPI_UNSIGNED_LONG;
+  case OVK_UNSIGNED_LONG_LONG: return MPI_UNSIGNED_LONG_LONG;
+  case OVK_UNSIGNED_SIZE: return KMPI_UNSIGNED_SIZE;
+  case OVK_UINT32: return MPI_UNSIGNED;
+  case OVK_UINT64: return MPI_UNSIGNED_LONG_LONG;
+  case OVK_FLOAT: return MPI_FLOAT;
+  case OVK_DOUBLE: return MPI_DOUBLE;
+  default: return MPI_DATATYPE_NULL;
   }
 
 }
