@@ -1,8 +1,8 @@
 // Copyright (c) 2018 Matthew J. Smith and Overkit contributors
 // License: MIT (http://opensource.org/licenses/MIT)
 
-#ifndef OVK_CORE_PARALLEL_UTILS_INCLUDED
-#define OVK_CORE_PARALLEL_UTILS_INCLUDED
+#ifndef OVK_CORE_MPI_UTILS_INCLUDED
+#define OVK_CORE_MPI_UTILS_INCLUDED
 
 #include "ovk/core/Global.h"
 #include "ovk/core/OrderedMap.h"
