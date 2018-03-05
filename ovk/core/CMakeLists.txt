@@ -19,6 +19,7 @@ set(OVERKIT_SOURCES
   MiscUtils.cpp
   MPIUtils.c
   PartitionHash.c
+  ProfileUtils.c
 )
 
 add_library(overkit ${OVERKIT_SOURCES})

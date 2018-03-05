@@ -78,14 +78,20 @@ else()
 endif()
 
 # Build options
+option(BUILD_SHARED_LIBS "Build libraries as shared" OFF)
 option(TESTS "Enable tests" OFF)
 option(EXAMPLES "Enable examples" OFF)
-option(BUILD_SHARED_LIBS "Build libraries as shared" OFF)
+option(PROFILE "Enable profiling" OFF)
 option(XPACC "Enable XPACC-specific extras" OFF)
 
 # Not entirely sure why this is here
 if(NOT DEFINED BUILD_SHARED_LIBS)
   set(BUILD_SHARED_LIBS FALSE)
+endif()
+
+# Enable profiling
+if(PROFILE)
+  add_definitions(-DOVERKIT_PROFILE)
 endif()
 
 # Extra code for XPACC purposes
@@ -258,6 +264,7 @@ message(STATUS "Shared libraries:   ${BUILD_SHARED_LIBS}")
 message(STATUS "Install prefix:     ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "Examples:           ${EXAMPLES}")
 message(STATUS "Tests:              ${TESTS}")
+message(STATUS "Profiling:          ${PROFILE}")
 message(STATUS "")
 if(GLOBAL_WARNING_FLAG)
   message(STATUS "**** Warnings were produced. See details above. **** ")

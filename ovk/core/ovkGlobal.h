@@ -38,6 +38,12 @@ void OVK_PRIVATE(DebugAssert)(const char *File, int Line, const char *Format, ..
 #define OVK_DEBUG_ASSERT(...)
 #endif
 
+#ifdef OVERKIT_PROFILE
+#define OVK_PROFILE true
+#else
+#define OVK_PROFILE false
+#endif
+
 enum {
   OVK_MAX_DIMS = 3,
   OVK_NAME_LENGTH = 256,
