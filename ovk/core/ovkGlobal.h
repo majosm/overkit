@@ -65,7 +65,7 @@ typedef enum {
 
 typedef enum {
   OVK_NO_ERROR = 0,
-  OVK_ERROR_NO_MPI,
+  OVK_ERROR_MPI,
   OVK_ERROR_FILE_OPEN,
   OVK_ERROR_FILE_READ,
   OVK_ERROR_FILE_WRITE,
