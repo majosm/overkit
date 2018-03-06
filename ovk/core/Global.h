@@ -39,15 +39,11 @@ enum {
 };
 
 // Define MPI datatype for size_t
-#if SIZE_MAX == UINT_MAX
-  static const MPI_Datatype KMPI_UNSIGNED_SIZE = MPI_UNSIGNED;
-#elif SIZE_MAX == ULONG_MAX
-  static const MPI_Datatype KMPI_UNSIGNED_SIZE = MPI_UNSIGNED_LONG;
-#elif SIZE_MAX == ULLONG_MAX
-  static const MPI_Datatype KMPI_UNSIGNED_SIZE = MPI_UNSIGNED_LONG_LONG;
-#else
-#error "Failed to detect MPI datatype corresponding to size_t."
-#endif
+static const MPI_Datatype KMPI_UNSIGNED_SIZE =
+  sizeof(size_t) == sizeof(unsigned int) ? MPI_UNSIGNED :
+  (sizeof(size_t) == sizeof(unsigned long) ? MPI_UNSIGNED_LONG :
+  (sizeof(size_t) == sizeof(unsigned long long) ? MPI_UNSIGNED_LONG_LONG :
+  MPI_DATATYPE_NULL));
 
 static inline bool ValidLogLevel(ovk_log_level LogLevel) {
 

@@ -35,6 +35,22 @@ ovk_error ovkCreateContext(ovk_context **Context_, const ovk_context_params *Par
   OVK_DEBUG_ASSERT(Context_, "Invalid context pointer.");
   OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
 
+  int CommRank;
+  MPI_Comm_rank(Params->comm, &CommRank);
+
+  // Make sure size_t MPI type was detected successfully
+  if (KMPI_UNSIGNED_SIZE == MPI_DATATYPE_NULL) {
+    if (CommRank == 0) {
+      fprintf(stderr, "ERROR: Failed to detect MPI datatype corresponding to size_t.\n");
+      fflush(stderr);
+    }
+    if (Params->error_handler_type == OVK_ERROR_HANDLER_ABORT) {
+      MPI_Abort(Params->comm, OVK_ERROR_MPI);
+    } else {
+      return OVK_ERROR_MPI;
+    }
+  }
+
   MPI_Comm Comm;
   MPI_Comm_dup(Params->comm, &Comm);
 
