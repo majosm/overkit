@@ -1425,8 +1425,8 @@ static void ResetAllConnectivityEdits(ovk_domain *Domain) {
 }
 
 void ovkCollect(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
-  ovk_data_type DataType, int Count, ovk_collect_op CollectOp, const void **GridData,
-  ovk_array_layout GridDataLayout, void **DonorData) {
+  ovk_data_type DataType, int Count, ovk_collect_op CollectOp, const ovk_range *GridDataRange,
+  ovk_array_layout GridDataLayout, const void **GridData, void **DonorData) {
 
   int iCount;
 
@@ -1464,7 +1464,8 @@ void ovkCollect(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
   OVK_DEBUG_ASSERT(ovkRankHasExchangeDonorSide(Exchange), "Exchange %s does not have "
     "donor-side data on rank @rank@.", Container->info->name);
 
-  ExchangeCollect(Exchange, DataType, Count, CollectOp, GridData, GridDataLayout, DonorData);
+  ExchangeCollect(Exchange, DataType, Count, CollectOp, GridDataRange, GridDataLayout, GridData,
+    DonorData);
 
 }
 
@@ -1565,7 +1566,7 @@ void ovkWaitAny(int NumRequests, ovk_request **Requests, int *Index) {
 
 void ovkDisperse(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
   ovk_data_type DataType, int Count, ovk_disperse_op DisperseOp, const void **ReceiverData,
-  void **GridData, ovk_array_layout GridDataLayout) {
+  const ovk_range *GridDataRange, ovk_array_layout GridDataLayout, void **GridData) {
 
   int iCount;
 
@@ -1605,7 +1606,8 @@ void ovkDisperse(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
   OVK_DEBUG_ASSERT(ovkRankHasExchangeReceiverSide(Exchange), "Exchange %s does not have "
     "receiver-side data on rank @rank@.", Container->info->name);
 
-  ExchangeDisperse(Exchange, DataType, Count, DisperseOp, ReceiverData, GridData, GridDataLayout);
+  ExchangeDisperse(Exchange, DataType, Count, DisperseOp, ReceiverData, GridDataRange,
+    GridDataLayout, GridData);
 
 }
 

@@ -1563,8 +1563,8 @@ static void UpdateReceiveInfo(ovk_exchange *Exchange) {
   } while (false)
 
 void PRIVATE(ExchangeCollect)(const ovk_exchange *Exchange, ovk_data_type DataType, int Count,
-  ovk_collect_op CollectOp, const void **GridData, ovk_array_layout GridDataLayout,
-  void **DonorData) {
+  ovk_collect_op CollectOp, const ovk_range *GridDataRange, ovk_array_layout GridDataLayout,
+  const void **GridData, void **DonorData) {
 
   int iDim, iSend, iRecv, iCount;
   size_t iDonor, iGridPoint, iBuffer;
@@ -1599,6 +1599,8 @@ void PRIVATE(ExchangeCollect)(const ovk_exchange *Exchange, ovk_data_type DataTy
 
   ovk_range LocalRange;
   ovkGetGridPropertyLocalRange(DonorGridProperties, &LocalRange);
+
+  OVK_DEBUG_ASSERT(ovkRangeIncludes(GridDataRange, &LocalRange), "Invalid grid data range.");
 
   ovk_cart Cart;
   ovkGetGridCart(DonorGrid, &Cart);
@@ -1652,7 +1654,7 @@ void PRIVATE(ExchangeCollect)(const ovk_exchange *Exchange, ovk_data_type DataTy
         Exchange->collect_send_points[iSend][1][iSendPoint],
         Exchange->collect_send_points[iSend][2][iSendPoint]
       };
-      ovkRangeTupleToIndex(&LocalRange, GridDataLayout, Point, &iGridPoint);
+      ovkRangeTupleToIndex(GridDataRange, GridDataLayout, Point, &iGridPoint);
       switch (DataType) {
       case OVK_BOOL:
         PACK_COLLECT_SEND_BUFFER(bool, unsigned char);
@@ -1724,7 +1726,7 @@ void PRIVATE(ExchangeCollect)(const ovk_exchange *Exchange, ovk_data_type DataTy
             for (i = IntersectRange.b[0]; i < IntersectRange.e[0]; ++i) {
               int Point[MAX_DIMS] = {i, j, k};
               ovkRangeTupleToIndexSmall(&DonorRange, OVK_COLUMN_MAJOR, Point, &iPointInCell);
-              ovkRangeTupleToIndex(&LocalRange, GridDataLayout, Point, &iGridPoint);
+              ovkRangeTupleToIndex(GridDataRange, GridDataLayout, Point, &iGridPoint);
               for (iCount = 0; iCount < Count; ++iCount) {
                 ((double *)DonorPointData[iCount])[iPointInCell] =
                   ((const double *)GridData[iCount])[iGridPoint];
@@ -1740,7 +1742,7 @@ void PRIVATE(ExchangeCollect)(const ovk_exchange *Exchange, ovk_data_type DataTy
               int Point[MAX_DIMS] = {i, j, k};
               ovkCartPeriodicAdjust(&Cart, Point, Point);
               if (ovkRangeContains(&LocalRange, Point)) {
-                ovkRangeTupleToIndex(&LocalRange, GridDataLayout, Point, &iGridPoint);
+                ovkRangeTupleToIndex(GridDataRange, GridDataLayout, Point, &iGridPoint);
                 for (iCount = 0; iCount < Count; ++iCount) {
                   ((double *)DonorPointData[iCount])[iPointInCell] =
                     ((const double *)GridData[iCount])[iGridPoint];
@@ -2082,8 +2084,8 @@ void PRIVATE(ExchangeWaitAny)(int NumRequests, ovk_request **Requests, int *Inde
 }
 
 void PRIVATE(ExchangeDisperse)(const ovk_exchange *Exchange, ovk_data_type DataType, int Count,
-  ovk_disperse_op DisperseOp, const void **ReceiverData, void **GridData,
-  ovk_array_layout GridDataLayout) {
+  ovk_disperse_op DisperseOp, const void **ReceiverData, const ovk_range *GridDataRange,
+  ovk_array_layout GridDataLayout, void **GridData) {
 
   int iCount;
   size_t iReceiver, iPoint;
@@ -2105,8 +2107,11 @@ void PRIVATE(ExchangeDisperse)(const ovk_exchange *Exchange, ovk_data_type DataT
   const ovk_grid_properties *ReceiverGridProperties;
   ovkGetGridProperties(ReceiverGrid, &ReceiverGridProperties);
 
-  ovk_range LocalRange;
-  ovkGetGridPropertyLocalRange(ReceiverGridProperties, &LocalRange);
+  if (OVK_DEBUG) {
+    ovk_range LocalRange;
+    ovkGetGridPropertyLocalRange(ReceiverGridProperties, &LocalRange);
+    OVK_DEBUG_ASSERT(ovkRangeIncludes(GridDataRange, &LocalRange), "Invalid grid data range.");
+  }
 
   switch (DisperseOp) {
   case OVK_DISPERSE_OVERWRITE:
@@ -2116,7 +2121,7 @@ void PRIVATE(ExchangeDisperse)(const ovk_exchange *Exchange, ovk_data_type DataT
         Receivers->points[1][iReceiver],
         Receivers->points[2][iReceiver]
       };
-      ovkRangeTupleToIndex(&LocalRange, GridDataLayout, Point, &iPoint);
+      ovkRangeTupleToIndex(GridDataRange, GridDataLayout, Point, &iPoint);
       switch (DataType) {
       case OVK_BOOL:
         for (iCount = 0; iCount < Count; ++iCount) {

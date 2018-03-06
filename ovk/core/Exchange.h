@@ -86,8 +86,8 @@ void PRIVATE(UpdateExchange)(ovk_exchange *Exchange);
 #define UpdateExchange(...) PRIVATE(UpdateExchange)(__VA_ARGS__)
 
 void PRIVATE(ExchangeCollect)(const ovk_exchange *Exchange, ovk_data_type DataType, int Count,
-  ovk_collect_op CollectOp, const void **GridData, ovk_array_layout GridDataLayout,
-  void **DonorData);
+  ovk_collect_op CollectOp, const ovk_range *GridDataRange, ovk_array_layout GridDataLayout,
+  const void **GridData, void **DonorData);
 #define ExchangeCollect(...) PRIVATE(ExchangeCollect)(__VA_ARGS__)
 void PRIVATE(ExchangeSend)(const ovk_exchange *Exchange, ovk_data_type DataType, int Count,
   const void **DonorData, int Tag, ovk_request **Request);
@@ -100,8 +100,8 @@ void PRIVATE(ExchangeWaitAll)(int NumRequests, ovk_request **Requests);
 void PRIVATE(ExchangeWaitAny)(int NumRequests, ovk_request **Requests, int *Index);
 #define ExchangeWaitAny(...) PRIVATE(ExchangeWaitAny)(__VA_ARGS__)
 void PRIVATE(ExchangeDisperse)(const ovk_exchange *Exchange, ovk_data_type DataType, int Count,
-  ovk_disperse_op DisperseOp, const void **ReceiverData, void **GridData,
-  ovk_array_layout GridDataLayout);
+  ovk_disperse_op DisperseOp, const void **ReceiverData, const ovk_range *GridDataRange,
+  ovk_array_layout GridDataLayout, void **GridData);
 #define ExchangeDisperse(...) PRIVATE(ExchangeDisperse)(__VA_ARGS__)
 
 #ifdef __cplusplus
