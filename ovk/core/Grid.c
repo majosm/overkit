@@ -691,58 +691,6 @@ void ovkSetGridParamGeometryType(ovk_grid_params *Params, ovk_geometry_type Geom
 
 }
 
-void ovkGetGridParamLocalBegin(const ovk_grid_params *Params, int *LocalBegin) {
-
-  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
-  OVK_DEBUG_ASSERT(LocalBegin, "Invalid local begin pointer.");
-
-  int iDim;
-
-  for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    LocalBegin[iDim] = Params->local_range.b[iDim];
-  }
-
-}
-
-void ovkSetGridParamLocalBegin(ovk_grid_params *Params, const int *LocalBegin) {
-
-  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
-  OVK_DEBUG_ASSERT(LocalBegin, "Invalid local begin pointer.");
-
-  int iDim;
-
-  for (iDim = 0; iDim < Params->num_dims; ++iDim) {
-    Params->local_range.b[iDim] = LocalBegin[iDim];
-  }
-
-}
-
-void ovkGetGridParamLocalEnd(const ovk_grid_params *Params, int *LocalEnd) {
-
-  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
-  OVK_DEBUG_ASSERT(LocalEnd, "Invalid local end pointer.");
-
-  int iDim;
-
-  for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    LocalEnd[iDim] = Params->local_range.e[iDim];
-  }
-
-}
-
-void ovkSetGridParamLocalEnd(ovk_grid_params *Params, const int *LocalEnd) {
-
-  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
-  OVK_DEBUG_ASSERT(LocalEnd, "Invalid local end pointer.");
-
-  int iDim;
-
-  for (iDim = 0; iDim < Params->num_dims; ++iDim) {
-    Params->local_range.e[iDim] = LocalEnd[iDim];
-  }
-
-}
-
 void ovkGetGridParamLocalRange(const ovk_grid_params *Params, ovk_range *LocalRange) {
 
   OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");

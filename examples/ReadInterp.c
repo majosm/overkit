@@ -125,8 +125,9 @@ int main(int argc, char **argv) {
       ovkSetGridParamPeriodic(GridParams, InputGrid->periodic);
       ovkSetGridParamPeriodicStorage(GridParams, OVK_NO_OVERLAP_PERIODIC);
       ovkSetGridParamPeriodicLength(GridParams, InputGrid->periodic_length);
-      ovkSetGridParamLocalBegin(GridParams, InputGrid->is);
-      ovkSetGridParamLocalEnd(GridParams, InputGrid->ie);
+      ovk_range LocalRange;
+      ovkSetRange(&LocalRange, 2, InputGrid->is, InputGrid->ie);
+      ovkSetGridParamLocalRange(GridParams, &LocalRange);
       ovkCreateGridLocal(Domain, GridID, GridParams);
       ovkDestroyGridParams(Domain, &GridParams);
     } else {

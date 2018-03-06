@@ -135,8 +135,9 @@ void ExchangeTest(int argc, char **argv) {
       ovkSetGridParamName(GridParams, InputGrid->name);
       ovkSetGridParamComm(GridParams, InputGrid->comm);
       ovkSetGridParamSize(GridParams, InputGrid->global_size);
-      ovkSetGridParamLocalBegin(GridParams, InputGrid->is);
-      ovkSetGridParamLocalEnd(GridParams, InputGrid->ie);
+      ovk_range LocalRange;
+      ovkSetRange(&LocalRange, 2, InputGrid->is, InputGrid->ie);
+      ovkSetGridParamLocalRange(GridParams, &LocalRange);
       ovkCreateGridLocal(Domain, GridID, GridParams);
       ovkDestroyGridParams(Domain, &GridParams);
     } else {
@@ -153,8 +154,9 @@ void ExchangeTest(int argc, char **argv) {
 //       ovkSetGridParamName(GridParams, InputGrid->name);
 //       ovkSetGridParamComm(GridParams, InputGrid->comm);
 //       ovkSetGridParamSize(GridParams, InputGrid->global_size);
-//       ovkSetGridParamLocalBegin(GridParams, InputGrid->is);
-//       ovkSetGridParamLocalEnd(GridParams, InputGrid->ie);
+//       ovk_range LocalRange;
+//       ovkSetRange(&LocalRange, 2, InputGrid->is, InputGrid->ie);
+//       ovkSetGridParamLocalRange(GridParams, &LocalRange);
 //     }
 //     ovkCreateGrid(Domain, GridID, GridParams);
 //     if (InputGrid) {
@@ -171,8 +173,9 @@ void ExchangeTest(int argc, char **argv) {
 //       ovkSetGridParamName(GridParams[iGrid], InputGrid->name);
 //       ovkSetGridParamComm(GridParams[iGrid], InputGrid->comm);
 //       ovkSetGridParamSize(GridParams[iGrid], InputGrid->global_size);
-//       ovkSetGridParamLocalBegin(GridParams[iGrid], InputGrid->is);
-//       ovkSetGridParamLocalEnd(GridParams[iGrid], InputGrid->ie);
+//       ovk_range LocalRange;
+//       ovkSetRange(&LocalRange, 2, InputGrid->is, InputGrid->ie);
+//       ovkSetGridParamLocalRange(GridParams[iGrid], &LocalRange);
 //     }
 //   }
 
@@ -722,8 +725,9 @@ void AssembleTest(int argc, char **argv) {
       ovkSetGridParamName(GridParams, InputGrid->name);
       ovkSetGridParamComm(GridParams, InputGrid->comm);
       ovkSetGridParamSize(GridParams, InputGrid->global_size);
-      ovkSetGridParamLocalBegin(GridParams, InputGrid->is);
-      ovkSetGridParamLocalEnd(GridParams, InputGrid->ie);
+      ovk_range LocalRange;
+      ovkSetRange(&LocalRange, 2, InputGrid->is, InputGrid->ie);
+      ovkSetGridParamLocalRange(GridParams, &LocalRange);
       ovkCreateGridLocal(Domain, GridID, GridParams);
       ovkDestroyGridParams(Domain, &GridParams);
     } else {

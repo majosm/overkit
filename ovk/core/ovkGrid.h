@@ -43,10 +43,6 @@ void ovkGetGridParamPeriodicLength(const ovk_grid_params *Params, double *Period
 void ovkSetGridParamPeriodicLength(ovk_grid_params *Params, const double *PeriodicLength);
 void ovkGetGridParamGeometryType(const ovk_grid_params *Params, ovk_geometry_type *GeometryType);
 void ovkSetGridParamGeometryType(ovk_grid_params *Params, ovk_geometry_type GeometryType);
-void ovkGetGridParamLocalBegin(const ovk_grid_params *Params, int *LocalBegin);
-void ovkSetGridParamLocalBegin(ovk_grid_params *Params, const int *LocalBegin);
-void ovkGetGridParamLocalEnd(const ovk_grid_params *Params, int *LocalEnd);
-void ovkSetGridParamLocalEnd(ovk_grid_params *Params, const int *LocalEnd);
 void ovkSetGridParamLocalRange(ovk_grid_params *Params, const ovk_range *LocalRange);
 void ovkGetGridParamLocalRange(const ovk_grid_params *Params, ovk_range *LocalRange);
 
