@@ -20,9 +20,11 @@
 #include "ovk/core/PartitionHash.h"
 #include "ovk/core/ProfileUtils.h"
 #include "ovk/core/Range.h"
+#include "ovk/core/TextUtils.h"
 
 #include <limits.h>
 #include <stdio.h>
+#include <string.h>
 
 typedef struct {
   size_t count;
@@ -80,6 +82,7 @@ typedef struct {
 
 typedef struct {
   int id;
+  char name[OVK_NAME_LENGTH];
   int num_dims;
   MPI_Comm comm;
   int comm_size;
@@ -118,12 +121,13 @@ typedef struct {
 } t_xintout;
 
 static void CreateXINTOUT(t_xintout **XINTOUT, int NumDims, MPI_Comm Comm, int NumGrids,
-  int NumLocalGrids, const int *LocalGridIDs, const MPI_Comm *LocalGridComms,
-  const int **LocalGridGlobalSizes, t_logger *Logger, t_error_handler *ErrorHandler);
+  int NumLocalGrids, const int *LocalGridIDs, const char (*LocalGridNames)[OVK_NAME_LENGTH],
+  const MPI_Comm *LocalGridComms, const int **LocalGridGlobalSizes, t_logger *Logger,
+  t_error_handler *ErrorHandler);
 static void DestroyXINTOUT(t_xintout **XINTOUT);
 
-static void CreateXINTOUTGrid(t_xintout_grid **XINTOUTGrid, int ID, int NumDims, MPI_Comm Comm,
-  const int *GlobalSize, t_logger *Logger, t_error_handler *ErrorHandler);
+static void CreateXINTOUTGrid(t_xintout_grid **XINTOUTGrid, int ID, const char *Name, int NumDims,
+  MPI_Comm Comm, const int *GlobalSize, t_logger *Logger, t_error_handler *ErrorHandler);
 static void DestroyXINTOUTGrid(t_xintout_grid **XINTOUTGrid);
 
 static ovk_error ReadXINTOUT(t_xintout *XINTOUT, const char *HOPath, const char *XPath,
@@ -256,6 +260,7 @@ ovk_error ovkEXTImportXINTOUT(ovk_domain *Domain, const char *HOPath, const char
 
     const ovk_grid **LocalGrids = malloc(NumLocalGrids*sizeof(const ovk_grid *));
     int *LocalGridIDs = malloc(NumLocalGrids*sizeof(int));
+    char (*LocalGridNames)[OVK_NAME_LENGTH] = malloc(NumLocalGrids*sizeof(char[OVK_NAME_LENGTH]));
     MPI_Comm *LocalGridComms = malloc(NumLocalGrids*sizeof(MPI_Comm));
     int *LocalGridGlobalSizes[MAX_DIMS];
     LocalGridGlobalSizes[0] = malloc(MAX_DIMS*NumLocalGrids*sizeof(int));
@@ -269,12 +274,15 @@ ovk_error ovkEXTImportXINTOUT(ovk_domain *Domain, const char *HOPath, const char
         ovkGetGrid(Domain, GridID, &Grid);
         const ovk_grid_properties *GridProperties;
         ovkGetGridProperties(Grid, &GridProperties);
+        char Name[OVK_NAME_LENGTH];
         int GlobalSize[MAX_DIMS];
         MPI_Comm GridComm;
+        ovkGetGridPropertyName(GridProperties, Name);
         ovkGetGridPropertySize(GridProperties, GlobalSize);
         ovkGetGridPropertyComm(GridProperties, &GridComm);
         LocalGrids[iLocalGrid] = Grid;
         LocalGridIDs[iLocalGrid] = GridID;
+        strncpy(LocalGridNames[iLocalGrid], Name, OVK_NAME_LENGTH);
         LocalGridComms[iLocalGrid] = GridComm;
         for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
           LocalGridGlobalSizes[iDim][iLocalGrid] = GlobalSize[iDim];
@@ -293,8 +301,9 @@ ovk_error ovkEXTImportXINTOUT(ovk_domain *Domain, const char *HOPath, const char
     StartProfileSync(Profiler, CreateTime, Comm);
 
     t_xintout *XINTOUT;
-    CreateXINTOUT(&XINTOUT, NumDims, Comm, NumGrids, NumLocalGrids, LocalGridIDs, LocalGridComms,
-      (const int **)LocalGridGlobalSizes, Logger, ErrorHandler);
+    CreateXINTOUT(&XINTOUT, NumDims, Comm, NumGrids, NumLocalGrids, LocalGridIDs,
+      (const char (*)[])LocalGridNames, LocalGridComms, (const int **)LocalGridGlobalSizes, Logger,
+      ErrorHandler);
 
     EndProfileSync(Profiler, CreateTime, Comm);
     StartProfileSync(Profiler, ReadTime, Comm);
@@ -367,8 +376,9 @@ ovk_error ovkEXTExportXINTOUT(const ovk_domain *Domain, const char *HOPath, cons
 }
 
 static void CreateXINTOUT(t_xintout **XINTOUT_, int NumDims, MPI_Comm Comm, int NumGrids,
-  int NumLocalGrids, const int *LocalGridIDs, const MPI_Comm *LocalGridComms,
-  const int **LocalGridGlobalSizes, t_logger *Logger, t_error_handler *ErrorHandler) {
+  int NumLocalGrids, const int *LocalGridIDs, const char (*LocalGridNames)[OVK_NAME_LENGTH],
+  const MPI_Comm *LocalGridComms, const int **LocalGridGlobalSizes, t_logger *Logger,
+  t_error_handler *ErrorHandler) {
 
   int iLocalGrid;
 
@@ -399,8 +409,9 @@ static void CreateXINTOUT(t_xintout **XINTOUT_, int NumDims, MPI_Comm Comm, int 
       LocalGridGlobalSizes[1][iLocalGrid],
       LocalGridGlobalSizes[2][iLocalGrid]
     };
-    CreateXINTOUTGrid(XINTOUT->grids+iLocalGrid, LocalGridIDs[iLocalGrid], NumDims,
-      LocalGridComms[iLocalGrid], GlobalSize, Logger, ErrorHandler);
+    CreateXINTOUTGrid(XINTOUT->grids+iLocalGrid, LocalGridIDs[iLocalGrid],
+      LocalGridNames[iLocalGrid], NumDims, LocalGridComms[iLocalGrid], GlobalSize, Logger,
+      ErrorHandler);
   }
 
   XINTOUT->connections.count = 0;
@@ -439,8 +450,8 @@ static void DestroyXINTOUT(t_xintout **XINTOUT_) {
 
 }
 
-static void CreateXINTOUTGrid(t_xintout_grid **XINTOUTGrid_, int ID, int NumDims, MPI_Comm Comm,
-  const int *GlobalSize, t_logger *Logger, t_error_handler *ErrorHandler) {
+static void CreateXINTOUTGrid(t_xintout_grid **XINTOUTGrid_, int ID, const char *Name, int NumDims,
+  MPI_Comm Comm, const int *GlobalSize, t_logger *Logger, t_error_handler *ErrorHandler) {
 
   int iDim;
 
@@ -454,6 +465,9 @@ static void CreateXINTOUTGrid(t_xintout_grid **XINTOUTGrid_, int ID, int NumDims
   MPI_Comm_rank(Comm, &CommRank);
 
   XINTOUTGrid->id = ID;
+
+  strncpy(XINTOUTGrid->name, Name, OVK_NAME_LENGTH);
+
   XINTOUTGrid->num_dims = NumDims;
   XINTOUTGrid->comm = Comm;
   XINTOUTGrid->comm_size = CommSize;
@@ -511,15 +525,19 @@ static ovk_error ReadXINTOUT(t_xintout *XINTOUT, const char *HOPath, const char 
   int iLocalGrid;
 
   MPI_Comm Comm = XINTOUT->comm;
+  int CommRank = XINTOUT->comm_rank;
 
   MPI_Barrier(Comm);
 
   t_error_handler *ErrorHandler = XINTOUT->error_handler;
+  t_logger *Logger = XINTOUT->logger;
 
   int NumLocalGrids = XINTOUT->num_local_grids;
 
   OVK_EH_INIT(ErrorHandler);
   ovk_error Error = OVK_NO_ERROR;
+
+  LogStatus(Logger, CommRank == 0, 0, "Reading XINTOUT files '%s' and '%s'...", HOPath, XPath);
 
   ovk_ext_endian Endian;
   ovk_ext_xintout_format Format;
@@ -556,6 +574,8 @@ static ovk_error ReadXINTOUT(t_xintout *XINTOUT, const char *HOPath, const char 
     OVK_EH_CHECK_ALL(ErrorHandler, Error, Comm);
 
   MPI_Barrier(Comm);
+
+  LogStatus(Logger, CommRank == 0, 0, "Finished reading XINTOUT files.");
 
   OVK_EH_FINALIZE(ErrorHandler);
 
@@ -1156,6 +1176,15 @@ static ovk_error ReadDonors(t_xintout_grid *XINTOUTGrid, const char *HOPath, con
     &NumChunks, &ChunkSize);
   bool HasChunk = CommRank % ChunkRankInterval == 0;
 
+  if (LoggingStatus(Logger)) {
+    char NumDonorsString[NUMBER_STRING_LENGTH+6];
+    char NumRanksString[NUMBER_STRING_LENGTH+9];
+    PluralizeLabel(NumDonors, "donors", "donor", NumDonorsString);
+    PluralizeLabel(NumChunks, "I/O ranks", "I/O rank", NumRanksString);
+    LogStatus(Logger, CommRank == 0, 1, "Grid %s has %s; using %s.",
+      XINTOUTGrid->name, NumDonorsString, NumRanksString);
+  }
+
   XINTOUTDonors->chunk_size = ChunkSize;
   XINTOUTDonors->has_chunk = HasChunk;
 
@@ -1474,6 +1503,15 @@ static ovk_error ReadReceivers(t_xintout_grid *XINTOUTGrid, const char *HOPath, 
     &NumChunks, &ChunkSize);
   bool HasChunk = CommRank % ChunkRankInterval == 0;
 
+  if (LoggingStatus(Logger)) {
+    char NumReceiversString[NUMBER_STRING_LENGTH+9];
+    char NumRanksString[NUMBER_STRING_LENGTH+9];
+    PluralizeLabel(NumReceivers, "receivers", "receiver", NumReceiversString);
+    PluralizeLabel(NumChunks, "I/O ranks", "I/O rank", NumRanksString);
+    LogStatus(Logger, CommRank == 0, 1, "Grid %s has %s; using %s.",
+      XINTOUTGrid->name, NumReceiversString, NumRanksString);
+  }
+
   XINTOUTReceivers->chunk_size = ChunkSize;
   XINTOUTReceivers->has_chunk = HasChunk;
 
@@ -1642,6 +1680,12 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
   MPI_Comm Comm = XINTOUT->comm;
   int CommSize = XINTOUT->comm_size;
   int CommRank = XINTOUT->comm_rank;
+
+  MPI_Barrier(Comm);
+
+  t_logger *Logger = XINTOUT->logger;
+
+  LogStatus(Logger, CommRank == 0, 0, "Matching donors and receivers...");
 
   int MapToBinsTime = GetProfilerTimerID(Profiler, "XINTOUT::Match::MapToBins");
   int HandshakeTime = GetProfilerTimerID(Profiler, "XINTOUT::Match::Handshake");
@@ -2170,6 +2214,10 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
   }
   OMDestroy(&ReceiverRecvs);
 
+  MPI_Barrier(Comm);
+
+  LogStatus(Logger, CommRank == 0, 0, "Finished matching donors and receivers.");
+
 }
 
 static void DistributeConnectivityData(const t_xintout *XINTOUT, const ovk_grid **LocalGrids,
@@ -2177,12 +2225,25 @@ static void DistributeConnectivityData(const t_xintout *XINTOUT, const ovk_grid 
 
   int iLocalGrid;
 
+  MPI_Comm Comm = XINTOUT->comm;
+  int CommRank = XINTOUT->comm_rank;
+
+  MPI_Barrier(Comm);
+
+  t_logger *Logger = XINTOUT->logger;
+
+  LogStatus(Logger, CommRank == 0, 0, "Distributing connectivity data to ranks...");
+
   for (iLocalGrid = 0; iLocalGrid < XINTOUT->num_local_grids; ++iLocalGrid) {
     const t_xintout_grid *XINTOUTGrid = XINTOUT->grids[iLocalGrid];
     const ovk_grid *Grid = LocalGrids[iLocalGrid];
     DistributeGridConnectivityData(XINTOUTGrid, Grid, LocalDonorData+iLocalGrid,
       LocalReceiverData+iLocalGrid, Profiler);
   }
+
+  MPI_Barrier(Comm);
+
+  LogStatus(Logger, CommRank == 0, 0, "Finished distributing connectivity data to ranks.");
 
 }
 
@@ -2790,8 +2851,20 @@ static void ImportConnectivityData(int NumGrids, int NumLocalGrids, int *LocalGr
   const ovk_domain_properties *DomainProperties;
   ovkGetDomainProperties(Domain, &DomainProperties);
 
+  char DomainName[OVK_NAME_LENGTH];
+  ovkGetDomainPropertyName(DomainProperties, DomainName);
+
   MPI_Comm Comm;
+  int CommRank;
   ovkGetDomainPropertyComm(DomainProperties, &Comm);
+  ovkGetDomainPropertyCommRank(DomainProperties, &CommRank);
+
+  MPI_Barrier(Comm);
+
+  t_logger *Logger;
+  GetDomainLogger(Domain, &Logger);
+
+  LogStatus(Logger, CommRank == 0, 0, "Importing connectivity data into domain %s...", DomainName);
 
   size_t **NumConnections = malloc(NumGrids*sizeof(size_t *));
   NumConnections[0] = malloc(NumGrids*NumGrids*sizeof(size_t));
@@ -2943,6 +3016,11 @@ static void ImportConnectivityData(int NumGrids, int NumLocalGrids, int *LocalGr
 
   free(NumConnections[0]);
   free(NumConnections);
+
+  MPI_Barrier(Comm);
+
+  LogStatus(Logger, CommRank == 0, 0, "Finished importing connectivity data into domain %s.",
+    DomainName);
 
 }
 
