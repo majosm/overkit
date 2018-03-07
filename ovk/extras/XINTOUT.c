@@ -594,7 +594,8 @@ static ovk_error ReadGlobalInfo(const t_xintout *XINTOUT, const char *HOPath,
     int ReadSize;
 
     StartProfile(Profiler, MPIIOTime);
-    MPIError = MPI_File_open(MPI_COMM_SELF, HOPath, MPI_MODE_RDONLY, MPI_INFO_NULL, &HOFile);
+    MPIError = MPI_File_open(MPI_COMM_SELF, (char *)HOPath, MPI_MODE_RDONLY, MPI_INFO_NULL,
+      &HOFile);
     EndProfile(Profiler, MPIIOTime);
     if (MPIError != MPI_SUCCESS) {
       LogError(Logger, true, "Unable to open file '%s'.", HOPath);
@@ -840,7 +841,8 @@ static ovk_error ReadGridInfo(const t_xintout_grid *XINTOUTGrid, const char *HOP
     size_t NumInterpCoefs;
 
     StartProfile(Profiler, MPIIOTime);
-    MPIError = MPI_File_open(MPI_COMM_SELF, HOPath, MPI_MODE_RDONLY, MPI_INFO_NULL, &HOFile);
+    MPIError = MPI_File_open(MPI_COMM_SELF, (char *)HOPath, MPI_MODE_RDONLY, MPI_INFO_NULL,
+      &HOFile);
     EndProfile(Profiler, MPIIOTime);
     if (MPIError != MPI_SUCCESS) {
       LogError(Logger, true, "Unable to open file '%s'.", HOPath);
@@ -849,7 +851,8 @@ static ovk_error ReadGridInfo(const t_xintout_grid *XINTOUTGrid, const char *HOP
     }
 
     StartProfile(Profiler, MPIIOTime);
-    MPIError = MPI_File_open(MPI_COMM_SELF, XPath, MPI_MODE_RDONLY, MPI_INFO_NULL, &XFile);
+    MPIError = MPI_File_open(MPI_COMM_SELF, (char *)XPath, MPI_MODE_RDONLY, MPI_INFO_NULL,
+      &XFile);
     EndProfile(Profiler, MPIIOTime);
     if (MPIError != MPI_SUCCESS) {
       LogError(Logger, true, "Unable to open file '%s'.", XPath);
@@ -1193,7 +1196,7 @@ static ovk_error ReadDonors(t_xintout_grid *XINTOUTGrid, const char *HOPath, con
     int MPIIOTime = GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO");
 
     StartProfileSync(Profiler, MPIIOTime, ChunkComm);
-    MPIError = MPI_File_open(ChunkComm, HOPath, MPI_MODE_RDONLY, MPIInfo, &HOFile);
+    MPIError = MPI_File_open(ChunkComm, (char *)HOPath, MPI_MODE_RDONLY, MPIInfo, &HOFile);
     EndProfileSync(Profiler, MPIIOTime, ChunkComm);
     if (MPIError != MPI_SUCCESS) {
       LogError(Logger, true, "Unable to open file '%s'.", HOPath);
@@ -1202,7 +1205,7 @@ static ovk_error ReadDonors(t_xintout_grid *XINTOUTGrid, const char *HOPath, con
     }
 
     StartProfileSync(Profiler, MPIIOTime, ChunkComm);
-    MPIError = MPI_File_open(ChunkComm, XPath, MPI_MODE_RDONLY, MPIInfo, &XFile);
+    MPIError = MPI_File_open(ChunkComm, (char *)XPath, MPI_MODE_RDONLY, MPIInfo, &XFile);
     EndProfileSync(Profiler, MPIIOTime, ChunkComm);
     if (MPIError != MPI_SUCCESS) {
       LogError(Logger, true, "Unable to open file '%s'.", XPath);
@@ -1515,7 +1518,7 @@ static ovk_error ReadReceivers(t_xintout_grid *XINTOUTGrid, const char *HOPath, 
     int MPIIOTime = GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO");
 
     StartProfileSync(Profiler, MPIIOTime, ChunkComm);
-    MPIError = MPI_File_open(ChunkComm, HOPath, MPI_MODE_RDONLY, MPIInfo, &HOFile);
+    MPIError = MPI_File_open(ChunkComm, (char *)HOPath, MPI_MODE_RDONLY, MPIInfo, &HOFile);
     EndProfileSync(Profiler, MPIIOTime, ChunkComm);
     if (MPIError != MPI_SUCCESS) {
       LogError(Logger, true, "Unable to open file '%s'.", HOPath);
