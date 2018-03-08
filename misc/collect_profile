@@ -1,0 +1,32 @@
+#! /bin/bash
+
+set -e
+
+if [ $# -eq 0 ]; then
+  echo "ERROR: Missing argument."
+  exit 1
+fi
+
+CollectData() {
+  file=$1
+  name=$2
+  grep "$name: " $file | cut -d' ' -f3 | tr '\n' ' '
+}
+
+PrintData() {
+  name=$1
+  data=($2)
+  printf "$name"
+  for ((i=0; i<${#data[@]}; i++)); do
+    printf ",%s" ${data[$i]}
+  done
+  printf "\n"
+}
+
+file=$1
+
+PrintData "" "1 2 4 8 16 32 64 128 256 512"
+PrintData "Read" "$(CollectData $file "XINTOUT::Read")"
+PrintData "Match" "$(CollectData $file "XINTOUT::Match")"
+PrintData "Distribute" "$(CollectData $file "XINTOUT::Distribute")"
+PrintData "Import" "$(CollectData $file "XINTOUT::Import")"
