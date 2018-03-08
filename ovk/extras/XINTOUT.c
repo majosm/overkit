@@ -230,7 +230,10 @@ ovk_error ovkEXTImportXINTOUT(ovk_domain *Domain, const char *HOPath, const char
   AddProfilerTimer(Profiler, "XINTOUT::Create");
   AddProfilerTimer(Profiler, "XINTOUT::Destroy");
   AddProfilerTimer(Profiler, "XINTOUT::Read");
-  AddProfilerTimer(Profiler, "XINTOUT::Read::MPI-IO");
+  AddProfilerTimer(Profiler, "XINTOUT::Read::MPI-IO::Open");
+  AddProfilerTimer(Profiler, "XINTOUT::Read::MPI-IO::Close");
+  AddProfilerTimer(Profiler, "XINTOUT::Read::MPI-IO::Read");
+  AddProfilerTimer(Profiler, "XINTOUT::Read::MPI-IO::Other");
   AddProfilerTimer(Profiler, "XINTOUT::Match");
   AddProfilerTimer(Profiler, "XINTOUT::Match::MapToBins");
   AddProfilerTimer(Profiler, "XINTOUT::Match::Handshake");
@@ -604,7 +607,8 @@ static ovk_error ReadGlobalInfo(const t_xintout *XINTOUT, const char *HOPath,
   ovk_ext_xintout_format Format;
   bool WithIBlank;
 
-  int MPIIOTime = GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO");
+  int MPIIOOpenTime = GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Open");
+  int MPIIOCloseTime = GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Close");
 
   if (CommRank == 0) {
 
@@ -613,10 +617,10 @@ static ovk_error ReadGlobalInfo(const t_xintout *XINTOUT, const char *HOPath,
     int MPIError;
     int ReadSize;
 
-    StartProfile(Profiler, MPIIOTime);
+    StartProfile(Profiler, MPIIOOpenTime);
     MPIError = MPI_File_open(MPI_COMM_SELF, (char *)HOPath, MPI_MODE_RDONLY, MPI_INFO_NULL,
       &HOFile);
-    EndProfile(Profiler, MPIIOTime);
+    EndProfile(Profiler, MPIIOOpenTime);
     if (MPIError != MPI_SUCCESS) {
       LogError(Logger, true, "Unable to open file '%s'.", HOPath);
       Error = OVK_ERROR_FILE_OPEN;
@@ -745,9 +749,9 @@ static ovk_error ReadGlobalInfo(const t_xintout *XINTOUT, const char *HOPath,
     }
 
     close_ho:
-      StartProfile(Profiler, MPIIOTime);
+      StartProfile(Profiler, MPIIOCloseTime);
       MPI_File_close(&HOFile);
-      EndProfile(Profiler, MPIIOTime);
+      EndProfile(Profiler, MPIIOCloseTime);
 
   }
 
@@ -785,13 +789,13 @@ static bool DetectFormat(MPI_File HOFile, ovk_ext_endian *Endian_, ovk_ext_xinto
   ovk_ext_endian Endian;
   ovk_ext_xintout_format Format;
 
-  int MPIIOTime = GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO");
+  int MPIIOReadTime = GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Read");
 
   unsigned char InitialBytes[sizeof(int)];
   MPI_Status Status;
-  StartProfile(Profiler, MPIIOTime);
+  StartProfile(Profiler, MPIIOReadTime);
   int MPIError = MPI_File_read_at(HOFile, 0, InitialBytes, sizeof(int), MPI_BYTE, &Status);
-  EndProfile(Profiler, MPIIOTime);
+  EndProfile(Profiler, MPIIOReadTime);
   if (MPIError != MPI_SUCCESS) return false;
 
   // If little endian, the first byte will be the size of the file header data
@@ -847,7 +851,8 @@ static ovk_error ReadGridInfo(const t_xintout_grid *XINTOUTGrid, const char *HOP
   MPI_Offset HODonorCellsOffset, HODonorCoordsOffset, HOReceiverPointsOffset,
     HOReceiverConnectionIDsOffset, XDonorSizesOffset, XDonorInterpCoefsOffset;
 
-  int MPIIOTime = GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO");
+  int MPIIOOpenTime = GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Open");
+  int MPIIOCloseTime = GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Close");
 
   if (CommRank == 0) {
 
@@ -860,20 +865,20 @@ static ovk_error ReadGridInfo(const t_xintout_grid *XINTOUTGrid, const char *HOP
     int GridSize[MAX_DIMS];
     size_t NumInterpCoefs;
 
-    StartProfile(Profiler, MPIIOTime);
+    StartProfile(Profiler, MPIIOOpenTime);
     MPIError = MPI_File_open(MPI_COMM_SELF, (char *)HOPath, MPI_MODE_RDONLY, MPI_INFO_NULL,
       &HOFile);
-    EndProfile(Profiler, MPIIOTime);
+    EndProfile(Profiler, MPIIOOpenTime);
     if (MPIError != MPI_SUCCESS) {
       LogError(Logger, true, "Unable to open file '%s'.", HOPath);
       Error = OVK_ERROR_FILE_OPEN;
       OVK_EH_HANDLE_GOTO(ErrorHandler, Error, done_reading);
     }
 
-    StartProfile(Profiler, MPIIOTime);
+    StartProfile(Profiler, MPIIOOpenTime);
     MPIError = MPI_File_open(MPI_COMM_SELF, (char *)XPath, MPI_MODE_RDONLY, MPI_INFO_NULL,
       &XFile);
-    EndProfile(Profiler, MPIIOTime);
+    EndProfile(Profiler, MPIIOOpenTime);
     if (MPIError != MPI_SUCCESS) {
       LogError(Logger, true, "Unable to open file '%s'.", XPath);
       Error = OVK_ERROR_FILE_OPEN;
@@ -1097,14 +1102,14 @@ static ovk_error ReadGridInfo(const t_xintout_grid *XINTOUTGrid, const char *HOP
     XDonorInterpCoefsOffset = XGridOffset;
 
     close_x:
-      StartProfile(Profiler, MPIIOTime);
+      StartProfile(Profiler, MPIIOCloseTime);
       MPI_File_close(&XFile);
-      EndProfile(Profiler, MPIIOTime);
+      EndProfile(Profiler, MPIIOCloseTime);
 
     close_ho:
-      StartProfile(Profiler, MPIIOTime);
+      StartProfile(Profiler, MPIIOCloseTime);
       MPI_File_close(&HOFile);
-      EndProfile(Profiler, MPIIOTime);
+      EndProfile(Profiler, MPIIOCloseTime);
 
   }
 
@@ -1222,20 +1227,22 @@ static ovk_error ReadDonors(t_xintout_grid *XINTOUTGrid, const char *HOPath, con
     MPI_Offset DatasetOffset, ReadOffset;
     int ReadSize;
 
-    int MPIIOTime = GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO");
+    int MPIIOOpenTime = GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Open");
+    int MPIIOCloseTime = GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Close");
+    int MPIIOOtherTime = GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Other");
 
-    StartProfileSync(Profiler, MPIIOTime, ChunkComm);
+    StartProfileSync(Profiler, MPIIOOpenTime, ChunkComm);
     MPIError = MPI_File_open(ChunkComm, (char *)HOPath, MPI_MODE_RDONLY, MPIInfo, &HOFile);
-    EndProfileSync(Profiler, MPIIOTime, ChunkComm);
+    EndProfileSync(Profiler, MPIIOOpenTime, ChunkComm);
     if (MPIError != MPI_SUCCESS) {
       LogError(Logger, true, "Unable to open file '%s'.", HOPath);
       Error = OVK_ERROR_FILE_OPEN;
       OVK_EH_HANDLE_GOTO(ErrorHandler, Error, free_comm);
     }
 
-    StartProfileSync(Profiler, MPIIOTime, ChunkComm);
+    StartProfileSync(Profiler, MPIIOOpenTime, ChunkComm);
     MPIError = MPI_File_open(ChunkComm, (char *)XPath, MPI_MODE_RDONLY, MPIInfo, &XFile);
-    EndProfileSync(Profiler, MPIIOTime, ChunkComm);
+    EndProfileSync(Profiler, MPIIOOpenTime, ChunkComm);
     if (MPIError != MPI_SUCCESS) {
       LogError(Logger, true, "Unable to open file '%s'.", XPath);
       Error = OVK_ERROR_FILE_OPEN;
@@ -1268,9 +1275,9 @@ static ovk_error ReadDonors(t_xintout_grid *XINTOUTGrid, const char *HOPath, con
     DatasetOffset = XSizesOffset;
     for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
       ReadOffset = DatasetOffset + LocalBegin*sizeof(int);
-      StartProfileSync(Profiler, MPIIOTime, ChunkComm);
+      StartProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
       MPI_File_set_view(XFile, ReadOffset, MPI_INT, MPI_INT, "native", MPIInfo);
-      EndProfileSync(Profiler, MPIIOTime, ChunkComm);
+      EndProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
       File_read_all_endian(XFile, Sizes[iDim], (int)NumLocalDonors, MPI_INT, Endian,
         &Status, Profiler, ChunkComm);
       MPI_Get_count(&Status, MPI_INT, &ReadSize);
@@ -1314,9 +1321,9 @@ static ovk_error ReadDonors(t_xintout_grid *XINTOUTGrid, const char *HOPath, con
     DatasetOffset = HOCellsOffset;
     for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
       ReadOffset = DatasetOffset + LocalBegin*sizeof(int);
-      StartProfileSync(Profiler, MPIIOTime, ChunkComm);
+      StartProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
       MPI_File_set_view(HOFile, ReadOffset, MPI_INT, MPI_INT, "native", MPIInfo);
-      EndProfileSync(Profiler, MPIIOTime, ChunkComm);
+      EndProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
       File_read_all_endian(HOFile, Data->extents[0][iDim], (int)NumLocalDonors, MPI_INT, Endian,
         &Status, Profiler, ChunkComm);
       MPI_Get_count(&Status, MPI_INT, &ReadSize);
@@ -1362,9 +1369,9 @@ static ovk_error ReadDonors(t_xintout_grid *XINTOUTGrid, const char *HOPath, con
     DatasetOffset = HOCoordsOffset;
     for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
       ReadOffset = DatasetOffset + LocalBegin*sizeof(double);
-      StartProfileSync(Profiler, MPIIOTime, ChunkComm);
+      StartProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
       MPI_File_set_view(HOFile, ReadOffset, MPI_DOUBLE, MPI_DOUBLE, "native", MPIInfo);
-      EndProfileSync(Profiler, MPIIOTime, ChunkComm);
+      EndProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
       File_read_all_endian(HOFile, Data->coords[iDim], (int)NumLocalDonors, MPI_DOUBLE, Endian,
         &Status, Profiler, ChunkComm);
       MPI_Get_count(&Status, MPI_DOUBLE, &ReadSize);
@@ -1410,9 +1417,9 @@ static ovk_error ReadDonors(t_xintout_grid *XINTOUTGrid, const char *HOPath, con
     DatasetOffset = XInterpCoefsOffset;
     for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
       ReadOffset = DatasetOffset + NumInterpCoefsBeforeChunk[iDim]*sizeof(double);
-      StartProfileSync(Profiler, MPIIOTime, ChunkComm);
+      StartProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
       MPI_File_set_view(XFile, ReadOffset, MPI_DOUBLE, MPI_DOUBLE, "native", MPIInfo);
-      EndProfileSync(Profiler, MPIIOTime, ChunkComm);
+      EndProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
       File_read_all_endian(XFile, Buffer, (int)NumLocalInterpCoefs[iDim], MPI_DOUBLE, Endian,
         &Status, Profiler, ChunkComm);
       MPI_Get_count(&Status, MPI_DOUBLE, &ReadSize);
@@ -1443,14 +1450,14 @@ static ovk_error ReadDonors(t_xintout_grid *XINTOUTGrid, const char *HOPath, con
     free(InterpCoefs);
 
     close_x:
-      StartProfileSync(Profiler, MPIIOTime, ChunkComm);
+      StartProfileSync(Profiler, MPIIOCloseTime, ChunkComm);
       MPI_File_close(&XFile);
-      EndProfileSync(Profiler, MPIIOTime, ChunkComm);
+      EndProfileSync(Profiler, MPIIOCloseTime, ChunkComm);
 
     close_ho:
-      StartProfileSync(Profiler, MPIIOTime, ChunkComm);
+      StartProfileSync(Profiler, MPIIOCloseTime, ChunkComm);
       MPI_File_close(&HOFile);
-      EndProfileSync(Profiler, MPIIOTime, ChunkComm);
+      EndProfileSync(Profiler, MPIIOCloseTime, ChunkComm);
 
     free_comm:
       MPI_Comm_free(&ChunkComm);
@@ -1553,11 +1560,13 @@ static ovk_error ReadReceivers(t_xintout_grid *XINTOUTGrid, const char *HOPath, 
     MPI_Offset DatasetOffset, ReadOffset;
     int ReadSize;
 
-    int MPIIOTime = GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO");
+    int MPIIOOpenTime = GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Open");
+    int MPIIOCloseTime = GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Close");
+    int MPIIOOtherTime = GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Other");
 
-    StartProfileSync(Profiler, MPIIOTime, ChunkComm);
+    StartProfileSync(Profiler, MPIIOOpenTime, ChunkComm);
     MPIError = MPI_File_open(ChunkComm, (char *)HOPath, MPI_MODE_RDONLY, MPIInfo, &HOFile);
-    EndProfileSync(Profiler, MPIIOTime, ChunkComm);
+    EndProfileSync(Profiler, MPIIOOpenTime, ChunkComm);
     if (MPIError != MPI_SUCCESS) {
       LogError(Logger, true, "Unable to open file '%s'.", HOPath);
       Error = OVK_ERROR_FILE_OPEN;
@@ -1585,9 +1594,9 @@ static ovk_error ReadReceivers(t_xintout_grid *XINTOUTGrid, const char *HOPath, 
     DatasetOffset = HOPointsOffset;
     for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
       ReadOffset = DatasetOffset + LocalBegin*sizeof(int);
-      StartProfileSync(Profiler, MPIIOTime, ChunkComm);
+      StartProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
       MPI_File_set_view(HOFile, ReadOffset, MPI_INT, MPI_INT, "native", MPIInfo);
-      EndProfileSync(Profiler, MPIIOTime, ChunkComm);
+      EndProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
       File_read_all_endian(HOFile, Data->points[iDim], (int)NumLocalReceivers, MPI_INT, Endian,
         &Status, Profiler, ChunkComm);
       MPI_Get_count(&Status, MPI_INT, &ReadSize);
@@ -1621,9 +1630,9 @@ static ovk_error ReadReceivers(t_xintout_grid *XINTOUTGrid, const char *HOPath, 
 
     DatasetOffset = HOConnectionIDsOffset;
     ReadOffset = DatasetOffset+LocalBegin*ConnectionIDSize;
-    StartProfileSync(Profiler, MPIIOTime, ChunkComm);
+    StartProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
     MPI_File_set_view(HOFile, ReadOffset, ConnectionIDType, ConnectionIDType, "native", MPIInfo);
-    EndProfileSync(Profiler, MPIIOTime, ChunkComm);
+    EndProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
     File_read_all_endian(HOFile, ConnectionIDs, (int)NumLocalReceivers, ConnectionIDType, Endian,
       &Status, Profiler, ChunkComm);
     MPI_Get_count(&Status, ConnectionIDType, &ReadSize);
@@ -1651,9 +1660,9 @@ static ovk_error ReadReceivers(t_xintout_grid *XINTOUTGrid, const char *HOPath, 
       OVK_EH_CHECK_GOTO(ErrorHandler, Error, close_ho);
 
     close_ho:
-      StartProfileSync(Profiler, MPIIOTime, ChunkComm);
+      StartProfileSync(Profiler, MPIIOCloseTime, ChunkComm);
       MPI_File_close(&HOFile);
-      EndProfileSync(Profiler, MPIIOTime, ChunkComm);
+      EndProfileSync(Profiler, MPIIOCloseTime, ChunkComm);
 
     free_comm:
       MPI_Comm_free(&ChunkComm);
@@ -3405,10 +3414,10 @@ static void Chunkify(size_t Count, int MaxChunks, size_t TargetChunkSize, int Ad
 static int File_read_all_endian(MPI_File File, void *Buffer, int Count, MPI_Datatype DataType,
   ovk_ext_endian Endian, MPI_Status *Status, t_profiler *Profiler, MPI_Comm Comm) {
 
-  int MPIIOTime = GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO");
-  StartProfileSync(Profiler, MPIIOTime, Comm);
+  int MPIIOReadTime = GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Read");
+  StartProfileSync(Profiler, MPIIOReadTime, Comm);
   int MPIError = MPI_File_read_all(File, Buffer, Count, DataType, Status);
-  EndProfileSync(Profiler, MPIIOTime, Comm);
+  EndProfileSync(Profiler, MPIIOReadTime, Comm);
 
   if (MPIError == MPI_SUCCESS) {
     if (Endian != MachineEndian()) {
@@ -3425,10 +3434,10 @@ static int File_read_all_endian(MPI_File File, void *Buffer, int Count, MPI_Data
 static int File_read_at_endian(MPI_File File, MPI_Offset Offset, void *Buffer, int Count,
   MPI_Datatype DataType, ovk_ext_endian Endian, MPI_Status *Status, t_profiler *Profiler) {
 
-  int MPIIOTime = GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO");
-  StartProfile(Profiler, MPIIOTime);
+  int MPIIOReadTime = GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Read");
+  StartProfile(Profiler, MPIIOReadTime);
   int MPIError = MPI_File_read_at(File, Offset, Buffer, Count, DataType, Status);
-  EndProfile(Profiler, MPIIOTime);
+  EndProfile(Profiler, MPIIOReadTime);
 
   if (MPIError == MPI_SUCCESS) {
     if (Endian != MachineEndian()) {
