@@ -3041,6 +3041,8 @@ static void ImportDonors(const t_donor_data *DonorData, int NumDestinationGrids,
   int iPoint;
   size_t iDonor;
 
+  if (NumDestinationGrids == 0) return;
+
   const ovk_connectivity_d_properties *Properties;
   ovkGetConnectivityDonorSideProperties(Donors[0], &Properties);
 
@@ -3173,6 +3175,8 @@ static void ImportReceivers(const t_receiver_data *ReceiverData, int NumSourceGr
   int iSourceGrid;
   int iDim;
   size_t iReceiver;
+
+  if (NumSourceGrids == 0) return;
 
   const ovk_connectivity_r_properties *Properties;
   ovkGetConnectivityReceiverSideProperties(Receivers[0], &Properties);
