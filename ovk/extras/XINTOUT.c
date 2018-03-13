@@ -805,7 +805,8 @@ static bool DetectFormat(MPI_File HOFile, ovk_ext_endian *Endian_, ovk_ext_xinto
     Endian = OVK_EXT_BIG_ENDIAN;
   }
 
-  int HeaderSize = *(int *)InitialBytes;
+  int HeaderSize;
+  memcpy(&HeaderSize, InitialBytes, sizeof(int));
   if (Endian != MachineEndian()) {
     SwapEndian(&HeaderSize, sizeof(int), 1);
   }
