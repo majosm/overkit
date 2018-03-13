@@ -1546,7 +1546,7 @@ void ovkReceive(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
 void ovkWaitAll(int NumRequests, ovk_request **Requests) {
 
   OVK_DEBUG_ASSERT(NumRequests >= 0, "Invalid request count.");
-  OVK_DEBUG_ASSERT(Requests, "Invalid requests pointer.");
+  OVK_DEBUG_ASSERT(NumRequests == 0 || Requests, "Invalid requests pointer.");
   // Note: Not checking Requests[i] here on purpose -- allowed to be NULL
 
   ExchangeWaitAll(NumRequests, Requests);
@@ -1556,7 +1556,7 @@ void ovkWaitAll(int NumRequests, ovk_request **Requests) {
 void ovkWaitAny(int NumRequests, ovk_request **Requests, int *Index) {
 
   OVK_DEBUG_ASSERT(NumRequests >= 0, "Invalid request count.");
-  OVK_DEBUG_ASSERT(Requests, "Invalid requests pointer.");
+  OVK_DEBUG_ASSERT(NumRequests == 0 || Requests, "Invalid requests pointer.");
   // Note: Not checking Requests[i] here on purpose -- allowed to be NULL
   OVK_DEBUG_ASSERT(Index, "Invalid index pointer.");
 
