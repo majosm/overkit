@@ -38,7 +38,7 @@ void PRIVATE(BroadcastAnySource)(void *Data, int Count, MPI_Datatype DataType, b
 // but who has time for that?
 struct t_signal {
   MPI_Comm comm;
-#ifdef HAVE_IBARRIER
+#ifdef OVK_HAVE_MPI_IBARRIER
   MPI_Request request;
 #else
   char send_buffer[2], recv_buffer[1];
@@ -54,7 +54,7 @@ void PRIVATE(CreateSignal)(t_signal **Signal_, MPI_Comm Comm) {
   *Signal_ = malloc(sizeof(t_signal));
   t_signal *Signal = *Signal_;
 
-#ifdef HAVE_IBARRIER
+#ifdef OVK_HAVE_MPI_IBARRIER
   Signal->comm = Comm;
   Signal->request = MPI_REQUEST_NULL;
 #else
@@ -70,7 +70,7 @@ void PRIVATE(CreateSignal)(t_signal **Signal_, MPI_Comm Comm) {
 
 void PRIVATE(StartSignal)(t_signal *Signal) {
 
-#ifdef HAVE_IBARRIER
+#ifdef OVK_HAVE_MPI_IBARRIER
   MPI_Ibarrier(Signal->comm, &Signal->request);
 #else
   if (Signal->comm_rank > 0) {
@@ -85,7 +85,7 @@ void PRIVATE(CheckSignal)(t_signal *Signal, bool *Done_) {
 
   int Done;
 
-#ifdef HAVE_IBARRIER
+#ifdef OVK_HAVE_MPI_IBARRIER
   MPI_Test(&Signal->request, &Done, MPI_STATUS_IGNORE);
 #else
   if (Signal->comm_rank > 0) {
@@ -122,7 +122,7 @@ void PRIVATE(CheckSignal)(t_signal *Signal, bool *Done_) {
 
 void PRIVATE(DestroySignal)(t_signal **Signal) {
 
-#ifdef HAVE_IBARRIER
+#ifdef OVK_HAVE_MPI_IBARRIER
   // Do nothing
 #else
   MPI_Comm_free(&(*Signal)->comm);

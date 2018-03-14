@@ -1,0 +1,67 @@
+# Copyright (c) 2018 Matthew J. Smith and Overkit contributors
+# License: MIT (http://opensource.org/licenses/MIT)
+
+include(CMakeParseArguments)
+include(ExternalProject)
+
+macro(configure_overkit)
+
+  set(CONFIGURE_OVERKIT_OPTION_NAMES QUIET)
+  set(CONFIGURE_OVERKIT_ONE_VALUE_NAMES SOURCE_DIR BINARY_DIR INSTALL_BIN_DIR INSTALL_LIB_DIR
+    INSTALL_INCLUDE_DIR)
+  set(CONFIGURE_OVERKIT_MULTI_VALUE_NAMES OPTIONS)
+  cmake_parse_arguments("CONFIGURE_OVERKIT_ARG" "${CONFIGURE_OVERKIT_OPTION_NAMES}"
+    "${CONFIGURE_OVERKIT_ONE_VALUE_NAMES}" "${CONFIGURE_OVERKIT_MULTI_VALUE_NAMES}" ${ARGV})
+
+  file(MAKE_DIRECTORY "${CONFIGURE_OVERKIT_ARG_BINARY_DIR}")
+
+  if(CONFIGURE_OVERKIT_ARG_QUIET)
+    set(CONFIGURE_OVERKIT_OUTPUT_QUIET OUTPUT_QUIET)
+  endif()
+  execute_process(
+    COMMAND "${CMAKE_COMMAND}" ${CONFIGURE_OVERKIT_ARG_OPTIONS} -DSUBPROJECT=ON
+      "${CONFIGURE_OVERKIT_ARG_SOURCE_DIR}"
+    WORKING_DIRECTORY "${CONFIGURE_OVERKIT_ARG_BINARY_DIR}"
+    ${CONFIGURE_OVERKIT_OUTPUT_QUIET}
+  )
+
+  externalproject_add(OverkitSubproject
+    PREFIX "${CONFIGURE_OVERKIT_ARG_BINARY_DIR}"
+    SOURCE_DIR "${CONFIGURE_OVERKIT_ARG_SOURCE_DIR}"
+    BINARY_DIR "${CONFIGURE_OVERKIT_ARG_BINARY_DIR}"
+    INSTALL_DIR ""
+    CONFIGURE_COMMAND ""
+    INSTALL_COMMAND "${CMAKE_COMMAND}" -E echo_append ""
+  )
+
+  # CMake by default doesn't seem to rebuild subprojects when changes are made to their source files
+  externalproject_add_step(OverkitSubproject forcebuild
+    COMMAND "${CMAKE_COMMAND}" -E echo_append ""
+    DEPENDEES configure
+    DEPENDERS build
+    ALWAYS 1
+  )
+
+  find_package(Overkit QUIET CONFIG REQUIRED PATHS "${CONFIGURE_OVERKIT_ARG_BINARY_DIR}")
+
+  foreach(LIBRARY ${Overkit_LIBRARIES})
+    add_dependencies(${LIBRARY} OverkitSubproject)
+  endforeach()
+
+  # No binaries yet
+#   if(NOT "${CONFIGURE_OVERKIT_ARG_INSTALL_BIN_DIR}" STREQUAL "")
+#     install(DIRECTORY "${CONFIGURE_OVERKIT_ARG_BINARY_DIR}/bin/" DESTINATION
+#       "${CONFIGURE_OVERKIT_ARG_INSTALL_BIN_DIR}")
+#   endif()
+
+  if(NOT "${CONFIGURE_OVERKIT_ARG_INSTALL_LIB_DIR}" STREQUAL "")
+    install(DIRECTORY "${CONFIGURE_OVERKIT_ARG_BINARY_DIR}/lib/" DESTINATION
+      "${CONFIGURE_OVERKIT_ARG_INSTALL_LIB_DIR}")
+  endif()
+
+  if(NOT "${CONFIGURE_OVERKIT_ARG_INSTALL_INCLUDE_DIR}" STREQUAL "")
+    install(DIRECTORY "${CONFIGURE_OVERKIT_ARG_BINARY_DIR}/include/" DESTINATION
+      "${CONFIGURE_OVERKIT_ARG_INSTALL_INCLUDE_DIR}")
+  endif()
+
+endmacro()

@@ -5,18 +5,13 @@
 #define OVK_EXTRAS_GLOBAL_INCLUDED
 
 #include "ovk/extras/ovkGlobal.h"
+
 #include "ovk/core/Global.h"
 
 // Headers that are used by nearly every source file
 #include <mpi.h>
 #include <stdbool.h>
 #include <stdlib.h>
-
-// Use this in overkit-extras.h to check whether internal headers were included into any public
-// headers
-#ifndef OVK_EXTRAS_INTERNAL
-#define OVK_EXTRAS_INTERNAL
-#endif
 
 #ifdef __cplusplus
 extern "C" {

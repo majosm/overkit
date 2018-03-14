@@ -4,6 +4,9 @@
 #ifndef OVK_CORE_PUBLIC_GLOBAL_INCLUDED
 #define OVK_CORE_PUBLIC_GLOBAL_INCLUDED
 
+// Build configuration header
+#include <ovk/core/ovkConfig.h>
+
 // Headers that are needed for API
 #include <mpi.h>
 #include <stdbool.h>
@@ -28,20 +31,12 @@
 extern "C" {
 #endif
 
-#ifdef OVERKIT_DEBUG
-#define OVK_DEBUG true
+#if OVK_DEBUG
 void OVK_PRIVATE(DebugAssert)(const char *File, int Line, const char *Format, ...);
 #define OVK_DEBUG_ASSERT(Condition, ...) \
   if (!(Condition)) OVK_PRIVATE(DebugAssert)(__FILE__, __LINE__, __VA_ARGS__)
 #else
-#define OVK_DEBUG false
 #define OVK_DEBUG_ASSERT(...)
-#endif
-
-#ifdef OVERKIT_PROFILE
-#define OVK_PROFILE true
-#else
-#define OVK_PROFILE false
 #endif
 
 enum {

@@ -1,0 +1,18 @@
+# Copyright (c) 2018 Matthew J. Smith and Overkit contributors
+# License: MIT (http://opensource.org/licenses/MIT)
+
+# Location
+set(Overkit_DIR "@Overkit_CMAKE_DIR@")
+
+# Compiling/linking
+set(Overkit_INCLUDES "@Overkit_CMAKE_INCLUDES@")
+set(Overkit_LIBRARIES @Overkit_CMAKE_LIBRARIES@)
+set(Overkit_HEADERS @Overkit_CMAKE_HEADERS@)
+
+# Build option detection
+set(Overkit_OPTION_SHARED_LIBS @Overkit_CMAKE_OPTION_SHARED_LIBS@)
+set(Overkit_OPTION_TESTS @Overkit_CMAKE_OPTION_TESTS@)
+set(Overkit_OPTION_COVERAGE @Overkit_CMAKE_OPTION_COVERAGE@)
+set(Overkit_OPTION_EXAMPLES @Overkit_CMAKE_OPTION_EXAMPLES@)
+set(Overkit_OPTION_PROFILE @Overkit_CMAKE_OPTION_PROFILE@)
+set(Overkit_OPTION_XPACC @Overkit_CMAKE_OPTION_XPACC@)

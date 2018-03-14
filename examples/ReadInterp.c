@@ -2,9 +2,8 @@
 // License: MIT (http://opensource.org/licenses/MIT)
 
 #include <overkit.h>
-#include <overkit-extras.h>
 
-#include "../ovk/core/ProfileUtils.h"
+#include "ovk/core/ProfileUtils.h"
 
 #include <mpi.h>
 #include <math.h>

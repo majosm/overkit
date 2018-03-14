@@ -5,20 +5,27 @@
 # Initialization
 #================
 
+# Initialize warning flag for reporting warnings at end of configuration
 set(GLOBAL_WARNING_FLAG FALSE CACHE INTERNAL "")
 
-#====================
+# Forbid in-source builds
+if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
+  message(FATAL_ERROR "In-source builds are not allowed. Please run CMake from a separate directory (you may need to remove CMakeFiles and CMakeCache.txt).")
+endif()
+
+#--------------------
 # CMake requirements
-#====================
+#--------------------
 
 cmake_minimum_required(VERSION 2.8.12)
 
 include(CheckIncludeFile)
 include(CheckSymbolExists)
+include(CMakePackageConfigHelpers)
 
-#===============
-# Project setup
-#===============
+#--------------------
+# Project definition
+#--------------------
 
 project(Overkit C CXX)
 set(Overkit_VERSION_MAJOR 0)
@@ -26,33 +33,10 @@ set(Overkit_VERSION_MINOR 1)
 set(Overkit_VERSION_PATCH 0)
 set(Overkit_VERSION ${Overkit_VERSION_MAJOR}.${Overkit_VERSION_MINOR}.${Overkit_VERSION_PATCH})
 
-# Module stuff
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/config/modules")
 set(C_ENABLED TRUE)
 set(CXX_ENABLED TRUE)
 set(Fortran_ENABLED FALSE)
-
-# OS X RPATH for dynamic libraries
-set(CMAKE_MACOSX_RPATH TRUE)
-
-# Add install lib dir to any executables' RPATH, as well as any paths to external libraries
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-
-# Forbid in-source builds
-if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
-  message(FATAL_ERROR "In-source builds are not allowed. Please run CMake from a separate directory (you may need to remove CMakeFiles and CMakeCache.txt).")
-endif()
-
-# Adds "make distclean" command to delete contents of build directory (safer than rm -rf *)
-add_custom_target(distclean COMMAND "${CMAKE_COMMAND}" -DBINARY_DIR="${CMAKE_BINARY_DIR}"
-  -P "${CMAKE_SOURCE_DIR}/config/scripts/distclean.cmake")
-
-# Include top level source directory
-include_directories(${CMAKE_SOURCE_DIR})
-
-# Include 'include' directory
-include_directories(${CMAKE_SOURCE_DIR}/include)
 
 #=========================
 # Build types and options
@@ -61,7 +45,6 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 # Build types
 include(DebugBuildType)
 include(ReleaseBuildType)
-include(CoverageBuildType)
 if(NOT CMAKE_CONFIGURATION_TYPES)
   # Single-configuration generator
   if(CMAKE_BUILD_TYPE)
@@ -71,54 +54,44 @@ if(NOT CMAKE_CONFIGURATION_TYPES)
     set(BUILD_TYPE_VALUE Release)
   endif()
   set(CMAKE_BUILD_TYPE ${BUILD_TYPE_VALUE} CACHE STRING
-    "Choose the type of build, options are: None Debug Release Coverage." FORCE)
-else()
-  # Multi-configuration generator
-  # (Not sure what to do here)
+    "Choose the type of build, options are: None Debug Release." FORCE)
 endif()
 
-# Build options
+# Options
 option(BUILD_SHARED_LIBS "Build libraries as shared" OFF)
-option(TESTS "Enable tests" OFF)
 option(EXAMPLES "Enable examples" OFF)
+option(TESTS "Enable tests" OFF)
+option(COVERAGE "Enable coverage analysis" OFF)
 option(PROFILE "Enable profiling" OFF)
 option(XPACC "Enable XPACC-specific extras" OFF)
 
-# Not entirely sure why this is here
-if(NOT DEFINED BUILD_SHARED_LIBS)
-  set(BUILD_SHARED_LIBS FALSE)
-endif()
-
-# Enable profiling
-if(PROFILE)
-  add_definitions(-DOVERKIT_PROFILE)
-endif()
-
-# Extra code for XPACC purposes
-if(XPACC)
-  add_definitions(-DOVERKIT_XPACC)
+if(NOT DEFINED SUBPROJECT)
+  set(SUBPROJECT FALSE CACHE INTERNAL "")
 endif()
 
 #=======================
 # External dependencies
 #=======================
 
+#-----
 # MPI
-if(NOT BUILT_IN_MPI AND NOT EXTERNAL_MPI)
-  set(BUILT_IN_MPI FALSE CACHE INTERNAL "")
+#-----
+
+if(NOT COMPILER_BUILT_IN_MPI AND NOT EXTERNAL_MPI)
+  set(COMPILER_BUILT_IN_MPI FALSE CACHE INTERNAL "")
   set(EXTERNAL_MPI FALSE CACHE INTERNAL "")
   # If the user specified MPI wrappers as compilers, use them
   check_include_file("mpi.h" MPI_HEADER_FOUND)
   if(MPI_HEADER_FOUND)
     check_symbol_exists(MPI_Init "mpi.h" MPI_WORKS)
     if(MPI_WORKS)
-      set(BUILT_IN_MPI TRUE CACHE INTERNAL "")
+      set(COMPILER_BUILT_IN_MPI TRUE CACHE INTERNAL "")
       set(MPI_INCLUDE_PATH "" CACHE INTERNAL "")
       set(MPI_C_LIBRARIES "" CACHE INTERNAL "")
     endif()
   endif()
   # Otherwise, try to find an MPI installation
-  if(NOT BUILT_IN_MPI)
+  if(NOT COMPILER_BUILT_IN_MPI)
     message(STATUS "Not using MPI compiler wrappers; searching for external MPI installation")
     find_package(MPI REQUIRED)
     set(CMAKE_REQUIRED_INCLUDES ${MPI_INCLUDE_PATH})
@@ -138,66 +111,93 @@ elseif(EXTERNAL_MPI)
   find_package(MPI REQUIRED)
 endif()
 
-include_directories(SYSTEM ${MPI_INCLUDE_PATH})
-link_libraries(${MPI_C_LIBRARIES})
-
 # Check if MPI_Ibarrier is supported
 set(CMAKE_REQUIRED_INCLUDES ${MPI_INCLUDE_PATH})
 set(CMAKE_REQUIRED_LIBRARIES ${MPI_C_LIBRARIES})
-check_symbol_exists(MPI_Ibarrier "mpi.h" IBARRIER_SUPPORTED)
-if(IBARRIER_SUPPORTED)
-  add_definitions(-DHAVE_IBARRIER)
-else()
+check_symbol_exists(MPI_Ibarrier "mpi.h" HAVE_MPI_IBARRIER)
+if(NOT HAVE_MPI_IBARRIER)
   message(WARNING "MPI non-blocking collectives aren't supported. Performance may be degraded for certain operations.")
   set(GLOBAL_WARNING_FLAG TRUE CACHE INTERNAL "")
 endif()
 
-#======================
-# Extra compiler flags
-#======================
+#----------------
+# C math library
+#----------------
 
-set(EXTRA_C_FLAGS "")
-
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${EXTRA_C_FLAGS}" CACHE STRING
-  "Flags used by the C compiler during debug builds." FORCE)
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${EXTRA_C_FLAGS}" CACHE STRING
-  "Flags used by the C compiler during release builds." FORCE)
-set(CMAKE_C_FLAGS_COVERAGE "${CMAKE_C_FLAGS_COVERAGE} ${EXTRA_C_FLAGS}" CACHE STRING
-  "Flags used by the C compiler during coverage builds." FORCE)
-
-#======================
-# Testing and coverage
-#======================
-
-# Enable testing
-if(TESTS)
-  enable_testing()
+find_library(C_MATH_LIBRARY m)
+if(NOT C_MATH_LIBRARY)
+  message(FATAL_ERROR "Could not find C math library.")
 endif()
 
-# Verbose version of 'make test'
-add_custom_target(test-v COMMAND ${CMAKE_CTEST_COMMAND} --verbose)
+#=======================
+# Project configuration
+#=======================
 
-# Coverage report
-add_custom_target(coverage
-  COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR="${CMAKE_SOURCE_DIR}" -DBINARY_DIR="${CMAKE_BINARY_DIR}"
-    -DCOVERAGE_DIR="src/core" -P "${CMAKE_SOURCE_DIR}/config/scripts/gen-coverage-data.cmake"
-  COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR="${CMAKE_SOURCE_DIR}" -DBINARY_DIR="${CMAKE_BINARY_DIR}"
-    -DCOVERAGE_DIR="src/support" -P "${CMAKE_SOURCE_DIR}/config/scripts/gen-coverage-data.cmake"
-  COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR="${CMAKE_SOURCE_DIR}" -DBINARY_DIR="${CMAKE_BINARY_DIR}"
-    -DCOVERAGE_DIR="src/utils" -P "${CMAKE_SOURCE_DIR}/config/scripts/gen-coverage-data.cmake"
-  COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR="${CMAKE_SOURCE_DIR}" -DBINARY_DIR="${CMAKE_BINARY_DIR}"
-    -P "${CMAKE_SOURCE_DIR}/config/scripts/gen-coverage-report.cmake"
-)
+#---------
+# Testing
+#---------
 
-# Reset coverage data
-add_custom_target(coverageclean
-  COMMAND "${CMAKE_COMMAND}" -DBINARY_DIR="${CMAKE_BINARY_DIR}"
-    -P "${CMAKE_SOURCE_DIR}/config/scripts/coverageclean.cmake"
-)
+if(TESTS)
 
-#=====================
-# Other configuration
-#=====================
+  enable_testing()
+
+  # Verbose version of 'make test'
+  add_custom_target(test-v COMMAND ${CMAKE_CTEST_COMMAND} --verbose)
+
+endif()
+
+#----------
+# Coverage
+#----------
+
+if(COVERAGE)
+
+  # Requires GNU
+  if (NOT "${CMAKE_C_COMPILER_ID}" MATCHES "GNU")
+    message(FATAL_ERROR "Building with coverage analysis requires GNU C compiler.")
+  endif()
+  if (NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+    message(FATAL_ERROR "Building with coverage analysis requires GNU C++ compiler.")
+  endif()
+
+  # Coverage report
+  add_custom_target(coverage
+    COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR="${CMAKE_SOURCE_DIR}" -DBINARY_DIR="${CMAKE_BINARY_DIR}"
+      -DCOVERAGE_DIRS="ovk/core;ovk/extras" -P "${CMAKE_SOURCE_DIR}/config/scripts/gen-coverage-report.cmake"
+  )
+
+  # Reset coverage data
+  add_custom_target(coverage-clean
+    COMMAND "${CMAKE_COMMAND}" -DBINARY_DIR="${CMAKE_BINARY_DIR}" -P
+      "${CMAKE_SOURCE_DIR}/config/scripts/coverage-clean.cmake"
+  )
+
+endif()
+
+#-------
+# RPATH
+#-------
+
+if(BUILD_SHARED_LIBS)
+
+  # Enable RPATH on Mac OS X
+  if(APPLE)
+    set(CMAKE_MACOSX_RPATH TRUE)
+  endif()
+
+  # Add install lib dir to any executables' RPATH, as well as any paths to external libraries
+  set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+  set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+endif()
+
+#-------
+# Misc.
+#-------
+
+# Distclean
+add_custom_target(distclean COMMAND "${CMAKE_COMMAND}" -DBINARY_DIR="${CMAKE_BINARY_DIR}"
+  -P "${CMAKE_SOURCE_DIR}/config/scripts/distclean.cmake")
 
 # Shut ranlib up about no symbols
 if(APPLE)
@@ -205,35 +205,140 @@ if(APPLE)
   set(CMAKE_C_ARCHIVE_FINISH "<CMAKE_RANLIB> -no_warning_for_no_symbols -c <TARGET>")
 endif()
 
+# API headers end up in the include directory of the build tree
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/include")
+include_directories("${CMAKE_BINARY_DIR}/include")
+
+# Internal headers end up in the include-internal directory of the build tree
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/include-internal")
+include_directories("${CMAKE_BINARY_DIR}/include-internal")
+
+# set(EXTRA_C_FLAGS "")
+# set(EXTRA_CXX_FLAGS "")
+# set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${EXTRA_C_FLAGS}" CACHE STRING
+#   "Flags used by the C compiler during debug builds." FORCE)
+# set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${EXTRA_C_FLAGS}" CACHE STRING
+#   "Flags used by the C compiler during release builds." FORCE)
+# set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${EXTRA_CXX_FLAGS}" CACHE STRING
+#   "Flags used by the C++ compiler during debug builds." FORCE)
+# set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${EXTRA_CXX_FLAGS}" CACHE STRING
+#   "Flags used by the C++ compiler during release builds." FORCE)
+
+#==================
+# Pre-build checks
+#==================
+
+# Extra build configuration checks that can't be done at configure time
+add_custom_target(config-check
+  COMMAND "${CMAKE_COMMAND}"
+    -DDEBUG=$<CONFIG:Debug>
+    -DCOVERAGE=${COVERAGE}
+    -P "${CMAKE_SOURCE_DIR}/config/scripts/check-config.cmake"
+)
+
+add_custom_target(pre-build ALL)
+add_dependencies(pre-build config-check)
+
 #================
 # Subdirectories
 #================
 
-add_subdirectory(examples)
+# Main library code
 add_subdirectory(ovk)
+
+# Supporting code for tests, examples, utils
 add_subdirectory(support)
-add_subdirectory(tests)
+
+# Utility programs
 add_subdirectory(utils)
 
-#==============
-# Installation
-#==============
+# Test code
+if(TESTS)
+  add_subdirectory(tests)
+endif()
 
-include(CMakePackageConfigHelpers)
+# Example programs
+if(EXAMPLES)
+  add_subdirectory(examples)
+endif()
+
+#==============================
+# Package configuration/export
+#==============================
+
+#-------------------
+# Package variables
+#-------------------
+
+# CMake
+if(SUBPROJECT)
+  set(Overkit_CMAKE_DIR "${CMAKE_BINARY_DIR}")
+  set(Overkit_CMAKE_INCLUDES "${CMAKE_BINARY_DIR}/include")
+else()
+  set(Overkit_CMAKE_DIR "${CMAKE_INSTALL_PREFIX}")
+  set(Overkit_CMAKE_INCLUDES "${CMAKE_INSTALL_PREFIX}/include")
+endif()
+set(Overkit_CMAKE_LIBRARIES overkit)
+set(Overkit_CMAKE_HEADERS overkit.h)
+
+set(Overkit_CMAKE_OPTION_SHARED_LIBS ${BUILD_SHARED_LIBS})
+set(Overkit_CMAKE_OPTION_EXAMPLES ${EXAMPLES})
+set(Overkit_CMAKE_OPTION_TESTS ${TESTS})
+set(Overkit_CMAKE_OPTION_COVERAGE ${COVERAGE})
+set(Overkit_CMAKE_OPTION_PROFILE ${PROFILE})
+set(Overkit_CMAKE_OPTION_XPACC ${XPACC})
+
+configure_file("${CMAKE_SOURCE_DIR}/config/OverkitDefs.cmake.in"
+  "${CMAKE_BINARY_DIR}/OverkitDefs.cmake" @ONLY)
+
+install(FILES "${CMAKE_BINARY_DIR}/OverkitDefs.cmake" DESTINATION lib/Overkit/CMake)
+
+# Make
+if(SUBPROJECT)
+  set(Overkit_MAKE_DIR "${CMAKE_BINARY_DIR}")
+  set(Overkit_MAKE_CPPFLAGS "-I\"${CMAKE_BINARY_DIR}/include\"")
+  set(Overkit_MAKE_LDFLAGS "-L\"${CMAKE_BINARY_DIR}/lib\"")
+else()
+  set(Overkit_MAKE_DIR "${CMAKE_INSTALL_PREFIX}")
+  set(Overkit_MAKE_CPPFLAGS "-I\"${CMAKE_INSTALL_PREFIX}/include\"")
+  set(Overkit_MAKE_LDFLAGS "-L\"${CMAKE_INSTALL_PREFIX}/lib\"")
+endif()
+set(Overkit_MAKE_LIBS "-loverkit")
+set(Overkit_MAKE_HEADERS overkit.h)
+
+macro(convert_to_01 IN OUT)
+if(${${IN}})
+  set(${OUT} 1)
+else()
+  set(${OUT} 0)
+endif()
+endmacro()
+
+convert_to_01(BUILD_SHARED_LIBS Overkit_MAKE_OPTION_SHARED_LIBS)
+convert_to_01(EXAMPLES Overkit_MAKE_OPTION_EXAMPLES)
+convert_to_01(TESTS Overkit_MAKE_OPTION_TESTS)
+convert_to_01(COVERAGE Overkit_MAKE_OPTION_COVERAGE)
+convert_to_01(PROFILE Overkit_MAKE_OPTION_PROFILE)
+convert_to_01(XPACC Overkit_MAKE_OPTION_XPACC)
+
+configure_file("${CMAKE_SOURCE_DIR}/config/OverkitDefs.mk.in"
+  "${CMAKE_BINARY_DIR}/OverkitDefs.mk" @ONLY)
+
+install(FILES "${CMAKE_BINARY_DIR}/OverkitDefs.mk" DESTINATION lib/Overkit/Make)
+
+#--------------------------
+# Exports and version info
+#--------------------------
+
+configure_file("${CMAKE_SOURCE_DIR}/config/OverkitConfig.cmake"
+  "${CMAKE_BINARY_DIR}/OverkitConfig.cmake" COPYONLY)
 
 write_basic_package_version_file("${CMAKE_BINARY_DIR}/OverkitConfigVersion.cmake"
   VERSION ${Overkit_VERSION}
   COMPATIBILITY SameMajorVersion
 )
 
-export(EXPORT OverkitTargets
-  FILE "${CMAKE_BINARY_DIR}/OverkitTargets.cmake"
-)
-
-configure_file(config/OverkitConfig.cmake
-  "${CMAKE_BINARY_DIR}/OverkitConfig.cmake"
-  COPYONLY
-)
+export(EXPORT OverkitTargets FILE "${CMAKE_BINARY_DIR}/OverkitTargets.cmake")
 
 install(
   FILES
@@ -242,11 +347,7 @@ install(
   DESTINATION lib/Overkit/CMake
 )
 
-install(EXPORT OverkitTargets
-  DESTINATION lib/Overkit/CMake
-)
-
-install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/" DESTINATION include FILES_MATCHING PATTERN "*.h")
+install(EXPORT OverkitTargets DESTINATION lib/Overkit/CMake)
 
 #=============================
 # Write configuration summary
@@ -257,14 +358,22 @@ message(STATUS "=====================")
 message(STATUS "Configuration Summary")
 message(STATUS "=====================")
 message(STATUS "")
-message(STATUS "Build type:         ${CMAKE_BUILD_TYPE}")
-message(STATUS "C compiler:         ${CMAKE_C_COMPILER}")
-message(STATUS "C++ compiler:       ${CMAKE_CXX_COMPILER}")
-message(STATUS "Shared libraries:   ${BUILD_SHARED_LIBS}")
-message(STATUS "Install prefix:     ${CMAKE_INSTALL_PREFIX}")
-message(STATUS "Examples:           ${EXAMPLES}")
-message(STATUS "Tests:              ${TESTS}")
-message(STATUS "Profiling:          ${PROFILE}")
+if(CMAKE_CONFIGURATION_TYPES)
+message(STATUS "Configuration types: ${CMAKE_CONFIGURATION_TYPES}")
+else()
+message(STATUS "Build type:          ${CMAKE_BUILD_TYPE}")
+endif()
+message(STATUS "C compiler:          ${CMAKE_C_COMPILER}")
+message(STATUS "C++ compiler:        ${CMAKE_CXX_COMPILER}")
+message(STATUS "Shared libraries:    ${BUILD_SHARED_LIBS}")
+message(STATUS "Install prefix:      ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "Examples:            ${EXAMPLES}")
+message(STATUS "Tests:               ${TESTS}")
+message(STATUS "Coverage:            ${COVERAGE}")
+message(STATUS "Profiling:           ${PROFILE}")
+if(XPACC)
+message(STATUS "XPACC:               ${XPACC}")
+endif()
 message(STATUS "")
 if(GLOBAL_WARNING_FLAG)
   message(STATUS "**** Warnings were produced. See details above. **** ")

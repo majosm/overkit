@@ -1,5 +1,4 @@
 # Copyright (c) 2018 Matthew J. Smith and Overkit contributors
 # License: MIT (http://opensource.org/licenses/MIT)
 
-include("${CMAKE_CURRENT_LIST_DIR}/OverkitTargets.cmake")
-include("${CMAKE_CURRENT_LIST_DIR}/OverkitDefs.cmake")
+configure_file("${CONFIG_IN}" "${CONFIG_OUT}" ${CONFIG_OPTIONS})

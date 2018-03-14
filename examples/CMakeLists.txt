@@ -1,22 +1,64 @@
 # Copyright (c) 2018 Matthew J. Smith and Overkit contributors
 # License: MIT (http://opensource.org/licenses/MIT)
 
-#==================
-# Overkit examples
-#==================
+#================
+# Initialization
+#================
 
-if(EXAMPLES)
+set(LOCAL_TARGETS)
 
-# Link to overkit and overkit-support
-include_directories("${CMAKE_SOURCE_DIR}/ovk/core")
-# include_directories("${CMAKE_SOURCE_DIR}/support")
-# link_libraries(overkit-support overkit)
-link_libraries(overkit overkit-extras)
+#=========================
+# Directory-wide settings
+#=========================
+
+#-------------------
+# Compiling/linking
+#-------------------
+
+# MPI
+if(EXTERNAL_MPI)
+  include_directories(SYSTEM "${MPI_INCLUDE_PATH}")
+  link_libraries(${MPI_C_LIBRARIES})
+endif()
+
+# C math library
+link_libraries("${C_MATH_LIBRARY}")
+
+# Overkit library
+link_libraries(overkit)
+
+#==========
+# Examples
+#==========
+
+#------
+# Test
+#------
 
 add_executable(Test Test.c)
+list(APPEND LOCAL_TARGETS Test)
+
+#-------
+# Debug
+#-------
+
 # add_executable(Debug Debug.c)
+# list(APPEND LOCAL_TARGETS Debug)
+
+#------------
+# ReadInterp
+#------------
+
 if(XPACC)
-add_executable(ReadInterp ReadInterp.c)
+  add_executable(ReadInterp ReadInterp.c)
+  list(APPEND LOCAL_TARGETS ReadInterp)
 endif()
 
-endif()
+#==============
+# Finalization
+#==============
+
+# Run pre-build stuff first
+foreach(TARGET ${LOCAL_TARGETS})
+  add_dependencies(${TARGET} pre-build)
+endforeach()
