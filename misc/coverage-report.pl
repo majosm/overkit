@@ -51,10 +51,10 @@ $unknownColor = 'fuchsia';
 
 $annotationBeginPrefixC  = '\/\*\s*\[';
 $annotationBeginPostfixC = '\]\s*\*\/';
-$annotationBeginPrefixF  = '!\s*\[';
-$annotationBeginPostfixF = '\]\s*$';
 $annotationEndPrefixC  = '\/\*\s*\[\/';
 $annotationEndPostfixC = '\]\s*\*\/';
+$annotationBeginPrefixF  = '!\s*\[';
+$annotationBeginPostfixF = '\]\s*$';
 $annotationEndPrefixF  = '!\s*\[\/';
 $annotationEndPostfixF = '\]\s*$';
 
@@ -64,25 +64,40 @@ $blockIgnored{'DEFAULT'} = 0;
 $blockUnused{'DEFAULT'} = 0;
 
 # process arguments
+@paths = ();
 for (@ARGV) {
   if (/^--?config=(.*)/) {
     print STDERR "--config=file not supported\n";
     $configfile = $1;
   } elsif (-d $_) {
-    @files = (@files, &ExpandDir($_));
+    $paths[$#paths + 1] = $_;
   } elsif (-f $_) {
-    $files[$#files + 1] = $_;
+    $paths[$#paths + 1] = $_;
   } else {
-    print STDERR "Unrecognized argument $_";
+    print STDERR "Unrecognized argument $_\n";
     &printHelp;
     exit(1);
   }
 }
 
-# give an error if no files were provided
-if ($#files + 1 == 0) {
+# give an error if no paths were provided
+if ($#paths + 1 == 0) {
   print STDERR "Must provide at least one file or directory\n";
   &printHelp;
+  exit(1);
+}
+
+for (@paths) {
+  if (-d $_) {
+    @files = (@files, &ExpandDir($_));
+  } elsif ($_ =~ /\.gcov$/) {
+    $files[$#files + 1] = $_;
+  }
+}
+
+# give an error if no gcov files found
+if ($#files + 1 == 0) {
+  print STDERR "Unable to find .gcov files\n";
   exit(1);
 }
 
@@ -116,7 +131,7 @@ sub annotateFile {
   open(INFD,"<$infile") || die "Could not open $infile";
   open(OUTFD,">$outfile")  || die "Could not open $outfile";
 
-  if ($infile =~ /\.c\.gcov$/) {
+  if ($infile =~ /\.(c|cpp|h|hpp|inl)\.gcov$/) {
     $annotationBeginPrefix  = $annotationBeginPrefixC;
     $annotationBeginPostfix = $annotationBeginPostfixC;
     $annotationEndPrefix    = $annotationEndPrefixC;
