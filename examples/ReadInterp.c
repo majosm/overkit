@@ -137,14 +137,7 @@ int main(int argc, char **argv) {
   EndProfileSync(Profiler, CreateTime, MPI_COMM_WORLD);
   StartProfileSync(Profiler, ImportTime, MPI_COMM_WORLD);
 
-  int ReadGranularityAdjust = 0;
-  int Blah = NumProcs;
-  while (Blah > 1024) {
-    Blah >>= 1;
-    ReadGranularityAdjust -= 1;
-  }
-
-  ovkEXTImportXINTOUT(Domain, HOPath, XPath, ReadGranularityAdjust, MPI_INFO_NULL);
+  ovkEXTImportXINTOUT(Domain, HOPath, XPath, 0, MPI_INFO_NULL);
 
   EndProfileSync(Profiler, ImportTime, MPI_COMM_WORLD);
   StartProfileSync(Profiler, AssembleTime, MPI_COMM_WORLD);
