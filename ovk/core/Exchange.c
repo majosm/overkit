@@ -74,7 +74,7 @@ void PRIVATE(CreateExchange)(ovk_exchange **Exchange_, const ovk_connectivity *C
   ovkGetConnectivityDonorGridInfo(Connectivity, &DonorGridInfo);
 
   const ovk_grid_info *ReceiverGridInfo;
-  ovkGetConnectivityDonorGridInfo(Connectivity, &ReceiverGridInfo);
+  ovkGetConnectivityReceiverGridInfo(Connectivity, &ReceiverGridInfo);
 
   const ovk_connectivity_d *Donors = NULL;
   const ovk_grid *DonorGrid = NULL;
