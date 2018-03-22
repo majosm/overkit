@@ -1010,7 +1010,7 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
           }
         }
       }
-      Exchange->num_remote_donor_points[iDonor] = (int)NumRemoteDonorPoints;
+      Exchange->num_remote_donor_points[iDonor] = NumRemoteDonorPoints;
       TotalRemoteDonorPoints += NumRemoteDonorPoints;
     }
 
