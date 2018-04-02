@@ -1582,6 +1582,19 @@ void PRIVATE(ExchangeCollect)(const ovk_exchange *Exchange, ovk_data_type DataTy
   size_t NumDonors;
   ovkGetConnectivityDonorSidePropertyCount(DonorsProperties, &NumDonors);
 
+  if (OVK_DEBUG) {
+    if (Count > 0 && NumDonors > 0) {
+      OVK_DEBUG_ASSERT(GridData, "Invalid grid data pointer.");
+      for (iCount = 0; iCount < Count; ++iCount) {
+        OVK_DEBUG_ASSERT(GridData[iCount], "Invalid grid data pointer.");
+      }
+      OVK_DEBUG_ASSERT(DonorData, "Invalid donor data pointer.");
+      for (iCount = 0; iCount < Count; ++iCount) {
+        OVK_DEBUG_ASSERT(DonorData[iCount], "Invalid donor data pointer.");
+      }
+    }
+  }
+
   int MaxSize;
   ovkGetConnectivityDonorSidePropertyMaxSize(DonorsProperties, &MaxSize);
 
@@ -1847,6 +1860,15 @@ void PRIVATE(ExchangeSend)(const ovk_exchange *Exchange, ovk_data_type DataType,
   size_t NumDonors;
   ovkGetConnectivityDonorSidePropertyCount(DonorsProperties, &NumDonors);
 
+  if (OVK_DEBUG) {
+    if (Count > 0 && NumDonors > 0) {
+      OVK_DEBUG_ASSERT(DonorData, "Invalid donor data pointer.");
+      for (iCount = 0; iCount < Count; ++iCount) {
+        OVK_DEBUG_ASSERT(DonorData[iCount], "Invalid donor data pointer.");
+      }
+    }
+  }
+
   int NumSends = Exchange->num_sends;
 
   MPI_Datatype MPIDataType = DataTypeToMPI(DataType);
@@ -1906,6 +1928,7 @@ void PRIVATE(ExchangeSend)(const ovk_exchange *Exchange, ovk_data_type DataType,
 void PRIVATE(ExchangeReceive)(const ovk_exchange *Exchange, ovk_data_type DataType, int Count,
   void **ReceiverData, int Tag, ovk_request **Request) {
 
+  int iCount;
   int iRecv;
 
   const ovk_connectivity *Connectivity = Exchange->connectivity;
@@ -1918,6 +1941,15 @@ void PRIVATE(ExchangeReceive)(const ovk_exchange *Exchange, ovk_data_type DataTy
 
   size_t NumReceivers;
   ovkGetConnectivityReceiverSidePropertyCount(ReceiversProperties, &NumReceivers);
+
+  if (OVK_DEBUG) {
+    if (Count > 0 && NumReceivers > 0) {
+      OVK_DEBUG_ASSERT(ReceiverData, "Invalid receiver data pointer.");
+      for (iCount = 0; iCount < Count; ++iCount) {
+        OVK_DEBUG_ASSERT(ReceiverData[iCount], "Invalid receiver data pointer.");
+      }
+    }
+  }
 
   int NumRecvs = Exchange->num_recvs;
 
@@ -2100,6 +2132,19 @@ void PRIVATE(ExchangeDisperse)(const ovk_exchange *Exchange, ovk_data_type DataT
 
   size_t NumReceivers;
   ovkGetConnectivityReceiverSidePropertyCount(ReceiversProperties, &NumReceivers);
+
+  if (OVK_DEBUG) {
+    if (Count > 0 && NumReceivers > 0) {
+      OVK_DEBUG_ASSERT(ReceiverData, "Invalid receiver data pointer.");
+      for (iCount = 0; iCount < Count; ++iCount) {
+        OVK_DEBUG_ASSERT(ReceiverData[iCount], "Invalid receiver data pointer.");
+      }
+      OVK_DEBUG_ASSERT(GridData, "Invalid grid data pointer.");
+      for (iCount = 0; iCount < Count; ++iCount) {
+        OVK_DEBUG_ASSERT(GridData[iCount], "Invalid grid data pointer.");
+      }
+    }
+  }
 
   const ovk_grid *ReceiverGrid;
   ovkGetConnectivityReceiverSideGrid(Receivers, &ReceiverGrid);

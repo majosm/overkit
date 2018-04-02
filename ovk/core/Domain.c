@@ -1428,8 +1428,6 @@ void ovkCollect(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
   ovk_data_type DataType, int Count, ovk_collect_op CollectOp, const ovk_range *GridDataRange,
   ovk_array_layout GridDataLayout, const void **GridData, void **DonorData) {
 
-  int iCount;
-
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
   OVK_DEBUG_ASSERT(Domain->config & OVK_DOMAIN_CONFIG_EXCHANGE, "Domain %s is not configured for "
     "exchange.", Domain->properties.name);
@@ -1440,19 +1438,8 @@ void ovkCollect(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
   OVK_DEBUG_ASSERT(ValidDataType(DataType), "Invalid data type.");
   OVK_DEBUG_ASSERT(Count >= 0, "Invalid count.");
   OVK_DEBUG_ASSERT(ValidCollectOp(CollectOp), "Invalid collect operation.");
-  OVK_DEBUG_ASSERT(Count == 0 || GridData, "Invalid grid data pointer.");
-  if (OVK_DEBUG) {
-    for (iCount = 0; iCount < Count; ++iCount) {
-      OVK_DEBUG_ASSERT(GridData[iCount], "Invalid grid data pointer.");
-    }
-  }
+  // Note: Checking GridDataRange, GridData, and DonorData inside ExchangeCollect
   OVK_DEBUG_ASSERT(ValidArrayLayout(GridDataLayout), "Invalid grid data layout.");
-  OVK_DEBUG_ASSERT(Count == 0 || DonorData, "Invalid donor data pointer.");
-  if (OVK_DEBUG) {
-    for (iCount = 0; iCount < Count; ++iCount) {
-      OVK_DEBUG_ASSERT(DonorData[iCount], "Invalid donor data pointer.");
-    }
-  }
 
   const t_domain_exchange_container *Container = FindExchangeC(Domain, DonorGridID, ReceiverGridID);
   OVK_DEBUG_ASSERT(Container, "Exchange (%i,%i) does not exist.", DonorGridID, ReceiverGridID);
@@ -1472,8 +1459,6 @@ void ovkCollect(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
 void ovkSend(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, ovk_data_type DataType,
   int Count, const void **DonorData, int Tag, ovk_request **Request) {
 
-  int iCount;
-
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
   OVK_DEBUG_ASSERT(Domain->config & OVK_DOMAIN_CONFIG_EXCHANGE, "Domain %s is not configured for "
     "exchange.", Domain->properties.name);
@@ -1483,12 +1468,7 @@ void ovkSend(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, ovk_
   OVK_DEBUG_ASSERT(ovkGridExists(Domain, ReceiverGridID), "Grid %i does not exist.", ReceiverGridID);
   OVK_DEBUG_ASSERT(ValidDataType(DataType), "Invalid data type.");
   OVK_DEBUG_ASSERT(Count >= 0, "Invalid count.");
-  OVK_DEBUG_ASSERT(Count == 0 || DonorData, "Invalid donor data pointer.");
-  if (OVK_DEBUG) {
-    for (iCount = 0; iCount < Count; ++iCount) {
-      OVK_DEBUG_ASSERT(DonorData[iCount], "Invalid donor data pointer.");
-    }
-  }
+  // Note: Checking DonorData inside ExchangeSend
   OVK_DEBUG_ASSERT(Tag >= 0, "Invalid tag.");
   OVK_DEBUG_ASSERT(Request, "Invalid request pointer.");
 
@@ -1509,8 +1489,6 @@ void ovkSend(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, ovk_
 void ovkReceive(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
   ovk_data_type DataType, int Count, void **ReceiverData, int Tag, ovk_request **Request) {
 
-  int iCount;
-
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
   OVK_DEBUG_ASSERT(Domain->config & OVK_DOMAIN_CONFIG_EXCHANGE, "Domain %s is not configured for "
     "exchange.", Domain->properties.name);
@@ -1520,12 +1498,7 @@ void ovkReceive(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
   OVK_DEBUG_ASSERT(ovkGridExists(Domain, ReceiverGridID), "Grid %i does not exist.", ReceiverGridID);
   OVK_DEBUG_ASSERT(ValidDataType(DataType), "Invalid data type.");
   OVK_DEBUG_ASSERT(Count >= 0, "Invalid count.");
-  OVK_DEBUG_ASSERT(Count == 0 || ReceiverData, "Invalid receiver data pointer.");
-  if (OVK_DEBUG) {
-    for (iCount = 0; iCount < Count; ++iCount) {
-      OVK_DEBUG_ASSERT(ReceiverData[iCount], "Invalid receiver data pointer.");
-    }
-  }
+  // Note: Checking ReceiverData inside ExchangeReceive
   OVK_DEBUG_ASSERT(Tag >= 0, "Invalid tag.");
   OVK_DEBUG_ASSERT(Request, "Invalid request pointer.");
 
@@ -1568,8 +1541,6 @@ void ovkDisperse(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
   ovk_data_type DataType, int Count, ovk_disperse_op DisperseOp, const void **ReceiverData,
   const ovk_range *GridDataRange, ovk_array_layout GridDataLayout, void **GridData) {
 
-  int iCount;
-
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
   OVK_DEBUG_ASSERT(Domain->config & OVK_DOMAIN_CONFIG_EXCHANGE, "Domain %s is not configured for "
     "exchange.", Domain->properties.name);
@@ -1582,18 +1553,7 @@ void ovkDisperse(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
   OVK_DEBUG_ASSERT(ValidDataType(DataType), "Invalid data type.");
   OVK_DEBUG_ASSERT(Count >= 0, "Invalid count.");
   OVK_DEBUG_ASSERT(ValidDisperseOp(DisperseOp), "Invalid disperse operation.");
-  OVK_DEBUG_ASSERT(Count == 0 || ReceiverData, "Invalid receiver data pointer.");
-  if (OVK_DEBUG) {
-    for (iCount = 0; iCount < Count; ++iCount) {
-      OVK_DEBUG_ASSERT(ReceiverData[iCount], "Invalid receiver data pointer.");
-    }
-  }
-  OVK_DEBUG_ASSERT(Count == 0 || GridData, "Invalid grid data pointer.");
-  if (OVK_DEBUG) {
-    for (iCount = 0; iCount < Count; ++iCount) {
-      OVK_DEBUG_ASSERT(GridData[iCount], "Invalid grid data pointer.");
-    }
-  }
+  // Note: Checking GridDataRange, GridData, and DonorData inside ExchangeCollect
   OVK_DEBUG_ASSERT(ValidArrayLayout(GridDataLayout), "Invalid grid data layout.");
 
   const t_domain_exchange_container *Container = FindExchangeC(Domain, DonorGridID, ReceiverGridID);
