@@ -9,11 +9,13 @@
 #include "ovk/core/Range.h"
 
 #include <math.h>
+#include <float.h>
 
 static void CreatePartitionBin(t_partition_bin **Bin, int NumDims, int Index, ovk_range *Range,
   int NumPartitions);
 static void DestroyPartitionBin(t_partition_bin **Bin);
 
+static void BinDecomp(int NumDims, int *GlobalSize, int MaxBins, int *NumBins);
 static inline void MapToUniformCell(const int *Origin, const int *CellSize, const int *Point,
   int *Cell);
 
@@ -40,50 +42,12 @@ void PRIVATE(CreatePartitionHash)(t_partition_hash **Hash_, int NumDims, MPI_Com
   int GlobalSize[MAX_DIMS];
   ovkRangeSize(GlobalRange, GlobalSize);
 
-  double Length[MAX_DIMS];
-  for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Length[iDim] = (double)(GlobalSize[iDim]-1);
-  }
+  int NumBins[MAX_DIMS] = {1, 1, 1};
+  BinDecomp(Hash->num_dims, GlobalSize, Hash->comm_size, NumBins);
 
-  double Volume = 1.;
+  int TotalBins = 1;
   for (iDim = 0; iDim < NumDims; ++iDim) {
-    Volume *= Length[iDim];
-  }
-
-  double Scale[MAX_DIMS];
-  for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
-//     Scale[iDim] = Length[iDim]/pow(Volume, 1./(double)NumDims);
-    Scale[iDim] = Length[iDim]/Volume;
-  }
-
-  int NumBinsBase[MAX_DIMS];
-  for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    NumBinsBase[iDim] = clamp((int)(Scale[iDim]*(double)Hash->comm_size), 1, GlobalSize[iDim]);
-  }
-
-  // Find largest number of bins that can be distributed to ranks (at most 1 to any given rank)
-  int TotalBins = NumBinsBase[0]*NumBinsBase[1]*NumBinsBase[2];
-  int NumBins[MAX_DIMS] = {NumBinsBase[0], NumBinsBase[1], NumBinsBase[2]};
-  int SearchEnd[MAX_DIMS] = {1, 1, 1};
-  for (iDim = 0; iDim < NumDims; ++iDim) {
-    ++SearchEnd[iDim];
-  }
-  for (k = 0; k < SearchEnd[2]; ++k) {
-    for (j = 0; j < SearchEnd[1]; ++j) {
-      for (i = 0; i < SearchEnd[0]; ++i) {
-        int NumBinsPerturbed[MAX_DIMS] = {
-          min(NumBins[0]+i, GlobalSize[0]),
-          min(NumBins[1]+j, GlobalSize[1]),
-          min(NumBins[2]+k, GlobalSize[2])};
-        int TotalBinsPerturbed = NumBinsPerturbed[0]*NumBinsPerturbed[1]*NumBinsPerturbed[2];
-        if (TotalBinsPerturbed > TotalBins && TotalBinsPerturbed <= Hash->comm_size) {
-          TotalBins = TotalBinsPerturbed;
-          for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
-            NumBins[iDim] = NumBinsPerturbed[iDim];
-          }
-        }
-      }
-    }
+    TotalBins *= NumBins[iDim];
   }
 
   ovkDefaultRange(&Hash->bin_range, NumDims);
@@ -426,6 +390,67 @@ static void DestroyPartitionBin(t_partition_bin **Bin_) {
   free(Bin->partition_ranks);
 
   free_null(Bin_);
+
+}
+
+static void BinDecomp(int NumDims, int *GlobalSize, int MaxBins, int *NumBins) {
+
+  int iDim;
+  int iReducedDim;
+
+  if (NumDims == 1) {
+
+    NumBins[0] = MaxBins;
+
+  } else {
+
+    double Length[MAX_DIMS];
+    for (iDim = 0; iDim < NumDims; ++iDim) {
+      Length[iDim] = (double)(GlobalSize[iDim]-1);
+    }
+
+    double Volume = 1.;
+    for (iDim = 0; iDim < NumDims; ++iDim) {
+      Volume *= Length[iDim];
+    }
+
+    int iMinLengthDim = 0;
+    double MinLength = DBL_MAX;
+    for (iDim = 0; iDim < NumDims; ++iDim) {
+      if (Length[iDim] <= MinLength) {
+        iMinLengthDim = iDim;
+        MinLength = Length[iDim];
+      }
+    }
+
+    double Base = pow((double)MaxBins/Volume, 1./((double)NumDims));
+
+    NumBins[iMinLengthDim] = max((int)(Length[iMinLengthDim]*Base),1);
+
+    int GlobalSizeReduced[MAX_DIMS];
+
+    iReducedDim = 0;
+    for (iDim = 0; iDim < NumDims; ++iDim) {
+      if (iDim != iMinLengthDim) {
+        GlobalSizeReduced[iReducedDim] = GlobalSize[iDim];
+        ++iReducedDim;
+      }
+    }
+
+    int MaxBinsReduced = MaxBins/NumBins[iMinLengthDim];
+
+    int NumBinsReduced[MAX_DIMS];
+    BinDecomp(NumDims-1, GlobalSizeReduced, MaxBinsReduced, NumBinsReduced);
+
+    iReducedDim = 0;
+    for (iDim = 0; iDim < NumDims; ++iDim) {
+      if (iDim != iMinLengthDim) {
+        NumBins[iDim] = NumBinsReduced[iReducedDim];
+        ++iReducedDim;
+      }
+    }
+
+  }
 
 }
 
