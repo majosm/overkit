@@ -40,20 +40,25 @@ void PRIVATE(CreatePartitionHash)(t_partition_hash **Hash_, int NumDims, MPI_Com
   int GlobalSize[MAX_DIMS];
   ovkRangeSize(GlobalRange, GlobalSize);
 
-  double Aspect[MAX_DIMS];
+  double Length[MAX_DIMS];
   for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Aspect[iDim] = (double)(GlobalSize[iDim]-1)/((double)GlobalSize[0]-1);
+    Length[iDim] = (double)(GlobalSize[iDim]-1);
   }
 
   double Volume = 1.;
   for (iDim = 0; iDim < NumDims; ++iDim) {
-    Volume *= Aspect[iDim];
+    Volume *= Length[iDim];
   }
-  double BaseSize = pow((double)Hash->comm_size/Volume, 1./((double)NumDims));
+
+  double Scale[MAX_DIMS];
+  for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
+//     Scale[iDim] = Length[iDim]/pow(Volume, 1./(double)NumDims);
+    Scale[iDim] = Length[iDim]/Volume;
+  }
 
   int NumBinsBase[MAX_DIMS];
   for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    NumBinsBase[iDim] = clamp((int)(Aspect[iDim]*BaseSize), 1, GlobalSize[iDim]);
+    NumBinsBase[iDim] = clamp((int)(Scale[iDim]*(double)Hash->comm_size), 1, GlobalSize[iDim]);
   }
 
   // Find largest number of bins that can be distributed to ranks (at most 1 to any given rank)
