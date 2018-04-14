@@ -18,7 +18,7 @@ set(LOCAL_TARGETS)
 # MPI
 if(EXTERNAL_MPI)
   include_directories(SYSTEM "${MPI_INCLUDE_PATH}")
-  link_libraries(${MPI_C_LIBRARIES})
+  link_libraries(${MPI_C_LIBRARIES} ${MPI_CXX_LIBRARIES})
 endif()
 
 # C math library
