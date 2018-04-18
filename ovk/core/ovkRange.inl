@@ -79,25 +79,19 @@ static inline void ovkRangeCountSmall(const ovk_range *Range, int *Count) {
 static inline void ovkRangeTupleToIndex(const ovk_range *Range, ovk_array_layout Layout,
   const int *Tuple, size_t *Index) {
 
-  int iDim;
-  size_t Stride;
+  size_t Offset[OVK_MAX_DIMS] = {Tuple[0]-Range->b[0], Tuple[1]-Range->b[1], Tuple[2]-Range->b[2]};
+  size_t Stride[OVK_MAX_DIMS];
 
   switch (Layout) {
-  case OVK_COLUMN_MAJOR:
-    *Index = 0;
-    Stride = 1;
-    for (iDim = 0; iDim < Range->nd; ++iDim) {
-      *Index += Stride * (size_t)(Tuple[iDim] - Range->b[iDim]);
-      Stride *= (size_t)(Range->e[iDim] - Range->b[iDim]);
-    }
-    break;
   case OVK_ROW_MAJOR:
-    *Index = 0;
-    Stride = 1;
-    for (iDim = Range->nd-1; iDim >= 0; --iDim) {
-      *Index += Stride * (size_t)(Tuple[iDim] - Range->b[iDim]);
-      Stride *= (size_t)(Range->e[iDim] - Range->b[iDim]);
-    }
+    Stride[1] = Range->e[1]-Range->b[1];
+    Stride[2] = Range->e[2]-Range->b[2];
+    *Index = Stride[2]*(Stride[1]*Offset[0] + Offset[1]) + Offset[2];
+    break;
+  case OVK_COLUMN_MAJOR:
+    Stride[0] = Range->e[0]-Range->b[0];
+    Stride[1] = Range->e[1]-Range->b[1];
+    *Index = Offset[0] + Stride[0]*(Offset[1] + Stride[1]*Offset[2]);
     break;
   }
 
@@ -106,11 +100,21 @@ static inline void ovkRangeTupleToIndex(const ovk_range *Range, ovk_array_layout
 static inline void ovkRangeTupleToIndexSmall(const ovk_range *Range, ovk_array_layout Layout,
   const int *Tuple, int *Index) {
 
-  size_t IndexLarge;
+  int Offset[OVK_MAX_DIMS] = {Tuple[0]-Range->b[0], Tuple[1]-Range->b[1], Tuple[2]-Range->b[2]};
+  int Stride[OVK_MAX_DIMS];
 
-  ovkRangeTupleToIndex(Range, Layout, Tuple, &IndexLarge);
-
-  *Index = (int)IndexLarge;
+  switch (Layout) {
+  case OVK_ROW_MAJOR:
+    Stride[1] = Range->e[1]-Range->b[1];
+    Stride[2] = Range->e[2]-Range->b[2];
+    *Index = Stride[2]*(Stride[1]*Offset[0] + Offset[1]) + Offset[2];
+    break;
+  case OVK_COLUMN_MAJOR:
+    Stride[0] = Range->e[0]-Range->b[0];
+    Stride[1] = Range->e[1]-Range->b[1];
+    *Index = Offset[0] + Stride[0]*(Offset[1] + Stride[1]*Offset[2]);
+    break;
+  }
 
 }
 
