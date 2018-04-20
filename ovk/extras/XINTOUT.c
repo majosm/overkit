@@ -343,6 +343,7 @@ ovk_error ovkEXTImportXINTOUT(ovk_domain *Domain, const char *HOPath, const char
     free(LocalDonors);
     free(LocalReceivers);
     free(LocalGridIDs);
+    free(LocalGridNames);
     free(LocalGridComms);
     free(LocalGridGlobalSizes[0]);
     free(LocalGrids);
