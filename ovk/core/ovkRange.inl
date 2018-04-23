@@ -79,7 +79,7 @@ static inline void ovkRangeCountSmall(const ovk_range *Range, int *Count) {
 static inline void ovkRangeTupleToIndex(const ovk_range *Range, ovk_array_layout Layout,
   const int *Tuple, size_t *Index) {
 
-  size_t Offset[OVK_MAX_DIMS] = {Tuple[0]-Range->b[0], Tuple[1]-Range->b[1], Tuple[2]-Range->b[2]};
+  long long Offset[OVK_MAX_DIMS] = {Tuple[0]-Range->b[0], Tuple[1]-Range->b[1], Tuple[2]-Range->b[2]};
   size_t Stride[OVK_MAX_DIMS];
 
   switch (Layout) {
