@@ -8,17 +8,14 @@ if [ $# -eq 0 ]; then
 fi
 
 CollectData() {
-  file=$1
-  name=$2
-  grep "$name: " $file | cut -d' ' -f3 | tr '\n' ' '
+  grep "$2: " $1 | cut -d' ' -f3 | tr '\n' ' '
 }
 
 PrintData() {
-  name=$1
-  data=($2)
-  printf "$name"
-  for ((i=0; i<${#data[@]}; i++)); do
-    printf ",%s" ${data[$i]}
+  data_array=($2)
+  printf "$1"
+  for ((i=0; i<${#data_array[@]}; i++)); do
+    printf ",%s" ${data_array[$i]}
   done
   printf "\n"
 }
