@@ -42,7 +42,7 @@ macro(configure_overkit)
     ALWAYS 1
   )
 
-  find_package(Overkit QUIET CONFIG REQUIRED PATHS "${CONFIGURE_OVERKIT_ARG_BINARY_DIR}")
+  find_package(Overkit QUIET CONFIG REQUIRED PATHS "${CONFIGURE_OVERKIT_ARG_BINARY_DIR}" NO_DEFAULT_PATH)
 
   foreach(LIBRARY ${Overkit_LIBRARIES})
     add_dependencies(${LIBRARY} OverkitSubproject)
