@@ -87,6 +87,16 @@ add_dependencies(overkit-core core-internal-headers)
 # Compiling/linking
 #-------------------
 
+# C++11 standard
+if(NOT CMAKE_VERSION VERSION_LESS "3.6")
+  target_compile_features(overkit-core PRIVATE
+    cxx_auto_type
+    cxx_range_for
+  )
+else()
+  target_compile_options(overkit-core PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-std=c++11>)
+endif()
+
 # Needed for linking into shared lib
 if(BUILD_SHARED_LIBS)
   set_property(TARGET overkit-core PROPERTY POSITION_INDEPENDENT_CODE TRUE)
