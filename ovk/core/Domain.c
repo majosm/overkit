@@ -300,7 +300,7 @@ void ovkDestroyGridParams(ovk_domain *Domain, ovk_grid_params **Params) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
   OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
-  OVK_DEBUG_ASSERT(*Params, "Invalid grid params pointer.");
+  OVK_DEBUG_ASSERT(*Params, "Invalid params pointer.");
 
   DestroyGridParams(Params);
 
