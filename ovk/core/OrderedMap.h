@@ -40,7 +40,7 @@ static inline void OMSetData(t_ordered_map_entry *Entry, void *Data) { Entry->da
 
 static inline void OMCreate(t_ordered_map **Map_) {
 
-  *Map_ = malloc(sizeof(t_ordered_map));
+  *Map_ = (t_ordered_map *)malloc(sizeof(t_ordered_map));
   t_ordered_map *Map = *Map_;
 
   Map->head = NULL;
@@ -131,7 +131,7 @@ static inline bool OMExists(const t_ordered_map *Map, int Key) {
 
 static inline t_ordered_map_entry *OMInsert(t_ordered_map *Map, int Key, void *Data) {
 
-  t_ordered_map_entry *NewEntry = malloc(sizeof(t_ordered_map_entry));
+  t_ordered_map_entry *NewEntry = (t_ordered_map_entry *)malloc(sizeof(t_ordered_map_entry));
   NewEntry->key = Key;
   NewEntry->data = Data;
   NewEntry->next = NULL;
