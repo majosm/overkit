@@ -25,7 +25,7 @@ endif()
 link_libraries("${C_MATH_LIBRARY}")
 
 # Overkit library
-link_libraries(overkit)
+link_libraries(overkit-parallel)
 
 #==========
 # Examples
