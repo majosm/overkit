@@ -4,6 +4,7 @@
 #ifndef OVK_CORE_PUBLIC_DOMAIN_INCLUDED
 #define OVK_CORE_PUBLIC_DOMAIN_INCLUDED
 
+#include <ovk/core/ovkAssemblyOptions.h>
 #include <ovk/core/ovkConnectivity.h>
 #include <ovk/core/ovkGlobal.h>
 #include <ovk/core/ovkGrid.h>
@@ -68,7 +69,10 @@ void ovkGetLocalDonorCount(const ovk_domain *Domain, int DonorGridID, int Receiv
 void ovkGetLocalReceiverCount(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
   size_t *NumReceivers);
 
-void ovkAssemble(ovk_domain *Domain);
+void ovkCreateAssemblyOptions(ovk_domain *Domain, ovk_assembly_options **Options);
+void ovkDestroyAssemblyOptions(ovk_domain *Domain, ovk_assembly_options **Options);
+
+void ovkAssemble(ovk_domain *Domain, const ovk_assembly_options *Options);
 
 void ovkCollect(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
   ovk_data_type DataType, int Count, ovk_collect_op CollectOp, const ovk_range *GridDataRange,

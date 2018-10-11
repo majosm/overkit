@@ -16,6 +16,7 @@ set(LOCAL_TARGETS)
 #--------------
 
 set(SOURCES
+  AssemblyOptions.cpp
   Connectivity.c
   ConnectivityD.c
   ConnectivityR.c
@@ -33,6 +34,7 @@ set(SOURCES
 )
 
 set(INTERNAL_HEADERS
+  AssemblyOptions.h
   Box.h
   Cart.h
   Connectivity.h
@@ -56,6 +58,7 @@ set(INTERNAL_HEADERS
 )
 
 set(API_HEADERS
+  ovkAssemblyOptions.h
   ovkBox.h
   ovkBox.inl
   ovkCart.h

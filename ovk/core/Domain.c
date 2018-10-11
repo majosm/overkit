@@ -3,6 +3,7 @@
 
 #include "ovk/core/Domain.h"
 
+#include "ovk/core/AssemblyOptions.h"
 #include "ovk/core/Connectivity.h"
 #include "ovk/core/ErrorHandler.h"
 #include "ovk/core/Exchange.h"
@@ -1354,7 +1355,38 @@ void ovkGetLocalReceiverCount(const ovk_domain *Domain, int DonorGridID, int Rec
 
 }
 
-void ovkAssemble(ovk_domain *Domain) {
+void ovkCreateAssemblyOptions(ovk_domain *Domain, ovk_assembly_options **Options) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+  OVK_DEBUG_ASSERT(Options, "Invalid options pointer.");
+
+  t_ordered_map *GridIDs;
+  OMCreate(&GridIDs);
+  t_ordered_map_entry *Entry = OMBegin(Domain->grids);
+  while (Entry != OMEnd(Domain->grids)) {
+    int GridID = OMKey(Entry);
+    OMInsert(GridIDs, GridID, NULL);
+    Entry = OMNext(Entry);
+  }
+
+  CreateAssemblyOptions(Options, Domain->properties.num_dims, Domain->properties.num_grids,
+    GridIDs, Domain->logger, Domain->error_handler);
+
+  OMDestroy(&GridIDs);
+
+}
+
+void ovkDestroyAssemblyOptions(ovk_domain *Domain, ovk_assembly_options **Options) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+  OVK_DEBUG_ASSERT(Options, "Invalid options pointer.");
+  OVK_DEBUG_ASSERT(*Options, "Invalid options pointer.");
+
+  DestroyAssemblyOptions(Options);
+
+}
+
+void ovkAssemble(ovk_domain *Domain, const ovk_assembly_options *Options) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
 

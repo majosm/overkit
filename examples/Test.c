@@ -390,7 +390,12 @@ void ExchangeTest(int argc, char **argv) {
     }
   }
 
-  ovkAssemble(Domain);
+  ovk_assembly_options *Options;
+  ovkCreateAssemblyOptions(Domain, &Options);
+
+  ovkAssemble(Domain, Options);
+
+  ovkDestroyAssemblyOptions(Domain, &Options);
 
   // Exchange variant #1 -- basic exchange
 
@@ -800,7 +805,12 @@ void AssembleTest(int argc, char **argv) {
   }
   free(Grids);
 
-  ovkAssemble(Domain);
+  ovk_assembly_options *Options;
+  ovkCreateAssemblyOptions(Domain, &Options);
+
+  ovkAssemble(Domain, Options);
+
+  ovkDestroyAssemblyOptions(Domain, &Options);
 
   ovkDestroyContext(&Context);
 

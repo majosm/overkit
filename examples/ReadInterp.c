@@ -142,7 +142,12 @@ int main(int argc, char **argv) {
   EndProfileSync(Profiler, ImportTime, MPI_COMM_WORLD);
   StartProfileSync(Profiler, AssembleTime, MPI_COMM_WORLD);
 
-  ovkAssemble(Domain);
+  ovk_assembly_options *Options;
+  ovkCreateAssemblyOptions(Domain, &Options);
+
+  ovkAssemble(Domain, Options);
+
+  ovkDestroyAssemblyOptions(Domain, &Options);
 
   EndProfileSync(Profiler, AssembleTime, MPI_COMM_WORLD);
   StartProfileSync(Profiler, ExchangeTime, MPI_COMM_WORLD);
