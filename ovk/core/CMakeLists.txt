@@ -99,7 +99,7 @@ endif()
 
 # Coverage
 if(COVERAGE)
-  target_compile_options(overkit-core PRIVATE "--coverage")
+  target_compile_options(overkit-core PRIVATE --coverage)
 endif()
 
 #--------------------
