@@ -91,6 +91,19 @@ typedef enum {
 } ovk_geometry_type;
 
 typedef enum {
+  OVK_OCCLUDES_NONE,
+  OVK_OCCLUDES_ALL,
+  OVK_OCCLUDES_COARSE
+} ovk_occludes;
+
+typedef enum {
+  OVK_CONNECTION_NONE,
+  OVK_CONNECTION_NEAREST,
+  OVK_CONNECTION_LINEAR,
+  OVK_CONNECTION_CUBIC
+} ovk_connection_type;
+
+typedef enum {
   OVK_ROW_MAJOR,
   OVK_COLUMN_MAJOR,
   OVK_GRID_LAYOUT = OVK_COLUMN_MAJOR

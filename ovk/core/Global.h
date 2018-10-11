@@ -96,6 +96,33 @@ static inline bool ValidGeometryType(ovk_geometry_type GeometryType) {
 
 }
 
+static inline bool ValidOccludes(ovk_occludes Occludes) {
+
+  switch (Occludes) {
+  case OVK_OCCLUDES_NONE:
+  case OVK_OCCLUDES_ALL:
+  case OVK_OCCLUDES_COARSE:
+    return true;
+  default:
+    return false;
+  }
+
+}
+
+static inline bool ValidConnectionType(ovk_connection_type ConnectionType) {
+
+  switch (ConnectionType) {
+  case OVK_CONNECTION_NONE:
+  case OVK_CONNECTION_NEAREST:
+  case OVK_CONNECTION_LINEAR:
+  case OVK_CONNECTION_CUBIC:
+    return true;
+  default:
+    return false;
+  }
+
+}
+
 static inline bool ValidArrayLayout(ovk_array_layout Layout) {
 
   switch (Layout) {
