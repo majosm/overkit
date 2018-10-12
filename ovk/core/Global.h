@@ -77,18 +77,24 @@ static inline bool ValidDomainConfig(ovk_domain_config DomainConfig) {
 
 static inline bool ValidPeriodicStorage(ovk_periodic_storage PeriodicStorage) {
 
-  return PeriodicStorage == OVK_NO_OVERLAP_PERIODIC || PeriodicStorage == OVK_OVERLAP_PERIODIC;
+  switch (PeriodicStorage) {
+  case OVK_PERIODIC_STORAGE_UNIQUE:
+  case OVK_PERIODIC_STORAGE_DUPLICATED:
+    return true;
+  default:
+    return false;
+  }
 
 }
 
 static inline bool ValidGeometryType(ovk_geometry_type GeometryType) {
 
   switch (GeometryType) {
-  case OVK_GEOMETRY_TYPE_CARTESIAN:
-  case OVK_GEOMETRY_TYPE_RECTILINEAR:
-  case OVK_GEOMETRY_TYPE_ORIENTED_CARTESIAN:
-  case OVK_GEOMETRY_TYPE_ORIENTED_RECTILINEAR:
-  case OVK_GEOMETRY_TYPE_CURVILINEAR:
+  case OVK_GEOMETRY_UNIFORM:
+  case OVK_GEOMETRY_ORIENTED_UNIFORM:
+  case OVK_GEOMETRY_RECTILINEAR:
+  case OVK_GEOMETRY_ORIENTED_RECTILINEAR:
+  case OVK_GEOMETRY_CURVILINEAR:
     return true;
   default:
     return false;

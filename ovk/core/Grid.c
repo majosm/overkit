@@ -74,7 +74,7 @@ void PRIVATE(CreateGrid)(ovk_grid **Grid_, int ID, const ovk_grid_params *Params
   ovkDefaultCart(&Grid->cart, NumDims);
   for (iDim = 0; iDim < NumDims; ++iDim) {
     if (Grid->properties.periodic[iDim] && Grid->properties.periodic_storage ==
-      OVK_OVERLAP_PERIODIC) {
+      OVK_PERIODIC_STORAGE_DUPLICATED) {
       Grid->cart.size[iDim] = Grid->properties.global_range.e[iDim]-1;
     } else {
       Grid->cart.size[iDim] = Grid->properties.global_range.e[iDim];
@@ -519,11 +519,11 @@ void PRIVATE(CreateGridParams)(ovk_grid_params **Params_, int NumDims, MPI_Comm 
   Params->periodic[0] = false;
   Params->periodic[1] = false;
   Params->periodic[2] = false;
-  Params->periodic_storage = OVK_NO_OVERLAP_PERIODIC;
+  Params->periodic_storage = OVK_PERIODIC_STORAGE_UNIQUE;
   Params->periodic_length[0] = 0.;
   Params->periodic_length[1] = 0.;
   Params->periodic_length[2] = 0.;
-  Params->geometry_type = OVK_GEOMETRY_TYPE_CURVILINEAR;
+  Params->geometry_type = OVK_GEOMETRY_CURVILINEAR;
 
   ovkDefaultRange(&Params->local_range, NumDims);
 
@@ -639,8 +639,8 @@ void ovkSetGridParamPeriodicStorage(ovk_grid_params *Params, ovk_periodic_storag
   OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
   OVK_DEBUG_ASSERT(ValidPeriodicStorage(PeriodicStorage), "Invalid periodic storage.");
 
-  OVK_DEBUG_ASSERT(PeriodicStorage == OVK_NO_OVERLAP_PERIODIC, "Overlap periodic is not currently "
-    "supported.");
+  OVK_DEBUG_ASSERT(PeriodicStorage == OVK_PERIODIC_STORAGE_DUPLICATED, "Duplicated periodic storage "
+    "is not currently supported.");
 
   Params->periodic_storage = PeriodicStorage;
 
@@ -722,11 +722,11 @@ static void DefaultProperties(ovk_grid_properties *Properties, int NumDims) {
   Properties->periodic[0] = false;
   Properties->periodic[1] = false;
   Properties->periodic[2] = false;
-  Properties->periodic_storage = OVK_NO_OVERLAP_PERIODIC;
+  Properties->periodic_storage = OVK_PERIODIC_STORAGE_UNIQUE;
   Properties->periodic_length[0] = 0.;
   Properties->periodic_length[1] = 0.;
   Properties->periodic_length[2] = 0.;
-  Properties->geometry_type = OVK_GEOMETRY_TYPE_CURVILINEAR;
+  Properties->geometry_type = OVK_GEOMETRY_CURVILINEAR;
 
   ovkDefaultRange(&Properties->global_range, NumDims);
   ovkDefaultRange(&Properties->local_range, NumDims);
