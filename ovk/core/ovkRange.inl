@@ -80,18 +80,18 @@ static inline void ovkRangeTupleToIndex(const ovk_range *Range, ovk_array_layout
   const int *Tuple, size_t *Index) {
 
   long long Offset[OVK_MAX_DIMS] = {Tuple[0]-Range->b[0], Tuple[1]-Range->b[1], Tuple[2]-Range->b[2]};
-  size_t Stride[OVK_MAX_DIMS];
+  size_t Size[OVK_MAX_DIMS];
 
   switch (Layout) {
   case OVK_ROW_MAJOR:
-    Stride[1] = Range->e[1]-Range->b[1];
-    Stride[2] = Range->e[2]-Range->b[2];
-    *Index = Stride[2]*(Stride[1]*Offset[0] + Offset[1]) + Offset[2];
+    Size[1] = Range->e[1]-Range->b[1];
+    Size[2] = Range->e[2]-Range->b[2];
+    *Index = Size[2]*(Size[1]*Offset[0] + Offset[1]) + Offset[2];
     break;
   case OVK_COLUMN_MAJOR:
-    Stride[0] = Range->e[0]-Range->b[0];
-    Stride[1] = Range->e[1]-Range->b[1];
-    *Index = Offset[0] + Stride[0]*(Offset[1] + Stride[1]*Offset[2]);
+    Size[0] = Range->e[0]-Range->b[0];
+    Size[1] = Range->e[1]-Range->b[1];
+    *Index = Offset[0] + Size[0]*(Offset[1] + Size[1]*Offset[2]);
     break;
   }
 
@@ -101,18 +101,18 @@ static inline void ovkRangeTupleToIndexSmall(const ovk_range *Range, ovk_array_l
   const int *Tuple, int *Index) {
 
   int Offset[OVK_MAX_DIMS] = {Tuple[0]-Range->b[0], Tuple[1]-Range->b[1], Tuple[2]-Range->b[2]};
-  int Stride[OVK_MAX_DIMS];
+  int Size[OVK_MAX_DIMS];
 
   switch (Layout) {
   case OVK_ROW_MAJOR:
-    Stride[1] = Range->e[1]-Range->b[1];
-    Stride[2] = Range->e[2]-Range->b[2];
-    *Index = Stride[2]*(Stride[1]*Offset[0] + Offset[1]) + Offset[2];
+    Size[1] = Range->e[1]-Range->b[1];
+    Size[2] = Range->e[2]-Range->b[2];
+    *Index = Size[2]*(Size[1]*Offset[0] + Offset[1]) + Offset[2];
     break;
   case OVK_COLUMN_MAJOR:
-    Stride[0] = Range->e[0]-Range->b[0];
-    Stride[1] = Range->e[1]-Range->b[1];
-    *Index = Offset[0] + Stride[0]*(Offset[1] + Stride[1]*Offset[2]);
+    Size[0] = Range->e[0]-Range->b[0];
+    Size[1] = Range->e[1]-Range->b[1];
+    *Index = Offset[0] + Size[0]*(Offset[1] + Size[1]*Offset[2]);
     break;
   }
 
@@ -122,23 +122,30 @@ static inline void ovkRangeIndexToTuple(const ovk_range *Range, ovk_array_layout
   size_t Index, int *Tuple) {
 
   int iDim;
-  size_t Stride;
+  size_t Stride[OVK_MAX_DIMS];
+  size_t ReducedIndex;
 
   switch (Layout) {
-  case OVK_COLUMN_MAJOR:
-    Stride = 1;
+  case OVK_ROW_MAJOR:
+    Stride[2] = 1;
+    Stride[1] = Range->e[2]-Range->b[2];
+    Stride[0] = Stride[1]*(Range->e[1]-Range->b[1]);
+    ReducedIndex = Index;
     for (iDim = 0; iDim < Range->nd; ++iDim) {
-      size_t N = Range->e[iDim] - Range->b[iDim];
-      Tuple[iDim] = Range->b[iDim] + (int)((Index/Stride) % N);
-      Stride *= N;
+      int Offset = (int)(ReducedIndex/Stride[iDim]);
+      Tuple[iDim] = Range->b[iDim] + Offset;
+      ReducedIndex -= Offset*Stride[iDim];
     }
     break;
-  case OVK_ROW_MAJOR:
-    Stride = 1;
+  case OVK_COLUMN_MAJOR:
+    Stride[0] = 1;
+    Stride[1] = Range->e[0]-Range->b[0];
+    Stride[2] = Stride[1]*(Range->e[1]-Range->b[1]);
+    ReducedIndex = Index;
     for (iDim = Range->nd-1; iDim >= 0; --iDim) {
-      size_t N = Range->e[iDim] - Range->b[iDim];
-      Tuple[iDim] = Range->b[iDim] + (int)((Index/Stride) % N);
-      Stride *= N;
+      int Offset = (int)(ReducedIndex/Stride[iDim]);
+      Tuple[iDim] = Range->b[iDim] + Offset;
+      ReducedIndex -= Offset*Stride[iDim];
     }
     break;
   }
