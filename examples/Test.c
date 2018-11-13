@@ -99,14 +99,14 @@ void ExchangeTest(int argc, char **argv) {
   ovkDestroyContextParams(&ContextParams);
 
   ovk_domain_params *DomainParams;
-  ovkCreateDomainParams(Context, &DomainParams);
-  ovkSetDomainParamDimension(DomainParams, 2);
+  ovkCreateDomainParams(&DomainParams, 2);
+  ovkSetDomainParamName(DomainParams, "Domain");
   ovkSetDomainParamComm(DomainParams, MPI_COMM_WORLD);
 
   ovk_domain *Domain;
   ovkCreateDomain(Context, &Domain, DomainParams);
 
-  ovkDestroyDomainParams(Context, &DomainParams);
+  ovkDestroyDomainParams(&DomainParams);
 
   ovkConfigureDomain(Domain, OVK_DOMAIN_CONFIG_CONNECTIVITY | OVK_DOMAIN_CONFIG_EXCHANGE);
 
@@ -115,13 +115,12 @@ void ExchangeTest(int argc, char **argv) {
 
   ovk_domain *OtherDomain = NULL;
   if (Rank % 2 == 1) {
-    ovkCreateDomainParams(Context, &DomainParams);
+    ovkCreateDomainParams(&DomainParams, 2);
     ovkSetDomainParamName(DomainParams, "OtherDomain");
-    ovkSetDomainParamDimension(DomainParams, 2);
     ovkSetDomainParamComm(DomainParams, SplitComm);
     ovkCreateDomain(Context, &OtherDomain, DomainParams);
-    ovkDestroyDomainParams(Context, &DomainParams);
     ovkDestroyDomain(Context, &OtherDomain);
+    ovkDestroyDomainParams(&DomainParams);
   }
 
   MPI_Comm_free(&SplitComm);
@@ -131,7 +130,7 @@ void ExchangeTest(int argc, char **argv) {
     input_grid *InputGrid = FindLocalGrid(NumLocalGrids, InputGrids, GridID);
     if (InputGrid) {
       ovk_grid_params *GridParams;
-      ovkCreateGridParams(Domain, &GridParams);
+      ovkCreateGridParams(&GridParams, 2);
       ovkSetGridParamName(GridParams, InputGrid->name);
       ovkSetGridParamComm(GridParams, InputGrid->comm);
       ovkSetGridParamSize(GridParams, InputGrid->global_size);
@@ -139,7 +138,7 @@ void ExchangeTest(int argc, char **argv) {
       ovkSetRange(&LocalRange, 2, InputGrid->is, InputGrid->ie);
       ovkSetGridParamLocalRange(GridParams, &LocalRange);
       ovkCreateGridLocal(Domain, GridID, GridParams);
-      ovkDestroyGridParams(Domain, &GridParams);
+      ovkDestroyGridParams(&GridParams);
     } else {
       ovkCreateGridRemote(Domain, GridID);
     }
@@ -150,7 +149,7 @@ void ExchangeTest(int argc, char **argv) {
 //     input_grid *InputGrid = FindLocalGrid(NumLocalGrids, InputGrids, GridID);
 //     ovk_grid_params *GridParams = NULL;
 //     if (InputGrid) {
-//       ovkCreateGridParams(Domain, &GridParams);
+//       ovkCreateGridParams(&GridParams, 2);
 //       ovkSetGridParamName(GridParams, InputGrid->name);
 //       ovkSetGridParamComm(GridParams, InputGrid->comm);
 //       ovkSetGridParamSize(GridParams, InputGrid->global_size);
@@ -160,7 +159,7 @@ void ExchangeTest(int argc, char **argv) {
 //     }
 //     ovkCreateGrid(Domain, GridID, GridParams);
 //     if (InputGrid) {
-//       ovkDestroyGridParams(Domain, &GridParams);
+//       ovkDestroyGridParams(&GridParams);
 //     }
 //   }
 
@@ -169,7 +168,7 @@ void ExchangeTest(int argc, char **argv) {
 //   for (iGrid = 0; iGrid < 2; ++iGrid) {
 //     input_grid *InputGrid = FindLocalGrid(NumLocalGrids, InputGrids, GridIDs[iGrid]);
 //     if (InputGrid) {
-//       ovkCreateGridParams(Domain, &GridParams[iGrid]);
+//       ovkCreateGridParams(&GridParams[iGrid], 2);
 //       ovkSetGridParamName(GridParams[iGrid], InputGrid->name);
 //       ovkSetGridParamComm(GridParams[iGrid], InputGrid->comm);
 //       ovkSetGridParamSize(GridParams[iGrid], InputGrid->global_size);
@@ -184,18 +183,9 @@ void ExchangeTest(int argc, char **argv) {
 //   for (iGrid = 0; iGrid < 2; ++iGrid) {
 //     input_grid *InputGrid = FindLocalGrid(NumLocalGrids, InputGrids, GridIDs[iGrid]);
 //     if (InputGrid) {
-//       ovkDestroyGridParams(Domain, &GridParams[iGrid]);
+//       ovkDestroyGridParams(&GridParams[iGrid]);
 //     }
 //   }
-
-  ovk_domain_properties *DomainProperties;
-  ovkEditDomainProperties(Domain, &DomainProperties);
-#ifdef NOPE
-  ovkSetDomainPropertyOverlappable(DomainProperties, OVK_ALL_GRIDS, OVK_ALL_GRIDS, true);
-  ovkSetDomainPropertyConnectionType(DomainProperties, OVK_ALL_GRIDS, OVK_ALL_GRIDS,
-    OVK_CONNECTION_MANUAL);
-#endif
-  ovkReleaseDomainProperties(Domain, &DomainProperties);
 
 //   ovk_overlap *Overlap;
 //   ovkEditOverlap(Domain, DonorGridID, ReceiverGridID, &Overlap);
@@ -228,6 +218,11 @@ void ExchangeTest(int argc, char **argv) {
 //   ovkGetLocalConnectivityCount(Domain, &NumLocalConnectivities);
 //   ovk_connectivity **Connectivities = malloc(NumLocalConnectivities*sizeof(ovk_connectivity *));
 //   ovkEditAllConnectivities(Domain, Connectivities);
+
+//   int DonorGridIDs[] = {1, 2};
+//   int ReceiverGridIDs[] = {2, 1};
+//   ovkCreateConnectivities(Domain, 2, DonorGridIDs, ReceiverGridIDs);
+//   ovkCreateExchanges(Domain, 2, DonorGridIDs, ReceiverGridIDs);
 
   ovk_connectivity *Connectivities[2] = {NULL, NULL};
   iConnectivity = 0;
@@ -391,11 +386,12 @@ void ExchangeTest(int argc, char **argv) {
   }
 
   ovk_assembly_options *Options;
-  ovkCreateAssemblyOptions(Domain, &Options);
+  int GridIDs[2] = {1, 2};
+  ovkCreateAssemblyOptions(&Options, 2, 2, GridIDs);
 
   ovkAssemble(Domain, Options);
 
-  ovkDestroyAssemblyOptions(Domain, &Options);
+  ovkDestroyAssemblyOptions(&Options);
 
   // Exchange variant #1 -- basic exchange
 
@@ -709,14 +705,14 @@ void AssembleTest(int argc, char **argv) {
   ovkDestroyContextParams(&ContextParams);
 
   ovk_domain_params *DomainParams;
-  ovkCreateDomainParams(Context, &DomainParams);
-  ovkSetDomainParamDimension(DomainParams, 2);
+  ovkCreateDomainParams(&DomainParams, 2);
+  ovkSetDomainParamName(DomainParams, "Domain");
   ovkSetDomainParamComm(DomainParams, MPI_COMM_WORLD);
 
   ovk_domain *Domain;
   ovkCreateDomain(Context, &Domain, DomainParams);
 
-  ovkDestroyDomainParams(Context, &DomainParams);
+  ovkDestroyDomainParams(&DomainParams);
 
   ovkConfigureDomain(Domain, OVK_DOMAIN_CONFIG_GEOMETRY | OVK_DOMAIN_CONFIG_OVERLAP |
     OVK_DOMAIN_CONFIG_CONNECTIVITY);
@@ -726,7 +722,7 @@ void AssembleTest(int argc, char **argv) {
     input_grid *InputGrid = FindLocalGrid(NumLocalGrids, InputGrids, GridID);
     if (InputGrid) {
       ovk_grid_params *GridParams;
-      ovkCreateGridParams(Domain, &GridParams);
+      ovkCreateGridParams(&GridParams, 2);
       ovkSetGridParamName(GridParams, InputGrid->name);
       ovkSetGridParamComm(GridParams, InputGrid->comm);
       ovkSetGridParamSize(GridParams, InputGrid->global_size);
@@ -734,25 +730,11 @@ void AssembleTest(int argc, char **argv) {
       ovkSetRange(&LocalRange, 2, InputGrid->is, InputGrid->ie);
       ovkSetGridParamLocalRange(GridParams, &LocalRange);
       ovkCreateGridLocal(Domain, GridID, GridParams);
-      ovkDestroyGridParams(Domain, &GridParams);
+      ovkDestroyGridParams(&GridParams);
     } else {
       ovkCreateGridRemote(Domain, GridID);
     }
   }
-
-  ovk_domain_properties *Properties;
-  ovkEditDomainProperties(Domain, &Properties);
-#ifdef NOPE
-  ovkSetDomainPropertyOverlappable(Properties, OVK_ALL_GRIDS, OVK_ALL_GRIDS, true);
-  ovkSetDomainPropertyOverlapTolerance(Properties, OVK_ALL_GRIDS, OVK_ALL_GRIDS, 1.e-10);
-  ovkSetDomainPropertyInferBoundaries(Properties, OVK_ALL_GRIDS, true);
-  ovkSetDomainPropertyBoundaryHoleCutting(Properties, OVK_ALL_GRIDS, OVK_ALL_GRIDS, false);
-  ovkSetDomainPropertyOverlapHoleCutting(Properties, OVK_ALL_GRIDS, OVK_ALL_GRIDS, false);
-  ovkSetDomainPropertyConnectionType(Properties, OVK_ALL_GRIDS, OVK_ALL_GRIDS, OVK_CONNECTION_FRINGE);
-  ovkSetDomainPropertyFringeSize(Properties, OVK_ALL_GRIDS, OVK_ALL_GRIDS, 1);
-  ovkSetDomainPropertyFringePadding(Properties, OVK_ALL_GRIDS, OVK_ALL_GRIDS, 0);
-#endif
-  ovkReleaseDomainProperties(Domain, &Properties);
 
   ovk_grid **Grids = malloc(NumLocalGrids*sizeof(ovk_grid *));
   iLocalGrid = 0;
@@ -805,12 +787,26 @@ void AssembleTest(int argc, char **argv) {
   }
   free(Grids);
 
+#ifdef NOPE
   ovk_assembly_options *Options;
-  ovkCreateAssemblyOptions(Domain, &Options);
+  int GridIDs[2] = {1, 2};
+  ovkCreateAssemblyOptions(&Options, 2, 2, GridIDs);
+  ovkSetAssemblyOptionOverlappable(Options, OVK_ALL_GRIDS, OVK_ALL_GRIDS, OVK_TRUE);
+  ovkSetAssemblyOptionTolerance(Options, OVK_ALL_GRIDS, OVK_ALL_GRIDS, 0.1);
+  ovkSetAssemblyOptionAccelQualityAdjust(Options, OVK_ALL_GRIDS, OVK_ALL_GRIDS, 0.);
+  ovkSetAssemblyOptionInferBoundaries(Options, OVK_ALL_GRIDS, OVK_TRUE);
+  ovkSetAssemblyOptionCutBoundaryHoles(Options, OVK_ALL_GRIDS, OVK_ALL_GRIDS, OVK_TRUE);
+  ovkSetAssemblyOptionOccludes(Options, OVK_ALL_GRIDS, OVK_ALL_GRIDS, OVK_OCCLUDES_COARSE);
+  ovkSetAssemblyOptionEdgePadding(Options, OVK_ALL_GRIDS, OVK_ALL_GRIDS, 2);
+  ovkSetAssemblyOptionEdgeSmoothing(Options, OVK_ALL_GRIDS, 2);
+  ovkSetAssemblyOptionConnectionType(Options, OVK_ALL_GRIDS, OVK_ALL_GRIDS, OVK_CONNECTION_CUBIC);
+  ovkSetAssemblyOptionFringeSize(Options, OVK_ALL_GRIDS, 2);
+  ovkSetAssemblyOptionMinimizeOverlap(Options, OVK_ALL_GRIDS, OVK_ALL_GRIDS, OVK_TRUE);
 
   ovkAssemble(Domain, Options);
 
-  ovkDestroyAssemblyOptions(Domain, &Options);
+  ovkDestroyAssemblyOptions(&Options);
+#endif
 
   ovkDestroyContext(&Context);
 

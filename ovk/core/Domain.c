@@ -288,25 +288,6 @@ void ovkGetNextAvailableGridID(const ovk_domain *Domain, int *GridID) {
 
 }
 
-void ovkCreateGridParams(ovk_domain *Domain, ovk_grid_params **Params) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
-
-  CreateGridParams(Params, Domain->properties.num_dims, Domain->properties.comm);
-
-}
-
-void ovkDestroyGridParams(ovk_domain *Domain, ovk_grid_params **Params) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
-  OVK_DEBUG_ASSERT(*Params, "Invalid params pointer.");
-
-  DestroyGridParams(Params);
-
-}
-
 void ovkCreateGridLocal(ovk_domain *Domain, int GridID, const ovk_grid_params *Params) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
@@ -1355,37 +1336,6 @@ void ovkGetLocalReceiverCount(const ovk_domain *Domain, int DonorGridID, int Rec
 
 }
 
-void ovkCreateAssemblyOptions(ovk_domain *Domain, ovk_assembly_options **Options) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(Options, "Invalid options pointer.");
-
-  t_ordered_map *GridIDs;
-  OMCreate(&GridIDs);
-  t_ordered_map_entry *Entry = OMBegin(Domain->grids);
-  while (Entry != OMEnd(Domain->grids)) {
-    int GridID = OMKey(Entry);
-    OMInsert(GridIDs, GridID, NULL);
-    Entry = OMNext(Entry);
-  }
-
-  CreateAssemblyOptions(Options, Domain->properties.num_dims, Domain->properties.num_grids,
-    GridIDs, Domain->logger, Domain->error_handler);
-
-  OMDestroy(&GridIDs);
-
-}
-
-void ovkDestroyAssemblyOptions(ovk_domain *Domain, ovk_assembly_options **Options) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(Options, "Invalid options pointer.");
-  OVK_DEBUG_ASSERT(*Options, "Invalid options pointer.");
-
-  DestroyAssemblyOptions(Options);
-
-}
-
 void ovkAssemble(ovk_domain *Domain, const ovk_assembly_options *Options) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
@@ -1689,30 +1639,35 @@ static void DestroyExchangeContainer(t_domain_exchange_container **Container_) {
 
 }
 
-void PRIVATE(CreateDomainParams)(ovk_domain_params **Params_, MPI_Comm DefaultComm) {
-
-  *Params_ = malloc(sizeof(ovk_domain_params));
-  ovk_domain_params *Params = *Params_;
-
-  memset(Params->name, 0, OVK_NAME_LENGTH);
-
-  Params->num_dims = 2;
-  Params->comm = DefaultComm;
-
-}
-
-void PRIVATE(DestroyDomainParams)(ovk_domain_params **Params) {
-
-  free_null(Params);
-
-}
-
 void ovkGetDomainParamName(const ovk_domain_params *Params, char *Name) {
 
   OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
   OVK_DEBUG_ASSERT(Name, "Invalid name pointer.");
 
   strcpy(Name, Params->name);
+
+}
+
+void ovkCreateDomainParams(ovk_domain_params **Params_, int NumDims) {
+
+  OVK_DEBUG_ASSERT(Params_, "Invalid params pointer.");
+  OVK_DEBUG_ASSERT(NumDims == 2 || NumDims == 3, "Invalid dimension.");
+
+  *Params_ = malloc(sizeof(ovk_domain_params));
+  ovk_domain_params *Params = *Params_;
+
+  Params->num_dims = NumDims;
+  memset(Params->name, 0, OVK_NAME_LENGTH);
+  Params->comm = MPI_COMM_NULL;
+
+}
+
+void ovkDestroyDomainParams(ovk_domain_params **Params) {
+
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
+  OVK_DEBUG_ASSERT(*Params, "Invalid params pointer.");
+
+  free_null(Params);
 
 }
 
@@ -1731,15 +1686,6 @@ void ovkGetDomainParamDimension(const ovk_domain_params *Params, int *NumDims) {
   OVK_DEBUG_ASSERT(NumDims, "Invalid num dims pointer.");
 
   *NumDims = Params->num_dims;
-
-}
-
-void ovkSetDomainParamDimension(ovk_domain_params *Params, int NumDims) {
-
-  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
-  OVK_DEBUG_ASSERT(NumDims == 2 || NumDims == 3, "Invalid dimension.");
-
-  Params->num_dims = NumDims;
 
 }
 
@@ -1826,3 +1772,19 @@ void ovkGetDomainPropertyGridCount(const ovk_domain_properties *Properties, int 
   *NumGrids = Properties->num_grids;
 
 }
+
+// void ovkGetDomainGridIDs(const ovk_domain *Domain, int *GridIDs) {
+
+
+
+//   int iGrid;
+
+//   iGrid = 0;
+//   t_ordered_map_entry *Entry = OMBegin(Domain->grids);
+//   while (Entry != OMEnd(Domain->grids)) {
+//     GridIDs[iGrid] = OMKey(Entry);
+//     ++iGrid;
+//     Entry = OMNext(Entry);
+//   }
+
+// }

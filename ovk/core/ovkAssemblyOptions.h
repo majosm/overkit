@@ -13,6 +13,10 @@ extern "C" {
 struct ovk_assembly_options;
 typedef struct ovk_assembly_options ovk_assembly_options;
 
+void ovkCreateAssemblyOptions(ovk_assembly_options **Options, int NumDims, int NumGrids,
+  int *GridIDs);
+void ovkDestroyAssemblyOptions(ovk_assembly_options **Options);
+
 void ovkGetAssemblyOptionsDimension(const ovk_assembly_options *Options, int *NumDims);
 void ovkGetAssemblyOptionsGridCount(const ovk_assembly_options *Options, int *NumGrids);
 

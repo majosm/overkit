@@ -94,11 +94,6 @@ static inline void GetGridPartitionHash(const ovk_grid *Grid, const t_partition_
   *Hash = Grid->partition_hash;
 }
 
-void PRIVATE(CreateGridParams)(ovk_grid_params **Params, int NumDims, MPI_Comm DefaultComm);
-#define CreateGridParams(...) PRIVATE(CreateGridParams)(__VA_ARGS__)
-void PRIVATE(DestroyGridParams)(ovk_grid_params **Params);
-#define DestroyGridParams(...) PRIVATE(DestroyGridParams)(__VA_ARGS__)
-
 void PRIVATE(CreateGridInfo)(ovk_grid_info **Info, const ovk_grid *Grid, MPI_Comm Comm,
   int CommRank);
 #define CreateGridInfo(...) PRIVATE(CreateGridInfo)(__VA_ARGS__)

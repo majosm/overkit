@@ -139,25 +139,6 @@ void ovkGetContextProperties(const ovk_context *Context, const ovk_context_prope
 
 }
 
-void ovkCreateDomainParams(ovk_context *Context, ovk_domain_params **Params) {
-
-  OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
-  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
-
-  CreateDomainParams(Params, Context->properties.comm);
-
-}
-
-void ovkDestroyDomainParams(ovk_context *Context, ovk_domain_params **Params) {
-
-  OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
-  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
-  OVK_DEBUG_ASSERT(*Params, "Invalid params pointer.");
-
-  DestroyDomainParams(Params);
-
-}
-
 void ovkCreateDomain(ovk_context *Context, ovk_domain **Domain_, const ovk_domain_params *Params) {
 
   OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");

@@ -32,9 +32,6 @@ void ovkReleaseDomainProperties(ovk_domain *Domain, ovk_domain_properties **Prop
 
 void ovkGetNextAvailableGridID(const ovk_domain *Domain, int *GridID);
 
-void ovkCreateGridParams(ovk_domain *Domain, ovk_grid_params **Params);
-void ovkDestroyGridParams(ovk_domain *Domain, ovk_grid_params **Params);
-
 void ovkCreateGridLocal(ovk_domain *Domain, int GridID, const ovk_grid_params *Params);
 void ovkCreateGridRemote(ovk_domain *Domain, int GridID);
 void ovkDestroyGrid(ovk_domain *Domain, int GridID);
@@ -69,9 +66,6 @@ void ovkGetLocalDonorCount(const ovk_domain *Domain, int DonorGridID, int Receiv
 void ovkGetLocalReceiverCount(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
   size_t *NumReceivers);
 
-void ovkCreateAssemblyOptions(ovk_domain *Domain, ovk_assembly_options **Options);
-void ovkDestroyAssemblyOptions(ovk_domain *Domain, ovk_assembly_options **Options);
-
 void ovkAssemble(ovk_domain *Domain, const ovk_assembly_options *Options);
 
 void ovkCollect(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
@@ -92,10 +86,12 @@ void ovkDisperse(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
   ovk_data_type DataType, int Count, ovk_disperse_op DisperseOp, const void **ReceiverData,
   const ovk_range *GridDataRange, ovk_array_layout GridDataLayout, void **GridData);
 
+void ovkCreateDomainParams(ovk_domain_params **Params, int NumDims);
+void ovkDestroyDomainParams(ovk_domain_params **Params);
+
 void ovkGetDomainParamName(const ovk_domain_params *Params, char *Name);
 void ovkSetDomainParamName(ovk_domain_params *Params, const char *Name);
 void ovkGetDomainParamDimension(const ovk_domain_params *Params, int *NumDims);
-void ovkSetDomainParamDimension(ovk_domain_params *Params, int NumDims);
 void ovkGetDomainParamComm(const ovk_domain_params *Params, MPI_Comm *Comm);
 void ovkSetDomainParamComm(ovk_domain_params *Params, MPI_Comm Comm);
 

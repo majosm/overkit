@@ -15,8 +15,6 @@
 struct ovk_assembly_options {
   int num_dims;
   int num_grids;
-  t_logger *logger;
-  t_error_handler *error_handler;
   std::map<int, std::map<int, bool>> overlappable;
   std::map<int, std::map<int, double>> overlap_tolerance;
   std::map<int, double> overlap_accel_depth_adjust;
@@ -109,26 +107,19 @@ template <typename T> void SetOption(std::map<int, std::map<int, T>> &Option, in
 
 }
 
-void PRIVATE(CreateAssemblyOptions)(ovk_assembly_options **Options_, int NumDims, int NumGrids,
-  const t_ordered_map *GridIDs_, t_logger *Logger, t_error_handler *ErrorHandler) {
+void ovkCreateAssemblyOptions(ovk_assembly_options **Options_, int NumDims, int NumGrids,
+  int *GridIDs) {
 
   OVK_DEBUG_ASSERT(Options_, "Invalid options pointer.");
+  OVK_DEBUG_ASSERT(NumDims == 2 || NumDims == 3, "Invalid dimension.");
+  OVK_DEBUG_ASSERT(NumGrids >= 0, "Invalid grid count.");
+  OVK_DEBUG_ASSERT(GridIDs, "Invalid grid IDs pointer.");
 
   *Options_ = new ovk_assembly_options();
   ovk_assembly_options *Options = *Options_;
 
   Options->num_dims = NumDims;
   Options->num_grids = NumGrids;
-  Options->logger = Logger;
-  Options->error_handler = ErrorHandler;
-
-  std::vector<int> GridIDs;
-  const t_ordered_map_entry *Entry = OMBeginC(GridIDs_);
-  while (Entry != OMEndC(GridIDs_)) {
-    int GridID = OMKey(Entry);
-    GridIDs.push_back(GridID);
-    Entry = OMNextC(Entry);
-  }
 
   for (int iGrid = 0; iGrid < NumGrids; ++iGrid) {
     for (int jGrid = 0; jGrid < NumGrids; ++jGrid) {
@@ -166,13 +157,13 @@ void PRIVATE(CreateAssemblyOptions)(ovk_assembly_options **Options_, int NumDims
 
 }
 
-void PRIVATE(DestroyAssemblyOptions)(ovk_assembly_options **Options_) {
+void ovkDestroyAssemblyOptions(ovk_assembly_options **Options) {
 
-  OVK_DEBUG_ASSERT(Options_, "Invalid options pointer.");
-  OVK_DEBUG_ASSERT(*Options_, "Invalid options pointer.");
+  OVK_DEBUG_ASSERT(Options, "Invalid options pointer.");
+  OVK_DEBUG_ASSERT(*Options, "Invalid options pointer.");
 
-  delete *Options_;
-  *Options_ = NULL;
+  delete *Options;
+  *Options = NULL;
 
 }
 

@@ -38,9 +38,6 @@ void ovkGetContextProperties(const ovk_context *Context, const ovk_context_prope
 // void ovkEditContextProperties(ovk_context *Context, ovk_context_properties **Properties);
 // void ovkReleaseContextProperties(ovk_context *Context, ovk_context_properties **Properties);
 
-void ovkCreateDomainParams(ovk_context *Context, ovk_domain_params **Params);
-void ovkDestroyDomainParams(ovk_context *Context, ovk_domain_params **Params);
-
 void ovkCreateDomain(ovk_context *Context, ovk_domain **Domain, const ovk_domain_params *Params);
 void ovkDestroyDomain(ovk_context *Context, ovk_domain **Domain);
 

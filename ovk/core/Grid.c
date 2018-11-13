@@ -497,17 +497,19 @@ void PRIVATE(GetGridNeighborRank)(const ovk_grid *Grid, int iNeighbor, int *Neig
 
 }
 
-void PRIVATE(CreateGridParams)(ovk_grid_params **Params_, int NumDims, MPI_Comm DefaultComm) {
+void ovkCreateGridParams(ovk_grid_params **Params_, int NumDims) {
+
+  OVK_DEBUG_ASSERT(Params_, "Invalid params pointer.");
+  OVK_DEBUG_ASSERT(NumDims == 2 || NumDims == 3, "Invalid dimension.");
 
   int iDim;
 
   *Params_ = malloc(sizeof(ovk_grid_params));
   ovk_grid_params *Params = *Params_;
 
-  memset(Params->name, 0, OVK_NAME_LENGTH);
-
   Params->num_dims = NumDims;
-  Params->comm = DefaultComm;
+  memset(Params->name, 0, OVK_NAME_LENGTH);
+  Params->comm = MPI_COMM_NULL;
 
   for (iDim = 0; iDim < NumDims; ++iDim) {
     Params->size[iDim] = 0;
@@ -529,7 +531,10 @@ void PRIVATE(CreateGridParams)(ovk_grid_params **Params_, int NumDims, MPI_Comm 
 
 }
 
-void PRIVATE(DestroyGridParams)(ovk_grid_params **Params) {
+void ovkDestroyGridParams(ovk_grid_params **Params) {
+
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
+  OVK_DEBUG_ASSERT(*Params, "Invalid params pointer.");
 
   free_null(Params);
 
@@ -550,6 +555,15 @@ void ovkSetGridParamName(ovk_grid_params *Params, const char *Name) {
   OVK_DEBUG_ASSERT(Name, "Invalid name pointer.");
 
   strncpy(Params->name, Name, OVK_NAME_LENGTH);
+
+}
+
+void ovkGetGridParamDimension(const ovk_grid_params *Params, int *NumDims) {
+
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
+  OVK_DEBUG_ASSERT(NumDims, "Invalid num dims pointer.");
+
+  *NumDims = Params->num_dims;
 
 }
 

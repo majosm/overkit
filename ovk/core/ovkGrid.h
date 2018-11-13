@@ -28,8 +28,12 @@ void ovkGetGridProperties(const ovk_grid *Grid, const ovk_grid_properties **Prop
 
 void ovkGetGridCart(const ovk_grid *Grid, ovk_cart *Cart);
 
+void ovkCreateGridParams(ovk_grid_params **Params, int NumDims);
+void ovkDestroyGridParams(ovk_grid_params **Params);
+
 void ovkGetGridParamName(const ovk_grid_params *Params, char *Name);
 void ovkSetGridParamName(ovk_grid_params *Params, const char *Name);
+void ovkGetGridParamDimension(const ovk_grid_params *Params, int *NumDims);
 void ovkGetGridParamComm(const ovk_grid_params *Params, MPI_Comm *Comm);
 void ovkSetGridParamComm(ovk_grid_params *Params, MPI_Comm Comm);
 void ovkGetGridParamSize(const ovk_grid_params *Params, int *Size);

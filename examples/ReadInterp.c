@@ -101,14 +101,14 @@ int main(int argc, char **argv) {
   ovkDestroyContextParams(&ContextParams);
 
   ovk_domain_params *DomainParams;
-  ovkCreateDomainParams(Context, &DomainParams);
-  ovkSetDomainParamDimension(DomainParams, 2);
+  ovkCreateDomainParams(&DomainParams, 2);
+  ovkSetDomainParamName(DomainParams, "Domain");
   ovkSetDomainParamComm(DomainParams, MPI_COMM_WORLD);
 
   ovk_domain *Domain;
   ovkCreateDomain(Context, &Domain, DomainParams);
 
-  ovkDestroyDomainParams(Context, &DomainParams);
+  ovkDestroyDomainParams(&DomainParams);
 
   ovkConfigureDomain(Domain, OVK_DOMAIN_CONFIG_CONNECTIVITY | OVK_DOMAIN_CONFIG_EXCHANGE);
 
@@ -117,7 +117,7 @@ int main(int argc, char **argv) {
     input_grid *InputGrid = FindLocalGrid(NumLocalGrids, InputGrids, GridID);
     if (InputGrid) {
       ovk_grid_params *GridParams;
-      ovkCreateGridParams(Domain, &GridParams);
+      ovkCreateGridParams(&GridParams, 2);
       ovkSetGridParamName(GridParams, InputGrid->name);
       ovkSetGridParamComm(GridParams, InputGrid->comm);
       ovkSetGridParamSize(GridParams, InputGrid->global_size);
@@ -128,7 +128,7 @@ int main(int argc, char **argv) {
       ovkSetRange(&LocalRange, 2, InputGrid->is, InputGrid->ie);
       ovkSetGridParamLocalRange(GridParams, &LocalRange);
       ovkCreateGridLocal(Domain, GridID, GridParams);
-      ovkDestroyGridParams(Domain, &GridParams);
+      ovkDestroyGridParams(&GridParams);
     } else {
       ovkCreateGridRemote(Domain, GridID);
     }
@@ -143,11 +143,12 @@ int main(int argc, char **argv) {
   StartProfileSync(Profiler, AssembleTime, MPI_COMM_WORLD);
 
   ovk_assembly_options *Options;
-  ovkCreateAssemblyOptions(Domain, &Options);
+  int GridIDs[2] = {1, 2};
+  ovkCreateAssemblyOptions(&Options, 2, 2, GridIDs);
 
   ovkAssemble(Domain, Options);
 
-  ovkDestroyAssemblyOptions(Domain, &Options);
+  ovkDestroyAssemblyOptions(&Options);
 
   EndProfile(Profiler, AssembleTime);
   StartProfileSync(Profiler, ExchangeTime, MPI_COMM_WORLD);

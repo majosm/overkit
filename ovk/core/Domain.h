@@ -79,11 +79,6 @@ static inline void GetDomainErrorHandler(const ovk_domain *Domain, t_error_handl
   *ErrorHandler = (t_error_handler *)Domain->error_handler;
 }
 
-void PRIVATE(CreateDomainParams)(ovk_domain_params **Params, MPI_Comm DefaultComm);
-#define CreateDomainParams(...) PRIVATE(CreateDomainParams)(__VA_ARGS__)
-void PRIVATE(DestroyDomainParams)(ovk_domain_params **Params);
-#define DestroyDomainParams(...) PRIVATE(DestroyDomainParams)(__VA_ARGS__)
-
 #ifdef __cplusplus
 }
 #endif
