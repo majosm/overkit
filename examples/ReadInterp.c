@@ -134,12 +134,12 @@ int main(int argc, char **argv) {
     }
   }
 
-  EndProfileSync(Profiler, CreateTime, MPI_COMM_WORLD);
+  EndProfile(Profiler, CreateTime);
   StartProfileSync(Profiler, ImportTime, MPI_COMM_WORLD);
 
   ovkEXTImportXINTOUT(Domain, HOPath, XPath, 0, MPI_INFO_NULL);
 
-  EndProfileSync(Profiler, ImportTime, MPI_COMM_WORLD);
+  EndProfile(Profiler, ImportTime);
   StartProfileSync(Profiler, AssembleTime, MPI_COMM_WORLD);
 
   ovk_assembly_options *Options;
@@ -149,7 +149,7 @@ int main(int argc, char **argv) {
 
   ovkDestroyAssemblyOptions(Domain, &Options);
 
-  EndProfileSync(Profiler, AssembleTime, MPI_COMM_WORLD);
+  EndProfile(Profiler, AssembleTime);
   StartProfileSync(Profiler, ExchangeTime, MPI_COMM_WORLD);
 
   int NumSends = 0;
@@ -213,7 +213,7 @@ int main(int argc, char **argv) {
       }
     }
 
-    EndProfileSync(Profiler, CollectTime, MPI_COMM_WORLD);
+    EndProfile(Profiler, CollectTime);
     StartProfileSync(Profiler, SendRecvTime, MPI_COMM_WORLD);
 
     ovk_request **Requests = malloc((NumSends+NumReceives)*sizeof(ovk_request *));
@@ -250,7 +250,7 @@ int main(int argc, char **argv) {
 
     free(Requests);
 
-    EndProfileSync(Profiler, SendRecvTime, MPI_COMM_WORLD);
+    EndProfile(Profiler, SendRecvTime);
     StartProfileSync(Profiler, DisperseTime, MPI_COMM_WORLD);
 
     iReceive = 0;
@@ -272,7 +272,7 @@ int main(int argc, char **argv) {
       }
     }
 
-    EndProfileSync(Profiler, DisperseTime, MPI_COMM_WORLD);
+    EndProfile(Profiler, DisperseTime);
 
   }
 
@@ -286,7 +286,7 @@ int main(int argc, char **argv) {
   }
   free(ReceiveBuffers);
 
-  EndProfileSync(Profiler, ExchangeTime, MPI_COMM_WORLD);
+  EndProfile(Profiler, ExchangeTime);
 
   for (OtherRank = 0; OtherRank < NumProcs; ++OtherRank) {
     if (OtherRank == Rank) {
@@ -324,8 +324,8 @@ int main(int argc, char **argv) {
 
   DestroyInputs(NumLocalGrids, &InputGrids, &InputStates);
 
-  EndProfileSync(Profiler, DestroyTime, MPI_COMM_WORLD);
-  EndProfileSync(Profiler, OverallTime, MPI_COMM_WORLD);
+  EndProfile(Profiler, DestroyTime);
+  EndProfile(Profiler, OverallTime);
 
   WriteProfileTimes(Profiler, stdout);
   DestroyProfiler(&Profiler);

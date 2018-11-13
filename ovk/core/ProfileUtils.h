@@ -115,16 +115,6 @@ static inline void StartProfile(t_profiler *Profiler, int TimerID) {
 
 }
 
-static inline void EndProfile(t_profiler *Profiler, int TimerID) {
-
-  if (Profiler->enabled) {
-    OVK_DEBUG_ASSERT(TimerID >= 0 && TimerID < Profiler->num_timers, "Invalid timer ID.");
-    t_profiler_timer_info *TimerInfo = Profiler->timers[TimerID];
-    StopTimer(&TimerInfo->timer);
-  }
-
-}
-
 static inline void StartProfileSync(t_profiler *Profiler, int TimerID, MPI_Comm Comm) {
 
   if (Profiler->enabled) {
@@ -136,12 +126,11 @@ static inline void StartProfileSync(t_profiler *Profiler, int TimerID, MPI_Comm 
 
 }
 
-static inline void EndProfileSync(t_profiler *Profiler, int TimerID, MPI_Comm Comm) {
+static inline void EndProfile(t_profiler *Profiler, int TimerID) {
 
   if (Profiler->enabled) {
     OVK_DEBUG_ASSERT(TimerID >= 0 && TimerID < Profiler->num_timers, "Invalid timer ID.");
     t_profiler_timer_info *TimerInfo = Profiler->timers[TimerID];
-    MPI_Barrier(Comm);
     StopTimer(&TimerInfo->timer);
   }
 

@@ -308,18 +308,18 @@ ovk_error ovkEXTImportXINTOUT(ovk_domain *Domain, const char *HOPath, const char
       (const char (*)[])LocalGridNames, LocalGridComms, (const int **)LocalGridGlobalSizes, Logger,
       ErrorHandler);
 
-    EndProfileSync(Profiler, CreateTime, Comm);
+    EndProfile(Profiler, CreateTime);
     StartProfileSync(Profiler, ReadTime, Comm);
 
     Error = ReadXINTOUT(XINTOUT, HOPath, XPath, ReadGranularityAdjust, MPIInfo, Profiler);
 
-    EndProfileSync(Profiler, ReadTime, Comm);
+    EndProfile(Profiler, ReadTime);
     OVK_EH_CHECK_GOTO(ErrorHandler, Error, destroy_xintout);
     StartProfileSync(Profiler, MatchTime, Comm);
 
     MatchDonorsAndReceivers(XINTOUT, Profiler);
 
-    EndProfileSync(Profiler, MatchTime, Comm);
+    EndProfile(Profiler, MatchTime);
     StartProfileSync(Profiler, DistributeTime, Comm);
 
     t_donor_data **LocalDonors = malloc(NumLocalGrids*sizeof(t_donor_data *));
@@ -327,13 +327,13 @@ ovk_error ovkEXTImportXINTOUT(ovk_domain *Domain, const char *HOPath, const char
 
     DistributeConnectivityData(XINTOUT, LocalGrids, LocalDonors, LocalReceivers, Profiler);
 
-    EndProfileSync(Profiler, DistributeTime, Comm);
+    EndProfile(Profiler, DistributeTime);
     StartProfileSync(Profiler, ImportTime, Comm);
 
     ImportConnectivityData(NumGrids, NumLocalGrids, LocalGridIDs, (const t_donor_data **)LocalDonors,
       (const t_receiver_data **)LocalReceivers, Domain);
 
-    EndProfileSync(Profiler, ImportTime, Comm);
+    EndProfile(Profiler, ImportTime);
     StartProfileSync(Profiler, DestroyTime, Comm);
 
     for (iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
@@ -348,12 +348,12 @@ ovk_error ovkEXTImportXINTOUT(ovk_domain *Domain, const char *HOPath, const char
     free(LocalGridGlobalSizes[0]);
     free(LocalGrids);
 
-    EndProfileSync(Profiler, DestroyTime, Comm);
+    EndProfile(Profiler, DestroyTime);
 
     destroy_xintout:
       StartProfileSync(Profiler, DestroyTime, Comm);
       DestroyXINTOUT(&XINTOUT);
-      EndProfileSync(Profiler, DestroyTime, Comm);
+      EndProfile(Profiler, DestroyTime);
       OVK_EH_CHECK_GOTO(ErrorHandler, Error, destroy_profiler);
 
   }
@@ -1235,7 +1235,7 @@ static ovk_error ReadDonors(t_xintout_grid *XINTOUTGrid, const char *HOPath, con
 
     StartProfileSync(Profiler, MPIIOOpenTime, ChunkComm);
     MPIError = MPI_File_open(ChunkComm, (char *)HOPath, MPI_MODE_RDONLY, MPIInfo, &HOFile);
-    EndProfileSync(Profiler, MPIIOOpenTime, ChunkComm);
+    EndProfile(Profiler, MPIIOOpenTime);
     if (MPIError != MPI_SUCCESS) {
       LogError(Logger, true, "Unable to open file '%s'.", HOPath);
       Error = OVK_ERROR_FILE_OPEN;
@@ -1244,7 +1244,7 @@ static ovk_error ReadDonors(t_xintout_grid *XINTOUTGrid, const char *HOPath, con
 
     StartProfileSync(Profiler, MPIIOOpenTime, ChunkComm);
     MPIError = MPI_File_open(ChunkComm, (char *)XPath, MPI_MODE_RDONLY, MPIInfo, &XFile);
-    EndProfileSync(Profiler, MPIIOOpenTime, ChunkComm);
+    EndProfile(Profiler, MPIIOOpenTime);
     if (MPIError != MPI_SUCCESS) {
       LogError(Logger, true, "Unable to open file '%s'.", XPath);
       Error = OVK_ERROR_FILE_OPEN;
@@ -1279,7 +1279,7 @@ static ovk_error ReadDonors(t_xintout_grid *XINTOUTGrid, const char *HOPath, con
       ReadOffset = DatasetOffset + LocalBegin*sizeof(int);
       StartProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
       MPI_File_set_view(XFile, ReadOffset, MPI_INT, MPI_INT, "native", MPIInfo);
-      EndProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
+      EndProfile(Profiler, MPIIOOtherTime);
       File_read_all_endian(XFile, Sizes[iDim], (int)NumLocalDonors, MPI_INT, Endian,
         &Status, Profiler, ChunkComm);
       MPI_Get_count(&Status, MPI_INT, &ReadSize);
@@ -1325,7 +1325,7 @@ static ovk_error ReadDonors(t_xintout_grid *XINTOUTGrid, const char *HOPath, con
       ReadOffset = DatasetOffset + LocalBegin*sizeof(int);
       StartProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
       MPI_File_set_view(HOFile, ReadOffset, MPI_INT, MPI_INT, "native", MPIInfo);
-      EndProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
+      EndProfile(Profiler, MPIIOOtherTime);
       File_read_all_endian(HOFile, Data->extents[0][iDim], (int)NumLocalDonors, MPI_INT, Endian,
         &Status, Profiler, ChunkComm);
       MPI_Get_count(&Status, MPI_INT, &ReadSize);
@@ -1373,7 +1373,7 @@ static ovk_error ReadDonors(t_xintout_grid *XINTOUTGrid, const char *HOPath, con
       ReadOffset = DatasetOffset + LocalBegin*sizeof(double);
       StartProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
       MPI_File_set_view(HOFile, ReadOffset, MPI_DOUBLE, MPI_DOUBLE, "native", MPIInfo);
-      EndProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
+      EndProfile(Profiler, MPIIOOtherTime);
       File_read_all_endian(HOFile, Data->coords[iDim], (int)NumLocalDonors, MPI_DOUBLE, Endian,
         &Status, Profiler, ChunkComm);
       MPI_Get_count(&Status, MPI_DOUBLE, &ReadSize);
@@ -1421,7 +1421,7 @@ static ovk_error ReadDonors(t_xintout_grid *XINTOUTGrid, const char *HOPath, con
       ReadOffset = DatasetOffset + NumInterpCoefsBeforeChunk[iDim]*sizeof(double);
       StartProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
       MPI_File_set_view(XFile, ReadOffset, MPI_DOUBLE, MPI_DOUBLE, "native", MPIInfo);
-      EndProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
+      EndProfile(Profiler, MPIIOOtherTime);
       File_read_all_endian(XFile, Buffer, (int)NumLocalInterpCoefs[iDim], MPI_DOUBLE, Endian,
         &Status, Profiler, ChunkComm);
       MPI_Get_count(&Status, MPI_DOUBLE, &ReadSize);
@@ -1454,12 +1454,12 @@ static ovk_error ReadDonors(t_xintout_grid *XINTOUTGrid, const char *HOPath, con
     close_x:
       StartProfileSync(Profiler, MPIIOCloseTime, ChunkComm);
       MPI_File_close(&XFile);
-      EndProfileSync(Profiler, MPIIOCloseTime, ChunkComm);
+      EndProfile(Profiler, MPIIOCloseTime);
 
     close_ho:
       StartProfileSync(Profiler, MPIIOCloseTime, ChunkComm);
       MPI_File_close(&HOFile);
-      EndProfileSync(Profiler, MPIIOCloseTime, ChunkComm);
+      EndProfile(Profiler, MPIIOCloseTime);
 
     free_comm:
       MPI_Comm_free(&ChunkComm);
@@ -1568,7 +1568,7 @@ static ovk_error ReadReceivers(t_xintout_grid *XINTOUTGrid, const char *HOPath, 
 
     StartProfileSync(Profiler, MPIIOOpenTime, ChunkComm);
     MPIError = MPI_File_open(ChunkComm, (char *)HOPath, MPI_MODE_RDONLY, MPIInfo, &HOFile);
-    EndProfileSync(Profiler, MPIIOOpenTime, ChunkComm);
+    EndProfile(Profiler, MPIIOOpenTime);
     if (MPIError != MPI_SUCCESS) {
       LogError(Logger, true, "Unable to open file '%s'.", HOPath);
       Error = OVK_ERROR_FILE_OPEN;
@@ -1598,7 +1598,7 @@ static ovk_error ReadReceivers(t_xintout_grid *XINTOUTGrid, const char *HOPath, 
       ReadOffset = DatasetOffset + LocalBegin*sizeof(int);
       StartProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
       MPI_File_set_view(HOFile, ReadOffset, MPI_INT, MPI_INT, "native", MPIInfo);
-      EndProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
+      EndProfile(Profiler, MPIIOOtherTime);
       File_read_all_endian(HOFile, Data->points[iDim], (int)NumLocalReceivers, MPI_INT, Endian,
         &Status, Profiler, ChunkComm);
       MPI_Get_count(&Status, MPI_INT, &ReadSize);
@@ -1634,7 +1634,7 @@ static ovk_error ReadReceivers(t_xintout_grid *XINTOUTGrid, const char *HOPath, 
     ReadOffset = DatasetOffset+LocalBegin*ConnectionIDSize;
     StartProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
     MPI_File_set_view(HOFile, ReadOffset, ConnectionIDType, ConnectionIDType, "native", MPIInfo);
-    EndProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
+    EndProfile(Profiler, MPIIOOtherTime);
     File_read_all_endian(HOFile, ConnectionIDs, (int)NumLocalReceivers, ConnectionIDType, Endian,
       &Status, Profiler, ChunkComm);
     MPI_Get_count(&Status, ConnectionIDType, &ReadSize);
@@ -1664,7 +1664,7 @@ static ovk_error ReadReceivers(t_xintout_grid *XINTOUTGrid, const char *HOPath, 
     close_ho:
       StartProfileSync(Profiler, MPIIOCloseTime, ChunkComm);
       MPI_File_close(&HOFile);
-      EndProfileSync(Profiler, MPIIOCloseTime, ChunkComm);
+      EndProfile(Profiler, MPIIOCloseTime);
 
     free_comm:
       MPI_Comm_free(&ChunkComm);
@@ -1894,7 +1894,7 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
     ++iBin;
   }
 
-  EndProfileSync(Profiler, MapToBinsTime, Comm);
+  EndProfile(Profiler, MapToBinsTime);
   StartProfileSync(Profiler, HandshakeTime, Comm);
 
   t_ordered_map *DonorRecvs, *ReceiverRecvs;
@@ -1907,7 +1907,7 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
   free(DonorSendToRanks);
   free(ReceiverSendToRanks);
 
-  EndProfileSync(Profiler, HandshakeTime, Comm);
+  EndProfile(Profiler, HandshakeTime);
   StartProfileSync(Profiler, SendToBinsTime, Comm);
 
   int NumDonorRecvs = OMSize(DonorRecvs);
@@ -2024,7 +2024,7 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
 
   MPI_Waitall(NumRequests, Requests, MPI_STATUSES_IGNORE);
 
-  EndProfileSync(Profiler, SendToBinsTime, Comm);
+  EndProfile(Profiler, SendToBinsTime);
   StartProfileSync(Profiler, RecvFromBinsTime, Comm);
 
   NumRequests = 0;
@@ -2053,7 +2053,7 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
     Entry = OMNext(Entry);
   }
 
-  EndProfileSync(Profiler, RecvFromBinsTime, Comm);
+  EndProfile(Profiler, RecvFromBinsTime);
   StartProfileSync(Profiler, FillConnectionDataTime, Comm);
 
   Entry = OMBegin(DonorRecvs);
@@ -2084,7 +2084,7 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
     Entry = OMNext(Entry);
   }
 
-  EndProfileSync(Profiler, FillConnectionDataTime, Comm);
+  EndProfile(Profiler, FillConnectionDataTime);
   StartProfileSync(Profiler, RecvFromBinsTime, Comm);
 
   Entry = OMBegin(DonorRecvs);
@@ -2129,7 +2129,7 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
 
   free(Requests);
 
-  EndProfileSync(Profiler, RecvFromBinsTime, Comm);
+  EndProfile(Profiler, RecvFromBinsTime);
   StartProfileSync(Profiler, UnpackTime, Comm);
 
   Entry = OMBegin(DonorSends);
@@ -2187,7 +2187,7 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
     }
   }
 
-  EndProfileSync(Profiler, UnpackTime, Comm);
+  EndProfile(Profiler, UnpackTime);
 
   Entry = OMBegin(DonorSends);
   while (Entry != OMEnd(DonorSends)) {
@@ -2385,12 +2385,12 @@ static void DistributeGridConnectivityData(const t_xintout_grid *XINTOUTGrid, co
     }
   }
 
-  EndProfileSync(Profiler, MapToBinsTime, Comm);
+  EndProfile(Profiler, MapToBinsTime);
   StartProfileSync(Profiler, RetrieveBinsTime, Comm);
 
   RetrievePartitionBins(Hash, Bins);
 
-  EndProfileSync(Profiler, RetrieveBinsTime, Comm);
+  EndProfile(Profiler, RetrieveBinsTime);
   StartProfileSync(Profiler, FindRanksTime, Comm);
 
   int *NumChunkDonorRanks;
@@ -2597,7 +2597,7 @@ static void DistributeGridConnectivityData(const t_xintout_grid *XINTOUTGrid, co
     ++iSend;
   }
 
-  EndProfileSync(Profiler, FindRanksTime, Comm);
+  EndProfile(Profiler, FindRanksTime);
   StartProfileSync(Profiler, HandshakeTime, Comm);
 
   t_ordered_map *DonorRecvs, *ReceiverRecvs;
@@ -2610,7 +2610,7 @@ static void DistributeGridConnectivityData(const t_xintout_grid *XINTOUTGrid, co
   free(DonorSendToRanks);
   free(ReceiverSendToRanks);
 
-  EndProfileSync(Profiler, HandshakeTime, Comm);
+  EndProfile(Profiler, HandshakeTime);
   StartProfileSync(Profiler, SendDataTime, Comm);
 
   int NumDonorRecvs = OMSize(DonorRecvs);
@@ -2847,7 +2847,7 @@ static void DistributeGridConnectivityData(const t_xintout_grid *XINTOUTGrid, co
   }
   OMDestroy(&ReceiverRecvs);
 
-  EndProfileSync(Profiler, SendDataTime, Comm);
+  EndProfile(Profiler, SendDataTime);
 
 }
 
@@ -3423,7 +3423,7 @@ static int File_read_all_endian(MPI_File File, void *Buffer, int Count, MPI_Data
   int MPIIOReadTime = GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Read");
   StartProfileSync(Profiler, MPIIOReadTime, Comm);
   int MPIError = MPI_File_read_all(File, Buffer, Count, DataType, Status);
-  EndProfileSync(Profiler, MPIIOReadTime, Comm);
+  EndProfile(Profiler, MPIIOReadTime);
 
   if (MPIError == MPI_SUCCESS) {
     if (Endian != MachineEndian()) {
