@@ -881,7 +881,7 @@ void ovkGetGridPropertyLocalRange(const ovk_grid_properties *Properties, ovk_ran
 
 void ovkGetGridInfoID(const ovk_grid_info *Info, int *ID) {
 
-  OVK_DEBUG_ASSERT(Info, "Invalid properties pointer.");
+  OVK_DEBUG_ASSERT(Info, "Invalid info pointer.");
   OVK_DEBUG_ASSERT(ID, "Invalid ID pointer.");
 
   *ID = Info->id;
@@ -949,7 +949,7 @@ void ovkGetGridInfoPeriodicLength(const ovk_grid_info *Info, double *PeriodicLen
 
 void ovkGetGridInfoGeometryType(const ovk_grid_info *Info, ovk_geometry_type *GeometryType) {
 
-  OVK_DEBUG_ASSERT(Info, "Invalid properties pointer.");
+  OVK_DEBUG_ASSERT(Info, "Invalid info pointer.");
   OVK_DEBUG_ASSERT(GeometryType, "Invalid geometry type pointer.");
 
   *GeometryType = Info->geometry_type;
