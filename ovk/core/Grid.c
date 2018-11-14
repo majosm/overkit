@@ -328,6 +328,34 @@ void ovkGetGridLocalRange(const ovk_grid *Grid, ovk_range *LocalRange) {
 
 }
 
+void ovkGetGridGlobalCount(const ovk_grid *Grid, size_t *NumGlobal) {
+
+  OVK_DEBUG_ASSERT(Grid, "Invalid grid pointer.");
+  OVK_DEBUG_ASSERT(NumGlobal, "Invalid num global pointer.");
+
+  int iDim;
+
+  *NumGlobal = 1;
+  for (iDim = 0; iDim < Grid->num_dims; ++iDim) {
+    *NumGlobal *= (size_t)(Grid->global_range.e[iDim]-Grid->global_range.b[iDim]);
+  }
+
+}
+
+void ovkGetGridLocalCount(const ovk_grid *Grid, size_t *NumLocal) {
+
+  OVK_DEBUG_ASSERT(Grid, "Invalid grid pointer.");
+  OVK_DEBUG_ASSERT(NumLocal, "Invalid num local pointer.");
+
+  int iDim;
+
+  *NumLocal = 1;
+  for (iDim = 0; iDim < Grid->num_dims; ++iDim) {
+    *NumLocal *= (size_t)(Grid->local_range.e[iDim]-Grid->local_range.b[iDim]);
+  }
+
+}
+
 static void CreateNeighbors(ovk_grid *Grid) {
 
   int iDim, jDim;
