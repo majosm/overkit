@@ -17,16 +17,6 @@
 extern "C" {
 #endif
 
-struct ovk_connectivity_properties {
-  int donor_grid_id;
-  int receiver_grid_id;
-  char name[OVK_NAME_LENGTH];
-  int num_dims;
-  MPI_Comm comm;
-  int comm_size;
-  int comm_rank;
-};
-
 typedef struct {
   bool num_donors;
   bool donor_extents;
@@ -55,10 +45,15 @@ typedef struct {
 } t_connectivity_receiver_side_container;
 
 struct ovk_connectivity {
-  ovk_connectivity_properties properties;
-  int properties_edit_ref_count;
   t_logger *logger;
   t_error_handler *error_handler;
+  int donor_grid_id;
+  int receiver_grid_id;
+  char name[OVK_NAME_LENGTH];
+  int num_dims;
+  MPI_Comm comm;
+  int comm_size;
+  int comm_rank;
   t_connectivity_edits edits;
   t_connectivity_donor_side_container *donors_container;
   t_connectivity_receiver_side_container *receivers_container;

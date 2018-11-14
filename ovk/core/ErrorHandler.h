@@ -83,6 +83,12 @@ void PRIVATE(CreateErrorHandler)(t_error_handler **Handler, ovk_error_handler_ty
 void PRIVATE(DestroyErrorHandler)(t_error_handler **Handler);
 #define DestroyErrorHandler(...) PRIVATE(DestroyErrorHandler)(__VA_ARGS__)
 
+void PRIVATE(GetErrorHandlerType)(const t_error_handler *Handler, ovk_error_handler_type *Type);
+#define GetErrorHandlerType(...) PRIVATE(GetErrorHandlerType)(__VA_ARGS__)
+
+void PRIVATE(SetErrorHandlerType)(t_error_handler *Handler, ovk_error_handler_type Type);
+#define SetErrorHandlerType(...) PRIVATE(SetErrorHandlerType)(__VA_ARGS__)
+
 #ifdef __cplusplus
 }
 #endif

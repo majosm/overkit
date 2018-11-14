@@ -11,14 +11,17 @@
 extern "C" {
 #endif
 
-struct ovk_connectivity_r_properties;
-typedef struct ovk_connectivity_r_properties ovk_connectivity_r_properties;
-
 struct ovk_connectivity_r;
 typedef struct ovk_connectivity_r ovk_connectivity_r;
 
-void ovkGetConnectivityReceiverSideProperties(const ovk_connectivity_r *Receivers,
-  const ovk_connectivity_r_properties **Properties);
+void ovkGetConnectivityReceiverSideGridID(const ovk_connectivity_r *Receivers, int *GridID);
+void ovkGetConnectivityReceiverSideSourceGridID(const ovk_connectivity_r *Receivers, int
+  *SourceGridID);
+void ovkGetConnectivityReceiverSideDimension(const ovk_connectivity_r *Receivers, int *NumDims);
+void ovkGetConnectivityReceiverSideComm(const ovk_connectivity_r *Receivers, MPI_Comm *Comm);
+void ovkGetConnectivityReceiverSideCommSize(const ovk_connectivity_r *Receivers, int *CommSize);
+void ovkGetConnectivityReceiverSideCommRank(const ovk_connectivity_r *Receivers, int *CommRank);
+void ovkGetConnectivityReceiverSideCount(const ovk_connectivity_r *Receivers, size_t *NumReceivers);
 
 void ovkResizeReceivers(ovk_connectivity_r *Receivers, size_t NumReceivers);
 
@@ -36,21 +39,6 @@ void ovkReleaseReceiverSourceRanks(ovk_connectivity_r *Receivers, int **SourceRa
 
 void ovkGetConnectivityReceiverSideGrid(const ovk_connectivity_r *Receivers,
   const ovk_grid **ReceiverGrid);
-
-void ovkGetConnectivityReceiverSidePropertyGridID(const ovk_connectivity_r_properties *Properties,
-  int *GridID);
-void ovkGetConnectivityReceiverSidePropertySourceGridID(const ovk_connectivity_r_properties
-  *Properties, int *SourceGridID);
-void ovkGetConnectivityReceiverSidePropertyDimension(const ovk_connectivity_r_properties *Properties,
-  int *NumDims);
-void ovkGetConnectivityReceiverSidePropertyComm(const ovk_connectivity_r_properties *Properties,
-  MPI_Comm *Comm);
-void ovkGetConnectivityReceiverSidePropertyCommSize(const ovk_connectivity_r_properties *Properties,
-  int *CommSize);
-void ovkGetConnectivityReceiverSidePropertyCommRank(const ovk_connectivity_r_properties *Properties,
-  int *CommRank);
-void ovkGetConnectivityReceiverSidePropertyCount(const ovk_connectivity_r_properties *Properties,
-  size_t *NumReceivers);
 
 #ifdef __cplusplus
 }

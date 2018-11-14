@@ -20,3 +20,20 @@ void PRIVATE(DestroyErrorHandler)(t_error_handler **Handler_) {
   *Handler_ = NULL;
 
 }
+
+void PRIVATE(GetErrorHandlerType)(const t_error_handler *Handler, ovk_error_handler_type *Type) {
+
+  OVK_DEBUG_ASSERT(Handler, "Invalid error handler pointer.");
+  OVK_DEBUG_ASSERT(Type, "Invalid error handler type pointer.");
+
+  *Type = Handler->type;
+
+}
+
+void PRIVATE(SetErrorHandlerType)(t_error_handler *Handler, ovk_error_handler_type Type) {
+
+  OVK_DEBUG_ASSERT(Handler, "Invalid error handler pointer.");
+
+  Handler->type = Type;
+
+}

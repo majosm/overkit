@@ -11,14 +11,17 @@
 extern "C" {
 #endif
 
-struct ovk_connectivity_d_properties;
-typedef struct ovk_connectivity_d_properties ovk_connectivity_d_properties;
-
 struct ovk_connectivity_d;
 typedef struct ovk_connectivity_d ovk_connectivity_d;
 
-void ovkGetConnectivityDonorSideProperties(const ovk_connectivity_d *Donors,
-  const ovk_connectivity_d_properties **Properties);
+void ovkGetConnectivityDonorSideGridID(const ovk_connectivity_d *Donors, int *GridID);
+void ovkGetConnectivityDonorSideDestinationGridID(const ovk_connectivity_d *Donors, int *GridID);
+void ovkGetConnectivityDonorSideDimension(const ovk_connectivity_d *Donors, int *NumDims);
+void ovkGetConnectivityDonorSideComm(const ovk_connectivity_d *Donors, MPI_Comm *Comm);
+void ovkGetConnectivityDonorSideCommSize(const ovk_connectivity_d *Donors, int *CommSize);
+void ovkGetConnectivityDonorSideCommRank(const ovk_connectivity_d *Donors, int *CommRank);
+void ovkGetConnectivityDonorSideCount(const ovk_connectivity_d *Donors, size_t *NumDonors);
+void ovkGetConnectivityDonorSideMaxSize(const ovk_connectivity_d *Donors, int *MaxSize);
 
 void ovkResizeDonors(ovk_connectivity_d *Donors, size_t NumDonors, int MaxSize);
 
@@ -48,23 +51,6 @@ void ovkEditDonorDestinationRanks(ovk_connectivity_d *Donors, int **DestinationR
 void ovkReleaseDonorDestinationRanks(ovk_connectivity_d *Donors, int **DestinationRanks);
 
 void ovkGetConnectivityDonorSideGrid(const ovk_connectivity_d *Donors, const ovk_grid **DonorGrid);
-
-void ovkGetConnectivityDonorSidePropertyGridID(const ovk_connectivity_d_properties *Properties,
-  int *GridID);
-void ovkGetConnectivityDonorSidePropertyDestinationGridID(const ovk_connectivity_d_properties
-  *Properties, int *GridID);
-void ovkGetConnectivityDonorSidePropertyDimension(const ovk_connectivity_d_properties *Properties,
-  int *NumDims);
-void ovkGetConnectivityDonorSidePropertyComm(const ovk_connectivity_d_properties *Properties,
-  MPI_Comm *Comm);
-void ovkGetConnectivityDonorSidePropertyCommSize(const ovk_connectivity_d_properties *Properties,
-  int *CommSize);
-void ovkGetConnectivityDonorSidePropertyCommRank(const ovk_connectivity_d_properties *Properties,
-  int *CommRank);
-void ovkGetConnectivityDonorSidePropertyCount(const ovk_connectivity_d_properties *Properties,
-  size_t *NumDonors);
-void ovkGetConnectivityDonorSidePropertyMaxSize(const ovk_connectivity_d_properties *Properties,
-  int *MaxSize);
 
 #ifdef __cplusplus
 }

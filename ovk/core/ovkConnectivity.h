@@ -15,14 +15,16 @@ extern "C" {
 struct ovk_connectivity;
 typedef struct ovk_connectivity ovk_connectivity;
 
-struct ovk_connectivity_properties;
-typedef struct ovk_connectivity_properties ovk_connectivity_properties;
-
 struct ovk_connectivity_info;
 typedef struct ovk_connectivity_info ovk_connectivity_info;
 
-void ovkGetConnectivityProperties(const ovk_connectivity *Connectivity,
-  const ovk_connectivity_properties **Properties);
+void ovkGetConnectivityDonorGridID(const ovk_connectivity *Connectivity, int *DonorGridID);
+void ovkGetConnectivityReceiverGridID(const ovk_connectivity *Connectivity, int *ReceiverGridID);
+void ovkGetConnectivityName(const ovk_connectivity *Connectivity, char *Name);
+void ovkGetConnectivityDimension(const ovk_connectivity *Connectivity, int *NumDims);
+void ovkGetConnectivityComm(const ovk_connectivity *Connectivity, MPI_Comm *Comm);
+void ovkGetConnectivityCommSize(const ovk_connectivity *Connectivity, int *CommSize);
+void ovkGetConnectivityCommRank(const ovk_connectivity *Connectivity, int *CommRank);
 
 void ovkGetConnectivityDonorGridInfo(const ovk_connectivity *Connectivity,
   const ovk_grid_info **DonorGridInfo);
@@ -48,19 +50,6 @@ void ovkEditConnectivityReceiverSideRemote(ovk_connectivity *Connectivity);
 void ovkReleaseConnectivityReceiverSideLocal(ovk_connectivity *Connectivity,
   ovk_connectivity_r **Receivers);
 void ovkReleaseConnectivityReceiverSideRemote(ovk_connectivity *Connectivity);
-
-void ovkGetConnectivityPropertyDonorGridID(const ovk_connectivity_properties *Properties,
-  int *DonorGridID);
-void ovkGetConnectivityPropertyReceiverGridID(const ovk_connectivity_properties *Properties,
-  int *ReceiverGridID);
-void ovkGetConnectivityPropertyName(const ovk_connectivity_properties *Properties, char *Name);
-void ovkGetConnectivityPropertyDimension(const ovk_connectivity_properties *Properties,
-  int *NumDims);
-void ovkGetConnectivityPropertyComm(const ovk_connectivity_properties *Properties, MPI_Comm *Comm);
-void ovkGetConnectivityPropertyCommSize(const ovk_connectivity_properties *Properties,
-  int *CommSize);
-void ovkGetConnectivityPropertyCommRank(const ovk_connectivity_properties *Properties,
-  int *CommRank);
 
 void ovkGetConnectivityInfoDonorGridID(const ovk_connectivity_info *Info, int *DonorGridID);
 void ovkGetConnectivityInfoReceiverGridID(const ovk_connectivity_info *Info, int *ReceiverGridID);

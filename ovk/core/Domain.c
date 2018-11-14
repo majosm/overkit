@@ -63,7 +63,6 @@ static void DestroyExchangeGlobal(t_domain_exchange_container **ExchangeContaine
 static const t_domain_exchange_container *FindExchangeC(const ovk_domain *Domain, int DonorGridID,
   int ReceiverGridID);
 
-static bool EditingProperties(const ovk_domain *Domain);
 static bool EditingGrid(const ovk_domain *Domain, int GridID);
 static bool EditingConnectivity(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID);
 
@@ -83,8 +82,6 @@ static void CreateExchangeContainer(t_domain_exchange_container **Container, ovk
   MPI_Comm Comm, int CommRank);
 static void DestroyExchangeContainer(t_domain_exchange_container **Container);
 
-static void DefaultProperties(ovk_domain_properties *Properties);
-
 void PRIVATE(CreateDomain)(ovk_domain **Domain_, const ovk_domain_params *Params, t_logger *Logger,
   t_error_handler *ErrorHandler) {
 
@@ -99,24 +96,20 @@ void PRIVATE(CreateDomain)(ovk_domain **Domain_, const ovk_domain_params *Params
   *Domain_ = malloc(sizeof(ovk_domain));
   ovk_domain *Domain = *Domain_;
 
-  DefaultProperties(&Domain->properties);
-
-  if (strlen(Params->name) > 0) {
-    strncpy(Domain->properties.name, Params->name, OVK_NAME_LENGTH);
-  } else {
-    strcpy(Domain->properties.name, "Domain");
-  }
-
-  Domain->properties.num_dims = Params->num_dims;
-
-  Domain->properties.comm = Comm;
-  MPI_Comm_size(Domain->properties.comm, &Domain->properties.comm_size);
-  MPI_Comm_rank(Domain->properties.comm, &Domain->properties.comm_rank);
-
-  Domain->properties_edit_ref_count = 0;
-
   Domain->logger = Logger;
   Domain->error_handler = ErrorHandler;
+
+  if (strlen(Params->name) > 0) {
+    strncpy(Domain->name, Params->name, OVK_NAME_LENGTH);
+  } else {
+    strcpy(Domain->name, "Domain");
+  }
+
+  Domain->num_dims = Params->num_dims;
+
+  Domain->comm = Comm;
+  MPI_Comm_size(Domain->comm, &Domain->comm_size);
+  MPI_Comm_rank(Domain->comm, &Domain->comm_rank);
 
   Domain->config = OVK_DOMAIN_CONFIG_NONE;
 
@@ -125,14 +118,14 @@ void PRIVATE(CreateDomain)(ovk_domain **Domain_, const ovk_domain_params *Params
 
   Domain->connectivities_edit_ref_count = 0;
 
-  if (Domain->properties.comm_rank == 0) {
+  if (Domain->comm_rank == 0) {
     char ProcessesString[NUMBER_STRING_LENGTH+10];
-    PluralizeLabel(Domain->properties.comm_size, "processes", "process", ProcessesString);
-    LogStatus(Logger, true, 0, "Created %1iD domain %s on %s.", Domain->properties.num_dims,
-      Domain->properties.name, ProcessesString);
+    PluralizeLabel(Domain->comm_size, "processes", "process", ProcessesString);
+    LogStatus(Logger, true, 0, "Created %1iD domain %s on %s.", Domain->num_dims,
+      Domain->name, ProcessesString);
   }
 
-  MPI_Barrier(Domain->properties.comm);
+  MPI_Barrier(Domain->comm);
 
 }
 
@@ -143,7 +136,7 @@ void PRIVATE(DestroyDomain)(ovk_domain **Domain_) {
 
   ovk_domain *Domain = *Domain_;
 
-  MPI_Barrier(Domain->properties.comm);
+  MPI_Barrier(Domain->comm);
 
   if (Domain->config & OVK_DOMAIN_CONFIG_EXCHANGE) {
     DisableExchangeComponent(Domain);
@@ -165,10 +158,10 @@ void PRIVATE(DestroyDomain)(ovk_domain **Domain_) {
   OMDestroy(&Domain->grids);
 
   t_logger *Logger = Domain->logger;
-  MPI_Comm Comm = Domain->properties.comm;
-  bool IsRoot = Domain->properties.comm_rank == 0;
+  MPI_Comm Comm = Domain->comm;
+  bool IsRoot = Domain->comm_rank == 0;
   char Name[OVK_NAME_LENGTH];
-  strncpy(Name, Domain->properties.name, OVK_NAME_LENGTH);
+  strncpy(Name, Domain->name, OVK_NAME_LENGTH);
 
   free_null(Domain_);
 
@@ -180,17 +173,61 @@ void PRIVATE(DestroyDomain)(ovk_domain **Domain_) {
 
 }
 
+void ovkGetDomainName(const ovk_domain *Domain, char *Name) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+  OVK_DEBUG_ASSERT(Name, "Invalid name pointer.");
+
+  strcpy(Name, Domain->name);
+
+}
+
+void ovkGetDomainDimension(const ovk_domain *Domain, int *NumDims) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+  OVK_DEBUG_ASSERT(NumDims, "Invalid num dims pointer.");
+
+  *NumDims = Domain->num_dims;
+
+}
+
+void ovkGetDomainComm(const ovk_domain *Domain, MPI_Comm *Comm) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+  OVK_DEBUG_ASSERT(Comm, "Invalid comm pointer.");
+
+  *Comm = Domain->comm;
+
+}
+
+void ovkGetDomainCommSize(const ovk_domain *Domain, int *CommSize) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+  OVK_DEBUG_ASSERT(CommSize, "Invalid comm size pointer.");
+
+  *CommSize = Domain->comm_size;
+
+}
+
+void ovkGetDomainCommRank(const ovk_domain *Domain, int *CommRank) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+  OVK_DEBUG_ASSERT(CommRank, "Invalid comm rank pointer.");
+
+  *CommRank = Domain->comm_rank;
+
+}
+
 void ovkConfigureDomain(ovk_domain *Domain, ovk_domain_config Config) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
   OVK_DEBUG_ASSERT(ValidDomainConfig(Config), "Invalid domain config.");
-  OVK_DEBUG_ASSERT(!EditingProperties(Domain), "Cannot configure domain while editing properties.");
   OVK_DEBUG_ASSERT(!EditingGrid(Domain, OVK_ALL_GRIDS), "Cannot configure domain while editing "
     "grids.");
   OVK_DEBUG_ASSERT(!EditingConnectivity(Domain, OVK_ALL_GRIDS, OVK_ALL_GRIDS), "Cannot configure "
     "domain while editing connectivities.");
 
-  MPI_Barrier(Domain->properties.comm);
+  MPI_Barrier(Domain->comm);
 
   ovk_domain_config OldConfig = Domain->config;
 
@@ -221,7 +258,7 @@ void ovkConfigureDomain(ovk_domain *Domain, ovk_domain_config Config) {
     DisableExchangeComponent(Domain);
   }
 
-  MPI_Barrier(Domain->properties.comm);
+  MPI_Barrier(Domain->comm);
 
 }
 
@@ -234,53 +271,30 @@ void ovkGetDomainConfiguration(ovk_domain *Domain, ovk_domain_config *Config) {
 
 }
 
-void ovkGetDomainProperties(const ovk_domain *Domain, const ovk_domain_properties **Properties) {
+void ovkGetDomainGridCount(const ovk_domain *Domain, int *NumGrids) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
+  OVK_DEBUG_ASSERT(NumGrids, "Invalid num grids pointer.");
 
-  *Properties = &Domain->properties;
+  *NumGrids = OMSize(Domain->grids);
 
 }
 
-void ovkEditDomainProperties(ovk_domain *Domain, ovk_domain_properties **Properties) {
+// void ovkGetDomainGridIDs(const ovk_domain *Domain, int *GridIDs) {
 
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
-  OVK_DEBUG_ASSERT(!EditingGrid(Domain, OVK_ALL_GRIDS), "Cannot edit properties while editing "
-    "grids.");
-  OVK_DEBUG_ASSERT(!EditingConnectivity(Domain, OVK_ALL_GRIDS, OVK_ALL_GRIDS), "Cannot edit "
-    "grid while editing connectivities.");
 
-  bool StartEdit = Domain->properties_edit_ref_count == 0;
-  ++Domain->properties_edit_ref_count;
 
-  if (StartEdit) {
-    MPI_Barrier(Domain->properties.comm);
-  }
+//   int iGrid;
 
-  *Properties = &Domain->properties;
+//   iGrid = 0;
+//   t_ordered_map_entry *Entry = OMBegin(Domain->grids);
+//   while (Entry != OMEnd(Domain->grids)) {
+//     GridIDs[iGrid] = OMKey(Entry);
+//     ++iGrid;
+//     Entry = OMNext(Entry);
+//   }
 
-}
-
-void ovkReleaseDomainProperties(ovk_domain *Domain, ovk_domain_properties **Properties) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
-  OVK_DEBUG_ASSERT(*Properties == &Domain->properties, "Invalid properties pointer.");
-  OVK_DEBUG_ASSERT(EditingProperties(Domain), "Unable to release properties; not currently being "
-    "edited.");
-
-  --Domain->properties_edit_ref_count;
-  bool EndEdit = Domain->properties_edit_ref_count == 0;
-
-  *Properties = NULL;
-
-  if (EndEdit) {
-    MPI_Barrier(Domain->properties.comm);
-  }
-
-}
+// }
 
 void ovkGetNextAvailableGridID(const ovk_domain *Domain, int *GridID) {
 
@@ -294,7 +308,6 @@ void ovkCreateGridLocal(ovk_domain *Domain, int GridID, const ovk_grid_params *P
   OVK_DEBUG_ASSERT(GridID >= 0, "Invalid grid ID.");
   OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
 
-  OVK_DEBUG_ASSERT(!EditingProperties(Domain), "Cannot create grid while editing properties.");
   OVK_DEBUG_ASSERT(!EditingGrid(Domain, OVK_ALL_GRIDS), "Cannot create grid while editing other "
     "grids.");
   OVK_DEBUG_ASSERT(!EditingConnectivity(Domain, OVK_ALL_GRIDS, OVK_ALL_GRIDS), "Cannot create grid "
@@ -302,15 +315,13 @@ void ovkCreateGridLocal(ovk_domain *Domain, int GridID, const ovk_grid_params *P
 
   OVK_DEBUG_ASSERT(!OMExists(Domain->grids, GridID), "Grid %i already exists.", GridID);
 
-  MPI_Barrier(Domain->properties.comm);
+  MPI_Barrier(Domain->comm);
 
   t_domain_grid_container *GridContainer;
-  CreateGridGlobal(&GridContainer, GridID, Params, Domain->properties.comm,
-    Domain->properties.comm_rank, Domain->logger, Domain->error_handler);
+  CreateGridGlobal(&GridContainer, GridID, Params, Domain->comm, Domain->comm_rank, Domain->logger,
+    Domain->error_handler);
 
   OMInsert(Domain->grids, GridID, GridContainer);
-
-  ++Domain->properties.num_grids;
 
   if (Domain->config & OVK_DOMAIN_CONFIG_CONNECTIVITY) {
     CreateConnectivitiesForGrid(Domain, GridID);
@@ -320,7 +331,7 @@ void ovkCreateGridLocal(ovk_domain *Domain, int GridID, const ovk_grid_params *P
     CreateExchangesForGrid(Domain, GridID);
   }
 
-  MPI_Barrier(Domain->properties.comm);
+  MPI_Barrier(Domain->comm);
 
 }
 
@@ -329,9 +340,8 @@ void ovkCreateGridRemote(ovk_domain *Domain, int GridID) {
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
   OVK_DEBUG_ASSERT(GridID >= 0, "Invalid grid ID.");
 
-  MPI_Barrier(Domain->properties.comm);
+  MPI_Barrier(Domain->comm);
 
-  OVK_DEBUG_ASSERT(!EditingProperties(Domain), "Cannot create grid while editing properties.");
   OVK_DEBUG_ASSERT(!EditingGrid(Domain, OVK_ALL_GRIDS), "Cannot create grid while editing other "
     "grids.");
   OVK_DEBUG_ASSERT(!EditingConnectivity(Domain, OVK_ALL_GRIDS, OVK_ALL_GRIDS), "Cannot create grid "
@@ -340,12 +350,10 @@ void ovkCreateGridRemote(ovk_domain *Domain, int GridID) {
   OVK_DEBUG_ASSERT(!OMExists(Domain->grids, GridID), "Grid %i already exists.", GridID);
 
   t_domain_grid_container *GridContainer;
-  CreateGridGlobal(&GridContainer, GridID, NULL, Domain->properties.comm,
-    Domain->properties.comm_rank, Domain->logger, Domain->error_handler);
+  CreateGridGlobal(&GridContainer, GridID, NULL, Domain->comm, Domain->comm_rank, Domain->logger,
+    Domain->error_handler);
 
   OMInsert(Domain->grids, GridID, GridContainer);
-
-  ++Domain->properties.num_grids;
 
   if (Domain->config & OVK_DOMAIN_CONFIG_CONNECTIVITY) {
     CreateConnectivitiesForGrid(Domain, GridID);
@@ -355,7 +363,7 @@ void ovkCreateGridRemote(ovk_domain *Domain, int GridID) {
     CreateExchangesForGrid(Domain, GridID);
   }
 
-  MPI_Barrier(Domain->properties.comm);
+  MPI_Barrier(Domain->comm);
 
 }
 
@@ -386,9 +394,8 @@ void ovkDestroyGrid(ovk_domain *Domain, int GridID) {
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
   OVK_DEBUG_ASSERT(GridID, "Invalid grid ID pointer.");
 
-  MPI_Barrier(Domain->properties.comm);
+  MPI_Barrier(Domain->comm);
 
-  OVK_DEBUG_ASSERT(!EditingProperties(Domain), "Cannot destroy grid while editing properties.");
   OVK_DEBUG_ASSERT(!EditingGrid(Domain, OVK_ALL_GRIDS), "Cannot destroy grid while editing other "
     "grids.");
   OVK_DEBUG_ASSERT(!EditingConnectivity(Domain, OVK_ALL_GRIDS, OVK_ALL_GRIDS), "Cannot destroy grid "
@@ -410,9 +417,7 @@ void ovkDestroyGrid(ovk_domain *Domain, int GridID) {
 
   DestroyGridGlobal(&GridContainer);
 
-  --Domain->properties.num_grids;
-
-  MPI_Barrier(Domain->properties.comm);
+  MPI_Barrier(Domain->comm);
 
 }
 
@@ -521,7 +526,6 @@ void ovkEditGridRemote(ovk_domain *Domain, int GridID) {
 
 static void EditGridGlobal(ovk_domain *Domain, int GridID, ovk_grid **Grid) {
 
-  OVK_DEBUG_ASSERT(!EditingProperties(Domain), "Cannot edit grid while editing properties.");
   OVK_DEBUG_ASSERT(!EditingConnectivity(Domain, OVK_ALL_GRIDS, OVK_ALL_GRIDS), "Cannot edit "
     "grid while editing connectivities.");
 
@@ -540,7 +544,7 @@ static void EditGridGlobal(ovk_domain *Domain, int GridID, ovk_grid **Grid) {
   ++Container->edit_ref_count;
 
   if (StartEdit) {
-    MPI_Barrier(Domain->properties.comm);
+    MPI_Barrier(Domain->comm);
   }
 
   if (IsLocal) {
@@ -596,7 +600,7 @@ static void ReleaseGridGlobal(ovk_domain *Domain, int GridID, ovk_grid **Grid) {
   }
 
   if (EndEdit) {
-    MPI_Barrier(Domain->properties.comm);
+    MPI_Barrier(Domain->comm);
   }
 
 }
@@ -625,9 +629,9 @@ static void EnableConnectivityComponent(ovk_domain *Domain) {
 
       if (ReceiverGridID != DonorGridID) {
         t_domain_connectivity_container *ConnectivityContainer;
-        CreateConnectivityGlobal(&ConnectivityContainer, Domain->properties.num_dims,
-          DonorGridContainer, ReceiverGridContainer, Domain->properties.comm,
-          Domain->properties.comm_rank, Domain->logger, Domain->error_handler);
+        CreateConnectivityGlobal(&ConnectivityContainer, Domain->num_dims,
+          DonorGridContainer, ReceiverGridContainer, Domain->comm,
+          Domain->comm_rank, Domain->logger, Domain->error_handler);
         OMInsert(ConnectivityRow, ReceiverGridID, ConnectivityContainer);
       }
 
@@ -683,8 +687,8 @@ static void CreateConnectivitiesForGrid(ovk_domain *Domain, int GridID) {
 
     if (OtherGridID != GridID) {
       t_domain_connectivity_container *ConnectivityContainer;
-      CreateConnectivityGlobal(&ConnectivityContainer, Domain->properties.num_dims, GridContainer,
-        OtherGridContainer, Domain->properties.comm, Domain->properties.comm_rank, Domain->logger,
+      CreateConnectivityGlobal(&ConnectivityContainer, Domain->num_dims, GridContainer,
+        OtherGridContainer, Domain->comm, Domain->comm_rank, Domain->logger,
         Domain->error_handler);
       OMInsert(ConnectivityRow, OtherGridID, ConnectivityContainer);
     }
@@ -703,8 +707,8 @@ static void CreateConnectivitiesForGrid(ovk_domain *Domain, int GridID) {
     if (OtherGridID != GridID) {
       ConnectivityRow = OMData(OMFind(Domain->connectivities, OtherGridID));
       t_domain_connectivity_container *ConnectivityContainer;
-      CreateConnectivityGlobal(&ConnectivityContainer, Domain->properties.num_dims,
-        OtherGridContainer, GridContainer, Domain->properties.comm, Domain->properties.comm_rank,
+      CreateConnectivityGlobal(&ConnectivityContainer, Domain->num_dims,
+        OtherGridContainer, GridContainer, Domain->comm, Domain->comm_rank,
         Domain->logger, Domain->error_handler);
       OMInsert(ConnectivityRow, GridID, ConnectivityContainer);
     }
@@ -910,7 +914,6 @@ void ovkEditConnectivityRemote(ovk_domain *Domain, int DonorGridID, int Receiver
 static void EditConnectivityGlobal(ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
   ovk_connectivity **Connectivity) {
 
-  OVK_DEBUG_ASSERT(!EditingProperties(Domain), "Cannot edit connectivity while editing properties.");
   OVK_DEBUG_ASSERT(!EditingGrid(Domain, OVK_ALL_GRIDS), "Cannot edit connectivity while editing "
     "grids.");
 
@@ -930,7 +933,7 @@ static void EditConnectivityGlobal(ovk_domain *Domain, int DonorGridID, int Rece
   ++Container->edit_ref_count;
 
   if (StartEdit) {
-    MPI_Barrier(Domain->properties.comm);
+    MPI_Barrier(Domain->comm);
   }
 
   if (IsLocal) {
@@ -996,7 +999,7 @@ static void ReleaseConnectivityGlobal(ovk_domain *Domain, int DonorGridID, int R
   }
 
   if (EndEdit) {
-    MPI_Barrier(Domain->properties.comm);
+    MPI_Barrier(Domain->comm);
   }
 
 }
@@ -1027,8 +1030,8 @@ static void EnableExchangeComponent(ovk_domain *Domain) {
         const t_domain_connectivity_container *ConnectivityContainer = FindConnectivityC(Domain,
           DonorGridID, ReceiverGridID);
         t_domain_exchange_container *ExchangeContainer;
-        CreateExchangeGlobal(&ExchangeContainer, ConnectivityContainer, Domain->properties.comm,
-          Domain->properties.comm_rank, Domain->logger, Domain->error_handler);
+        CreateExchangeGlobal(&ExchangeContainer, ConnectivityContainer, Domain->comm,
+          Domain->comm_rank, Domain->logger, Domain->error_handler);
         OMInsert(ExchangeRow, ReceiverGridID, ExchangeContainer);
       }
 
@@ -1084,8 +1087,8 @@ static void CreateExchangesForGrid(ovk_domain *Domain, int GridID) {
       const t_domain_connectivity_container *ConnectivityContainer = FindConnectivityC(Domain,
         GridID, OtherGridID);
       t_domain_exchange_container *ExchangeContainer;
-      CreateExchangeGlobal(&ExchangeContainer, ConnectivityContainer, Domain->properties.comm,
-        Domain->properties.comm_rank, Domain->logger, Domain->error_handler);
+      CreateExchangeGlobal(&ExchangeContainer, ConnectivityContainer, Domain->comm,
+        Domain->comm_rank, Domain->logger, Domain->error_handler);
       OMInsert(ExchangeRow, OtherGridID, ExchangeContainer);
     }
 
@@ -1105,8 +1108,8 @@ static void CreateExchangesForGrid(ovk_domain *Domain, int GridID) {
         OtherGridID, GridID);
       ExchangeRow = OMData(OMFind(Domain->exchanges, OtherGridID));
       t_domain_exchange_container *ExchangeContainer;
-      CreateExchangeGlobal(&ExchangeContainer, ConnectivityContainer, Domain->properties.comm,
-        Domain->properties.comm_rank, Domain->logger, Domain->error_handler);
+      CreateExchangeGlobal(&ExchangeContainer, ConnectivityContainer, Domain->comm,
+        Domain->comm_rank, Domain->logger, Domain->error_handler);
       OMInsert(ExchangeRow, GridID, ExchangeContainer);
     }
 
@@ -1265,12 +1268,6 @@ void ovkGetExchange(const ovk_domain *Domain, int DonorGridID, int ReceiverGridI
 
 }
 
-static bool EditingProperties(const ovk_domain *Domain) {
-
-  return Domain->properties_edit_ref_count > 0;
-
-}
-
 static bool EditingGrid(const ovk_domain *Domain, int GridID) {
 
   if (GridID == OVK_ALL_GRIDS) {
@@ -1307,11 +1304,7 @@ void ovkGetLocalDonorCount(const ovk_domain *Domain, int DonorGridID, int Receiv
 
   const ovk_connectivity_d *Donors;
   ovkGetConnectivityDonorSide(Connectivity, &Donors);
-
-  const ovk_connectivity_d_properties *DonorsProperties;
-  ovkGetConnectivityDonorSideProperties(Donors, &DonorsProperties);
-
-  ovkGetConnectivityDonorSidePropertyCount(DonorsProperties, NumDonors);
+  ovkGetConnectivityDonorSideCount(Donors, NumDonors);
 
 }
 
@@ -1328,11 +1321,7 @@ void ovkGetLocalReceiverCount(const ovk_domain *Domain, int DonorGridID, int Rec
 
   const ovk_connectivity_r *Receivers;
   ovkGetConnectivityReceiverSide(Connectivity, &Receivers);
-
-  const ovk_connectivity_r_properties *ReceiversProperties;
-  ovkGetConnectivityReceiverSideProperties(Receivers, &ReceiversProperties);
-
-  ovkGetConnectivityReceiverSidePropertyCount(ReceiversProperties, NumReceivers);
+  ovkGetConnectivityReceiverSideCount(Receivers, NumReceivers);
 
 }
 
@@ -1340,10 +1329,10 @@ void ovkAssemble(ovk_domain *Domain, const ovk_assembly_options *Options) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
 
-  bool IsDomainRoot = Domain->properties.comm_rank == 0;
+  bool IsDomainRoot = Domain->comm_rank == 0;
 
   LogStatus(Domain->logger, IsDomainRoot, 0, "Beginning overset assembly on domain %s.",
-    Domain->properties.name);
+    Domain->name);
 
   bool HasOverlap = Domain->config & OVK_DOMAIN_CONFIG_OVERLAP;
   bool HasConnectivity = Domain->config & OVK_DOMAIN_CONFIG_CONNECTIVITY;
@@ -1366,7 +1355,7 @@ void ovkAssemble(ovk_domain *Domain, const ovk_assembly_options *Options) {
   }
 
   LogStatus(Domain->logger, IsDomainRoot, 0, "Finished overset assembly on domain %s.",
-    Domain->properties.name);
+    Domain->name);
 
 }
 
@@ -1412,7 +1401,7 @@ void ovkCollect(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
   OVK_DEBUG_ASSERT(Domain->config & OVK_DOMAIN_CONFIG_EXCHANGE, "Domain %s is not configured for "
-    "exchange.", Domain->properties.name);
+    "exchange.", Domain->name);
   OVK_DEBUG_ASSERT(DonorGridID >= 0, "Invalid donor grid ID.");
   OVK_DEBUG_ASSERT(ReceiverGridID >= 0, "Invalid receiver grid ID.");
   OVK_DEBUG_ASSERT(ovkGridExists(Domain, DonorGridID), "Grid %i does not exist.", DonorGridID);
@@ -1443,7 +1432,7 @@ void ovkSend(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, ovk_
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
   OVK_DEBUG_ASSERT(Domain->config & OVK_DOMAIN_CONFIG_EXCHANGE, "Domain %s is not configured for "
-    "exchange.", Domain->properties.name);
+    "exchange.", Domain->name);
   OVK_DEBUG_ASSERT(DonorGridID >= 0, "Invalid donor grid ID.");
   OVK_DEBUG_ASSERT(ReceiverGridID >= 0, "Invalid receiver grid ID.");
   OVK_DEBUG_ASSERT(ovkGridExists(Domain, DonorGridID), "Grid %i does not exist.", DonorGridID);
@@ -1473,7 +1462,7 @@ void ovkReceive(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
   OVK_DEBUG_ASSERT(Domain->config & OVK_DOMAIN_CONFIG_EXCHANGE, "Domain %s is not configured for "
-    "exchange.", Domain->properties.name);
+    "exchange.", Domain->name);
   OVK_DEBUG_ASSERT(DonorGridID >= 0, "Invalid donor grid ID.");
   OVK_DEBUG_ASSERT(ReceiverGridID >= 0, "Invalid receiver grid ID.");
   OVK_DEBUG_ASSERT(ovkGridExists(Domain, DonorGridID), "Grid %i does not exist.", DonorGridID);
@@ -1525,7 +1514,7 @@ void ovkDisperse(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
   OVK_DEBUG_ASSERT(Domain->config & OVK_DOMAIN_CONFIG_EXCHANGE, "Domain %s is not configured for "
-    "exchange.", Domain->properties.name);
+    "exchange.", Domain->name);
   OVK_DEBUG_ASSERT(DonorGridID >= 0, "Invalid donor grid ID.");
   OVK_DEBUG_ASSERT(ReceiverGridID >= 0, "Invalid receiver grid ID.");
   OVK_DEBUG_ASSERT(ovkGridExists(Domain, DonorGridID), "Grid %i does not exist.", DonorGridID);
@@ -1706,85 +1695,3 @@ void ovkSetDomainParamComm(ovk_domain_params *Params, MPI_Comm Comm) {
   Params->comm = Comm;
 
 }
-
-static void DefaultProperties(ovk_domain_properties *Properties) {
-
-  memset(Properties->name, 0, OVK_NAME_LENGTH);
-
-  Properties->num_dims = 2;
-  Properties->comm = MPI_COMM_NULL;
-  Properties->comm_size = 0;
-  Properties->comm_rank = 0;
-  Properties->num_grids = 0;
-
-}
-
-void ovkGetDomainPropertyName(const ovk_domain_properties *Properties, char *Name) {
-
-  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
-  OVK_DEBUG_ASSERT(Name, "Invalid name pointer.");
-
-  strcpy(Name, Properties->name);
-
-}
-
-void ovkGetDomainPropertyDimension(const ovk_domain_properties *Properties, int *NumDims) {
-
-  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
-  OVK_DEBUG_ASSERT(NumDims, "Invalid num dims pointer.");
-
-  *NumDims = Properties->num_dims;
-
-}
-
-void ovkGetDomainPropertyComm(const ovk_domain_properties *Properties, MPI_Comm *Comm) {
-
-  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
-  OVK_DEBUG_ASSERT(Comm, "Invalid comm pointer.");
-
-  *Comm = Properties->comm;
-
-}
-
-void ovkGetDomainPropertyCommSize(const ovk_domain_properties *Properties, int *CommSize) {
-
-  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
-  OVK_DEBUG_ASSERT(CommSize, "Invalid comm size pointer.");
-
-  *CommSize = Properties->comm_size;
-
-}
-
-void ovkGetDomainPropertyCommRank(const ovk_domain_properties *Properties, int *CommRank) {
-
-  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
-  OVK_DEBUG_ASSERT(CommRank, "Invalid comm rank pointer.");
-
-  *CommRank = Properties->comm_rank;
-
-}
-
-void ovkGetDomainPropertyGridCount(const ovk_domain_properties *Properties, int *NumGrids) {
-
-  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
-  OVK_DEBUG_ASSERT(NumGrids, "Invalid num grids pointer.");
-
-  *NumGrids = Properties->num_grids;
-
-}
-
-// void ovkGetDomainGridIDs(const ovk_domain *Domain, int *GridIDs) {
-
-
-
-//   int iGrid;
-
-//   iGrid = 0;
-//   t_ordered_map_entry *Entry = OMBegin(Domain->grids);
-//   while (Entry != OMEnd(Domain->grids)) {
-//     GridIDs[iGrid] = OMKey(Entry);
-//     ++iGrid;
-//     Entry = OMNext(Entry);
-//   }
-
-// }

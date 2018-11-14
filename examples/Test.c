@@ -752,10 +752,8 @@ void AssembleTest(int argc, char **argv) {
   for (iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
     input_grid *InputGrid = InputGrids + iLocalGrid;
     ovk_grid *Grid = Grids[iLocalGrid];
-    const ovk_grid_properties *GridProperties;
-    ovkGetGridProperties(Grid, &GridProperties);
     ovk_range LocalRange;
-    ovkGetGridPropertyLocalRange(GridProperties, &LocalRange);
+    ovkGetGridLocalRange(Grid, &LocalRange);
     double *XYZ[2];
     for (iDim = 0; iDim < 2; ++iDim) {
       ovkEditGridCoords(Grid, iDim, &XYZ[iDim]);

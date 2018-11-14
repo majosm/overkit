@@ -17,9 +17,6 @@ typedef struct ovk_context_params ovk_context_params;
 struct ovk_context;
 typedef struct ovk_context ovk_context;
 
-struct ovk_context_properties;
-typedef struct ovk_context_properties ovk_context_properties;
-
 void ovkCreateContextParams(ovk_context_params **Params);
 void ovkDestroyContextParams(ovk_context_params **Params);
 void ovkGetContextParamComm(const ovk_context_params *Params, MPI_Comm *Comm);
@@ -34,20 +31,15 @@ void ovkSetContextParamErrorHandlerType(ovk_context_params *Params, ovk_error_ha
 ovk_error ovkCreateContext(ovk_context **Context, const ovk_context_params *Params);
 void ovkDestroyContext(ovk_context **Context);
 
-void ovkGetContextProperties(const ovk_context *Context, const ovk_context_properties **Properties);
-// void ovkEditContextProperties(ovk_context *Context, ovk_context_properties **Properties);
-// void ovkReleaseContextProperties(ovk_context *Context, ovk_context_properties **Properties);
+void ovkGetContextComm(const ovk_context *Context, MPI_Comm *Comm);
+void ovkGetContextLogLevel(const ovk_context *Context, ovk_log_level *LogLevel);
+void ovkSetContextLogLevel(ovk_context *Context, ovk_log_level LogLevel);
+void ovkGetContextErrorHandlerType(const ovk_context *Context, ovk_error_handler_type
+  *ErrorHandlerType);
+void ovkSetContextErrorHandlerType(ovk_context *Context, ovk_error_handler_type ErrorHandlerType);
 
 void ovkCreateDomain(ovk_context *Context, ovk_domain **Domain, const ovk_domain_params *Params);
 void ovkDestroyDomain(ovk_context *Context, ovk_domain **Domain);
-
-void ovkGetContextPropertyComm(const ovk_context_properties *Properties, MPI_Comm *Comm);
-void ovkGetContextPropertyLogLevel(const ovk_context_properties *Properties, ovk_log_level *LogLevel);
-void ovkSetContextPropertyLogLevel(ovk_context_properties *Properties, ovk_log_level LogLevel);
-void ovkGetContextPropertyErrorHandlerType(const ovk_context_properties *Properties,
-  ovk_error_handler_type *ErrorHandlerType);
-void ovkSetContextPropertyErrorHandlerType(ovk_context_properties *Properties,
-  ovk_error_handler_type ErrorHandlerType);
 
 #ifdef __cplusplus
 }

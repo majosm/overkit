@@ -10,8 +10,6 @@
 #include "ovk/core/Logger.h"
 #include "ovk/core/TextUtils.h"
 
-static void DefaultProperties(ovk_context_properties *Properties);
-
 ovk_error ovkCreateContext(ovk_context **Context_, const ovk_context_params *Params) {
 
   int MPIInitialized;
@@ -59,34 +57,29 @@ ovk_error ovkCreateContext(ovk_context **Context_, const ovk_context_params *Par
   *Context_ = malloc(sizeof(ovk_context));
   ovk_context *Context = *Context_;
 
-  DefaultProperties(&Context->properties);
+  Context->comm = Comm;
+  MPI_Comm_size(Comm, &Context->comm_size);
+  MPI_Comm_rank(Comm, &Context->comm_rank);
 
-  Context->properties.comm = Comm;
-  MPI_Comm_size(Comm, &Context->properties.comm_size);
-  MPI_Comm_rank(Comm, &Context->properties.comm_rank);
-
-  Context->properties.log_level = Params->log_level;
-  CreateLogger(&Context->logger, Params->log_level, Context->properties.comm_rank);
-
-  Context->properties.error_handler_type = Params->error_handler_type;
+  CreateLogger(&Context->logger, Params->log_level, Context->comm_rank);
   CreateErrorHandler(&Context->error_handler, Params->error_handler_type);
 
   switch (Params->error_handler_type) {
   case OVK_ERROR_HANDLER_ABORT:
-    MPI_Comm_set_errhandler(Context->properties.comm, MPI_ERRORS_ARE_FATAL);
+    MPI_Comm_set_errhandler(Context->comm, MPI_ERRORS_ARE_FATAL);
     break;
   case OVK_ERROR_HANDLER_RETURN:
-    MPI_Comm_set_errhandler(Context->properties.comm, MPI_ERRORS_RETURN);
+    MPI_Comm_set_errhandler(Context->comm, MPI_ERRORS_RETURN);
     break;
   }
 
   ListCreate(&Context->domains);
 
-  MPI_Barrier(Context->properties.comm);
+  MPI_Barrier(Context->comm);
 
-  if (Context->properties.comm_rank == 0 && LoggingStatus(Context->logger)) {
+  if (Context->comm_rank == 0 && LoggingStatus(Context->logger)) {
     char ProcessesString[NUMBER_STRING_LENGTH+10];
-    PluralizeLabel(Context->properties.comm_size, "processes", "process", ProcessesString);
+    PluralizeLabel(Context->comm_size, "processes", "process", ProcessesString);
     LogStatus(Context->logger, true, 0, "Created context on %s.", ProcessesString);
   }
 
@@ -101,7 +94,7 @@ void ovkDestroyContext(ovk_context **Context_) {
 
   ovk_context *Context = *Context_;
 
-  MPI_Barrier(Context->properties.comm);
+  MPI_Barrier(Context->comm);
 
   t_list_entry *Entry = ListBegin(Context->domains);
   while (Entry != ListEnd(Context->domains)) {
@@ -115,8 +108,8 @@ void ovkDestroyContext(ovk_context **Context_) {
 
   DestroyErrorHandler(&Context->error_handler);
 
-  MPI_Comm Comm = Context->properties.comm;
-  bool IsRoot = Context->properties.comm_rank == 0;
+  MPI_Comm Comm = Context->comm;
+  bool IsRoot = Context->comm_rank == 0;
 
   free_null(Context_);
 
@@ -129,13 +122,49 @@ void ovkDestroyContext(ovk_context **Context_) {
 
 }
 
-void ovkGetContextProperties(const ovk_context *Context, const ovk_context_properties **Properties)
-  {
+void ovkGetContextComm(const ovk_context *Context, MPI_Comm *Comm) {
 
   OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
-  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
+  OVK_DEBUG_ASSERT(Comm, "Invalid comm pointer.");
 
-  *Properties = &Context->properties;
+  *Comm = Context->comm;
+
+}
+
+void ovkGetContextLogLevel(const ovk_context *Context, ovk_log_level *LogLevel) {
+
+  OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
+  OVK_DEBUG_ASSERT(LogLevel, "Invalid log level pointer.");
+
+  GetLogLevel(Context->logger, LogLevel);
+
+}
+
+void ovkSetContextLogLevel(ovk_context *Context, ovk_log_level LogLevel) {
+
+  OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
+  OVK_DEBUG_ASSERT(ValidLogLevel(LogLevel), "Invalid log level.");
+
+  SetLogLevel(Context->logger, LogLevel);
+
+}
+
+void ovkGetContextErrorHandlerType(const ovk_context *Context, ovk_error_handler_type
+  *ErrorHandlerType) {
+
+  OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
+  OVK_DEBUG_ASSERT(ErrorHandlerType, "Invalid error handler type pointer.");
+
+  GetErrorHandlerType(Context->error_handler, ErrorHandlerType);
+
+}
+
+void ovkSetContextErrorHandlerType(ovk_context *Context, ovk_error_handler_type ErrorHandlerType) {
+
+  OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
+  OVK_DEBUG_ASSERT(ValidErrorHandlerType(ErrorHandlerType), "Invalid error handler type.");
+
+  SetErrorHandlerType(Context->error_handler, ErrorHandlerType);
 
 }
 
@@ -258,61 +287,5 @@ void ovkSetContextParamErrorHandlerType(ovk_context_params *Params, ovk_error_ha
   OVK_DEBUG_ASSERT(ValidErrorHandlerType(Params->error_handler_type), "Invalid error handler type.");
 
   Params->error_handler_type = ErrorHandlerType;
-
-}
-
-static void DefaultProperties(ovk_context_properties *Properties) {
-
-  Properties->comm = MPI_COMM_NULL;
-  Properties->comm_size = 0;
-  Properties->comm_rank = -1;
-  Properties->log_level = OVK_LOG_ALL;
-  Properties->error_handler_type = OVK_ERROR_HANDLER_ABORT;
-
-}
-
-void ovkGetContextPropertyComm(const ovk_context_properties *Properties, MPI_Comm *Comm) {
-
-  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
-  OVK_DEBUG_ASSERT(Comm, "Invalid comm pointer.");
-
-  *Comm = Properties->comm;
-
-}
-
-void ovkGetContextPropertyLogLevel(const ovk_context_properties *Properties,
-  ovk_log_level *LogLevel) {
-
-  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
-  OVK_DEBUG_ASSERT(LogLevel, "Invalid log level pointer.");
-
-  *LogLevel = Properties->log_level;
-
-}
-
-void ovkSetContextPropertyLogLevel(ovk_context_properties *Properties, ovk_log_level LogLevel) {
-
-  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
-
-  Properties->log_level = LogLevel;
-
-}
-
-void ovkGetContextPropertyErrorHandlerType(const ovk_context_properties *Properties,
-  ovk_error_handler_type *ErrorHandlerType) {
-
-  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
-  OVK_DEBUG_ASSERT(ErrorHandlerType, "Invalid error handler type pointer.");
-
-  *ErrorHandlerType = Properties->error_handler_type;
-
-}
-
-void ovkSetContextPropertyErrorHandlerType(ovk_context_properties *Properties,
-  ovk_error_handler_type ErrorHandlerType) {
-
-  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
-
-  Properties->error_handler_type = ErrorHandlerType;
 
 }

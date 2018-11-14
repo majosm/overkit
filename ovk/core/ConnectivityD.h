@@ -15,17 +15,6 @@
 extern "C" {
 #endif
 
-struct ovk_connectivity_d_properties {
-  int grid_id;
-  int destination_grid_id;
-  int num_dims;
-  MPI_Comm comm;
-  int comm_size;
-  int comm_rank;
-  size_t count;
-  int max_size;
-};
-
 typedef struct {
   bool count;
   bool extents;
@@ -35,10 +24,16 @@ typedef struct {
 } t_connectivity_d_edits;
 
 struct ovk_connectivity_d {
-  ovk_connectivity_d_properties properties;
-  int properties_edit_ref_count;
   t_logger *logger;
   t_error_handler *error_handler;
+  int grid_id;
+  int destination_grid_id;
+  int num_dims;
+  MPI_Comm comm;
+  int comm_size;
+  int comm_rank;
+  size_t count;
+  int max_size;
   const ovk_grid *grid;
   t_connectivity_d_edits edits;
   int *extents[2][MAX_DIMS];

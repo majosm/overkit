@@ -24,15 +24,6 @@ struct ovk_domain_params {
   MPI_Comm comm;
 };
 
-struct ovk_domain_properties {
-  char name[OVK_NAME_LENGTH];
-  int num_dims;
-  MPI_Comm comm;
-  int comm_size;
-  int comm_rank;
-  int num_grids;
-};
-
 typedef struct {
   ovk_grid_info *info;
   int edit_ref_count;
@@ -54,10 +45,13 @@ typedef struct {
 } t_domain_exchange_container;
 
 struct ovk_domain {
-  ovk_domain_properties properties;
-  int properties_edit_ref_count;
   t_logger *logger;
   t_error_handler *error_handler;
+  char name[OVK_NAME_LENGTH];
+  int num_dims;
+  MPI_Comm comm;
+  int comm_size;
+  int comm_rank;
   ovk_domain_config config;
   t_ordered_map *grids;
   int grids_edit_ref_count;

@@ -33,6 +33,11 @@ static inline bool LoggingErrors(const t_logger *Logger) {
   return (Logger->level & OVK_LOG_ERRORS) != 0;
 }
 
+void PRIVATE(GetLogLevel)(const t_logger *Logger, ovk_log_level *LogLevel);
+#define GetLogLevel(...) PRIVATE(GetLogLevel)(__VA_ARGS__)
+void PRIVATE(SetLogLevel)(t_logger *Logger, ovk_log_level LogLevel);
+#define SetLogLevel(...) PRIVATE(SetLogLevel)(__VA_ARGS__)
+
 void PRIVATE(LogStatus)(t_logger *Logger, bool WriteCondition, int IncrementLevel,
   const char *Format, ...);
 #define LogStatus(...) PRIVATE(LogStatus)(__VA_ARGS__)

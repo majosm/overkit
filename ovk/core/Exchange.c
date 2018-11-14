@@ -58,15 +58,15 @@ void PRIVATE(CreateExchange)(ovk_exchange **Exchange_, const ovk_connectivity *C
   *Exchange_ = malloc(sizeof(ovk_exchange));
   ovk_exchange *Exchange = *Exchange_;
 
+  Exchange->logger = Logger;
+  Exchange->error_handler = ErrorHandler;
+
   Exchange->connectivity = Connectivity;
 
-  const ovk_connectivity_properties *ConnectivityProperties;
-  ovkGetConnectivityProperties(Connectivity, &ConnectivityProperties);
-
-  ovkGetConnectivityPropertyDimension(ConnectivityProperties, &Exchange->num_dims);
-  ovkGetConnectivityPropertyComm(ConnectivityProperties, &Exchange->comm);
-  ovkGetConnectivityPropertyCommSize(ConnectivityProperties, &Exchange->comm_size);
-  ovkGetConnectivityPropertyCommRank(ConnectivityProperties, &Exchange->comm_rank);
+  ovkGetConnectivityDimension(Connectivity, &Exchange->num_dims);
+  ovkGetConnectivityComm(Connectivity, &Exchange->comm);
+  ovkGetConnectivityCommSize(Connectivity, &Exchange->comm_size);
+  ovkGetConnectivityCommRank(Connectivity, &Exchange->comm_rank);
 
   MPI_Barrier(Exchange->comm);
 
@@ -89,9 +89,6 @@ void PRIVATE(CreateExchange)(ovk_exchange **Exchange_, const ovk_connectivity *C
     ovkGetConnectivityReceiverSide(Connectivity, &Receivers);
     ovkGetConnectivityReceiverSideGrid(Receivers, &ReceiverGrid);
   }
-
-  Exchange->logger = Logger;
-  Exchange->error_handler = ErrorHandler;
 
   Exchange->num_collect_sends = 0;
   Exchange->collect_send_dest_ranks = NULL;
@@ -129,9 +126,7 @@ void PRIVATE(CreateExchange)(ovk_exchange **Exchange_, const ovk_connectivity *C
 
   ovk_range DonorGridLocalRange;
   if (DonorGrid) {
-    const ovk_grid_properties *DonorGridProperties;
-    ovkGetGridProperties(DonorGrid, &DonorGridProperties);
-    ovkGetGridPropertyLocalRange(DonorGridProperties, &DonorGridLocalRange);
+    ovkGetGridLocalRange(DonorGrid, &DonorGridLocalRange);
   } else {
     ovkDefaultRange(&DonorGridLocalRange, Exchange->num_dims);
   }
@@ -144,9 +139,7 @@ void PRIVATE(CreateExchange)(ovk_exchange **Exchange_, const ovk_connectivity *C
 
   ovk_range ReceiverGridLocalRange;
   if (ReceiverGrid) {
-    const ovk_grid_properties *ReceiverGridProperties;
-    ovkGetGridProperties(ReceiverGrid, &ReceiverGridProperties);
-    ovkGetGridPropertyLocalRange(ReceiverGridProperties, &ReceiverGridLocalRange);
+    ovkGetGridLocalRange(ReceiverGrid, &ReceiverGridLocalRange);
   } else {
     ovkDefaultRange(&ReceiverGridLocalRange, Exchange->num_dims);
   }
@@ -157,7 +150,7 @@ void PRIVATE(CreateExchange)(ovk_exchange **Exchange_, const ovk_connectivity *C
   MPI_Barrier(Exchange->comm);
 
   LogStatus(Exchange->logger, Exchange->comm_rank == 0, 0, "Created exchange %s.",
-    Connectivity->properties.name);
+    Connectivity->name);
 
 }
 
@@ -231,7 +224,7 @@ void PRIVATE(DestroyExchange)(ovk_exchange **Exchange_) {
   MPI_Comm Comm = Exchange->comm;
   bool IsRoot = Exchange->comm_rank == 0;
   char Name[OVK_NAME_LENGTH];
-  strncpy(Name, Connectivity->properties.name, OVK_NAME_LENGTH);
+  strncpy(Name, Connectivity->name, OVK_NAME_LENGTH);
 
   free_null(Exchange_);
 
@@ -263,10 +256,10 @@ void PRIVATE(CreateExchangeInfo)(ovk_exchange_info **Info_, const ovk_exchange *
   BroadcastAnySource(&RootRank, 1, MPI_INT, IsRoot, Comm);
 
   if (IsRoot) {
-    Info->donor_grid_id = Connectivity->properties.donor_grid_id;
-    Info->receiver_grid_id = Connectivity->properties.receiver_grid_id;
-    strcpy(Info->name, Connectivity->properties.name);
-    Info->num_dims = Connectivity->properties.num_dims;
+    Info->donor_grid_id = Connectivity->donor_grid_id;
+    Info->receiver_grid_id = Connectivity->receiver_grid_id;
+    strcpy(Info->name, Connectivity->name);
+    Info->num_dims = Connectivity->num_dims;
   }
   MPI_Bcast(&Info->donor_grid_id, 1, MPI_INT, RootRank, Comm);
   MPI_Bcast(&Info->receiver_grid_id, 1, MPI_INT, RootRank, Comm);
@@ -305,8 +298,8 @@ void PRIVATE(UpdateExchange)(ovk_exchange *Exchange) {
 
   const ovk_connectivity *Connectivity = Exchange->connectivity;
 
-  LogStatus(Exchange->logger, Connectivity->properties.comm_rank == 0, 0,
-    "Updating exchange %s...", Connectivity->properties.name);
+  LogStatus(Exchange->logger, Connectivity->comm_rank == 0, 0,
+    "Updating exchange %s...", Connectivity->name);
 
   const t_connectivity_edits *Edits;
   GetConnectivityEdits(Connectivity, &Edits);
@@ -373,8 +366,8 @@ void PRIVATE(UpdateExchange)(ovk_exchange *Exchange) {
 
   MPI_Barrier(Exchange->comm);
 
-  LogStatus(Exchange->logger, Connectivity->properties.comm_rank == 0, 0, 
-    "Done updating exchange %s.", Connectivity->properties.name);
+  LogStatus(Exchange->logger, Connectivity->comm_rank == 0, 0, 
+    "Done updating exchange %s.", Connectivity->name);
 
 }
 
@@ -406,9 +399,7 @@ static void ResizeDonors(ovk_exchange *Exchange) {
   if (ovkRankHasConnectivityDonorSide(Connectivity)) {
     const ovk_connectivity_d *Donors;
     ovkGetConnectivityDonorSide(Connectivity, &Donors);
-    const ovk_connectivity_d_properties *DonorsProperties;
-    ovkGetConnectivityDonorSideProperties(Donors, &DonorsProperties);
-    ovkGetConnectivityDonorSidePropertyCount(DonorsProperties, &NumDonors);
+    ovkGetConnectivityDonorSideCount(Donors, &NumDonors);
   }
 
   if (NumDonors > 0) {
@@ -452,9 +443,7 @@ static void ResizeReceivers(ovk_exchange *Exchange) {
   if (ovkRankHasConnectivityReceiverSide(Connectivity)) {
     const ovk_connectivity_r *Receivers;
     ovkGetConnectivityReceiverSide(Connectivity, &Receivers);
-    const ovk_connectivity_r_properties *ReceiversProperties;
-    ovkGetConnectivityReceiverSideProperties(Receivers, &ReceiversProperties);
-    ovkGetConnectivityReceiverSidePropertyCount(ReceiversProperties, &NumReceivers);
+    ovkGetConnectivityReceiverSideCount(Receivers, &NumReceivers);
   }
 
   if (NumReceivers > 0) {
@@ -498,10 +487,8 @@ static void UpdateCollectSendInfo(ovk_exchange *Exchange) {
   int MaxSize = 0;
   if (ovkRankHasConnectivityDonorSide(Connectivity)) {
     ovkGetConnectivityDonorSide(Connectivity, &Donors);
-    const ovk_connectivity_d_properties *DonorsProperties;
-    ovkGetConnectivityDonorSideProperties(Donors, &DonorsProperties);
-    ovkGetConnectivityDonorSidePropertyCount(DonorsProperties, &NumDonors);
-    ovkGetConnectivityDonorSidePropertyMaxSize(DonorsProperties, &MaxSize);
+    ovkGetConnectivityDonorSideCount(Donors, &NumDonors);
+    ovkGetConnectivityDonorSideMaxSize(Donors, &MaxSize);
   }
 
   if (NumDonors > 0) {
@@ -514,12 +501,9 @@ static void UpdateCollectSendInfo(ovk_exchange *Exchange) {
     const ovk_grid *Grid;
     ovkGetConnectivityDonorSideGrid(Donors, &Grid);
 
-    const ovk_grid_properties *GridProperties;
-    ovkGetGridProperties(Grid, &GridProperties);
-
     ovk_range GlobalRange, LocalRange;
-    ovkGetGridPropertyGlobalRange(GridProperties, &GlobalRange);
-    ovkGetGridPropertyLocalRange(GridProperties, &LocalRange);
+    ovkGetGridGlobalRange(Grid, &GlobalRange);
+    ovkGetGridLocalRange(Grid, &LocalRange);
 
     int NumNeighbors;
     GetGridNeighborCount(Grid, &NumNeighbors);
@@ -773,10 +757,8 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
   int MaxSize = 0;
   if (ovkRankHasConnectivityDonorSide(Connectivity)) {
     ovkGetConnectivityDonorSide(Connectivity, &Donors);
-    const ovk_connectivity_d_properties *DonorsProperties;
-    ovkGetConnectivityDonorSideProperties(Donors, &DonorsProperties);
-    ovkGetConnectivityDonorSidePropertyCount(DonorsProperties, &NumDonors);
-    ovkGetConnectivityDonorSidePropertyMaxSize(DonorsProperties, &MaxSize);
+    ovkGetConnectivityDonorSideCount(Donors, &NumDonors);
+    ovkGetConnectivityDonorSideMaxSize(Donors, &MaxSize);
   }
 
   if (NumDonors > 0) {
@@ -789,12 +771,9 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
     const ovk_grid *Grid;
     ovkGetConnectivityDonorSideGrid(Donors, &Grid);
 
-    const ovk_grid_properties *GridProperties;
-    ovkGetGridProperties(Grid, &GridProperties);
-
     ovk_range GlobalRange, LocalRange;
-    ovkGetGridPropertyGlobalRange(GridProperties, &GlobalRange);
-    ovkGetGridPropertyLocalRange(GridProperties, &LocalRange);
+    ovkGetGridGlobalRange(Grid, &GlobalRange);
+    ovkGetGridLocalRange(Grid, &LocalRange);
 
     int NumNeighbors;
     GetGridNeighborCount(Grid, &NumNeighbors);
@@ -1135,11 +1114,8 @@ static void UpdateDonorsSorted(ovk_exchange *Exchange) {
     const ovk_connectivity_d *Donors;
     ovkGetConnectivityDonorSide(Connectivity, &Donors);
 
-    const ovk_connectivity_d_properties *DonorsProperties;
-    ovkGetConnectivityDonorSideProperties(Donors, &DonorsProperties);
-
     size_t NumDonors;
-    ovkGetConnectivityDonorSidePropertyCount(DonorsProperties, &NumDonors);
+    ovkGetConnectivityDonorSideCount(Donors, &NumDonors);
 
     const ovk_grid_info *ReceiverGridInfo;
     ovkGetConnectivityReceiverGridInfo(Connectivity, &ReceiverGridInfo);
@@ -1196,20 +1172,14 @@ static void UpdateReceiversSorted(ovk_exchange *Exchange) {
     const ovk_connectivity_r *Receivers;
     ovkGetConnectivityReceiverSide(Connectivity, &Receivers);
 
-    const ovk_connectivity_r_properties *ReceiversProperties;
-    ovkGetConnectivityReceiverSideProperties(Receivers, &ReceiversProperties);
-
     size_t NumReceivers = 0;
-    ovkGetConnectivityReceiverSidePropertyCount(ReceiversProperties, &NumReceivers);
+    ovkGetConnectivityReceiverSideCount(Receivers, &NumReceivers);
 
     const ovk_grid *ReceiverGrid;
     ovkGetConnectivityReceiverSideGrid(Receivers, &ReceiverGrid);
 
-    const ovk_grid_properties *ReceiverGridProperties;
-    ovkGetGridProperties(ReceiverGrid, &ReceiverGridProperties);
-
     ovk_range GlobalRange;
-    ovkGetGridPropertyGlobalRange(ReceiverGridProperties, &GlobalRange);
+    ovkGetGridGlobalRange(ReceiverGrid, &GlobalRange);
 
     size_t *PointIndices = malloc(NumReceivers*sizeof(size_t));
 
@@ -1260,9 +1230,7 @@ static void UpdateSourceRanks(ovk_exchange *Exchange) {
   size_t NumReceivers;
   if (ReceiverGridIsLocal) {
     ovkGetConnectivityReceiverSide(Connectivity, &Receivers);
-    const ovk_connectivity_r_properties *ReceiversProperties;
-    ovkGetConnectivityReceiverSideProperties(Receivers, &ReceiversProperties);
-    ovkGetConnectivityReceiverSidePropertyCount(ReceiversProperties, &NumReceivers);
+    ovkGetConnectivityReceiverSideCount(Receivers, &NumReceivers);
   }
 
   t_ordered_map *Bins;
@@ -1306,9 +1274,7 @@ static void UpdateDestRanks(ovk_exchange *Exchange) {
   size_t NumDonors;
   if (DonorGridIsLocal) {
     ovkGetConnectivityDonorSide(Connectivity, &Donors);
-    const ovk_connectivity_d_properties *DonorsProperties;
-    ovkGetConnectivityDonorSideProperties(Donors, &DonorsProperties);
-    ovkGetConnectivityDonorSidePropertyCount(DonorsProperties, &NumDonors);
+    ovkGetConnectivityDonorSideCount(Donors, &NumDonors);
   }
 
   t_ordered_map *Bins;
@@ -1354,19 +1320,15 @@ static void UpdateSendInfo(ovk_exchange *Exchange) {
 
   const ovk_connectivity_d *Donors;
   size_t NumDonors = 0;
-  ovk_range LocalRange;
   ovk_cart Cart;
+  ovk_range LocalRange;
   if (ovkRankHasConnectivityDonorSide(Connectivity)) {
     ovkGetConnectivityDonorSide(Connectivity, &Donors);
-    const ovk_connectivity_d_properties *DonorsProperties;
-    ovkGetConnectivityDonorSideProperties(Donors, &DonorsProperties);
-    ovkGetConnectivityDonorSidePropertyCount(DonorsProperties, &NumDonors);
+    ovkGetConnectivityDonorSideCount(Donors, &NumDonors);
     const ovk_grid *DonorGrid;
     ovkGetConnectivityDonorSideGrid(Donors, &DonorGrid);
-    const ovk_grid_properties *DonorGridProperties;
-    ovkGetGridProperties(DonorGrid, &DonorGridProperties);
-    ovkGetGridPropertyLocalRange(DonorGridProperties, &LocalRange);
     ovkGetGridCart(DonorGrid, &Cart);
+    ovkGetGridLocalRange(DonorGrid, &LocalRange);
   }
 
   if (NumDonors > 0) {
@@ -1475,9 +1437,7 @@ static void UpdateReceiveInfo(ovk_exchange *Exchange) {
   size_t NumReceivers = 0;
   if (ovkRankHasConnectivityReceiverSide(Connectivity)) {
     ovkGetConnectivityReceiverSide(Connectivity, &Receivers);
-    const ovk_connectivity_r_properties *ReceiversProperties;
-    ovkGetConnectivityReceiverSideProperties(Receivers, &ReceiversProperties);
-    ovkGetConnectivityReceiverSidePropertyCount(ReceiversProperties, &NumReceivers);
+    ovkGetConnectivityReceiverSideCount(Receivers, &NumReceivers);
   }
 
   if (NumReceivers > 0) {
@@ -1576,11 +1536,10 @@ void PRIVATE(ExchangeCollect)(const ovk_exchange *Exchange, ovk_data_type DataTy
   const ovk_connectivity_d *Donors;
   ovkGetConnectivityDonorSide(Connectivity, &Donors);
 
-  const ovk_connectivity_d_properties *DonorsProperties;
-  ovkGetConnectivityDonorSideProperties(Donors, &DonorsProperties);
-
   size_t NumDonors;
-  ovkGetConnectivityDonorSidePropertyCount(DonorsProperties, &NumDonors);
+  int MaxSize;
+  ovkGetConnectivityDonorSideCount(Donors, &NumDonors);
+  ovkGetConnectivityDonorSideMaxSize(Donors, &MaxSize);
 
   if (OVK_DEBUG) {
     if (Count > 0 && NumDonors > 0) {
@@ -1595,28 +1554,19 @@ void PRIVATE(ExchangeCollect)(const ovk_exchange *Exchange, ovk_data_type DataTy
     }
   }
 
-  int MaxSize;
-  ovkGetConnectivityDonorSidePropertyMaxSize(DonorsProperties, &MaxSize);
-
   const ovk_grid *DonorGrid;
   ovkGetConnectivityDonorSideGrid(Donors, &DonorGrid);
 
-  const ovk_grid_properties *DonorGridProperties;
-  ovkGetGridProperties(DonorGrid, &DonorGridProperties);
-
   MPI_Comm DonorGridComm;
-  ovkGetGridPropertyComm(DonorGridProperties, &DonorGridComm);
-
+  ovk_cart Cart;
   ovk_range GlobalRange;
-  ovkGetGridPropertyGlobalRange(DonorGridProperties, &GlobalRange);
-
   ovk_range LocalRange;
-  ovkGetGridPropertyLocalRange(DonorGridProperties, &LocalRange);
+  ovkGetGridComm(DonorGrid, &DonorGridComm);
+  ovkGetGridCart(DonorGrid, &Cart);
+  ovkGetGridGlobalRange(DonorGrid, &GlobalRange);
+  ovkGetGridLocalRange(DonorGrid, &LocalRange);
 
   OVK_DEBUG_ASSERT(ovkRangeIncludes(GridDataRange, &LocalRange), "Invalid grid data range.");
-
-  ovk_cart Cart;
-  ovkGetGridCart(DonorGrid, &Cart);
 
   int NumCollectSends = Exchange->num_collect_sends;
   int NumCollectRecvs = Exchange->num_collect_recvs;
@@ -1854,11 +1804,8 @@ void PRIVATE(ExchangeSend)(const ovk_exchange *Exchange, ovk_data_type DataType,
   const ovk_connectivity_d *Donors;
   ovkGetConnectivityDonorSide(Connectivity, &Donors);
 
-  const ovk_connectivity_d_properties *DonorsProperties;
-  ovkGetConnectivityDonorSideProperties(Donors, &DonorsProperties);
-
   size_t NumDonors;
-  ovkGetConnectivityDonorSidePropertyCount(DonorsProperties, &NumDonors);
+  ovkGetConnectivityDonorSideCount(Donors, &NumDonors);
 
   if (OVK_DEBUG) {
     if (Count > 0 && NumDonors > 0) {
@@ -1936,11 +1883,8 @@ void PRIVATE(ExchangeReceive)(const ovk_exchange *Exchange, ovk_data_type DataTy
   const ovk_connectivity_r *Receivers;
   ovkGetConnectivityReceiverSide(Connectivity, &Receivers);
 
-  const ovk_connectivity_r_properties *ReceiversProperties;
-  ovkGetConnectivityReceiverSideProperties(Receivers, &ReceiversProperties);
-
   size_t NumReceivers;
-  ovkGetConnectivityReceiverSidePropertyCount(ReceiversProperties, &NumReceivers);
+  ovkGetConnectivityReceiverSideCount(Receivers, &NumReceivers);
 
   if (OVK_DEBUG) {
     if (Count > 0 && NumReceivers > 0) {
@@ -1975,14 +1919,10 @@ static void CompleteReceive(t_recv_request_data *RequestData) {
   const ovk_exchange *Exchange = RequestData->exchange;
   const ovk_connectivity *Connectivity = Exchange->connectivity;
 
-  const ovk_connectivity_properties *ConnectivityProperties;
-  ovkGetConnectivityProperties(Connectivity, &ConnectivityProperties);
-
   int DonorGridID;
-  ovkGetConnectivityPropertyDonorGridID(ConnectivityProperties, &DonorGridID);
-
   int ReceiverGridID;
-  ovkGetConnectivityPropertyReceiverGridID(ConnectivityProperties, &ReceiverGridID);
+  ovkGetConnectivityDonorGridID(Connectivity, &DonorGridID);
+  ovkGetConnectivityReceiverGridID(Connectivity, &ReceiverGridID);
 
   ovk_data_type DataType = RequestData->data_type;
   int Count = RequestData->count;
@@ -1991,11 +1931,8 @@ static void CompleteReceive(t_recv_request_data *RequestData) {
   const ovk_connectivity_r *Receivers;
   ovkGetConnectivityReceiverSide(Connectivity, &Receivers);
 
-  const ovk_connectivity_r_properties *ReceiversProperties;
-  ovkGetConnectivityReceiverSideProperties(Receivers, &ReceiversProperties);
-
   size_t NumReceivers;
-  ovkGetConnectivityReceiverSidePropertyCount(ReceiversProperties, &NumReceivers);
+  ovkGetConnectivityReceiverSideCount(Receivers, &NumReceivers);
 
   int NumRecvs = Exchange->num_recvs;
 
@@ -2127,11 +2064,8 @@ void PRIVATE(ExchangeDisperse)(const ovk_exchange *Exchange, ovk_data_type DataT
   const ovk_connectivity_r *Receivers;
   ovkGetConnectivityReceiverSide(Connectivity, &Receivers);
 
-  const ovk_connectivity_r_properties *ReceiversProperties;
-  ovkGetConnectivityReceiverSideProperties(Receivers, &ReceiversProperties);
-
   size_t NumReceivers;
-  ovkGetConnectivityReceiverSidePropertyCount(ReceiversProperties, &NumReceivers);
+  ovkGetConnectivityReceiverSideCount(Receivers, &NumReceivers);
 
   if (OVK_DEBUG) {
     if (Count > 0 && NumReceivers > 0) {
@@ -2149,12 +2083,9 @@ void PRIVATE(ExchangeDisperse)(const ovk_exchange *Exchange, ovk_data_type DataT
   const ovk_grid *ReceiverGrid;
   ovkGetConnectivityReceiverSideGrid(Receivers, &ReceiverGrid);
 
-  const ovk_grid_properties *ReceiverGridProperties;
-  ovkGetGridProperties(ReceiverGrid, &ReceiverGridProperties);
-
   if (OVK_DEBUG) {
     ovk_range LocalRange;
-    ovkGetGridPropertyLocalRange(ReceiverGridProperties, &LocalRange);
+    ovkGetGridLocalRange(ReceiverGrid, &LocalRange);
     OVK_DEBUG_ASSERT(ovkRangeIncludes(GridDataRange, &LocalRange), "Invalid grid data range.");
   }
 

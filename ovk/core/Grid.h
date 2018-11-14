@@ -29,31 +29,26 @@ struct ovk_grid_params {
   ovk_range local_range;
 };
 
-struct ovk_grid_properties {
-  int id;
-  char name[OVK_NAME_LENGTH];
-  int num_dims;
-  MPI_Comm comm;
-  int comm_size;
-  int comm_rank;
-  bool periodic[MAX_DIMS];
-  ovk_periodic_storage periodic_storage;
-  double periodic_length[MAX_DIMS];
-  ovk_geometry_type geometry_type;
-  ovk_range global_range;
-  ovk_range local_range;
-};
-
 typedef struct {
   int comm_rank;
   ovk_range local_range;
 } t_grid_neighbor;
 
 struct ovk_grid {
-  ovk_grid_properties properties;
   t_logger *logger;
   t_error_handler *error_handler;
+  int id;
+  char name[OVK_NAME_LENGTH];
+  int num_dims;
+  MPI_Comm comm;
+  int comm_size;
+  int comm_rank;
   ovk_cart cart;
+  ovk_periodic_storage periodic_storage;
+  double periodic_length[MAX_DIMS];
+  ovk_geometry_type geometry_type;
+  ovk_range global_range;
+  ovk_range local_range;
   int num_neighbors;
   t_grid_neighbor *neighbors;
   t_partition_hash *partition_hash;
@@ -64,10 +59,10 @@ struct ovk_grid_info {
   char name[OVK_NAME_LENGTH];
   int num_dims;
   int root_rank;
-  ovk_range global_range;
   ovk_cart cart;
   double periodic_length[MAX_DIMS];
   ovk_geometry_type geometry_type;
+  ovk_range global_range;
 };
 
 void PRIVATE(CreateGrid)(ovk_grid **Grid, int ID, const ovk_grid_params *Params, t_logger *Logger,

@@ -20,16 +20,16 @@ typedef struct ovk_domain_params ovk_domain_params;
 struct ovk_domain;
 typedef struct ovk_domain ovk_domain;
 
-struct ovk_domain_properties;
-typedef struct ovk_domain_properties ovk_domain_properties;
+void ovkGetDomainName(const ovk_domain *Domain, char *Name);
+void ovkGetDomainDimension(const ovk_domain *Domain, int *NumDims);
+void ovkGetDomainComm(const ovk_domain *Domain, MPI_Comm *Comm);
+void ovkGetDomainCommSize(const ovk_domain *Domain, int *CommSize);
+void ovkGetDomainCommRank(const ovk_domain *Domain, int *CommRank);
 
 void ovkConfigureDomain(ovk_domain *Domain, ovk_domain_config Config);
 void ovkGetDomainConfiguration(ovk_domain *Domain, ovk_domain_config *Config);
 
-void ovkGetDomainProperties(const ovk_domain *Domain, const ovk_domain_properties **Properties);
-void ovkEditDomainProperties(ovk_domain *Domain, ovk_domain_properties **Properties);
-void ovkReleaseDomainProperties(ovk_domain *Domain, ovk_domain_properties **Properties);
-
+void ovkGetDomainGridCount(const ovk_domain *Domain, int *NumGrids);
 void ovkGetNextAvailableGridID(const ovk_domain *Domain, int *GridID);
 
 void ovkCreateGridLocal(ovk_domain *Domain, int GridID, const ovk_grid_params *Params);
@@ -94,13 +94,6 @@ void ovkSetDomainParamName(ovk_domain_params *Params, const char *Name);
 void ovkGetDomainParamDimension(const ovk_domain_params *Params, int *NumDims);
 void ovkGetDomainParamComm(const ovk_domain_params *Params, MPI_Comm *Comm);
 void ovkSetDomainParamComm(ovk_domain_params *Params, MPI_Comm Comm);
-
-void ovkGetDomainPropertyName(const ovk_domain_properties *Properties, char *Name);
-void ovkGetDomainPropertyDimension(const ovk_domain_properties *Properties, int *NumDims);
-void ovkGetDomainPropertyComm(const ovk_domain_properties *Properties, MPI_Comm *Comm);
-void ovkGetDomainPropertyCommSize(const ovk_domain_properties *Properties, int *CommSize);
-void ovkGetDomainPropertyCommRank(const ovk_domain_properties *Properties, int *CommRank);
-void ovkGetDomainPropertyGridCount(const ovk_domain_properties *Properties, int *NumGrids);
 
 #ifdef __cplusplus
 }

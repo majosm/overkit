@@ -32,6 +32,23 @@ void PRIVATE(DestroyLogger)(t_logger **Logger_) {
 
 }
 
+void PRIVATE(GetLogLevel)(const t_logger *Logger, ovk_log_level *LogLevel) {
+
+  OVK_DEBUG_ASSERT(Logger, "Invalid logger pointer.");
+  OVK_DEBUG_ASSERT(LogLevel, "Invalid log level pointer.");
+
+  *LogLevel = Logger->level;
+
+}
+
+void PRIVATE(SetLogLevel)(t_logger *Logger, ovk_log_level LogLevel) {
+
+  OVK_DEBUG_ASSERT(Logger, "Invalid logger pointer.");
+
+  Logger->level = LogLevel;
+
+}
+
 void PRIVATE(LogStatus)(t_logger *Logger, bool WriteCondition, int IncrementLevel,
   const char *Format, ...) {
 

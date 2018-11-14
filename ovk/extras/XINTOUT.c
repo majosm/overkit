@@ -212,17 +212,14 @@ ovk_error ovkEXTImportXINTOUT(ovk_domain *Domain, const char *HOPath, const char
   OVK_EH_INIT(ErrorHandler);
   ovk_error Error = OVK_NO_ERROR;
 
-  const ovk_domain_properties *DomainProperties;
-  ovkGetDomainProperties(Domain, &DomainProperties);
-
   int NumDims;
-  int NumGrids;
   MPI_Comm Comm;
   int CommRank;
-  ovkGetDomainPropertyDimension(DomainProperties, &NumDims);
-  ovkGetDomainPropertyGridCount(DomainProperties, &NumGrids);
-  ovkGetDomainPropertyComm(DomainProperties, &Comm);
-  ovkGetDomainPropertyCommRank(DomainProperties, &CommRank);
+  int NumGrids;
+  ovkGetDomainDimension(Domain, &NumDims);
+  ovkGetDomainComm(Domain, &Comm);
+  ovkGetDomainCommRank(Domain, &CommRank);
+  ovkGetDomainGridCount(Domain, &NumGrids);
 
   t_profiler *Profiler;
   CreateProfiler(&Profiler, Comm);
@@ -275,14 +272,12 @@ ovk_error ovkEXTImportXINTOUT(ovk_domain *Domain, const char *HOPath, const char
       if (ovkRankHasGrid(Domain, GridID)) {
         const ovk_grid *Grid;
         ovkGetGrid(Domain, GridID, &Grid);
-        const ovk_grid_properties *GridProperties;
-        ovkGetGridProperties(Grid, &GridProperties);
         char Name[OVK_NAME_LENGTH];
         int GlobalSize[MAX_DIMS];
         MPI_Comm GridComm;
-        ovkGetGridPropertyName(GridProperties, Name);
-        ovkGetGridPropertySize(GridProperties, GlobalSize);
-        ovkGetGridPropertyComm(GridProperties, &GridComm);
+        ovkGetGridName(Grid, Name);
+        ovkGetGridSize(Grid, GlobalSize);
+        ovkGetGridComm(Grid, &GridComm);
         LocalGrids[iLocalGrid] = Grid;
         LocalGridIDs[iLocalGrid] = GridID;
         strncpy(LocalGridNames[iLocalGrid], Name, OVK_NAME_LENGTH);
@@ -2285,14 +2280,10 @@ static void DistributeGridConnectivityData(const t_xintout_grid *XINTOUTGrid, co
   const t_xintout_donors *XINTOUTDonors = &XINTOUTGrid->donors;
   const t_xintout_receivers *XINTOUTReceivers = &XINTOUTGrid->receivers;
 
-  const ovk_grid_properties *Properties;
-  ovkGetGridProperties(Grid, &Properties);
-
-  ovk_range GlobalRange;
-  ovkGetGridPropertyGlobalRange(Properties, &GlobalRange);
-
   ovk_cart Cart;
+  ovk_range GlobalRange;
   ovkGetGridCart(Grid, &Cart);
+  ovkGetGridGlobalRange(Grid, &GlobalRange);
 
   const t_partition_hash *Hash;
   GetGridPartitionHash(Grid, &Hash);
@@ -2859,16 +2850,13 @@ static void ImportConnectivityData(int NumGrids, int NumLocalGrids, int *LocalGr
   int iPair;
   size_t iReceiver;
 
-  const ovk_domain_properties *DomainProperties;
-  ovkGetDomainProperties(Domain, &DomainProperties);
-
   char DomainName[OVK_NAME_LENGTH];
-  ovkGetDomainPropertyName(DomainProperties, DomainName);
+  ovkGetDomainName(Domain, DomainName);
 
   MPI_Comm Comm;
   int CommRank;
-  ovkGetDomainPropertyComm(DomainProperties, &Comm);
-  ovkGetDomainPropertyCommRank(DomainProperties, &CommRank);
+  ovkGetDomainComm(Domain, &Comm);
+  ovkGetDomainCommRank(Domain, &CommRank);
 
   MPI_Barrier(Comm);
 
@@ -3045,17 +3033,13 @@ static void ImportDonors(const t_donor_data *DonorData, int NumDestinationGrids,
 
   if (NumDestinationGrids == 0) return;
 
-  const ovk_connectivity_d_properties *Properties;
-  ovkGetConnectivityDonorSideProperties(Donors[0], &Properties);
-
   MPI_Comm Comm;
-  ovkGetConnectivityDonorSidePropertyComm(Properties, &Comm);
+  ovkGetConnectivityDonorSideComm(Donors[0], &Comm);
 
   int *DestinationGridIDs = malloc(NumDestinationGrids*sizeof(int));
 
   for (iDestinationGrid = 0; iDestinationGrid < NumDestinationGrids; ++iDestinationGrid) {
-    ovkGetConnectivityDonorSideProperties(Donors[iDestinationGrid], &Properties);
-    ovkGetConnectivityDonorSidePropertyDestinationGridID(Properties, DestinationGridIDs+
+    ovkGetConnectivityDonorSideDestinationGridID(Donors[iDestinationGrid], DestinationGridIDs+
       iDestinationGrid);
   }
 
@@ -3180,17 +3164,13 @@ static void ImportReceivers(const t_receiver_data *ReceiverData, int NumSourceGr
 
   if (NumSourceGrids == 0) return;
 
-  const ovk_connectivity_r_properties *Properties;
-  ovkGetConnectivityReceiverSideProperties(Receivers[0], &Properties);
-
   MPI_Comm Comm;
-  ovkGetConnectivityReceiverSidePropertyComm(Properties, &Comm);
+  ovkGetConnectivityReceiverSideComm(Receivers[0], &Comm);
 
   int *SourceGridIDs = malloc(NumSourceGrids*sizeof(int));
 
   for (iSourceGrid = 0; iSourceGrid < NumSourceGrids; ++iSourceGrid) {
-    ovkGetConnectivityReceiverSideProperties(Receivers[iSourceGrid], &Properties);
-    ovkGetConnectivityReceiverSidePropertySourceGridID(Properties, SourceGridIDs+iSourceGrid);
+    ovkGetConnectivityReceiverSideSourceGridID(Receivers[iSourceGrid], SourceGridIDs+iSourceGrid);
   }
 
   t_ordered_map *OverkitReceiverData;

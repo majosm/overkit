@@ -9,14 +9,12 @@
 #include "ovk/core/Logger.h"
 #include "ovk/core/Range.h"
 
-static bool EditingProperties(const ovk_connectivity_d *Donors);
 static bool EditingExtents(const ovk_connectivity_d *Donors);
 static bool EditingCoords(const ovk_connectivity_d *Donors);
 static bool EditingInterpCoefs(const ovk_connectivity_d *Donors);
 static bool EditingDestinations(const ovk_connectivity_d *Donors);
 static bool EditingDestinationRanks(const ovk_connectivity_d *Donors);
 
-static void DefaultProperties(ovk_connectivity_d_properties *Properties);
 static void DefaultEdits(t_connectivity_d_edits *Edits);
 
 void PRIVATE(CreateConnectivityDonorSide)(ovk_connectivity_d **Donors_, const ovk_grid *Grid,
@@ -24,40 +22,32 @@ void PRIVATE(CreateConnectivityDonorSide)(ovk_connectivity_d **Donors_, const ov
 
   int iDim;
 
-  const ovk_grid_properties *GridProperties;
-  ovkGetGridProperties(Grid, &GridProperties);
-
   int GridID;
-  ovkGetGridPropertyID(GridProperties, &GridID);
-
   int NumDims;
-  ovkGetGridPropertyDimension(GridProperties, &NumDims);
-
   MPI_Comm Comm;
-  ovkGetGridPropertyComm(GridProperties, &Comm);
+  int CommSize, CommRank;
+  ovkGetGridID(Grid, &GridID);
+  ovkGetGridDimension(Grid, &NumDims);
+  ovkGetGridComm(Grid, &Comm);
+  ovkGetGridCommSize(Grid, &CommSize);
+  ovkGetGridCommRank(Grid, &CommRank);
 
   MPI_Barrier(Comm);
-
-  int CommSize, CommRank;
-  MPI_Comm_size(Comm, &CommSize);
-  MPI_Comm_rank(Comm, &CommRank);
 
   *Donors_ = malloc(sizeof(ovk_connectivity_d));
   ovk_connectivity_d *Donors = *Donors_;
 
-  DefaultProperties(&Donors->properties);
-
-  Donors->properties.grid_id = GridID;
-  Donors->properties.destination_grid_id = DestinationGridID;
-  Donors->properties.num_dims = NumDims;
-  Donors->properties.comm = Comm;
-  Donors->properties.comm_size = CommSize;
-  Donors->properties.comm_rank = CommRank;
-
-  Donors->properties_edit_ref_count = 0;
-
   Donors->logger = Logger;
   Donors->error_handler = ErrorHandler;
+
+  Donors->grid_id = GridID;
+  Donors->destination_grid_id = DestinationGridID;
+  Donors->num_dims = NumDims;
+  Donors->comm = Comm;
+  Donors->comm_size = CommSize;
+  Donors->comm_rank = CommRank;
+  Donors->count = 0;
+  Donors->max_size = 0;
 
   Donors->grid = Grid;
 
@@ -87,7 +77,7 @@ void PRIVATE(CreateConnectivityDonorSide)(ovk_connectivity_d **Donors_, const ov
   Donors->destination_ranks = NULL;
   Donors->destination_ranks_edit_ref_count = 0;
 
-  MPI_Barrier(Donors->properties.comm);
+  MPI_Barrier(Donors->comm);
 
 }
 
@@ -95,18 +85,18 @@ void PRIVATE(DestroyConnectivityDonorSide)(ovk_connectivity_d **Donors_) {
 
   ovk_connectivity_d *Donors = *Donors_;
 
-  MPI_Barrier(Donors->properties.comm);
+  MPI_Barrier(Donors->comm);
 
   free(Donors->extents[0][0]);
   free(Donors->coords[0]);
-  if (Donors->properties.max_size > 0) {
+  if (Donors->max_size > 0) {
     free(Donors->interp_coefs[0][0]);
   }
   free(Donors->interp_coefs[0]);
   free(Donors->destinations[0]);
   free(Donors->destination_ranks);
 
-  MPI_Comm Comm = Donors->properties.comm;
+  MPI_Comm Comm = Donors->comm;
 
   free_null(Donors_);
 
@@ -114,13 +104,76 @@ void PRIVATE(DestroyConnectivityDonorSide)(ovk_connectivity_d **Donors_) {
 
 }
 
-void ovkGetConnectivityDonorSideProperties(const ovk_connectivity_d *Donors,
-  const ovk_connectivity_d_properties **Properties) {
+void ovkGetConnectivityDonorSideGridID(const ovk_connectivity_d *Donors, int *GridID) {
 
   OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
-  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
+  OVK_DEBUG_ASSERT(GridID, "Invalid grid ID pointer.");
 
-  *Properties = &Donors->properties;
+  *GridID = Donors->grid_id;
+
+}
+
+void ovkGetConnectivityDonorSideDestinationGridID(const ovk_connectivity_d *Donors, int
+  *DestinationGridID) {
+
+  OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
+  OVK_DEBUG_ASSERT(DestinationGridID, "Invalid destination grid ID pointer.");
+
+  *DestinationGridID = Donors->destination_grid_id;
+
+}
+
+void ovkGetConnectivityDonorSideDimension(const ovk_connectivity_d *Donors, int *NumDims) {
+
+  OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
+  OVK_DEBUG_ASSERT(NumDims, "Invalid num dims pointer.");
+
+  *NumDims = Donors->num_dims;
+
+}
+
+void ovkGetConnectivityDonorSideComm(const ovk_connectivity_d *Donors, MPI_Comm *Comm) {
+
+  OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
+  OVK_DEBUG_ASSERT(Comm, "Invalid comm pointer.");
+
+  *Comm = Donors->comm;
+
+}
+
+void ovkGetConnectivityDonorSideCommSize(const ovk_connectivity_d *Donors, int *CommSize) {
+
+  OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
+  OVK_DEBUG_ASSERT(CommSize, "Invalid comm size pointer.");
+
+  *CommSize = Donors->comm_size;
+
+}
+
+void ovkGetConnectivityDonorSideCommRank(const ovk_connectivity_d *Donors, int *CommRank) {
+
+  OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
+  OVK_DEBUG_ASSERT(CommRank, "Invalid comm rank pointer.");
+
+  *CommRank = Donors->comm_rank;
+
+}
+
+void ovkGetConnectivityDonorSideCount(const ovk_connectivity_d *Donors, size_t *NumDonors) {
+
+  OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
+  OVK_DEBUG_ASSERT(NumDonors, "Invalid num donors pointer.");
+
+  *NumDonors = Donors->count;
+
+}
+
+void ovkGetConnectivityDonorSideMaxSize(const ovk_connectivity_d *Donors, int *MaxSize) {
+
+  OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
+  OVK_DEBUG_ASSERT(MaxSize, "Invalid max size pointer.");
+
+  *MaxSize = Donors->max_size;
 
 }
 
@@ -130,9 +183,8 @@ void ovkResizeDonors(ovk_connectivity_d *Donors, size_t NumDonors, int MaxSize) 
   OVK_DEBUG_ASSERT(NumDonors >= 0, "Invalid donor count.");
   OVK_DEBUG_ASSERT(MaxSize >= 0, "Invalid max size.");
 
-  MPI_Barrier(Donors->properties.comm);
+  MPI_Barrier(Donors->comm);
 
-  OVK_DEBUG_ASSERT(!EditingProperties(Donors), "Cannot resize donors while editing properties.");
   OVK_DEBUG_ASSERT(!EditingExtents(Donors), "Cannot resize donors while editing extents.");
   OVK_DEBUG_ASSERT(!EditingCoords(Donors), "Cannot resize donors while editing coords.");
   OVK_DEBUG_ASSERT(!EditingInterpCoefs(Donors), "Cannot resize donors while editing interp coefs.");
@@ -145,7 +197,7 @@ void ovkResizeDonors(ovk_connectivity_d *Donors, size_t NumDonors, int MaxSize) 
     // calling the edit function in a loop from 0 to max size would result in it not being called
     // on those ranks
     int GlobalMaxSize;
-    MPI_Allreduce(&MaxSize, &GlobalMaxSize, 1, MPI_INT, MPI_MAX, Donors->properties.comm);
+    MPI_Allreduce(&MaxSize, &GlobalMaxSize, 1, MPI_INT, MPI_MAX, Donors->comm);
     OVK_DEBUG_ASSERT(MaxSize == GlobalMaxSize, "Max size must be the same on all connectivity "
       "processes.");
   }
@@ -153,9 +205,9 @@ void ovkResizeDonors(ovk_connectivity_d *Donors, size_t NumDonors, int MaxSize) 
   int iDim, iPoint;
   size_t iDonor;
 
-  int NumDims = Donors->properties.num_dims;
+  int NumDims = Donors->num_dims;
 
-  int PrevMaxSize = Donors->properties.max_size;
+  int PrevMaxSize = Donors->max_size;
 
   free(Donors->extents[0][0]);
   for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
@@ -179,8 +231,8 @@ void ovkResizeDonors(ovk_connectivity_d *Donors, size_t NumDonors, int MaxSize) 
   }
   free_null(&Donors->destination_ranks);
 
-  Donors->properties.count = NumDonors;
-  Donors->properties.max_size = MaxSize;
+  Donors->count = NumDonors;
+  Donors->max_size = MaxSize;
 
   if (MaxSize > 0) {
     Donors->interp_coefs[0] = malloc(MAX_DIMS*MaxSize*sizeof(double *));
@@ -250,7 +302,7 @@ void ovkResizeDonors(ovk_connectivity_d *Donors, size_t NumDonors, int MaxSize) 
   Donors->edits.interp_coefs = true;
   Donors->edits.destinations = true;
 
-  MPI_Barrier(Donors->properties.comm);
+  MPI_Barrier(Donors->comm);
 
 }
 
@@ -273,13 +325,12 @@ void ovkEditDonorExtents(ovk_connectivity_d *Donors, int Dimension, int **Begins
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Begins, "Invalid begins pointer.");
   OVK_DEBUG_ASSERT(Ends, "Invalid ends pointer.");
-  OVK_DEBUG_ASSERT(!EditingProperties(Donors), "Cannot edit extents while editing properties.");
 
   bool StartEdit = Donors->extents_edit_ref_count == 0;
   ++Donors->extents_edit_ref_count;
 
   if (StartEdit) {
-    MPI_Barrier(Donors->properties.comm);
+    MPI_Barrier(Donors->comm);
   }
 
   *Begins = Donors->extents[0][Dimension];
@@ -305,7 +356,7 @@ void ovkReleaseDonorExtents(ovk_connectivity_d *Donors, int Dimension, int **Beg
 
   if (EndEdit) {
     Donors->edits.extents = true;
-    MPI_Barrier(Donors->properties.comm);
+    MPI_Barrier(Donors->comm);
   }
 
 }
@@ -325,13 +376,12 @@ void ovkEditDonorCoords(ovk_connectivity_d *Donors, int Dimension, double **Coor
   OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Coords, "Invalid coords pointer.");
-  OVK_DEBUG_ASSERT(!EditingProperties(Donors), "Cannot edit coords while editing properties.");
 
   bool StartEdit = Donors->coords_edit_ref_count == 0;
   ++Donors->coords_edit_ref_count;
 
   if (StartEdit) {
-    MPI_Barrier(Donors->properties.comm);
+    MPI_Barrier(Donors->comm);
   }
 
   *Coords = Donors->coords[Dimension];
@@ -353,7 +403,7 @@ void ovkReleaseDonorCoords(ovk_connectivity_d *Donors, int Dimension, double **C
 
   if (EndEdit) {
     Donors->edits.coords = true;
-    MPI_Barrier(Donors->properties.comm);
+    MPI_Barrier(Donors->comm);
   }
 
 }
@@ -363,7 +413,7 @@ void ovkGetDonorInterpCoefs(const ovk_connectivity_d *Donors, int Dimension, int
 
   OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
-  OVK_DEBUG_ASSERT(Point >= 0 && Point < Donors->properties.max_size, "Invalid point.");
+  OVK_DEBUG_ASSERT(Point >= 0 && Point < Donors->max_size, "Invalid point.");
   OVK_DEBUG_ASSERT(InterpCoefs, "Invalid interp coefs pointer.");
 
   *InterpCoefs = Donors->interp_coefs[Dimension][Point];
@@ -375,15 +425,14 @@ void ovkEditDonorInterpCoefs(ovk_connectivity_d *Donors, int Dimension, int Poin
 
   OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
-  OVK_DEBUG_ASSERT(Point >= 0 && Point < Donors->properties.max_size, "Invalid point.");
+  OVK_DEBUG_ASSERT(Point >= 0 && Point < Donors->max_size, "Invalid point.");
   OVK_DEBUG_ASSERT(InterpCoefs, "Invalid interp coefs pointer.");
-  OVK_DEBUG_ASSERT(!EditingProperties(Donors), "Cannot edit interp coefs while editing properties.");
 
   bool StartEdit = Donors->interp_coefs_edit_ref_count == 0;
   ++Donors->interp_coefs_edit_ref_count;
 
   if (StartEdit) {
-    MPI_Barrier(Donors->properties.comm);
+    MPI_Barrier(Donors->comm);
   }
 
   *InterpCoefs = Donors->interp_coefs[Dimension][Point];
@@ -395,7 +444,7 @@ void ovkReleaseDonorInterpCoefs(ovk_connectivity_d *Donors, int Dimension, int P
 
   OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
-  OVK_DEBUG_ASSERT(Point >= 0 && Point < Donors->properties.max_size, "Invalid point.");
+  OVK_DEBUG_ASSERT(Point >= 0 && Point < Donors->max_size, "Invalid point.");
   OVK_DEBUG_ASSERT(InterpCoefs, "Invalid donor coefs pointer.");
   OVK_DEBUG_ASSERT(*InterpCoefs == Donors->interp_coefs[Dimension][Point], "Invalid interp coefs "
     "pointer.");
@@ -409,7 +458,7 @@ void ovkReleaseDonorInterpCoefs(ovk_connectivity_d *Donors, int Dimension, int P
 
   if (EndEdit) {
     Donors->edits.interp_coefs = true;
-    MPI_Barrier(Donors->properties.comm);
+    MPI_Barrier(Donors->comm);
   }
 
 }
@@ -430,13 +479,12 @@ void ovkEditDonorDestinations(ovk_connectivity_d *Donors, int Dimension, int **D
   OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Destinations, "Invalid destinations pointer.");
-  OVK_DEBUG_ASSERT(!EditingProperties(Donors), "Cannot edit destinations while editing properties.");
 
   bool StartEdit = Donors->destinations_edit_ref_count == 0;
   ++Donors->destinations_edit_ref_count;
 
   if (StartEdit) {
-    MPI_Barrier(Donors->properties.comm);
+    MPI_Barrier(Donors->comm);
   }
 
   *Destinations = Donors->destinations[Dimension];
@@ -459,7 +507,7 @@ void ovkReleaseDonorDestinations(ovk_connectivity_d *Donors, int Dimension, int 
 
   if (EndEdit) {
     Donors->edits.destinations = true;
-    MPI_Barrier(Donors->properties.comm);
+    MPI_Barrier(Donors->comm);
   }
 
 
@@ -478,14 +526,12 @@ void ovkEditDonorDestinationRanks(ovk_connectivity_d *Donors, int **DestinationR
 
   OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
   OVK_DEBUG_ASSERT(DestinationRanks, "Invalid destination ranks pointer.");
-  OVK_DEBUG_ASSERT(!EditingProperties(Donors), "Cannot edit destination ranks while editing "
-    "properties.");
 
   bool StartEdit = Donors->destination_ranks_edit_ref_count == 0;
   ++Donors->destination_ranks_edit_ref_count;
 
   if (StartEdit) {
-    MPI_Barrier(Donors->properties.comm);
+    MPI_Barrier(Donors->comm);
   }
 
   *DestinationRanks = Donors->destination_ranks;
@@ -508,7 +554,7 @@ void ovkReleaseDonorDestinationRanks(ovk_connectivity_d *Donors, int **Destinati
 
   if (EndEdit) {
     Donors->edits.destinations = true;
-    MPI_Barrier(Donors->properties.comm);
+    MPI_Barrier(Donors->comm);
   }
 
 }
@@ -519,12 +565,6 @@ void ovkGetConnectivityDonorSideGrid(const ovk_connectivity_d *Donors, const ovk
   OVK_DEBUG_ASSERT(DonorGrid, "Invalid donor grid pointer.");
 
   *DonorGrid = Donors->grid;
-
-}
-
-static bool EditingProperties(const ovk_connectivity_d *Donors) {
-
-  return Donors->properties_edit_ref_count > 0;
 
 }
 
@@ -567,104 +607,11 @@ void PRIVATE(GetConnectivityDonorSideEdits)(const ovk_connectivity_d *Donors,
 
 void PRIVATE(ResetConnectivityDonorSideEdits)(ovk_connectivity_d *Donors) {
 
-  MPI_Barrier(Donors->properties.comm);
+  MPI_Barrier(Donors->comm);
 
   DefaultEdits(&Donors->edits);
 
-  MPI_Barrier(Donors->properties.comm);
-
-}
-
-static void DefaultProperties(ovk_connectivity_d_properties *Properties) {
-
-  Properties->grid_id = -1;
-  Properties->destination_grid_id = -1;
-  Properties->num_dims = 2;
-  Properties->comm = MPI_COMM_NULL;
-  Properties->comm_size = 0;
-  Properties->comm_rank = 0;
-  Properties->count = 0;
-  Properties->max_size = 0;
-
-}
-
-void ovkGetConnectivityDonorSidePropertyGridID(const ovk_connectivity_d_properties *Properties,
-  int *GridID) {
-
-  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
-  OVK_DEBUG_ASSERT(GridID, "Invalid grid ID pointer.");
-
-  *GridID = Properties->grid_id;
-
-}
-
-void ovkGetConnectivityDonorSidePropertyDestinationGridID(const ovk_connectivity_d_properties
-  *Properties, int *DestinationGridID) {
-
-  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
-  OVK_DEBUG_ASSERT(DestinationGridID, "Invalid destination grid ID pointer.");
-
-  *DestinationGridID = Properties->destination_grid_id;
-
-}
-
-void ovkGetConnectivityDonorSidePropertyDimension(const ovk_connectivity_d_properties *Properties,
-  int *NumDims) {
-
-  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
-  OVK_DEBUG_ASSERT(NumDims, "Invalid num dims pointer.");
-
-  *NumDims = Properties->num_dims;
-
-}
-
-void ovkGetConnectivityDonorSidePropertyComm(const ovk_connectivity_d_properties *Properties,
-  MPI_Comm *Comm) {
-
-  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
-  OVK_DEBUG_ASSERT(Comm, "Invalid comm pointer.");
-
-  *Comm = Properties->comm;
-
-}
-
-void ovkGetConnectivityDonorSidePropertyCommSize(const ovk_connectivity_d_properties *Properties,
-  int *CommSize) {
-
-  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
-  OVK_DEBUG_ASSERT(CommSize, "Invalid comm size pointer.");
-
-  *CommSize = Properties->comm_size;
-
-}
-
-void ovkGetConnectivityDonorSidePropertyCommRank(const ovk_connectivity_d_properties *Properties,
-  int *CommRank) {
-
-  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
-  OVK_DEBUG_ASSERT(CommRank, "Invalid comm rank pointer.");
-
-  *CommRank = Properties->comm_rank;
-
-}
-
-void ovkGetConnectivityDonorSidePropertyCount(const ovk_connectivity_d_properties *Properties,
-  size_t *NumDonors) {
-
-  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
-  OVK_DEBUG_ASSERT(NumDonors, "Invalid num donors pointer.");
-
-  *NumDonors = Properties->count;
-
-}
-
-void ovkGetConnectivityDonorSidePropertyMaxSize(const ovk_connectivity_d_properties *Properties,
-  int *MaxSize) {
-
-  OVK_DEBUG_ASSERT(Properties, "Invalid properties pointer.");
-  OVK_DEBUG_ASSERT(MaxSize, "Invalid max size pointer.");
-
-  *MaxSize = Properties->max_size;
+  MPI_Barrier(Donors->comm);
 
 }
 
