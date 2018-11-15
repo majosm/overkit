@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
 
   t_profiler *Profiler;
   CreateProfiler(&Profiler, MPI_COMM_WORLD);
-  if (OVK_PROFILE) EnableProfiler(Profiler);
+  if (OVK_TIMERS) EnableProfiler(Profiler);
   int OverallTime = AddProfilerTimer(Profiler, "ReadInterp");
   int CreateTime = AddProfilerTimer(Profiler, "ReadInterp::Create");
   int DestroyTime = AddProfilerTimer(Profiler, "ReadInterp::Destroy");

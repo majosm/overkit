@@ -224,7 +224,7 @@ ovk_error ovkEXTImportXINTOUT(ovk_domain *Domain, const char *HOPath, const char
 
   t_profiler *Profiler;
   CreateProfiler(&Profiler, Comm);
-  if (OVK_PROFILE) EnableProfiler(Profiler);
+  if (OVK_TIMERS) EnableProfiler(Profiler);
   AddProfilerTimer(Profiler, "XINTOUT::Create");
   AddProfilerTimer(Profiler, "XINTOUT::Destroy");
   AddProfilerTimer(Profiler, "XINTOUT::Read");
