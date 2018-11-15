@@ -27,7 +27,7 @@
 #include <string.h>
 
 typedef struct {
-  size_t count;
+  long long count;
   int max_size;
   int *extents[2][MAX_DIMS];
   double *coords[MAX_DIMS];
@@ -37,15 +37,15 @@ typedef struct {
 } t_donor_data;
 
 typedef struct {
-  size_t count;
+  long long count;
   int *points[MAX_DIMS];
   int *source_grid_ids;
   int *source_cells[MAX_DIMS];
 } t_receiver_data;
 
 typedef struct {
-  size_t count;
-  size_t *connection_ids;
+  long long count;
+  long long *connection_ids;
   int *donor_grid_ids;
   int *donor_cells[MAX_DIMS];
   int *receiver_grid_ids;
@@ -53,29 +53,29 @@ typedef struct {
 } t_connection_data;
 
 typedef struct {
-  size_t begin;
-  size_t end;
+  long long begin;
+  long long end;
   t_donor_data *data;
-  size_t starting_connection_id;
+  long long starting_connection_id;
 } t_xintout_donor_chunk;
 
 typedef struct {
-  size_t begin;
-  size_t end;
+  long long begin;
+  long long end;
   t_receiver_data *data;
-  size_t *connection_ids;
+  long long *connection_ids;
 } t_xintout_receiver_chunk;
 
 typedef struct {
-  size_t count;
-  size_t chunk_size;
+  long long count;
+  long long chunk_size;
   bool has_chunk;
   t_xintout_donor_chunk *chunk;
 } t_xintout_donors;
 
 typedef struct {
-  size_t count;
-  size_t chunk_size;
+  long long count;
+  long long chunk_size;
   bool has_chunk;
   t_xintout_receiver_chunk *chunk;
 } t_xintout_receivers;
@@ -95,14 +95,14 @@ typedef struct {
 } t_xintout_grid;
 
 typedef struct {
-  size_t begin;
-  size_t end;
+  long long begin;
+  long long end;
   t_connection_data *data;
 } t_xintout_connection_bin;
 
 typedef struct {
-  size_t count;
-  size_t bin_size;
+  long long count;
+  long long bin_size;
   bool has_bin;
   t_xintout_connection_bin *bin;
 } t_xintout_connections;
@@ -140,20 +140,21 @@ static bool DetectFormat(MPI_File HOFile, ovk_ext_endian *Endian, ovk_ext_xintou
   t_profiler *Profiler);
 
 static ovk_error ReadGridInfo(const t_xintout_grid *XINTOUTGrid, const char *HOPath,
-  const char *XPath, size_t *NumDonors, size_t *NumReceivers, size_t *StartingConnectionID,
+  const char *XPath, long long *NumDonors, long long *NumReceivers, long long *StartingConnectionID,
   MPI_Offset *HODonorCellsOffset, MPI_Offset *HODonorCoordsOffset,
   MPI_Offset *HOReceiverPointsOffset, MPI_Offset *HOReceiverConnectionIDsOffset,
   MPI_Offset *XDonorSizesOffset, MPI_Offset *XDonorInterpCoefsOffset, ovk_ext_endian Endian,
   ovk_ext_xintout_format Format, bool WithIBlank, t_profiler *Profiler);
 
 static ovk_error ReadDonors(t_xintout_grid *XINTOUTGrid, const char *HOPath, const char *XPath,
-  size_t NumDonors, size_t StartingConnectionID, MPI_Offset HOCellsOffset, MPI_Offset HOCoordsOffset,
-  MPI_Offset XSizesOffset, MPI_Offset XInterpCoefsOffset, ovk_ext_endian Endian,
-  int ReadGranularityAdjust, MPI_Info MPIInfo, t_profiler *Profiler);
+  long long NumDonors, long long StartingConnectionID, MPI_Offset HOCellsOffset,
+  MPI_Offset HOCoordsOffset, MPI_Offset XSizesOffset, MPI_Offset XInterpCoefsOffset,
+  ovk_ext_endian Endian, int ReadGranularityAdjust, MPI_Info MPIInfo, t_profiler *Profiler);
 
-static ovk_error ReadReceivers(t_xintout_grid *XINTOUTGrid, const char *HOPath, size_t NumReceivers,
-  MPI_Offset HOPointsOffset, MPI_Offset HOConnectionIDsOffset, ovk_ext_endian Endian,
-  ovk_ext_xintout_format Format, int ReadGranularityAdjust, MPI_Info MPIInfo, t_profiler *Profiler);
+static ovk_error ReadReceivers(t_xintout_grid *XINTOUTGrid, const char *HOPath,
+  long long NumReceivers, MPI_Offset HOPointsOffset, MPI_Offset HOConnectionIDsOffset,
+  ovk_ext_endian Endian, ovk_ext_xintout_format Format, int ReadGranularityAdjust, MPI_Info MPIInfo,
+  t_profiler *Profiler);
 
 static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler);
 
@@ -172,18 +173,18 @@ static void ImportDonors(const t_donor_data *DonorData, int NumReceiverGrids,
 static void ImportReceivers(const t_receiver_data *ReceiverData, int NumDonorGrids,
   ovk_connectivity_r **Receivers);
 
-static void CreateDonorData(t_donor_data **Data, size_t Count, int MaxSize);
+static void CreateDonorData(t_donor_data **Data, long long Count, int MaxSize);
 static void DestroyDonorData(t_donor_data **Data);
 
-static void CreateReceiverData(t_receiver_data **Data, size_t Count);
+static void CreateReceiverData(t_receiver_data **Data, long long Count);
 static void DestroyReceiverData(t_receiver_data **Data);
 
-static void CreateConnectionData(t_connection_data **Data, size_t Count);
+static void CreateConnectionData(t_connection_data **Data, long long Count);
 static void DestroyConnectionData(t_connection_data **Data);
 
-static size_t BinDivide(size_t N, int NumChunks);
-static void Chunkify(size_t Count, int MaxChunks, size_t TargetChunkSize, int Adjust,
-  int *ChunkInterval, int *NumChunks, size_t *ChunkSize);
+static long long BinDivide(long long N, int NumChunks);
+static void Chunkify(long long Count, int MaxChunks, long long TargetChunkSize, int Adjust,
+  int *ChunkInterval, int *NumChunks, long long *ChunkSize);
 
 static int File_read_all_endian(MPI_File File, void *Buffer, int Count, MPI_Datatype DataType,
   ovk_ext_endian Endian, MPI_Status *Status, t_profiler *Profiler, MPI_Comm Comm);
@@ -548,8 +549,8 @@ static ovk_error ReadXINTOUT(t_xintout *XINTOUT, const char *HOPath, const char 
 
     t_xintout_grid *XINTOUTGrid = XINTOUT->grids[iLocalGrid];
 
-    size_t NumDonors, NumReceivers;
-    size_t DonorStartingConnectionID;
+    long long NumDonors, NumReceivers;
+    long long DonorStartingConnectionID;
     MPI_Offset HODonorCellsOffset, HODonorCoordsOffset, XDonorSizesOffset, XDonorInterpCoefsOffset;
     MPI_Offset HOReceiverPointsOffset, HOReceiverConnectionIDsOffset;
     Error = ReadGridInfo(XINTOUTGrid, HOPath, XPath, &NumDonors, &NumReceivers,
@@ -660,8 +661,8 @@ static ovk_error ReadGlobalInfo(const t_xintout *XINTOUT, const char *HOPath,
     HOGridOffset += RecordWrapperSize;
 
     HOGridOffset += RecordWrapperSize;
-    size_t NumDonors;
-    size_t NumReceivers;
+    long long NumDonors;
+    long long NumReceivers;
     int GridSize[MAX_DIMS];
     if (Format == OVK_EXT_XINTOUT_STANDARD) {
       int Data[7];
@@ -724,7 +725,7 @@ static ovk_error ReadGlobalInfo(const t_xintout *XINTOUT, const char *HOPath,
         Profiler);
       MPI_Get_count(&Status, MPI_INT, &ReadSize);
       if (ReadSize == 1) {
-        size_t NumPoints = (size_t)GridSize[0]*(size_t)GridSize[1]*(size_t)GridSize[2];
+        long long NumPoints = (long long)GridSize[0]*(long long)GridSize[1]*(long long)GridSize[2];
         if (RecordWrapper == NumPoints*sizeof(int)) {
           WithIBlank = true;
         } else {
@@ -823,7 +824,7 @@ static bool DetectFormat(MPI_File HOFile, ovk_ext_endian *Endian_, ovk_ext_xinto
 }
 
 static ovk_error ReadGridInfo(const t_xintout_grid *XINTOUTGrid, const char *HOPath,
-  const char *XPath, size_t *NumDonors_, size_t *NumReceivers_, size_t *StartingConnectionID_,
+  const char *XPath, long long *NumDonors_, long long *NumReceivers_, long long *StartingConnectionID_,
   MPI_Offset *HODonorCellsOffset_, MPI_Offset *HODonorCoordsOffset_,
   MPI_Offset *HOReceiverPointsOffset_, MPI_Offset *HOReceiverConnectionIDsOffset_,
   MPI_Offset *XDonorSizesOffset_, MPI_Offset *XDonorInterpCoefsOffset_, ovk_ext_endian Endian,
@@ -843,8 +844,8 @@ static ovk_error ReadGridInfo(const t_xintout_grid *XINTOUTGrid, const char *HOP
   OVK_EH_INIT(ErrorHandler);
   ovk_error Error = OVK_NO_ERROR;
 
-  size_t NumDonors, NumReceivers;
-  size_t StartingConnectionID;
+  long long NumDonors, NumReceivers;
+  long long StartingConnectionID;
   MPI_Offset HODonorCellsOffset, HODonorCoordsOffset, HOReceiverPointsOffset,
     HOReceiverConnectionIDsOffset, XDonorSizesOffset, XDonorInterpCoefsOffset;
 
@@ -860,7 +861,7 @@ static ovk_error ReadGridInfo(const t_xintout_grid *XINTOUTGrid, const char *HOP
     int MPIError;
     int ReadSize;
     int GridSize[MAX_DIMS];
-    size_t NumInterpCoefs;
+    long long NumInterpCoefs;
 
     StartProfile(Profiler, MPIIOOpenTime);
     MPIError = MPI_File_open(MPI_COMM_SELF, (char *)HOPath, MPI_MODE_RDONLY, MPI_INFO_NULL,
@@ -977,7 +978,8 @@ static ovk_error ReadGridInfo(const t_xintout_grid *XINTOUTGrid, const char *HOP
 
       if (WithIBlank) {
         HOGridOffset += RecordWrapperSize;
-        HOGridOffset += (size_t)GridSize[0]*(size_t)GridSize[1]*(size_t)GridSize[2]*sizeof(int);
+        HOGridOffset += (long long)GridSize[0]*(long long)GridSize[1]*(long long)GridSize[2]*
+          sizeof(int);
         HOGridOffset += RecordWrapperSize;
       }
 
@@ -1113,9 +1115,9 @@ static ovk_error ReadGridInfo(const t_xintout_grid *XINTOUTGrid, const char *HOP
   done_reading:
     OVK_EH_CHECK_ALL(ErrorHandler, Error, Comm);
 
-  MPI_Bcast(&NumDonors, 1, KMPI_UNSIGNED_SIZE, 0, Comm);
-  MPI_Bcast(&NumReceivers, 1, KMPI_UNSIGNED_SIZE, 0, Comm);
-  MPI_Bcast(&StartingConnectionID, 1, KMPI_UNSIGNED_SIZE, 0, Comm);
+  MPI_Bcast(&NumDonors, 1, MPI_LONG_LONG, 0, Comm);
+  MPI_Bcast(&NumReceivers, 1, MPI_LONG_LONG, 0, Comm);
+  MPI_Bcast(&StartingConnectionID, 1, MPI_LONG_LONG, 0, Comm);
   MPI_Bcast(&HODonorCellsOffset, 1, MPI_OFFSET, 0, Comm);
   MPI_Bcast(&HODonorCoordsOffset, 1, MPI_OFFSET, 0, Comm);
   MPI_Bcast(&HOReceiverPointsOffset, 1, MPI_OFFSET, 0, Comm);
@@ -1140,13 +1142,13 @@ static ovk_error ReadGridInfo(const t_xintout_grid *XINTOUTGrid, const char *HOP
 }
 
 static ovk_error ReadDonors(t_xintout_grid *XINTOUTGrid, const char *HOPath, const char *XPath,
-  size_t NumDonors, size_t StartingConnectionID, MPI_Offset HOCellsOffset, MPI_Offset HOCoordsOffset,
-  MPI_Offset XSizesOffset, MPI_Offset XInterpCoefsOffset, ovk_ext_endian Endian,
-  int ReadGranularityAdjust, MPI_Info MPIInfo, t_profiler *Profiler) {
+  long long NumDonors, long long StartingConnectionID, MPI_Offset HOCellsOffset,
+  MPI_Offset HOCoordsOffset, MPI_Offset XSizesOffset, MPI_Offset XInterpCoefsOffset,
+  ovk_ext_endian Endian, int ReadGranularityAdjust, MPI_Info MPIInfo, t_profiler *Profiler) {
 
   int iDim;
   int iPoint;
-  size_t iDonor;
+  long long iDonor;
 
   int GridID = XINTOUTGrid->id;
 
@@ -1167,13 +1169,13 @@ static ovk_error ReadDonors(t_xintout_grid *XINTOUTGrid, const char *HOPath, con
   // Read chunk on every Nth rank, where N is a power of 2 (or CommSize) chosen such that the number
   // of donors per chunk is roughly the average number of grid points per rank (subject to user
   // adjustment)
-  size_t NumPoints =
-    (size_t)XINTOUTGrid->global_size[0]*
-    (size_t)XINTOUTGrid->global_size[1]*
-    (size_t)XINTOUTGrid->global_size[2];
-  size_t AvgPointsPerRank = BinDivide(NumPoints, CommSize);
+  long long NumPoints =
+    (long long)XINTOUTGrid->global_size[0]*
+    (long long)XINTOUTGrid->global_size[1]*
+    (long long)XINTOUTGrid->global_size[2];
+  long long AvgPointsPerRank = BinDivide(NumPoints, CommSize);
   int ChunkRankInterval, NumChunks;
-  size_t ChunkSize;
+  long long ChunkSize;
   Chunkify(NumDonors, CommSize, AvgPointsPerRank, ReadGranularityAdjust, &ChunkRankInterval,
     &NumChunks, &ChunkSize);
   bool HasChunk = CommRank % ChunkRankInterval == 0;
@@ -1203,9 +1205,9 @@ static ovk_error ReadDonors(t_xintout_grid *XINTOUTGrid, const char *HOPath, con
     int ChunkCommRank;
     MPI_Comm_rank(ChunkComm, &ChunkCommRank);
 
-    size_t LocalBegin = ChunkSize*ChunkCommRank;
-    size_t LocalEnd = min(ChunkSize*(ChunkCommRank+1), NumDonors);
-    size_t NumLocalDonors = LocalEnd - LocalBegin;
+    long long LocalBegin = ChunkSize*ChunkCommRank;
+    long long LocalEnd = min(ChunkSize*(ChunkCommRank+1), NumDonors);
+    long long NumLocalDonors = LocalEnd - LocalBegin;
 
     if (NumLocalDonors*sizeof(double) > INT_MAX) {
       LogError(Logger, true, "Donor chunk size too big; increase number of processes or read "
@@ -1381,7 +1383,7 @@ static ovk_error ReadDonors(t_xintout_grid *XINTOUTGrid, const char *HOPath, con
       DatasetOffset += NumDonors*sizeof(double);
     }
 
-    size_t NumLocalInterpCoefs[MAX_DIMS] = {0, 0, 0};
+    long long NumLocalInterpCoefs[MAX_DIMS] = {0, 0, 0};
     for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
       for (iDonor = 0; iDonor < NumLocalDonors; ++iDonor) {
         int Size = Data->extents[1][iDim][iDonor] - Data->extents[0][iDim][iDonor];
@@ -1398,11 +1400,11 @@ static ovk_error ReadDonors(t_xintout_grid *XINTOUTGrid, const char *HOPath, con
       }
     }
 
-    size_t NumInterpCoefs[MAX_DIMS];
-    size_t NumInterpCoefsBeforeChunk[MAX_DIMS];
-    MPI_Allreduce(&NumLocalInterpCoefs, &NumInterpCoefs, MAX_DIMS, KMPI_UNSIGNED_SIZE, MPI_SUM,
+    long long NumInterpCoefs[MAX_DIMS];
+    long long NumInterpCoefsBeforeChunk[MAX_DIMS];
+    MPI_Allreduce(&NumLocalInterpCoefs, &NumInterpCoefs, MAX_DIMS, MPI_LONG_LONG, MPI_SUM,
       ChunkComm);
-    MPI_Scan(&NumLocalInterpCoefs, &NumInterpCoefsBeforeChunk, MAX_DIMS, KMPI_UNSIGNED_SIZE, MPI_SUM,
+    MPI_Scan(&NumLocalInterpCoefs, &NumInterpCoefsBeforeChunk, MAX_DIMS, MPI_LONG_LONG, MPI_SUM,
       ChunkComm);
     for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
       NumInterpCoefsBeforeChunk[iDim] -= NumLocalInterpCoefs[iDim];
@@ -1430,7 +1432,7 @@ static ovk_error ReadDonors(t_xintout_grid *XINTOUTGrid, const char *HOPath, con
       DatasetOffset += NumInterpCoefs[iDim]*sizeof(double);
     }
 
-    size_t iNextCoef[MAX_DIMS];
+    long long iNextCoef[MAX_DIMS];
     iNextCoef[0] = 0;
     iNextCoef[1] = iNextCoef[0] + NumLocalInterpCoefs[0];
     iNextCoef[2] = iNextCoef[1] + NumLocalInterpCoefs[1];
@@ -1469,13 +1471,13 @@ static ovk_error ReadDonors(t_xintout_grid *XINTOUTGrid, const char *HOPath, con
 
 }
 
-static ovk_error ReadReceivers(t_xintout_grid *XINTOUTGrid, const char *HOPath, size_t NumReceivers,
-  MPI_Offset HOPointsOffset, MPI_Offset HOConnectionIDsOffset, ovk_ext_endian Endian,
-  ovk_ext_xintout_format Format, int ReadGranularityAdjust, MPI_Info MPIInfo,
+static ovk_error ReadReceivers(t_xintout_grid *XINTOUTGrid, const char *HOPath,
+  long long NumReceivers, MPI_Offset HOPointsOffset, MPI_Offset HOConnectionIDsOffset,
+  ovk_ext_endian Endian, ovk_ext_xintout_format Format, int ReadGranularityAdjust, MPI_Info MPIInfo,
   t_profiler *Profiler) {
 
   int iDim;
-  size_t iReceiver;
+  long long iReceiver;
 
   int GridID = XINTOUTGrid->id;
 
@@ -1496,13 +1498,13 @@ static ovk_error ReadReceivers(t_xintout_grid *XINTOUTGrid, const char *HOPath, 
   // Read chunk on every Nth rank, where N is a power of 2 (or CommSize) chosen such that the number
   // of receivers per chunk is roughly the average number of grid points per rank (subject to user
   // adjustment)
-  size_t NumPoints =
-    (size_t)XINTOUTGrid->global_size[0]*
-    (size_t)XINTOUTGrid->global_size[1]*
-    (size_t)XINTOUTGrid->global_size[2];
-  size_t AvgPointsPerRank = BinDivide(NumPoints, CommSize);
+  long long NumPoints =
+    (long long)XINTOUTGrid->global_size[0]*
+    (long long)XINTOUTGrid->global_size[1]*
+    (long long)XINTOUTGrid->global_size[2];
+  long long AvgPointsPerRank = BinDivide(NumPoints, CommSize);
   int ChunkRankInterval, NumChunks;
-  size_t ChunkSize;
+  long long ChunkSize;
   Chunkify(NumReceivers, CommSize, AvgPointsPerRank, ReadGranularityAdjust, &ChunkRankInterval,
     &NumChunks, &ChunkSize);
   bool HasChunk = CommRank % ChunkRankInterval == 0;
@@ -1532,9 +1534,9 @@ static ovk_error ReadReceivers(t_xintout_grid *XINTOUTGrid, const char *HOPath, 
     int ChunkCommRank;
     MPI_Comm_rank(ChunkComm, &ChunkCommRank);
 
-    size_t LocalBegin = ChunkSize*ChunkCommRank;
-    size_t LocalEnd = min(ChunkSize*(ChunkCommRank+1), NumReceivers);
-    size_t NumLocalReceivers = LocalEnd - LocalBegin;
+    long long LocalBegin = ChunkSize*ChunkCommRank;
+    long long LocalEnd = min(ChunkSize*(ChunkCommRank+1), NumReceivers);
+    long long NumLocalReceivers = LocalEnd - LocalBegin;
 
     if (NumLocalReceivers*sizeof(long long) > INT_MAX) {
       LogError(Logger, true, "Receiver chunk size too big; increase number of processes or read "
@@ -1549,7 +1551,7 @@ static ovk_error ReadReceivers(t_xintout_grid *XINTOUTGrid, const char *HOPath, 
     CreateReceiverData(&Chunk->data, NumLocalReceivers);
     t_receiver_data *Data = Chunk->data;
 
-    Chunk->connection_ids = malloc(NumLocalReceivers*sizeof(size_t));
+    Chunk->connection_ids = malloc(NumLocalReceivers*sizeof(long long));
 
     MPI_File HOFile;
     MPI_Status Status;
@@ -1679,8 +1681,8 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
   int iGrid, iLocalGrid;
   int iDim;
   int iBin;
-  size_t iDonor, iReceiver;
-  size_t iConnection;
+  long long iDonor, iReceiver;
+  long long iConnection;
   t_ordered_map_entry *Entry;
 
   MPI_Comm Comm = XINTOUT->comm;
@@ -1703,8 +1705,8 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
   int NumGrids = XINTOUT->num_grids;
   int NumLocalGrids = XINTOUT->num_local_grids;
 
-  size_t *NumPointsOnGrid = malloc(NumGrids*sizeof(size_t));
-  size_t *NumReceiversOnGrid = malloc(NumGrids*sizeof(size_t));
+  long long *NumPointsOnGrid = malloc(NumGrids*sizeof(long long));
+  long long *NumReceiversOnGrid = malloc(NumGrids*sizeof(long long));
 
   for (iGrid = 0; iGrid < NumGrids; ++iGrid) {
     NumPointsOnGrid[iGrid] = 0;
@@ -1722,11 +1724,11 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
     NumReceiversOnGrid[iGrid] = XINTOUTGrid->receivers.count;
   }
 
-  MPI_Allreduce(MPI_IN_PLACE, NumPointsOnGrid, NumGrids, KMPI_UNSIGNED_SIZE, MPI_MAX, Comm);
-  MPI_Allreduce(MPI_IN_PLACE, NumReceiversOnGrid, NumGrids, KMPI_UNSIGNED_SIZE, MPI_MAX, Comm);
+  MPI_Allreduce(MPI_IN_PLACE, NumPointsOnGrid, NumGrids, MPI_LONG_LONG, MPI_MAX, Comm);
+  MPI_Allreduce(MPI_IN_PLACE, NumReceiversOnGrid, NumGrids, MPI_LONG_LONG, MPI_MAX, Comm);
 
-  size_t NumPoints = 0;
-  size_t NumConnections = 0;
+  long long NumPoints = 0;
+  long long NumConnections = 0;
   for (iGrid = 0; iGrid < NumGrids; ++iGrid) {
     NumPoints += NumPointsOnGrid[iGrid];
     NumConnections += NumReceiversOnGrid[iGrid];
@@ -1737,7 +1739,7 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
 
   t_xintout_connections *XINTOUTConnections = &XINTOUT->connections;
 
-  size_t BinSize = min(BinDivide(NumPoints, CommSize), NumConnections);
+  long long BinSize = min(BinDivide(NumPoints, CommSize), NumConnections);
   bool HasBin = BinSize*CommRank < NumConnections;
 
   XINTOUTConnections->bin_size = BinSize;
@@ -1749,14 +1751,14 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
     Bin = malloc(sizeof(t_xintout_connection_bin));
     Bin->begin = BinSize*CommRank;
     Bin->end = min(BinSize*(CommRank+1), NumConnections);
-    size_t NumLocalConnections = Bin->end - Bin->begin;
+    long long NumLocalConnections = Bin->end - Bin->begin;
     CreateConnectionData(&BinData, NumLocalConnections);
     Bin->data = BinData;
     XINTOUTConnections->bin = Bin;
   }
 
   typedef struct {
-    size_t count;
+    long long count;
     t_connection_data *data;
   } t_send_recv;
 
@@ -1772,9 +1774,9 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
     t_xintout_receivers *XINTOUTReceivers = &XINTOUTGrid->receivers;
     if (XINTOUTDonors->has_chunk) {
       t_xintout_donor_chunk *DonorChunk = XINTOUTDonors->chunk;
-      size_t NumLocalDonors = DonorChunk->end - DonorChunk->begin;
+      long long NumLocalDonors = DonorChunk->end - DonorChunk->begin;
       for (iDonor = 0; iDonor < NumLocalDonors; ++iDonor) {
-        size_t ConnectionID = DonorChunk->starting_connection_id + iDonor;
+        long long ConnectionID = DonorChunk->starting_connection_id + iDonor;
         int ConnectionBinIndex = (int)(ConnectionID/BinSize);
         Entry = OMFind(DonorSends, ConnectionBinIndex);
         t_send_recv *Send;
@@ -1790,9 +1792,9 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
     }
     if (XINTOUTReceivers->has_chunk) {
       t_xintout_receiver_chunk *ReceiverChunk = XINTOUTReceivers->chunk;
-      size_t NumLocalReceivers = ReceiverChunk->end - ReceiverChunk->begin;
+      long long NumLocalReceivers = ReceiverChunk->end - ReceiverChunk->begin;
       for (iReceiver = 0; iReceiver < NumLocalReceivers; ++iReceiver) {
-        size_t ConnectionID = ReceiverChunk->connection_ids[iReceiver];
+        long long ConnectionID = ReceiverChunk->connection_ids[iReceiver];
         int ConnectionBinIndex = (int)(ConnectionID/BinSize);
         Entry = OMFind(ReceiverSends, ConnectionBinIndex);
         t_send_recv *Send;
@@ -1811,7 +1813,7 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
   Entry = OMBegin(DonorSends);
   while (Entry != OMEnd(DonorSends)) {
     t_send_recv *Send = OMData(Entry);
-    size_t Count = Send->count;
+    long long Count = Send->count;
     CreateConnectionData(&Send->data, Count);
     // Reset count for filling in data
     Send->count = 0;
@@ -1821,7 +1823,7 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
   Entry = OMBegin(ReceiverSends);
   while (Entry != OMEnd(ReceiverSends)) {
     t_send_recv *Send = OMData(Entry);
-    size_t Count = Send->count;
+    long long Count = Send->count;
     CreateConnectionData(&Send->data, Count);
     // Reset count for filling in data
     Send->count = 0;
@@ -1834,13 +1836,13 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
     t_xintout_receivers *XINTOUTReceivers = &XINTOUTGrid->receivers;
     if (XINTOUTDonors->has_chunk) {
       t_xintout_donor_chunk *DonorChunk = XINTOUTDonors->chunk;
-      size_t NumLocalDonors = DonorChunk->end - DonorChunk->begin;
+      long long NumLocalDonors = DonorChunk->end - DonorChunk->begin;
       for (iDonor = 0; iDonor < NumLocalDonors; ++iDonor) {
-        size_t ConnectionID = DonorChunk->starting_connection_id + iDonor;
+        long long ConnectionID = DonorChunk->starting_connection_id + iDonor;
         int ConnectionBinIndex = (int)(ConnectionID/BinSize);
         Entry = OMFind(DonorSends, ConnectionBinIndex);
         t_send_recv *Send = OMData(Entry);
-        size_t iNext = Send->count;
+        long long iNext = Send->count;
         Send->data->connection_ids[iNext] = ConnectionID;
         Send->data->donor_grid_ids[iNext] = XINTOUTGrid->id;
         for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
@@ -1851,13 +1853,13 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
     }
     if (XINTOUTReceivers->has_chunk) {
       t_xintout_receiver_chunk *ReceiverChunk = XINTOUTReceivers->chunk;
-      size_t NumLocalReceivers = ReceiverChunk->end - ReceiverChunk->begin;
+      long long NumLocalReceivers = ReceiverChunk->end - ReceiverChunk->begin;
       for (iReceiver = 0; iReceiver < NumLocalReceivers; ++iReceiver) {
-        size_t ConnectionID = ReceiverChunk->connection_ids[iReceiver];
+        long long ConnectionID = ReceiverChunk->connection_ids[iReceiver];
         int ConnectionBinIndex = (int)(ConnectionID/BinSize);
         Entry = OMFind(ReceiverSends, ConnectionBinIndex);
         t_send_recv *Send = OMData(Entry);
-        size_t iNext = Send->count;
+        long long iNext = Send->count;
         Send->data->connection_ids[iNext] = ConnectionID;
         Send->data->receiver_grid_ids[iNext] = XINTOUTGrid->id;
         for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
@@ -1918,7 +1920,7 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
     int Rank = OMKey(Entry);
     t_send_recv *Recv = malloc(sizeof(t_send_recv));
     OMSetData(Entry, Recv);
-    MPI_Irecv(&Recv->count, 1, KMPI_UNSIGNED_SIZE, Rank, 0, Comm, Requests+NumRequests);
+    MPI_Irecv(&Recv->count, 1, MPI_LONG_LONG, Rank, 0, Comm, Requests+NumRequests);
     ++NumRequests;
     Entry = OMNext(Entry);
   }
@@ -1928,7 +1930,7 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
     int Rank = OMKey(Entry);
     t_send_recv *Recv = malloc(sizeof(t_send_recv));
     OMSetData(Entry, Recv);
-    MPI_Irecv(&Recv->count, 1, KMPI_UNSIGNED_SIZE, Rank, 1, Comm, Requests+NumRequests);
+    MPI_Irecv(&Recv->count, 1, MPI_LONG_LONG, Rank, 1, Comm, Requests+NumRequests);
     ++NumRequests;
     Entry = OMNext(Entry);
   }
@@ -1937,7 +1939,7 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
   while (Entry != OMEnd(DonorSends)) {
     int Rank = OMKey(Entry);
     t_send_recv *Send = OMData(Entry);
-    MPI_Isend(&Send->count, 1, KMPI_UNSIGNED_SIZE, Rank, 0, Comm, Requests+NumRequests);
+    MPI_Isend(&Send->count, 1, MPI_LONG_LONG, Rank, 0, Comm, Requests+NumRequests);
     ++NumRequests;
     Entry = OMNext(Entry);
   }
@@ -1946,7 +1948,7 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
   while (Entry != OMEnd(ReceiverSends)) {
     int Rank = OMKey(Entry);
     t_send_recv *Send = OMData(Entry);
-    MPI_Isend(&Send->count, 1, KMPI_UNSIGNED_SIZE, Rank, 1, Comm, Requests+NumRequests);
+    MPI_Isend(&Send->count, 1, MPI_LONG_LONG, Rank, 1, Comm, Requests+NumRequests);
     ++NumRequests;
     Entry = OMNext(Entry);
   }
@@ -1961,7 +1963,7 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
     t_send_recv *Recv = OMData(Entry);
     int Count = (int)Recv->count;
     CreateConnectionData(&Recv->data, Count);
-    MPI_Irecv(Recv->data->connection_ids, Count, KMPI_UNSIGNED_SIZE, Rank, 0, Comm,
+    MPI_Irecv(Recv->data->connection_ids, Count, MPI_LONG_LONG, Rank, 0, Comm,
       Requests+NumRequests);
     MPI_Irecv(Recv->data->donor_grid_ids, Count, MPI_INT, Rank, 0, Comm,
       Requests+NumRequests+1);
@@ -1977,7 +1979,7 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
     t_send_recv *Recv = OMData(Entry);
     int Count = (int)Recv->count;
     CreateConnectionData(&Recv->data, Count);
-    MPI_Irecv(Recv->data->connection_ids, Count, KMPI_UNSIGNED_SIZE, Rank, 1, Comm,
+    MPI_Irecv(Recv->data->connection_ids, Count, MPI_LONG_LONG, Rank, 1, Comm,
       Requests+NumRequests);
     MPI_Irecv(Recv->data->receiver_grid_ids, Count, MPI_INT, Rank, 1, Comm,
       Requests+NumRequests+1);
@@ -1992,7 +1994,7 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
     int Rank = OMKey(Entry);
     t_send_recv *Send = OMData(Entry);
     int Count = (int)Send->count;
-    MPI_Isend(Send->data->connection_ids, Count, KMPI_UNSIGNED_SIZE, Rank, 0, Comm,
+    MPI_Isend(Send->data->connection_ids, Count, MPI_LONG_LONG, Rank, 0, Comm,
       Requests+NumRequests);
     MPI_Isend(Send->data->donor_grid_ids, Count, MPI_INT, Rank, 0, Comm,
       Requests+NumRequests+1);
@@ -2007,7 +2009,7 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
     int Rank = OMKey(Entry);
     t_send_recv *Send = OMData(Entry);
     int Count = (int)Send->count;
-    MPI_Isend(Send->data->connection_ids, Count, KMPI_UNSIGNED_SIZE, Rank, 1, Comm,
+    MPI_Isend(Send->data->connection_ids, Count, MPI_LONG_LONG, Rank, 1, Comm,
       Requests+NumRequests);
     MPI_Isend(Send->data->receiver_grid_ids, Count, MPI_INT, Rank, 1, Comm,
       Requests+NumRequests+1);
@@ -2149,13 +2151,13 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
     t_xintout_receivers *XINTOUTReceivers = &XINTOUTGrid->receivers;
     if (XINTOUTDonors->has_chunk) {
       t_xintout_donor_chunk *DonorChunk = XINTOUTDonors->chunk;
-      size_t NumLocalDonors = DonorChunk->end - DonorChunk->begin;
+      long long NumLocalDonors = DonorChunk->end - DonorChunk->begin;
       for (iDonor = 0; iDonor < NumLocalDonors; ++iDonor) {
-        size_t ConnectionID = DonorChunk->starting_connection_id + iDonor;
+        long long ConnectionID = DonorChunk->starting_connection_id + iDonor;
         int ConnectionBinIndex = (int)(ConnectionID/BinSize);
         Entry = OMFind(DonorSends, ConnectionBinIndex);
         t_send_recv *Send = OMData(Entry);
-        size_t iNext = Send->count;
+        long long iNext = Send->count;
         DonorChunk->data->destination_grid_ids[iDonor] = Send->data->receiver_grid_ids[iNext];
         for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
           DonorChunk->data->destination_points[iDim][iDonor] =
@@ -2166,13 +2168,13 @@ static void MatchDonorsAndReceivers(t_xintout *XINTOUT, t_profiler *Profiler) {
     }
     if (XINTOUTReceivers->has_chunk) {
       t_xintout_receiver_chunk *ReceiverChunk = XINTOUTReceivers->chunk;
-      size_t NumLocalReceivers = ReceiverChunk->end - ReceiverChunk->begin;
+      long long NumLocalReceivers = ReceiverChunk->end - ReceiverChunk->begin;
       for (iReceiver = 0; iReceiver < NumLocalReceivers; ++iReceiver) {
-        size_t ConnectionID = ReceiverChunk->connection_ids[iReceiver];
+        long long ConnectionID = ReceiverChunk->connection_ids[iReceiver];
         int ConnectionBinIndex = (int)(ConnectionID/BinSize);
         Entry = OMFind(ReceiverSends, ConnectionBinIndex);
         t_send_recv *Send = OMData(Entry);
-        size_t iNext = Send->count;
+        long long iNext = Send->count;
         ReceiverChunk->data->source_grid_ids[iReceiver] = Send->data->donor_grid_ids[iNext];
         for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
           ReceiverChunk->data->source_cells[iDim][iReceiver] = Send->data->donor_cells[iDim][iNext];
@@ -2262,9 +2264,9 @@ static void DistributeGridConnectivityData(const t_xintout_grid *XINTOUTGrid, co
   int iPointInCell;
   int iRank;
   int iSend;
-  size_t iDonor, iReceiver;
-  size_t iDonorPoint;
-  size_t iNext;
+  long long iDonor, iReceiver;
+  long long iDonorPoint;
+  long long iNext;
   t_ordered_map_entry *Entry;
 
   int NumDims = XINTOUTGrid->num_dims;
@@ -2294,8 +2296,8 @@ static void DistributeGridConnectivityData(const t_xintout_grid *XINTOUTGrid, co
   OMCreate(&Bins);
 
   t_xintout_donor_chunk *DonorChunk = NULL;
-  size_t NumChunkDonors = 0;
-  size_t NumChunkDonorPoints = 0;
+  long long NumChunkDonors = 0;
+  long long NumChunkDonorPoints = 0;
   int *ChunkDonorPoints[MAX_DIMS] = {NULL, NULL, NULL};
   int *ChunkDonorPointBinIndices = NULL;
   if (XINTOUTDonors->has_chunk) {
@@ -2360,7 +2362,7 @@ static void DistributeGridConnectivityData(const t_xintout_grid *XINTOUTGrid, co
   }
 
   t_xintout_receiver_chunk *ReceiverChunk = NULL;
-  size_t NumChunkReceivers = 0;
+  long long NumChunkReceivers = 0;
   int *ChunkReceiverBinIndices = NULL;
   if (XINTOUTReceivers->has_chunk) {
     ReceiverChunk = XINTOUTReceivers->chunk;
@@ -2398,7 +2400,7 @@ static void DistributeGridConnectivityData(const t_xintout_grid *XINTOUTGrid, co
       MaxPointsInCell *= MaxSize;
     }
     int *UniqueRanks = malloc(MaxPointsInCell*sizeof(int));
-    size_t iDonorPoint = 0;
+    long long iDonorPoint = 0;
     for (iDonor = 0; iDonor < NumChunkDonors; ++iDonor) {
       NumChunkDonorRanks[iDonor] = 0;
       ChunkDonorRanks[iDonor] = ChunkDonorRanks[0] + iDonorPoint;
@@ -2440,13 +2442,13 @@ static void DistributeGridConnectivityData(const t_xintout_grid *XINTOUTGrid, co
   OMDestroy(&Bins);
 
   typedef struct {
-    size_t count;
+    long long count;
     int max_size;
     t_donor_data *data;
   } t_donor_send_recv;
 
   typedef struct {
-    size_t count;
+    long long count;
     t_receiver_data *data;
   } t_receiver_send_recv;
 
@@ -2619,7 +2621,7 @@ static void DistributeGridConnectivityData(const t_xintout_grid *XINTOUTGrid, co
     int Rank = OMKey(Entry);
     t_donor_send_recv *Recv = malloc(sizeof(t_donor_send_recv));
     OMSetData(Entry, Recv);
-    MPI_Irecv(&Recv->count, 1, KMPI_UNSIGNED_SIZE, Rank, 0, Comm, Requests+NumRequests);
+    MPI_Irecv(&Recv->count, 1, MPI_LONG_LONG, Rank, 0, Comm, Requests+NumRequests);
     MPI_Irecv(&Recv->max_size, 1, MPI_INT, Rank, 0, Comm, Requests+NumRequests+1);
     NumRequests += 2;
     Entry = OMNext(Entry);
@@ -2630,7 +2632,7 @@ static void DistributeGridConnectivityData(const t_xintout_grid *XINTOUTGrid, co
     int Rank = OMKey(Entry);
     t_receiver_send_recv *Recv = malloc(sizeof(t_receiver_send_recv));
     OMSetData(Entry, Recv);
-    MPI_Irecv(&Recv->count, 1, KMPI_UNSIGNED_SIZE, Rank, 1, Comm, Requests+NumRequests);
+    MPI_Irecv(&Recv->count, 1, MPI_LONG_LONG, Rank, 1, Comm, Requests+NumRequests);
     ++NumRequests;
     Entry = OMNext(Entry);
   }
@@ -2639,7 +2641,7 @@ static void DistributeGridConnectivityData(const t_xintout_grid *XINTOUTGrid, co
   while (Entry != OMEnd(DonorSends)) {
     int Rank = OMKey(Entry);
     t_donor_send_recv *Send = OMData(Entry);
-    MPI_Isend(&Send->count, 1, KMPI_UNSIGNED_SIZE, Rank, 0, Comm, Requests+NumRequests);
+    MPI_Isend(&Send->count, 1, MPI_LONG_LONG, Rank, 0, Comm, Requests+NumRequests);
     MPI_Isend(&Send->max_size, 1, MPI_INT, Rank, 0, Comm, Requests+NumRequests+1);
     NumRequests += 2;
     Entry = OMNext(Entry);
@@ -2649,7 +2651,7 @@ static void DistributeGridConnectivityData(const t_xintout_grid *XINTOUTGrid, co
   while (Entry != OMEnd(ReceiverSends)) {
     int Rank = OMKey(Entry);
     t_receiver_send_recv *Send = OMData(Entry);
-    MPI_Isend(&Send->count, 1, KMPI_UNSIGNED_SIZE, Rank, 1, Comm, Requests+NumRequests);
+    MPI_Isend(&Send->count, 1, MPI_LONG_LONG, Rank, 1, Comm, Requests+NumRequests);
     ++NumRequests;
     Entry = OMNext(Entry);
   }
@@ -2748,9 +2750,9 @@ static void DistributeGridConnectivityData(const t_xintout_grid *XINTOUTGrid, co
   }
   OMDestroy(&ReceiverSends);
 
-  size_t NumLocalDonors = 0;
+  long long NumLocalDonors = 0;
   int MaxSize = 0;
-  size_t NumLocalReceivers = 0;
+  long long NumLocalReceivers = 0;
 
   Entry = OMBegin(DonorRecvs);
   while (Entry != OMEnd(DonorRecvs)) {
@@ -2848,7 +2850,7 @@ static void ImportConnectivityData(int NumGrids, int NumLocalGrids, int *LocalGr
 
   int iLocalGrid, iGrid, jGrid;
   int iPair;
-  size_t iReceiver;
+  long long iReceiver;
 
   char DomainName[OVK_NAME_LENGTH];
   ovkGetDomainName(Domain, DomainName);
@@ -2865,8 +2867,8 @@ static void ImportConnectivityData(int NumGrids, int NumLocalGrids, int *LocalGr
 
   LogStatus(Logger, CommRank == 0, 0, "Importing connectivity data into domain %s...", DomainName);
 
-  size_t **NumConnections = malloc(NumGrids*sizeof(size_t *));
-  NumConnections[0] = malloc(NumGrids*NumGrids*sizeof(size_t));
+  long long **NumConnections = malloc(NumGrids*sizeof(long long *));
+  NumConnections[0] = malloc(NumGrids*NumGrids*sizeof(long long));
   for (iGrid = 1; iGrid < NumGrids; ++iGrid) {
     NumConnections[iGrid] = NumConnections[iGrid-1] + NumGrids;
   }
@@ -2884,7 +2886,7 @@ static void ImportConnectivityData(int NumGrids, int NumLocalGrids, int *LocalGr
     }
   }
 
-  MPI_Allreduce(MPI_IN_PLACE, NumConnections[0], NumGrids*NumGrids, KMPI_UNSIGNED_SIZE, MPI_SUM,
+  MPI_Allreduce(MPI_IN_PLACE, NumConnections[0], NumGrids*NumGrids, MPI_LONG_LONG, MPI_SUM,
     Comm);
 
   typedef struct {
@@ -3029,7 +3031,7 @@ static void ImportDonors(const t_donor_data *DonorData, int NumDestinationGrids,
   int iDestinationGrid;
   int iDim;
   int iPoint;
-  size_t iDonor;
+  long long iDonor;
 
   if (NumDestinationGrids == 0) return;
 
@@ -3103,7 +3105,7 @@ static void ImportDonors(const t_donor_data *DonorData, int NumDestinationGrids,
   for (iDonor = 0; iDonor < DonorData->count; ++iDonor) {
     int DestinationGridID = DonorData->destination_grid_ids[iDonor];
     t_donor_data *OverkitData = OMData(OMFind(OverkitDonorData, DestinationGridID));
-    size_t iNext = OverkitData->count;
+    long long iNext = OverkitData->count;
     for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
       OverkitData->extents[0][iDim][iNext] = DonorData->extents[0][iDim][iDonor];
       OverkitData->extents[1][iDim][iNext] = DonorData->extents[1][iDim][iDonor];
@@ -3160,7 +3162,7 @@ static void ImportReceivers(const t_receiver_data *ReceiverData, int NumSourceGr
 
   int iSourceGrid;
   int iDim;
-  size_t iReceiver;
+  long long iReceiver;
 
   if (NumSourceGrids == 0) return;
 
@@ -3231,7 +3233,7 @@ static void ImportReceivers(const t_receiver_data *ReceiverData, int NumSourceGr
 
 }
 
-static void CreateDonorData(t_donor_data **Data_, size_t Count, int MaxSize) {
+static void CreateDonorData(t_donor_data **Data_, long long Count, int MaxSize) {
 
   int iDim;
   int iPoint;
@@ -3292,7 +3294,7 @@ static void DestroyDonorData(t_donor_data **Data_) {
 
 }
 
-static void CreateReceiverData(t_receiver_data **Data_, size_t Count) {
+static void CreateReceiverData(t_receiver_data **Data_, long long Count) {
 
   *Data_ = malloc(sizeof(t_receiver_data));
   t_receiver_data *Data = *Data_;
@@ -3323,14 +3325,14 @@ static void DestroyReceiverData(t_receiver_data **Data_) {
 
 }
 
-static void CreateConnectionData(t_connection_data **Data_, size_t Count) {
+static void CreateConnectionData(t_connection_data **Data_, long long Count) {
 
   *Data_ = malloc(sizeof(t_connection_data));
   t_connection_data *Data = *Data_;
 
   Data->count = Count;
 
-  Data->connection_ids = malloc(Count*sizeof(size_t));
+  Data->connection_ids = malloc(Count*sizeof(long long));
 
   Data->donor_grid_ids = malloc(Count*sizeof(int));
   Data->donor_cells[0] = malloc(MAX_DIMS*Count*sizeof(int));
@@ -3358,35 +3360,35 @@ static void DestroyConnectionData(t_connection_data **Data_) {
 
 }
 
-static size_t BinDivide(size_t N, int NumBins) {
+static long long BinDivide(long long N, int NumBins) {
 
-  return (N + (size_t)NumBins - 1)/(size_t)NumBins;
+  return (N + (long long)NumBins - 1)/(long long)NumBins;
 
 }
 
-static void Chunkify(size_t Count, int MaxChunks, size_t TargetChunkSize, int Adjust,
-  int *ChunkInterval_, int *NumChunks_, size_t *ChunkSize) {
+static void Chunkify(long long Count, int MaxChunks, long long TargetChunkSize, int Adjust,
+  int *ChunkInterval_, int *NumChunks_, long long *ChunkSize) {
 
   int ChunkInterval = 1;
   int NumChunks = MaxChunks;
 
   while (BinDivide(Count, NumChunks) < TargetChunkSize && NumChunks > 1) {
-    ChunkInterval = (int)min((size_t)ChunkInterval << 1, MaxChunks);
-    NumChunks = BinDivide((size_t)MaxChunks, ChunkInterval);
+    ChunkInterval = (int)min((long long)ChunkInterval << 1, MaxChunks);
+    NumChunks = BinDivide((long long)MaxChunks, ChunkInterval);
   }
 
   if (Adjust > 0) {
     int RemainingAdjustAmount = Adjust;
     while (RemainingAdjustAmount > 0 && NumChunks < MaxChunks) {
       ChunkInterval = max(ChunkInterval >> 1, 1);
-      NumChunks = BinDivide((size_t)MaxChunks, ChunkInterval);
+      NumChunks = BinDivide((long long)MaxChunks, ChunkInterval);
       --RemainingAdjustAmount;
     }
   } else if (Adjust < 0) {
     int RemainingAdjustAmount = -Adjust;
     while (RemainingAdjustAmount > 0 && NumChunks > 1) {
-      ChunkInterval = (int)min((size_t)ChunkInterval << 1, MaxChunks);
-      NumChunks = BinDivide((size_t)MaxChunks, ChunkInterval);
+      ChunkInterval = (int)min((long long)ChunkInterval << 1, MaxChunks);
+      NumChunks = BinDivide((long long)MaxChunks, ChunkInterval);
       --RemainingAdjustAmount;
     }
   }

@@ -373,7 +373,7 @@ void PRIVATE(UpdateExchange)(ovk_exchange *Exchange) {
 
 static void ResizeDonors(ovk_exchange *Exchange) {
 
-  size_t iDonor;
+  long long iDonor;
 
   const ovk_connectivity *Connectivity = Exchange->connectivity;
 
@@ -395,7 +395,7 @@ static void ResizeDonors(ovk_exchange *Exchange) {
   }
   free_null(&Exchange->remote_donor_point_collect_recv_buffer_offsets);
 
-  size_t NumDonors = 0;
+  long long NumDonors = 0;
   if (ovkRankHasConnectivityDonorSide(Connectivity)) {
     const ovk_connectivity_d *Donors;
     ovkGetConnectivityDonorSide(Connectivity, &Donors);
@@ -404,15 +404,15 @@ static void ResizeDonors(ovk_exchange *Exchange) {
 
   if (NumDonors > 0) {
 
-    Exchange->donors_sorted = malloc(NumDonors*sizeof(size_t));
+    Exchange->donors_sorted = malloc(NumDonors*sizeof(long long));
     Exchange->donor_dest_ranks = malloc(NumDonors*sizeof(int));
     Exchange->donor_send_indices = malloc(NumDonors*sizeof(int));
     Exchange->num_remote_donor_points = malloc(NumDonors*sizeof(int));
-    Exchange->remote_donor_points = malloc(NumDonors*sizeof(size_t *));
+    Exchange->remote_donor_points = malloc(NumDonors*sizeof(long long *));
     Exchange->remote_donor_points[0] = NULL;
     Exchange->remote_donor_point_collect_recv_indices = malloc(NumDonors*sizeof(int *));
     Exchange->remote_donor_point_collect_recv_indices[0] = NULL;
-    Exchange->remote_donor_point_collect_recv_buffer_offsets = malloc(NumDonors*sizeof(size_t *));
+    Exchange->remote_donor_point_collect_recv_buffer_offsets = malloc(NumDonors*sizeof(long long *));
     Exchange->remote_donor_point_collect_recv_buffer_offsets[0] = NULL;
 
     for (iDonor = 0; iDonor < NumDonors; ++iDonor) {
@@ -431,7 +431,7 @@ static void ResizeDonors(ovk_exchange *Exchange) {
 
 static void ResizeReceivers(ovk_exchange *Exchange) {
 
-  size_t iReceiver;
+  long long iReceiver;
 
   const ovk_connectivity *Connectivity = Exchange->connectivity;
 
@@ -439,7 +439,7 @@ static void ResizeReceivers(ovk_exchange *Exchange) {
   free_null(&Exchange->receiver_source_ranks);
   free_null(&Exchange->receiver_recv_indices);
 
-  size_t NumReceivers = 0;
+  long long NumReceivers = 0;
   if (ovkRankHasConnectivityReceiverSide(Connectivity)) {
     const ovk_connectivity_r *Receivers;
     ovkGetConnectivityReceiverSide(Connectivity, &Receivers);
@@ -448,7 +448,7 @@ static void ResizeReceivers(ovk_exchange *Exchange) {
 
   if (NumReceivers > 0) {
 
-    Exchange->receivers_sorted = malloc(NumReceivers*sizeof(size_t));
+    Exchange->receivers_sorted = malloc(NumReceivers*sizeof(long long));
     Exchange->receiver_source_ranks = malloc(NumReceivers*sizeof(int));
     Exchange->receiver_recv_indices = malloc(NumReceivers*sizeof(int));
 
@@ -483,7 +483,7 @@ static void UpdateCollectSendInfo(ovk_exchange *Exchange) {
   const ovk_connectivity *Connectivity = Exchange->connectivity;
 
   const ovk_connectivity_d *Donors;
-  size_t NumDonors = 0;
+  long long NumDonors = 0;
   int MaxSize = 0;
   if (ovkRankHasConnectivityDonorSide(Connectivity)) {
     ovkGetConnectivityDonorSide(Connectivity, &Donors);
@@ -493,9 +493,9 @@ static void UpdateCollectSendInfo(ovk_exchange *Exchange) {
 
   if (NumDonors > 0) {
 
-    size_t iDonor;
+    long long iDonor;
     int iNeighbor;
-    size_t iPoint, iCollectSendPoint;
+    long long iPoint, iCollectSendPoint;
     int i, j, k;
 
     const ovk_grid *Grid;
@@ -599,7 +599,7 @@ static void UpdateCollectSendInfo(ovk_exchange *Exchange) {
     bool **CollectSendMasks = malloc(NumCollectSends*sizeof(bool *));
     for (iCollectSend = 0; iCollectSend < NumCollectSends; ++iCollectSend) {
       iNeighbor = CollectSendIndexToNeighbor[iCollectSend];
-      size_t NumPoints;
+      long long NumPoints;
       ovkRangeCount(&SendToNeighborRanges[iNeighbor], &NumPoints);
       CollectSendMasks[iCollectSend] = malloc(NumPoints*sizeof(bool));
       for (iPoint = 0; iPoint < NumPoints; ++iPoint) {
@@ -669,13 +669,13 @@ static void UpdateCollectSendInfo(ovk_exchange *Exchange) {
       }
     }
 
-    Exchange->num_collect_send_points = malloc(NumCollectSends*sizeof(size_t));
+    Exchange->num_collect_send_points = malloc(NumCollectSends*sizeof(long long));
 
     for (iCollectSend = 0; iCollectSend < NumCollectSends; ++iCollectSend) {
       iNeighbor = CollectSendIndexToNeighbor[iCollectSend];
-      size_t NumPoints;
+      long long NumPoints;
       ovkRangeCount(&SendToNeighborRanges[iNeighbor], &NumPoints);
-      size_t NumCollectSendPoints = 0;
+      long long NumCollectSendPoints = 0;
       for (iPoint = 0; iPoint < NumPoints; ++iPoint) {
         if (CollectSendMasks[iCollectSend][iPoint]) {
           ++NumCollectSendPoints;
@@ -687,13 +687,13 @@ static void UpdateCollectSendInfo(ovk_exchange *Exchange) {
     Exchange->collect_send_points = malloc(NumCollectSends*sizeof(int **));
     for (iCollectSend = 0; iCollectSend < NumCollectSends; ++iCollectSend) {
       Exchange->collect_send_points[iCollectSend] = malloc(MAX_DIMS*sizeof(int *));
-      size_t NumCollectSendPoints = Exchange->num_collect_send_points[iCollectSend];
+      long long NumCollectSendPoints = Exchange->num_collect_send_points[iCollectSend];
       for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
         Exchange->collect_send_points[iCollectSend][iDim] = malloc(NumCollectSendPoints*
           sizeof(int));
       }
       iNeighbor = CollectSendIndexToNeighbor[iCollectSend];
-      size_t NumPoints;
+      long long NumPoints;
       ovkRangeCount(&SendToNeighborRanges[iNeighbor], &NumPoints);
       iCollectSendPoint = 0;
       for (iPoint = 0; iPoint < NumPoints; ++iPoint) {
@@ -753,7 +753,7 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
   const ovk_connectivity *Connectivity = Exchange->connectivity;
 
   const ovk_connectivity_d *Donors;
-  size_t NumDonors = 0;
+  long long NumDonors = 0;
   int MaxSize = 0;
   if (ovkRankHasConnectivityDonorSide(Connectivity)) {
     ovkGetConnectivityDonorSide(Connectivity, &Donors);
@@ -763,9 +763,9 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
 
   if (NumDonors > 0) {
 
-    size_t iDonor;
+    long long iDonor;
     int iNeighbor;
-    size_t iPoint, iCollectRecvPoint;
+    long long iPoint, iCollectRecvPoint;
     int i, j, k;
 
     const ovk_grid *Grid;
@@ -850,7 +850,7 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
     bool **CollectRecvMasks = malloc(NumCollectRecvs*sizeof(bool *));
     for (iCollectRecv = 0; iCollectRecv < NumCollectRecvs; ++iCollectRecv) {
       iNeighbor = CollectRecvIndexToNeighbor[iCollectRecv];
-      size_t NumPoints;
+      long long NumPoints;
       ovkRangeCount(&RecvFromNeighborRanges[iNeighbor], &NumPoints);
       CollectRecvMasks[iCollectRecv] = malloc(NumPoints*sizeof(bool));
       for (iPoint = 0; iPoint < NumPoints; ++iPoint) {
@@ -901,13 +901,13 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
       }
     }
 
-    size_t **CollectRecvOffsets = malloc(NumCollectRecvs*sizeof(size_t *));
+    long long **CollectRecvOffsets = malloc(NumCollectRecvs*sizeof(long long *));
     for (iCollectRecv = 0; iCollectRecv < NumCollectRecvs; ++iCollectRecv) {
       iNeighbor = CollectRecvIndexToNeighbor[iCollectRecv];
-      size_t NumPoints;
+      long long NumPoints;
       ovkRangeCount(&RecvFromNeighborRanges[iNeighbor], &NumPoints);
-      CollectRecvOffsets[iCollectRecv] = malloc(NumPoints*sizeof(size_t));
-      size_t iRemotePoint = 0;
+      CollectRecvOffsets[iCollectRecv] = malloc(NumPoints*sizeof(long long));
+      long long iRemotePoint = 0;
       for (iPoint = 0; iPoint < NumPoints; ++iPoint) {
         if (CollectRecvMasks[iCollectRecv][iPoint]) {
           CollectRecvOffsets[iCollectRecv][iPoint] = iRemotePoint;
@@ -916,13 +916,13 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
       }
     }
 
-    Exchange->num_collect_recv_points = malloc(NumCollectRecvs*sizeof(size_t));
+    Exchange->num_collect_recv_points = malloc(NumCollectRecvs*sizeof(long long));
 
     for (iCollectRecv = 0; iCollectRecv < NumCollectRecvs; ++iCollectRecv) {
       iNeighbor = CollectRecvIndexToNeighbor[iCollectRecv];
-      size_t NumPoints;
+      long long NumPoints;
       ovkRangeCount(&RecvFromNeighborRanges[iNeighbor], &NumPoints);
-      size_t NumCollectRecvPoints = 0;
+      long long NumCollectRecvPoints = 0;
       for (iPoint = 0; iPoint < NumPoints; ++iPoint) {
         if (CollectRecvMasks[iCollectRecv][iPoint]) {
           ++NumCollectRecvPoints;
@@ -934,13 +934,13 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
     Exchange->collect_recv_points = malloc(NumCollectRecvs*sizeof(int **));
     for (iCollectRecv = 0; iCollectRecv < NumCollectRecvs; ++iCollectRecv) {
       Exchange->collect_recv_points[iCollectRecv] = malloc(MAX_DIMS*sizeof(int *));
-      size_t NumCollectRecvPoints = Exchange->num_collect_recv_points[iCollectRecv];
+      long long NumCollectRecvPoints = Exchange->num_collect_recv_points[iCollectRecv];
       for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
         Exchange->collect_recv_points[iCollectRecv][iDim] = malloc(NumCollectRecvPoints*
           sizeof(int));
       }
       iNeighbor = CollectRecvIndexToNeighbor[iCollectRecv];
-      size_t NumPoints;
+      long long NumPoints;
       ovkRangeCount(&RecvFromNeighborRanges[iNeighbor], &NumPoints);
       iCollectRecvPoint = 0;
       for (iPoint = 0; iPoint < NumPoints; ++iPoint) {
@@ -957,7 +957,7 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
 
     }
 
-    size_t TotalRemoteDonorPoints = 0;
+    long long TotalRemoteDonorPoints = 0;
     for (iDonor = 0; iDonor < NumDonors; ++iDonor) {
       ovk_range DonorRange;
       ovkDefaultRange(&DonorRange, NumDims);
@@ -994,14 +994,14 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
     }
 
     // Flattened buffers that elements of Exchange->remote_donor_points, etc. point to
-    size_t *RemoteDonorPoints = malloc(TotalRemoteDonorPoints*sizeof(size_t));
+    long long *RemoteDonorPoints = malloc(TotalRemoteDonorPoints*sizeof(long long));
     int *RemoteDonorPointCollectRecvIndices = malloc(TotalRemoteDonorPoints*sizeof(int));
-    size_t *RemoteDonorPointCollectRecvBufferOffsets = malloc(TotalRemoteDonorPoints*
-      sizeof(size_t));
+    long long *RemoteDonorPointCollectRecvBufferOffsets = malloc(TotalRemoteDonorPoints*
+      sizeof(long long));
 
-    size_t RemoteDonorPointOffset = 0;
+    long long RemoteDonorPointOffset = 0;
     for (iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      size_t NumRemoteDonorPoints = Exchange->num_remote_donor_points[iDonor];
+      long long NumRemoteDonorPoints = Exchange->num_remote_donor_points[iDonor];
       Exchange->remote_donor_points[iDonor] = RemoteDonorPoints + RemoteDonorPointOffset;
       Exchange->remote_donor_point_collect_recv_indices[iDonor] =
         RemoteDonorPointCollectRecvIndices + RemoteDonorPointOffset;
@@ -1015,7 +1015,7 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
       MaxPointsInCell *= MaxSize;
     }
     int *CellCollectRecvIndices = malloc(MaxPointsInCell*sizeof(int));
-    int *CellCollectRecvOffsets = malloc(MaxPointsInCell*sizeof(size_t));
+    int *CellCollectRecvOffsets = malloc(MaxPointsInCell*sizeof(long long));
 
     for (iDonor = 0; iDonor < NumDonors; ++iDonor) {
       for (iPointInCell = 0; iPointInCell < MaxPointsInCell; ++iPointInCell) {
@@ -1105,7 +1105,7 @@ static void UpdateCollectReceiveInfo(ovk_exchange *Exchange) {
 
 static void UpdateDonorsSorted(ovk_exchange *Exchange) {
 
-  size_t iDonor;
+  long long iDonor;
 
   const ovk_connectivity *Connectivity = Exchange->connectivity;
 
@@ -1114,7 +1114,7 @@ static void UpdateDonorsSorted(ovk_exchange *Exchange) {
     const ovk_connectivity_d *Donors;
     ovkGetConnectivityDonorSide(Connectivity, &Donors);
 
-    size_t NumDonors;
+    long long NumDonors;
     ovkGetConnectivityDonorSideCount(Donors, &NumDonors);
 
     const ovk_grid_info *ReceiverGridInfo;
@@ -1123,7 +1123,7 @@ static void UpdateDonorsSorted(ovk_exchange *Exchange) {
     ovk_range ReceiverGridGlobalRange;
     ovkGetGridInfoGlobalRange(ReceiverGridInfo, &ReceiverGridGlobalRange);
 
-    size_t *DestinationIndices = malloc(NumDonors*sizeof(size_t));
+    long long *DestinationIndices = malloc(NumDonors*sizeof(long long));
 
     for (iDonor = 0; iDonor < NumDonors; ++iDonor) {
       int DestinationPoint[MAX_DIMS] = {
@@ -1138,7 +1138,7 @@ static void UpdateDonorsSorted(ovk_exchange *Exchange) {
     bool Sorted = true;
 
     // Check if they're already sorted
-    size_t PrevIndex = 0;
+    long long PrevIndex = 0;
     for (iDonor = 0; iDonor < NumDonors; ++iDonor) {
       if (DestinationIndices[iDonor] < PrevIndex) {
         Sorted = false;
@@ -1152,7 +1152,7 @@ static void UpdateDonorsSorted(ovk_exchange *Exchange) {
         Exchange->donors_sorted[iDonor] = iDonor;
       }
     } else {
-      SortPermutation_size_t(NumDonors, DestinationIndices, Exchange->donors_sorted);
+      SortPermutation_long_long(NumDonors, DestinationIndices, Exchange->donors_sorted);
     }
 
     free(DestinationIndices);
@@ -1163,7 +1163,7 @@ static void UpdateDonorsSorted(ovk_exchange *Exchange) {
 
 static void UpdateReceiversSorted(ovk_exchange *Exchange) {
 
-  size_t iReceiver;
+  long long iReceiver;
 
   const ovk_connectivity *Connectivity = Exchange->connectivity;
 
@@ -1172,7 +1172,7 @@ static void UpdateReceiversSorted(ovk_exchange *Exchange) {
     const ovk_connectivity_r *Receivers;
     ovkGetConnectivityReceiverSide(Connectivity, &Receivers);
 
-    size_t NumReceivers = 0;
+    long long NumReceivers = 0;
     ovkGetConnectivityReceiverSideCount(Receivers, &NumReceivers);
 
     const ovk_grid *ReceiverGrid;
@@ -1181,7 +1181,7 @@ static void UpdateReceiversSorted(ovk_exchange *Exchange) {
     ovk_range GlobalRange;
     ovkGetGridGlobalRange(ReceiverGrid, &GlobalRange);
 
-    size_t *PointIndices = malloc(NumReceivers*sizeof(size_t));
+    long long *PointIndices = malloc(NumReceivers*sizeof(long long));
 
     for (iReceiver = 0; iReceiver < NumReceivers; ++iReceiver) {
       int Point[MAX_DIMS] = {
@@ -1195,7 +1195,7 @@ static void UpdateReceiversSorted(ovk_exchange *Exchange) {
     bool Sorted = true;
 
     // Check if they're already sorted
-    size_t PrevIndex = 0;
+    long long PrevIndex = 0;
     for (iReceiver = 0; iReceiver < NumReceivers; ++iReceiver) {
       if (PointIndices[iReceiver] < PrevIndex) {
         Sorted = false;
@@ -1209,7 +1209,7 @@ static void UpdateReceiversSorted(ovk_exchange *Exchange) {
         Exchange->receivers_sorted[iReceiver] = iReceiver;
       }
     } else {
-      SortPermutation_size_t(NumReceivers, PointIndices, Exchange->receivers_sorted);
+      SortPermutation_long_long(NumReceivers, PointIndices, Exchange->receivers_sorted);
     }
 
     free(PointIndices);
@@ -1220,14 +1220,14 @@ static void UpdateReceiversSorted(ovk_exchange *Exchange) {
 
 static void UpdateSourceRanks(ovk_exchange *Exchange) {
 
-  size_t iReceiver;
+  long long iReceiver;
 
   const ovk_connectivity *Connectivity = Exchange->connectivity;
 
   bool ReceiverGridIsLocal = ovkRankHasConnectivityReceiverSide(Connectivity);
 
   const ovk_connectivity_r *Receivers;
-  size_t NumReceivers;
+  long long NumReceivers;
   if (ReceiverGridIsLocal) {
     ovkGetConnectivityReceiverSide(Connectivity, &Receivers);
     ovkGetConnectivityReceiverSideCount(Receivers, &NumReceivers);
@@ -1264,14 +1264,14 @@ static void UpdateSourceRanks(ovk_exchange *Exchange) {
 
 static void UpdateDestRanks(ovk_exchange *Exchange) {
 
-  size_t iDonor;
+  long long iDonor;
 
   const ovk_connectivity *Connectivity = Exchange->connectivity;
 
   bool DonorGridIsLocal = ovkRankHasConnectivityDonorSide(Connectivity);
 
   const ovk_connectivity_d *Donors;
-  size_t NumDonors;
+  long long NumDonors;
   if (DonorGridIsLocal) {
     ovkGetConnectivityDonorSide(Connectivity, &Donors);
     ovkGetConnectivityDonorSideCount(Donors, &NumDonors);
@@ -1309,7 +1309,7 @@ static void UpdateDestRanks(ovk_exchange *Exchange) {
 static void UpdateSendInfo(ovk_exchange *Exchange) {
 
   int iSend;
-  size_t iDonor;
+  long long iDonor;
 
   free_null(&Exchange->send_ranks);
   free_null(&Exchange->send_counts);
@@ -1319,7 +1319,7 @@ static void UpdateSendInfo(ovk_exchange *Exchange) {
   const ovk_connectivity *Connectivity = Exchange->connectivity;
 
   const ovk_connectivity_d *Donors;
-  size_t NumDonors = 0;
+  long long NumDonors = 0;
   ovk_cart Cart;
   ovk_range LocalRange;
   if (ovkRankHasConnectivityDonorSide(Connectivity)) {
@@ -1357,10 +1357,10 @@ static void UpdateSendInfo(ovk_exchange *Exchange) {
       if (DonorCommunicates[iDonor]) {
         Entry = OMFind(SendCounts, Exchange->donor_dest_ranks[iDonor]);
         if (Entry != OMEnd(SendCounts)) {
-          size_t *SendCount = OMData(Entry);
+          long long *SendCount = OMData(Entry);
           ++(*SendCount);
         } else {
-          size_t *SendCount = malloc(sizeof(size_t));
+          long long *SendCount = malloc(sizeof(long long));
           *SendCount = 1;
           OMInsert(SendCounts, Exchange->donor_dest_ranks[iDonor], SendCount);
         }
@@ -1372,13 +1372,13 @@ static void UpdateSendInfo(ovk_exchange *Exchange) {
     Exchange->num_sends = NumSends;
 
     Exchange->send_ranks = malloc(NumSends*sizeof(int));
-    Exchange->send_counts = malloc(NumSends*sizeof(size_t));
+    Exchange->send_counts = malloc(NumSends*sizeof(long long));
 
     Entry = OMBegin(SendCounts);
     iSend = 0;
     while (Entry != OMEnd(SendCounts)) {
       int Rank = OMKey(Entry);
-      size_t *SendCount = OMData(Entry);
+      long long *SendCount = OMData(Entry);
       Exchange->send_ranks[iSend] = Rank;
       Exchange->send_counts[iSend] = *SendCount;
       free(SendCount);
@@ -1424,7 +1424,7 @@ static void UpdateSendInfo(ovk_exchange *Exchange) {
 static void UpdateReceiveInfo(ovk_exchange *Exchange) {
 
   int iRecv;
-  size_t iReceiver;
+  long long iReceiver;
 
   free_null(&Exchange->recv_ranks);
   free_null(&Exchange->recv_counts);
@@ -1434,7 +1434,7 @@ static void UpdateReceiveInfo(ovk_exchange *Exchange) {
   const ovk_connectivity *Connectivity = Exchange->connectivity;
 
   const ovk_connectivity_r *Receivers;
-  size_t NumReceivers = 0;
+  long long NumReceivers = 0;
   if (ovkRankHasConnectivityReceiverSide(Connectivity)) {
     ovkGetConnectivityReceiverSide(Connectivity, &Receivers);
     ovkGetConnectivityReceiverSideCount(Receivers, &NumReceivers);
@@ -1451,10 +1451,10 @@ static void UpdateReceiveInfo(ovk_exchange *Exchange) {
       if (Exchange->receiver_source_ranks[iReceiver] >= 0) {
         Entry = OMFind(ReceiveCounts, Exchange->receiver_source_ranks[iReceiver]);
         if (Entry != OMEnd(ReceiveCounts)) {
-          size_t *ReceiveCount = OMData(Entry);
+          long long *ReceiveCount = OMData(Entry);
           ++(*ReceiveCount);
         } else {
-          size_t *ReceiveCount = malloc(sizeof(size_t));
+          long long *ReceiveCount = malloc(sizeof(long long));
           *ReceiveCount = 1;
           OMInsert(ReceiveCounts, Exchange->receiver_source_ranks[iReceiver], ReceiveCount);
         }
@@ -1466,13 +1466,13 @@ static void UpdateReceiveInfo(ovk_exchange *Exchange) {
     Exchange->num_recvs = NumReceives;
 
     Exchange->recv_ranks = malloc(NumReceives*sizeof(int));
-    Exchange->recv_counts = malloc(NumReceives*sizeof(size_t));
+    Exchange->recv_counts = malloc(NumReceives*sizeof(long long));
 
     Entry = OMBegin(ReceiveCounts);
     iRecv = 0;
     while (Entry != OMEnd(ReceiveCounts)) {
       int Rank = OMKey(Entry);
-      size_t *ReceiveCount = OMData(Entry);
+      long long *ReceiveCount = OMData(Entry);
       Exchange->recv_ranks[iRecv] = Rank;
       Exchange->recv_counts[iRecv] = *ReceiveCount;
       free(ReceiveCount);
@@ -1527,7 +1527,7 @@ void PRIVATE(ExchangeCollect)(const ovk_exchange *Exchange, ovk_data_type DataTy
   const void **GridData, void **DonorData) {
 
   int iDim, iSend, iRecv, iCount;
-  size_t iDonor, iGridPoint, iBuffer;
+  long long iDonor, iGridPoint, iBuffer;
   int i, j, k;
 
   int NumDims = Exchange->num_dims;
@@ -1536,7 +1536,7 @@ void PRIVATE(ExchangeCollect)(const ovk_exchange *Exchange, ovk_data_type DataTy
   const ovk_connectivity_d *Donors;
   ovkGetConnectivityDonorSide(Connectivity, &Donors);
 
-  size_t NumDonors;
+  long long NumDonors;
   int MaxSize;
   ovkGetConnectivityDonorSideCount(Donors, &NumDonors);
   ovkGetConnectivityDonorSideMaxSize(Donors, &MaxSize);
@@ -1609,8 +1609,8 @@ void PRIVATE(ExchangeCollect)(const ovk_exchange *Exchange, ovk_data_type DataTy
   }
 
   for (iSend = 0; iSend < NumCollectSends; ++iSend) {
-    size_t NumSendPoints = Exchange->num_collect_send_points[iSend];
-    size_t iSendPoint;
+    long long NumSendPoints = Exchange->num_collect_send_points[iSend];
+    long long iSendPoint;
     for (iSendPoint = 0; iSendPoint < NumSendPoints; ++iSendPoint) {
       int Point[MAX_DIMS] = {
         Exchange->collect_send_points[iSend][0][iSendPoint],
@@ -1797,14 +1797,14 @@ void PRIVATE(ExchangeSend)(const ovk_exchange *Exchange, ovk_data_type DataType,
   const void **DonorData, int Tag, ovk_request **Request) {
 
   int iSend, iCount;
-  size_t iDonor, iDonorOrder;
+  long long iDonor, iDonorOrder;
 
   const ovk_connectivity *Connectivity = Exchange->connectivity;
 
   const ovk_connectivity_d *Donors;
   ovkGetConnectivityDonorSide(Connectivity, &Donors);
 
-  size_t NumDonors;
+  long long NumDonors;
   ovkGetConnectivityDonorSideCount(Donors, &NumDonors);
 
   if (OVK_DEBUG) {
@@ -1825,7 +1825,7 @@ void PRIVATE(ExchangeSend)(const ovk_exchange *Exchange, ovk_data_type DataType,
   CreateSendRequest(Exchange, MPIDataSize, Count, Request);
   t_send_request_data *RequestData = (*Request)->data;
 
-  size_t *NextBufferEntry = malloc(NumSends*sizeof(size_t));
+  long long *NextBufferEntry = malloc(NumSends*sizeof(long long));
   for (iSend = 0; iSend < NumSends; ++iSend) {
     NextBufferEntry[iSend] = 0;
   }
@@ -1883,7 +1883,7 @@ void PRIVATE(ExchangeReceive)(const ovk_exchange *Exchange, ovk_data_type DataTy
   const ovk_connectivity_r *Receivers;
   ovkGetConnectivityReceiverSide(Connectivity, &Receivers);
 
-  size_t NumReceivers;
+  long long NumReceivers;
   ovkGetConnectivityReceiverSideCount(Receivers, &NumReceivers);
 
   if (OVK_DEBUG) {
@@ -1914,7 +1914,7 @@ void PRIVATE(ExchangeReceive)(const ovk_exchange *Exchange, ovk_data_type DataTy
 static void CompleteReceive(t_recv_request_data *RequestData) {
 
   int iRecv, iCount;
-  size_t iReceiver, iReceiverOrder;
+  long long iReceiver, iReceiverOrder;
 
   const ovk_exchange *Exchange = RequestData->exchange;
   const ovk_connectivity *Connectivity = Exchange->connectivity;
@@ -1931,12 +1931,12 @@ static void CompleteReceive(t_recv_request_data *RequestData) {
   const ovk_connectivity_r *Receivers;
   ovkGetConnectivityReceiverSide(Connectivity, &Receivers);
 
-  size_t NumReceivers;
+  long long NumReceivers;
   ovkGetConnectivityReceiverSideCount(Receivers, &NumReceivers);
 
   int NumRecvs = Exchange->num_recvs;
 
-  size_t *NextBufferEntry = malloc(NumRecvs*sizeof(size_t));
+  long long *NextBufferEntry = malloc(NumRecvs*sizeof(long long));
   for (iRecv = 0; iRecv < NumRecvs; ++iRecv) {
     NextBufferEntry[iRecv] = 0;
   }
@@ -2057,14 +2057,14 @@ void PRIVATE(ExchangeDisperse)(const ovk_exchange *Exchange, ovk_data_type DataT
   ovk_array_layout GridDataLayout, void **GridData) {
 
   int iCount;
-  size_t iReceiver, iPoint;
+  long long iReceiver, iPoint;
 
   const ovk_connectivity *Connectivity = Exchange->connectivity;
 
   const ovk_connectivity_r *Receivers;
   ovkGetConnectivityReceiverSide(Connectivity, &Receivers);
 
-  size_t NumReceivers;
+  long long NumReceivers;
   ovkGetConnectivityReceiverSideCount(Receivers, &NumReceivers);
 
   if (OVK_DEBUG) {

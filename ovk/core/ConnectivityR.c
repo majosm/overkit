@@ -139,7 +139,7 @@ void ovkGetConnectivityReceiverSideCommRank(const ovk_connectivity_r *Receivers,
 
 }
 
-void ovkGetConnectivityReceiverSideCount(const ovk_connectivity_r *Receivers, size_t *NumReceivers) {
+void ovkGetConnectivityReceiverSideCount(const ovk_connectivity_r *Receivers, long long *NumReceivers) {
 
   OVK_DEBUG_ASSERT(Receivers, "Invalid receivers pointer.");
   OVK_DEBUG_ASSERT(NumReceivers, "Invalid num receivers pointer.");
@@ -148,7 +148,7 @@ void ovkGetConnectivityReceiverSideCount(const ovk_connectivity_r *Receivers, si
 
 }
 
-void ovkResizeReceivers(ovk_connectivity_r *Receivers, size_t NumReceivers) {
+void ovkResizeReceivers(ovk_connectivity_r *Receivers, long long NumReceivers) {
 
   OVK_DEBUG_ASSERT(Receivers, "Invalid receivers pointer.");
   OVK_DEBUG_ASSERT(NumReceivers >= 0, "Invalid receiver count.");
@@ -161,7 +161,7 @@ void ovkResizeReceivers(ovk_connectivity_r *Receivers, size_t NumReceivers) {
     "ranks.");
 
   int iDim;
-  size_t iReceiver;
+  long long iReceiver;
 
   free(Receivers->points[0]);
   for (iDim = 0; iDim < MAX_DIMS; ++iDim) {

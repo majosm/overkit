@@ -1292,7 +1292,7 @@ static bool EditingConnectivity(const ovk_domain *Domain, int DonorGridID, int R
 }
 
 void ovkGetLocalDonorCount(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
-  size_t *NumDonors) {
+  long long *NumDonors) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
   OVK_DEBUG_ASSERT(DonorGridID >= 0, "Invalid donor grid ID.");
@@ -1309,7 +1309,7 @@ void ovkGetLocalDonorCount(const ovk_domain *Domain, int DonorGridID, int Receiv
 }
 
 void ovkGetLocalReceiverCount(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
-  size_t *NumReceivers) {
+  long long *NumReceivers) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
   OVK_DEBUG_ASSERT(DonorGridID >= 0, "Invalid donor grid ID.");

@@ -20,10 +20,10 @@ void ovkGetConnectivityDonorSideDimension(const ovk_connectivity_d *Donors, int 
 void ovkGetConnectivityDonorSideComm(const ovk_connectivity_d *Donors, MPI_Comm *Comm);
 void ovkGetConnectivityDonorSideCommSize(const ovk_connectivity_d *Donors, int *CommSize);
 void ovkGetConnectivityDonorSideCommRank(const ovk_connectivity_d *Donors, int *CommRank);
-void ovkGetConnectivityDonorSideCount(const ovk_connectivity_d *Donors, size_t *NumDonors);
+void ovkGetConnectivityDonorSideCount(const ovk_connectivity_d *Donors, long long *NumDonors);
 void ovkGetConnectivityDonorSideMaxSize(const ovk_connectivity_d *Donors, int *MaxSize);
 
-void ovkResizeDonors(ovk_connectivity_d *Donors, size_t NumDonors, int MaxSize);
+void ovkResizeDonors(ovk_connectivity_d *Donors, long long NumDonors, int MaxSize);
 
 void ovkGetDonorExtents(const ovk_connectivity_d *Donors, int Dimension, const int **Begins,
   const int **Ends);

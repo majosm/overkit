@@ -10,8 +10,8 @@
 extern "C" {
 #endif
 
-void PRIVATE(SortPermutation_size_t)(size_t N, const size_t *Array, size_t *Permutation);
-#define SortPermutation_size_t(...) PRIVATE(SortPermutation_size_t)(__VA_ARGS__)
+void PRIVATE(SortPermutation_long_long)(long long N, const long long *Array, long long *Permutation);
+#define SortPermutation_long_long(...) PRIVATE(SortPermutation_long_long)(__VA_ARGS__)
 
 #ifdef __cplusplus
 }

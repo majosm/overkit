@@ -44,14 +44,14 @@ static inline void ovkSetCart(ovk_cart *Cart, int NumDims, const int *Size, cons
 
 }
 
-static inline void ovkCartCount(const ovk_cart *Cart, size_t *Count) {
+static inline void ovkCartCount(const ovk_cart *Cart, long long *Count) {
 
   int iDim;
 
   *Count = 1;
 
   for (iDim = 0; iDim < Cart->nd; ++iDim) {
-    *Count *= (size_t)Cart->size[iDim];
+    *Count *= Cart->size[iDim];
   }
 
 }

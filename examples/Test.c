@@ -61,7 +61,7 @@ void ExchangeTest(int argc, char **argv) {
   int iGrid, jGrid, iLocalGrid;
   int iConnectivity, iSend, iReceive;
   int i, j;
-  size_t iDonor, iReceiver;
+  long long iDonor, iReceiver;
 
   MPI_Init(&argc, &argv);
 
@@ -265,7 +265,7 @@ void ExchangeTest(int argc, char **argv) {
           input_grid *InputGrid = FindLocalGrid(NumLocalGrids, InputGrids, DonorGridID);
           bool RightEdgeOfLeftGrid = InputGrid->id == 1 && InputGrid->ie[0] == N;
           bool LeftEdgeOfRightGrid = InputGrid->id == 2 && InputGrid->is[0] == 0;
-          size_t NumDonors = 0;
+          long long NumDonors = 0;
           if (RightEdgeOfLeftGrid || LeftEdgeOfRightGrid) {
             NumDonors = InputGrid->ie[1] - InputGrid->is[1];
           }
@@ -323,7 +323,7 @@ void ExchangeTest(int argc, char **argv) {
           input_grid *InputGrid = FindLocalGrid(NumLocalGrids, InputGrids, ReceiverGridID);
           bool RightEdgeOfLeftGrid = InputGrid->id == 1 && InputGrid->ie[0] == N;
           bool LeftEdgeOfRightGrid = InputGrid->id == 2 && InputGrid->is[0] == 0;
-          size_t NumReceivers = 0;
+          long long NumReceivers = 0;
           if (RightEdgeOfLeftGrid || LeftEdgeOfRightGrid) {
             NumReceivers = InputGrid->ie[1] - InputGrid->is[1];
           }
@@ -415,13 +415,13 @@ void ExchangeTest(int argc, char **argv) {
     for (iGrid = 0; iGrid < 2; ++iGrid) {
       int OtherGridID = iGrid+1;
       if (ovkConnectivityExists(Domain, LocalGridID, OtherGridID)) {
-        size_t NumDonors;
+        long long NumDonors;
         ovkGetLocalDonorCount(Domain, LocalGridID, OtherGridID, &NumDonors);
         SendBuffers[iSend] = malloc(NumDonors*sizeof(double));
         ++iSend;
       }
       if (ovkConnectivityExists(Domain, OtherGridID, LocalGridID)) {
-        size_t NumReceivers;
+        long long NumReceivers;
         ovkGetLocalReceiverCount(Domain, OtherGridID, LocalGridID, &NumReceivers);
         ReceiveBuffers[iReceive] = malloc(NumReceivers*sizeof(double));
         ++iReceive;
@@ -553,8 +553,8 @@ void ExchangeTest(int argc, char **argv) {
   l = 0;
   for (n = 0; n < NumLocalGrids; ++n) {
     for (m = 0; m < 2; ++m) {
-      size_t NumDonors = ovkGetDonorCount(Domain, Grids[n].id, m+1);
-      size_t NumReceivers = ovkGetReceiverCount(Domain, Grids[n].id, m+1);
+      long long NumDonors = ovkGetDonorCount(Domain, Grids[n].id, m+1);
+      long long NumReceivers = ovkGetReceiverCount(Domain, Grids[n].id, m+1);
       SendBuffers[l] = malloc(NumDonors*sizeof(double));
       ReceiveBuffers[l] = malloc(NumReceivers*sizeof(double));
       ++l;
@@ -609,7 +609,7 @@ void ExchangeTest(int argc, char **argv) {
   l = 0;
   for (n = 0; n < NumLocalGrids; ++n) {
     for (m = 0; m < 2; ++m) {
-      size_t NumReceivers = ovkGetReceiverCount(Domain, Grids[n].id, m+1);
+      long long NumReceivers = ovkGetReceiverCount(Domain, Grids[n].id, m+1);
       ReceiveBuffers[l] = malloc(NumReceivers*sizeof(double));
       ovkReceive(Domain, Grids[n].id, m+1, OVK_DOUBLE, 1, &ReceiveBuffers[l], 1, ReceiveRequests[l]);
       ++l;
@@ -621,7 +621,7 @@ void ExchangeTest(int argc, char **argv) {
   l = 0;
   for (n = 0; n < NumLocalGrids; ++n) {
     for (m = 0; m < 2; ++m) {
-      size_t NumDonors = ovkGetDonorCount(Domain, Grids[n].id, m+1);
+      long long NumDonors = ovkGetDonorCount(Domain, Grids[n].id, m+1);
       SendBuffers[l] = malloc(NumDonors*sizeof(double));
       ovkCollect(Domain, Grids[n].id, m+1, OVK_DOUBLE, 1, OVK_COLLECT_INTERPOLATE,
         InputStates[n]->values, SendBuffers[l]);
@@ -666,7 +666,7 @@ void AssembleTest(int argc, char **argv) {
   int OtherRank;
 //   int iDim;
   int iGrid, iLocalGrid;
-//   size_t iPoint;
+//   long long iPoint;
 //   int i, j;
 
   MPI_Init(&argc, &argv);
@@ -761,7 +761,7 @@ void AssembleTest(int argc, char **argv) {
     for (j = Grid->is[1]; j < Grid->ie[1]; ++j) {
       for (i = Grid->is[0]; i < Grid->ie[0]; ++i) {
         int Point[2] = {i, j};
-        size_t iInputPoint = (i-Grid->is[0]) + (j-Grid->is[1]) * Grid->local_size[0];
+        long long iInputPoint = (i-Grid->is[0]) + (j-Grid->is[1]) * Grid->local_size[0];
         ovkRangeTupleToIndex(&LocalRange, OVK_GRID_LAYOUT, Point, &iPoint);
         XYZ[0][iPoint] = Grid->xyz[iInputPoint];
         YYZ[1][iPoint] = Grid->xyz[iInputPoint+Grid->local_count];

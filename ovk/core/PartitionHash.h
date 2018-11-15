@@ -40,8 +40,8 @@ void PRIVATE(CreatePartitionHash)(t_partition_hash **Hash, int NumDims, MPI_Comm
 void PRIVATE(DestroyPartitionHash)(t_partition_hash **Hash);
 #define DestroyPartitionHash(...) PRIVATE(DestroyPartitionHash)(__VA_ARGS__)
 
-void PRIVATE(MapToPartitionBins)(const t_partition_hash *Hash, size_t NumPoints, const int **Points,
-  int *BinIndices);
+void PRIVATE(MapToPartitionBins)(const t_partition_hash *Hash, long long NumPoints, const int
+  **Points, int *BinIndices);
 #define MapToPartitionBins(...) PRIVATE(MapToPartitionBins)(__VA_ARGS__)
 
 void PRIVATE(RetrievePartitionBins)(const t_partition_hash *Hash, t_ordered_map *Bins);
@@ -50,7 +50,7 @@ void PRIVATE(ClearPartitionBins)(t_ordered_map *Bins);
 #define ClearPartitionBins(...) PRIVATE(ClearPartitionBins)(__VA_ARGS__)
 
 void PRIVATE(FindPartitions)(const t_partition_hash *Hash, const t_ordered_map *RetrievedBins,
-  size_t NumPoints, const int **Points, const int *BinIndices, int *PartitionRanks);
+  long long NumPoints, const int **Points, const int *BinIndices, int *PartitionRanks);
 #define FindPartitions(...) PRIVATE(FindPartitions)(__VA_ARGS__)
 
 #ifdef __cplusplus

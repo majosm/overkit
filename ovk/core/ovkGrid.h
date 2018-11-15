@@ -35,8 +35,8 @@ void ovkGetGridPeriodicLength(const ovk_grid *Grid, double *PeriodicLength);
 void ovkGetGridGeometryType(const ovk_grid *Grid, ovk_geometry_type *GeometryType);
 void ovkGetGridGlobalRange(const ovk_grid *Grid, ovk_range *GlobalRange);
 void ovkGetGridLocalRange(const ovk_grid *Grid, ovk_range *LocalRange);
-void ovkGetGridGlobalCount(const ovk_grid *Grid, size_t *NumGlobal);
-void ovkGetGridLocalCount(const ovk_grid *Grid, size_t *NumLocal);
+void ovkGetGridGlobalCount(const ovk_grid *Grid, long long *NumGlobal);
+void ovkGetGridLocalCount(const ovk_grid *Grid, long long *NumLocal);
 
 void ovkCreateGridParams(ovk_grid_params **Params, int NumDims);
 void ovkDestroyGridParams(ovk_grid_params **Params);

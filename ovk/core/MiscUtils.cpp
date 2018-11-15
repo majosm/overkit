@@ -20,13 +20,13 @@ template <typename T> struct sort_permutation_compare {
 
 extern "C" {
 
-void PRIVATE(SortPermutation_size_t)(size_t N, const size_t *Array, size_t *Permutation) {
+void PRIVATE(SortPermutation_long_long)(long long N, const long long *Array, long long *Permutation) {
 
-  for (size_t i = 0; i < N; ++i) {
+  for (long long i = 0; i < N; ++i) {
     Permutation[i] = i;
   }
 
-  std::sort(Permutation, Permutation+N, sort_permutation_compare<size_t>(Array));
+  std::sort(Permutation, Permutation+N, sort_permutation_compare<long long>(Array));
 
 }
 

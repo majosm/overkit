@@ -54,21 +54,21 @@ static inline void ovkRangeSize(const ovk_range *Range, int *Size) {
 
 }
 
-static inline void ovkRangeCount(const ovk_range *Range, size_t *Count) {
+static inline void ovkRangeCount(const ovk_range *Range, long long *Count) {
 
   int iDim;
 
   *Count = 1;
 
   for (iDim = 0; iDim < Range->nd; ++iDim) {
-    *Count *= (size_t)(Range->e[iDim] - Range->b[iDim]);
+    *Count *= Range->e[iDim] - Range->b[iDim];
   }
 
 }
 
 static inline void ovkRangeCountSmall(const ovk_range *Range, int *Count) {
 
-  size_t CountLarge;
+  long long CountLarge;
 
   ovkRangeCount(Range, &CountLarge);
 
@@ -77,10 +77,10 @@ static inline void ovkRangeCountSmall(const ovk_range *Range, int *Count) {
 }
 
 static inline void ovkRangeTupleToIndex(const ovk_range *Range, ovk_array_layout Layout,
-  const int *Tuple, size_t *Index) {
+  const int *Tuple, long long *Index) {
 
   long long Offset[OVK_MAX_DIMS] = {Tuple[0]-Range->b[0], Tuple[1]-Range->b[1], Tuple[2]-Range->b[2]};
-  size_t Size[OVK_MAX_DIMS];
+  long long Size[OVK_MAX_DIMS];
 
   switch (Layout) {
   case OVK_ROW_MAJOR:
@@ -100,30 +100,20 @@ static inline void ovkRangeTupleToIndex(const ovk_range *Range, ovk_array_layout
 static inline void ovkRangeTupleToIndexSmall(const ovk_range *Range, ovk_array_layout Layout,
   const int *Tuple, int *Index) {
 
-  int Offset[OVK_MAX_DIMS] = {Tuple[0]-Range->b[0], Tuple[1]-Range->b[1], Tuple[2]-Range->b[2]};
-  int Size[OVK_MAX_DIMS];
+  long long IndexLarge;
 
-  switch (Layout) {
-  case OVK_ROW_MAJOR:
-    Size[1] = Range->e[1]-Range->b[1];
-    Size[2] = Range->e[2]-Range->b[2];
-    *Index = Size[2]*(Size[1]*Offset[0] + Offset[1]) + Offset[2];
-    break;
-  case OVK_COLUMN_MAJOR:
-    Size[0] = Range->e[0]-Range->b[0];
-    Size[1] = Range->e[1]-Range->b[1];
-    *Index = Offset[0] + Size[0]*(Offset[1] + Size[1]*Offset[2]);
-    break;
-  }
+  ovkRangeTupleToIndex(Range, Layout, Tuple, &IndexLarge);
+
+  *Index = (int)IndexLarge;
 
 }
 
 static inline void ovkRangeIndexToTuple(const ovk_range *Range, ovk_array_layout Layout,
-  size_t Index, int *Tuple) {
+  long long Index, int *Tuple) {
 
   int iDim;
-  size_t Stride[OVK_MAX_DIMS];
-  size_t ReducedIndex;
+  long long Stride[OVK_MAX_DIMS];
+  long long ReducedIndex;
 
   switch (Layout) {
   case OVK_ROW_MAJOR:

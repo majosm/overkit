@@ -258,11 +258,7 @@ void ovkGetGridSize(const ovk_grid *Grid, int *Size) {
   OVK_DEBUG_ASSERT(Grid, "Invalid grid pointer.");
   OVK_DEBUG_ASSERT(Size, "Invalid size pointer.");
 
-  int iDim;
-
-  for (iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Size[iDim] = Grid->global_range.e[iDim];
-  }
+  ovkRangeSize(&Grid->global_range, Size);
 
 }
 
@@ -328,31 +324,21 @@ void ovkGetGridLocalRange(const ovk_grid *Grid, ovk_range *LocalRange) {
 
 }
 
-void ovkGetGridGlobalCount(const ovk_grid *Grid, size_t *NumGlobal) {
+void ovkGetGridGlobalCount(const ovk_grid *Grid, long long *NumGlobal) {
 
   OVK_DEBUG_ASSERT(Grid, "Invalid grid pointer.");
   OVK_DEBUG_ASSERT(NumGlobal, "Invalid num global pointer.");
 
-  int iDim;
-
-  *NumGlobal = 1;
-  for (iDim = 0; iDim < Grid->num_dims; ++iDim) {
-    *NumGlobal *= (size_t)(Grid->global_range.e[iDim]-Grid->global_range.b[iDim]);
-  }
+  ovkRangeCount(&Grid->global_range, NumGlobal);
 
 }
 
-void ovkGetGridLocalCount(const ovk_grid *Grid, size_t *NumLocal) {
+void ovkGetGridLocalCount(const ovk_grid *Grid, long long *NumLocal) {
 
   OVK_DEBUG_ASSERT(Grid, "Invalid grid pointer.");
   OVK_DEBUG_ASSERT(NumLocal, "Invalid num local pointer.");
 
-  int iDim;
-
-  *NumLocal = 1;
-  for (iDim = 0; iDim < Grid->num_dims; ++iDim) {
-    *NumLocal *= (size_t)(Grid->local_range.e[iDim]-Grid->local_range.b[iDim]);
-  }
+  ovkRangeCount(&Grid->local_range, NumLocal);
 
 }
 
@@ -361,7 +347,7 @@ static void CreateNeighbors(ovk_grid *Grid) {
   int iDim, jDim;
   int iFace;
   int i, j, k;
-  size_t iPoint;
+  long long iPoint;
   int iNeighbor;
   t_ordered_map_entry *Entry;
 
@@ -416,9 +402,9 @@ static void CreateNeighbors(ovk_grid *Grid) {
     }
   }
 
-  size_t NumNeighborPoints = 0;
+  long long NumNeighborPoints = 0;
   for (iFace = 0; iFace < NumNeighborFaces; ++iFace) {
-    size_t NumPoints;
+    long long NumPoints;
     ovkRangeCount(NeighborFaces+iFace, &NumPoints);
     NumNeighborPoints += NumPoints;
   }
@@ -555,7 +541,7 @@ static void PrintGridSummary(const ovk_grid *Grid) {
     }
   }
 
-  size_t TotalPoints;
+  long long TotalPoints;
   ovkRangeCount(&Grid->global_range, &TotalPoints);
 
   char TotalPointsString[NUMBER_STRING_LENGTH+7];
@@ -592,7 +578,7 @@ static void PrintGridDecomposition(const ovk_grid *Grid) {
   }
 
   char TotalLocalPointsString[NUMBER_STRING_LENGTH+7];
-  size_t TotalLocalPoints;
+  long long TotalLocalPoints;
   ovkRangeCount(&Grid->local_range, &TotalLocalPoints);
   PluralizeLabel(TotalLocalPoints, "points", "point", TotalLocalPointsString);
 

@@ -40,22 +40,33 @@ static inline void SizeToString(size_t N, char *NString) {
 
 }
 
-static inline void IntToString(int N, char *NString) {
+static inline void LongLongToString(long long N, char *NString) {
 
   if (N >= 0) {
-    SizeToString(N, NString);
+    SizeToString((size_t)N, NString);
   } else {
     NString[0] = '-';
-    SizeToString(abs(N), NString+1);
+    SizeToString((size_t)llabs(N), NString+1);
   }
 
 }
 
-static inline void PluralizeLabel(size_t Count, const char *PluralLabel, const char *SingularLabel,
-  char *String) {
+static inline void IntToString(int N, char *NString) {
+
+  if (N >= 0) {
+    SizeToString((size_t)N, NString);
+  } else {
+    NString[0] = '-';
+    SizeToString((size_t)abs(N), NString+1);
+  }
+
+}
+
+static inline void PluralizeLabel(long long Count, const char *PluralLabel, const char
+  *SingularLabel, char *String) {
 
   char CountString[32];
-  SizeToString(Count, CountString);
+  LongLongToString(Count, CountString);
 
   if (Count > 1 || Count == 0) {
     sprintf(String, "%s %s", CountString, PluralLabel);

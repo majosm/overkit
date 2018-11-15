@@ -159,7 +159,7 @@ void ovkGetConnectivityDonorSideCommRank(const ovk_connectivity_d *Donors, int *
 
 }
 
-void ovkGetConnectivityDonorSideCount(const ovk_connectivity_d *Donors, size_t *NumDonors) {
+void ovkGetConnectivityDonorSideCount(const ovk_connectivity_d *Donors, long long *NumDonors) {
 
   OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
   OVK_DEBUG_ASSERT(NumDonors, "Invalid num donors pointer.");
@@ -177,7 +177,7 @@ void ovkGetConnectivityDonorSideMaxSize(const ovk_connectivity_d *Donors, int *M
 
 }
 
-void ovkResizeDonors(ovk_connectivity_d *Donors, size_t NumDonors, int MaxSize) {
+void ovkResizeDonors(ovk_connectivity_d *Donors, long long NumDonors, int MaxSize) {
 
   OVK_DEBUG_ASSERT(Donors, "Invalid donors pointer.");
   OVK_DEBUG_ASSERT(NumDonors >= 0, "Invalid donor count.");
@@ -203,7 +203,7 @@ void ovkResizeDonors(ovk_connectivity_d *Donors, size_t NumDonors, int MaxSize) 
   }
 
   int iDim, iPoint;
-  size_t iDonor;
+  long long iDonor;
 
   int NumDims = Donors->num_dims;
 

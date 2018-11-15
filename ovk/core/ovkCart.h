@@ -18,7 +18,7 @@ typedef struct {
 
 static inline void ovkDefaultCart(ovk_cart *Cart, int NumDims);
 static inline void ovkSetCart(ovk_cart *Cart, int NumDims, const int *Size, const bool *Periodic);
-static inline void ovkCartCount(const ovk_cart *Cart, size_t *Count);
+static inline void ovkCartCount(const ovk_cart *Cart, long long *Count);
 static inline bool ovkCartEquals(const ovk_cart *Cart, const ovk_cart *OtherCart);
 static inline void ovkCartFindPeriod(const ovk_cart *Cart, const int *Point, int *Period);
 static inline void ovkCartPeriodicAdjust(const ovk_cart *Cart, const int *Tuple,

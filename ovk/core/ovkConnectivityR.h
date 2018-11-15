@@ -21,9 +21,10 @@ void ovkGetConnectivityReceiverSideDimension(const ovk_connectivity_r *Receivers
 void ovkGetConnectivityReceiverSideComm(const ovk_connectivity_r *Receivers, MPI_Comm *Comm);
 void ovkGetConnectivityReceiverSideCommSize(const ovk_connectivity_r *Receivers, int *CommSize);
 void ovkGetConnectivityReceiverSideCommRank(const ovk_connectivity_r *Receivers, int *CommRank);
-void ovkGetConnectivityReceiverSideCount(const ovk_connectivity_r *Receivers, size_t *NumReceivers);
+void ovkGetConnectivityReceiverSideCount(const ovk_connectivity_r *Receivers, long long
+  *NumReceivers);
 
-void ovkResizeReceivers(ovk_connectivity_r *Receivers, size_t NumReceivers);
+void ovkResizeReceivers(ovk_connectivity_r *Receivers, long long NumReceivers);
 
 void ovkGetReceiverPoints(const ovk_connectivity_r *Receivers, int Dimension, const int **Points);
 void ovkEditReceiverPoints(ovk_connectivity_r *Receivers, int Dimension, int **Points);

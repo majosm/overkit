@@ -32,7 +32,7 @@ struct ovk_connectivity_d {
   MPI_Comm comm;
   int comm_size;
   int comm_rank;
-  size_t count;
+  long long count;
   int max_size;
   const ovk_grid *grid;
   t_connectivity_d_edits edits;

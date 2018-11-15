@@ -173,13 +173,13 @@ int main(int argc, char **argv) {
     for (iGrid = 0; iGrid < 2; ++iGrid) {
       int OtherGridID = iGrid+1;
       if (ovkConnectivityExists(Domain, LocalGridID, OtherGridID)) {
-        size_t NumDonors;
+        long long NumDonors;
         ovkGetLocalDonorCount(Domain, LocalGridID, OtherGridID, &NumDonors);
         SendBuffers[iSend] = malloc(NumDonors*sizeof(double));
         ++iSend;
       }
       if (ovkConnectivityExists(Domain, OtherGridID, LocalGridID)) {
-        size_t NumReceivers;
+        long long NumReceivers;
         ovkGetLocalReceiverCount(Domain, OtherGridID, LocalGridID, &NumReceivers);
         ReceiveBuffers[iReceive] = malloc(NumReceivers*sizeof(double));
         ++iReceive;

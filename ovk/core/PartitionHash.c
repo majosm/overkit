@@ -190,10 +190,10 @@ void PRIVATE(DestroyPartitionHash)(t_partition_hash **Hash_) {
 
 }
 
-void PRIVATE(MapToPartitionBins)(const t_partition_hash *Hash, size_t NumPoints, const int **Points,
-  int *BinIndices) {
+void PRIVATE(MapToPartitionBins)(const t_partition_hash *Hash, long long NumPoints, const int
+  **Points, int *BinIndices) {
 
-  size_t iPoint;
+  long long iPoint;
 
   for (iPoint = 0; iPoint < NumPoints; ++iPoint) {
     int Point[MAX_DIMS] = {Points[0][iPoint], Points[1][iPoint], Points[2][iPoint]};
@@ -346,9 +346,9 @@ void PRIVATE(ClearPartitionBins)(t_ordered_map *Bins) {
 }
 
 void PRIVATE(FindPartitions)(const t_partition_hash *Hash, const t_ordered_map *RetrievedBins,
-  size_t NumPoints, const int **Points, const int *BinIndices, int *PartitionRanks) {
+  long long NumPoints, const int **Points, const int *BinIndices, int *PartitionRanks) {
 
-  size_t iPoint;
+  long long iPoint;
   int iPartition;
 
   for (iPoint = 0; iPoint < NumPoints; ++iPoint) {

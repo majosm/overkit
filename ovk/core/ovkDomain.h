@@ -62,9 +62,9 @@ void ovkGetExchange(const ovk_domain *Domain, int DonorGridID, int ReceiverGridI
   const ovk_exchange **Exchange);
 
 void ovkGetLocalDonorCount(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
-  size_t *NumDonors);
+  long long *NumDonors);
 void ovkGetLocalReceiverCount(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
-  size_t *NumReceivers);
+  long long *NumReceivers);
 
 void ovkAssemble(ovk_domain *Domain, const ovk_assembly_options *Options);
 
