@@ -17,10 +17,12 @@ endif()
 # CMake requirements
 #--------------------
 
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.0.2)
 
 include(CheckIncludeFile)
 include(CheckSymbolExists)
+include(CheckCCompilerFlag)
+include(CheckCXXCompilerFlag)
 include(CMakePackageConfigHelpers)
 
 #--------------------
@@ -34,17 +36,12 @@ set(OverkitParallel_VERSION_PATCH 0)
 set(OverkitParallel_VERSION ${OverkitParallel_VERSION_MAJOR}.${OverkitParallel_VERSION_MINOR}.${OverkitParallel_VERSION_PATCH})
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/config/modules")
-set(C_ENABLED TRUE)
-set(CXX_ENABLED TRUE)
-set(Fortran_ENABLED FALSE)
 
 #=========================
 # Build types and options
 #=========================
 
 # Build types
-include(DebugBuildType)
-include(ReleaseBuildType)
 if(NOT CMAKE_CONFIGURATION_TYPES)
   # Single-configuration generator
   if(CMAKE_BUILD_TYPE)
@@ -54,7 +51,7 @@ if(NOT CMAKE_CONFIGURATION_TYPES)
     set(BUILD_TYPE_VALUE Release)
   endif()
   set(CMAKE_BUILD_TYPE ${BUILD_TYPE_VALUE} CACHE STRING
-    "Choose the type of build, options are: None Debug Release." FORCE)
+    "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
 endif()
 
 # Options
@@ -97,13 +94,9 @@ if(NOT COMPILER_BUILT_IN_MPI AND NOT EXTERNAL_MPI)
     find_package(MPI REQUIRED)
     set(CMAKE_REQUIRED_INCLUDES ${MPI_INCLUDE_PATH})
     check_include_file(mpi.h FOUND_MPI_HEADER)
+    set(CMAKE_REQUIRED_INCLUDES)
     if(FOUND_MPI_HEADER)
-      # TODO: figure out why this doesn't work on some machines (e.g. Ray)
-#       set(CMAKE_REQUIRED_LIBRARIES ${MPI_C_LIBRARIES})
-#       check_symbol_exists(MPI_Init "mpi.h" MPI_WORKS)
-#       if(MPI_WORKS)
-        set(EXTERNAL_MPI TRUE CACHE INTERNAL "")
-#       endif()
+      set(EXTERNAL_MPI TRUE CACHE INTERNAL "")
     endif()
     if(NOT EXTERNAL_MPI)
       message(FATAL_ERROR "Unable to build with detected MPI installation.")
@@ -121,6 +114,8 @@ if(NOT HAVE_MPI_IBARRIER)
   message(WARNING "MPI non-blocking collectives aren't supported. Performance may be degraded for certain operations.")
   set(GLOBAL_WARNING_FLAG TRUE CACHE INTERNAL "")
 endif()
+set(CMAKE_REQUIRED_INCLUDES)
+set(CMAKE_REQUIRED_LIBRARIES)
 
 #----------------
 # C math library
@@ -134,6 +129,66 @@ endif()
 #=======================
 # Project configuration
 #=======================
+
+#-------------------------
+# Baseline compiler flags
+#-------------------------
+
+# Language dialect flags (only if target_compile_features isn't supported, CMake < 3.6)
+if(NOT DETECTED_DIALECT_FLAGS)
+  set(DIALECT_C_FLAGS "" CACHE INTERNAL "")
+  set(DIALECT_CXX_FLAGS "" CACHE INTERNAL "")
+  if(CMAKE_VERSION VERSION_LESS 3.6)
+    check_c_compiler_flag(-std=c99 STD_C99_FLAG_SUPPORTED)
+    if(STD_C99_FLAG_SUPPORTED)
+      set(DIALECT_C_FLAGS -std=c99 CACHE INTERNAL "")
+    endif()
+    check_cxx_compiler_flag(-std=c++11 STD_CXX11_FLAG_SUPPORTED)
+    if(STD_CXX11_FLAG_SUPPORTED)
+      set(DIALECT_CXX_FLAGS -std=c++11 CACHE INTERNAL "")
+    endif()
+  endif()
+  set(DETECTED_DIALECT_FLAGS TRUE CACHE INTERNAL "")
+endif()
+
+# Warnings
+if(NOT DETECTED_WARNING_FLAGS)
+  set(WARNING_C_FLAGS CACHE INTERNAL "")
+  set(WARNING_CXX_FLAGS CACHE INTERNAL "")
+  check_c_compiler_flag(-Wall WALL_FLAG_SUPPORTED)
+  if(WALL_FLAG_SUPPORTED)
+    set(WARNING_C_FLAGS -Wall CACHE INTERNAL "")
+    set(WARNING_CXX_FLAGS -Wall CACHE INTERNAL "")
+  endif()
+  set(DETECTED_WARNING_FLAGS TRUE CACHE INTERNAL "")
+endif()
+
+# Optimizations
+if(NOT DETECTED_OPT_FLAGS)
+  set(OPT_C_FLAGS "" CACHE INTERNAL "")
+  set(OPT_CXX_FLAGS "" CACHE INTERNAL "")
+  check_c_compiler_flag(-ffast-math FAST_MATH_FLAG_SUPPORTED)
+  if(FAST_MATH_FLAG_SUPPORTED)
+    set(OPT_C_FLAGS ${OPT_C_FLAGS} -ffast-math CACHE INTERNAL "")
+    set(OPT_CXX_FLAGS ${OPT_CXX_FLAGS} -ffast-math CACHE INTERNAL "")
+  endif()
+  check_c_compiler_flag(-funroll-loops UNROLL_LOOPS_FLAG_SUPPORTED)
+  if(UNROLL_LOOPS_FLAG_SUPPORTED)
+    set(OPT_C_FLAGS ${OPT_C_FLAGS} -funroll-loops CACHE INTERNAL "")
+    set(OPT_CXX_FLAGS ${OPT_CXX_FLAGS} -funroll-loops CACHE INTERNAL "")
+  endif()
+  check_c_compiler_flag(-ip IP_FLAG_SUPPORTED)
+  if(IP_FLAG_SUPPORTED)
+    set(OPT_C_FLAGS ${OPT_C_FLAGS} -ip CACHE INTERNAL "")
+    set(OPT_CXX_FLAGS ${OPT_CXX_FLAGS} -ip CACHE INTERNAL "")
+  endif()
+  check_c_compiler_flag(-no-prec-div NO_PREC_DIV_FLAG_SUPPORTED)
+  if(NO_PREC_DIV_FLAG_SUPPORTED)
+    set(OPT_C_FLAGS ${OPT_C_FLAGS} -no-prec-div CACHE INTERNAL "")
+    set(OPT_CXX_FLAGS ${OPT_CXX_FLAGS} -no-prec-div CACHE INTERNAL "")
+  endif()
+  set(DETECTED_OPT_FLAGS TRUE CACHE INTERNAL "")
+endif()
 
 #---------
 # Testing
@@ -156,10 +211,22 @@ if(COVERAGE)
 
   # Requires GNU
   if (NOT "${CMAKE_C_COMPILER_ID}" MATCHES "GNU")
-    message(FATAL_ERROR "Building with coverage analysis requires GNU C compiler.")
+    message(FATAL_ERROR "Building with coverage analysis requires GNU compilers.")
   endif()
-  if (NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-    message(FATAL_ERROR "Building with coverage analysis requires GNU C++ compiler.")
+
+  # Compiler flags
+  if(NOT FOUND_COVERAGE_FLAGS)
+    set(CMAKE_REQUIRED_LIBRARIES --coverage)
+    check_c_compiler_flag(--coverage COVERAGE_FLAG_SUPPORTED)
+    set(CMAKE_REQUIRED_LIBRARIES)
+    if(COVERAGE_FLAG_SUPPORTED)
+      set(COVERAGE_COMPILE_FLAGS --coverage CACHE INTERNAL "")
+      set(COVERAGE_LINK_FLAGS --coverage CACHE INTERNAL "")
+      set(FOUND_COVERAGE_FLAGS TRUE CACHE INTERNAL "")
+    endif()
+  endif()
+  if(NOT FOUND_COVERAGE_FLAGS)
+    message(FATAL_ERROR "Unable to set compiler flags to enable coverage.")
   endif()
 
   # Coverage report
@@ -173,6 +240,34 @@ if(COVERAGE)
     COMMAND "${CMAKE_COMMAND}" -DBINARY_DIR="${CMAKE_BINARY_DIR}" -P
       "${CMAKE_SOURCE_DIR}/config/scripts/coverage-clean.cmake"
   )
+
+endif()
+
+#-----------
+# Profiling
+#-----------
+
+if(PROFILE)
+
+  if(NOT FOUND_PROFILE_FLAGS)
+    # GNU-style
+    check_c_compiler_flag(-pg PG_FLAG_SUPPORTED)
+    if(PG_FLAG_SUPPORTED)
+      set(PROFILE_COMPILE_FLAGS -pg CACHE INTERNAL "")
+      set(FOUND_PROFILE_FLAGS TRUE CACHE INTERNAL "")
+    endif()
+  endif()
+  if(NOT FOUND_PROFILE_FLAGS)
+    # Intel-style
+    check_c_compiler_flag(-p P_FLAG_SUPPORTED)
+    if(P_FLAG_SUPPORTED)
+      set(PROFILE_COMPILE_FLAGS -p CACHE INTERNAL "")
+      set(FOUND_PROFILE_FLAGS TRUE CACHE INTERNAL "")
+    endif()
+  endif()
+  if(NOT FOUND_PROFILE_FLAGS)
+    message(FATAL_ERROR "Unable to set compiler flags to enable profiling.")
+  endif()
 
 endif()
 
@@ -214,17 +309,6 @@ include_directories("${CMAKE_BINARY_DIR}/include")
 # Internal headers end up in the include-internal directory of the build tree
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/include-internal")
 include_directories("${CMAKE_BINARY_DIR}/include-internal")
-
-# set(EXTRA_C_FLAGS "")
-# set(EXTRA_CXX_FLAGS "")
-# set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${EXTRA_C_FLAGS}" CACHE STRING
-#   "Flags used by the C compiler during debug builds." FORCE)
-# set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${EXTRA_C_FLAGS}" CACHE STRING
-#   "Flags used by the C compiler during release builds." FORCE)
-# set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${EXTRA_CXX_FLAGS}" CACHE STRING
-#   "Flags used by the C++ compiler during debug builds." FORCE)
-# set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${EXTRA_CXX_FLAGS}" CACHE STRING
-#   "Flags used by the C++ compiler during release builds." FORCE)
 
 #==================
 # Pre-build checks
@@ -280,7 +364,7 @@ else()
   set(OverkitParallel_CMAKE_DIR "${CMAKE_INSTALL_PREFIX}")
   set(OverkitParallel_CMAKE_INCLUDES "${CMAKE_INSTALL_PREFIX}/include")
 endif()
-set(OverkitParallel_CMAKE_LIBRARIES overkit-parallel)
+set(OverkitParallel_CMAKE_LIBRARIES OverkitParallel::overkit-parallel)
 set(OverkitParallel_CMAKE_HEADERS overkit.h)
 
 set(OverkitParallel_CMAKE_OPTION_SHARED_LIBS ${BUILD_SHARED_LIBS})
@@ -342,11 +426,7 @@ write_basic_package_version_file("${CMAKE_BINARY_DIR}/OverkitParallelConfigVersi
   COMPATIBILITY SameMajorVersion
 )
 
-if(CMAKE_MAJOR_VERSION GREATER 3)
-  export(EXPORT OverkitParallelTargets FILE "${CMAKE_BINARY_DIR}/OverkitParallelTargets.cmake")
-else()
-  export(TARGETS overkit-parallel FILE "${CMAKE_BINARY_DIR}/OverkitParallelTargets.cmake")
-endif()
+export(EXPORT OverkitParallelTargets NAMESPACE OverkitParallel:: FILE "${CMAKE_BINARY_DIR}/OverkitParallelTargets.cmake")
 
 install(
   FILES
@@ -355,7 +435,7 @@ install(
   DESTINATION lib/OverkitParallel/CMake
 )
 
-install(EXPORT OverkitParallelTargets DESTINATION lib/OverkitParallel/CMake)
+install(EXPORT OverkitParallelTargets NAMESPACE OverkitParallel:: DESTINATION lib/OverkitParallel/CMake)
 
 #=============================
 # Write configuration summary

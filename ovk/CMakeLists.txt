@@ -15,12 +15,23 @@ set(LOCAL_TARGETS)
 # Library target
 #----------------
 
-add_library(overkit-parallel $<TARGET_OBJECTS:overkit-core> $<TARGET_OBJECTS:overkit-extras>)
+add_library(overkit-parallel
+  $<TARGET_OBJECTS:overkit-core-c>
+  $<TARGET_OBJECTS:overkit-core-cxx>
+  $<TARGET_OBJECTS:overkit-extras>
+)
 list(APPEND LOCAL_TARGETS overkit-parallel)
+
+add_library(OverkitParallel::overkit-parallel ALIAS overkit-parallel)
 
 set_target_properties(overkit-parallel PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
   LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+)
+
+target_include_directories(overkit-parallel PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+  $<INSTALL_INTERFACE:include>
 )
 
 set_property(TARGET overkit-parallel PROPERTY VERSION ${OverkitParallel_VERSION})
@@ -42,15 +53,15 @@ install(TARGETS overkit-parallel
 # MPI
 if(EXTERNAL_MPI)
   target_include_directories(overkit-parallel SYSTEM PUBLIC "${MPI_INCLUDE_PATH}")
-  target_link_libraries(overkit-parallel ${MPI_C_LIBRARIES})
+  target_link_libraries(overkit-parallel PUBLIC ${MPI_C_LIBRARIES})
 endif()
 
 # C math library
-target_link_libraries(overkit-parallel "${C_MATH_LIBRARY}")
+target_link_libraries(overkit-parallel PUBLIC "${C_MATH_LIBRARY}")
 
 # Coverage
 if(COVERAGE)
-  set_target_properties(overkit-parallel PROPERTIES LINK_FLAGS_DEBUG "--coverage")
+  target_link_libraries(overkit-parallel PUBLIC ${COVERAGE_LINK_FLAGS})
 endif()
 
 #---------------

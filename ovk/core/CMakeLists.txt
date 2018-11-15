@@ -15,8 +15,7 @@ set(LOCAL_TARGETS)
 # Source files
 #--------------
 
-set(SOURCES
-  AssemblyOptions.cpp
+set(C_SOURCES
   Connectivity.c
   ConnectivityD.c
   ConnectivityR.c
@@ -27,10 +26,14 @@ set(SOURCES
   Global.c
   Grid.c
   Logger.c
-  MiscUtils.cpp
   MPIUtils.c
   PartitionHash.c
   ProfileUtils.c
+)
+
+set(CXX_SOURCES
+  AssemblyOptions.cpp
+  MiscUtils.cpp
 )
 
 set(INTERNAL_HEADERS
@@ -75,41 +78,76 @@ set(API_HEADERS
   ovkRange.inl
 )
 
-#----------------
-# Library target
-#----------------
+#-----------------
+# Library targets
+#-----------------
 
-add_library(overkit-core OBJECT ${SOURCES})
-list(APPEND LOCAL_TARGETS overkit-core)
+# Need separate libraries for C and C++ to support CMake versions older than 3.3 that
+# do not support COMPILE_LANGUAGE generator expressions in target_compile_options
+
+add_library(overkit-core-c OBJECT ${C_SOURCES})
+list(APPEND LOCAL_TARGETS overkit-core-c)
+
+add_library(overkit-core-cxx OBJECT ${CXX_SOURCES})
+list(APPEND LOCAL_TARGETS overkit-core-cxx)
 
 # Generate/copy headers to build tree before compiling
-add_dependencies(overkit-core core-api-headers)
-add_dependencies(overkit-core core-internal-headers)
+add_dependencies(overkit-core-c core-api-headers)
+add_dependencies(overkit-core-cxx core-api-headers)
+add_dependencies(overkit-core-c core-internal-headers)
+add_dependencies(overkit-core-cxx core-internal-headers)
 
 #-------------------
 # Compiling/linking
 #-------------------
 
+# Baseline compiler flags
+set(BASE_C_FLAGS_DEBUG -O0 ${DIALECT_C_FLAGS} ${WARNING_C_FLAGS})
+set(BASE_C_FLAGS_RELEASE ${DIALECT_C_FLAGS} ${OPT_C_FLAGS})
+target_compile_options(overkit-core-c PRIVATE
+  $<$<CONFIG:Debug>:${BASE_C_FLAGS_DEBUG}>
+  $<$<CONFIG:Release>:${BASE_C_FLAGS_RELEASE}>
+  $<$<CONFIG:RelWithDebInfo>:${BASE_C_FLAGS_RELEASE}>
+  $<$<CONFIG:MinSizeRel>:${BASE_C_FLAGS_RELEASE}>
+)
+set(BASE_CXX_FLAGS_DEBUG -O0 ${DIALECT_CXX_FLAGS} ${WARNING_CXX_FLAGS})
+set(BASE_CXX_FLAGS_RELEASE ${DIALECT_CXX_FLAGS} ${OPT_CXX_FLAGS})
+target_compile_options(overkit-core-cxx PRIVATE
+  $<$<CONFIG:Debug>:${BASE_CXX_FLAGS_DEBUG}>
+  $<$<CONFIG:Release>:${BASE_CXX_FLAGS_RELEASE}>
+  $<$<CONFIG:RelWithDebInfo>:${BASE_CXX_FLAGS_RELEASE}>
+  $<$<CONFIG:MinSizeRel>:${BASE_CXX_FLAGS_RELEASE}>
+)
+
+# Coverage
+if(COVERAGE)
+  target_compile_options(overkit-core-c PRIVATE ${COVERAGE_COMPILE_FLAGS})
+  target_compile_options(overkit-core-cxx PRIVATE ${COVERAGE_COMPILE_FLAGS})
+endif()
+
+# Profiling
+if(PROFILE)
+  target_compile_options(overkit-core-c PRIVATE ${PROFILE_COMPILE_FLAGS})
+  target_compile_options(overkit-core-cxx PRIVATE ${PROFILE_COMPILE_FLAGS})
+endif()
+
 # C++11 standard
 if(NOT CMAKE_VERSION VERSION_LESS "3.8")
-  target_compile_features(overkit-core PRIVATE cxx_std_11)
+  target_compile_features(overkit-core-cxx PRIVATE cxx_std_11)
 else()
-  target_compile_options(overkit-core PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-std=c++11>)
+  target_compile_options(overkit-core-cxx PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-std=c++11>)
 endif()
 
 # Needed for linking into shared lib
 if(BUILD_SHARED_LIBS)
-  set_property(TARGET overkit-core PROPERTY POSITION_INDEPENDENT_CODE TRUE)
+  set_property(TARGET overkit-core-c PROPERTY POSITION_INDEPENDENT_CODE TRUE)
+  set_property(TARGET overkit-core-cxx PROPERTY POSITION_INDEPENDENT_CODE TRUE)
 endif()
 
 # MPI
 if(EXTERNAL_MPI)
-  target_include_directories(overkit-core SYSTEM PUBLIC "${MPI_INCLUDE_PATH}")
-endif()
-
-# Coverage
-if(COVERAGE)
-  target_compile_options(overkit-core PRIVATE --coverage)
+  target_include_directories(overkit-core-c SYSTEM PUBLIC "${MPI_INCLUDE_PATH}")
+  target_include_directories(overkit-core-cxx SYSTEM PUBLIC "${MPI_INCLUDE_PATH}")
 endif()
 
 #--------------------
