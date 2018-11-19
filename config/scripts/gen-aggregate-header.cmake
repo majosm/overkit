@@ -15,4 +15,4 @@ else()
   endforeach()
 endif()
 
-configure_file("${HEADER_IN}" "${HEADER_OUT}")
+configure_file(${HEADER_IN} ${HEADER_OUT})

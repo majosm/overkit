@@ -2,10 +2,10 @@
 # License: MIT (http://opensource.org/licenses/MIT)
 
 # Location
-set(OverkitParallel_DIR "@OverkitParallel_CMAKE_DIR@")
+set(OverkitParallel_DIR @OverkitParallel_CMAKE_DIR@)
 
 # Compiling/linking
-set(OverkitParallel_INCLUDES "@OverkitParallel_CMAKE_INCLUDES@")
+set(OverkitParallel_INCLUDES @OverkitParallel_CMAKE_INCLUDES@)
 set(OverkitParallel_LIBRARIES @OverkitParallel_CMAKE_LIBRARIES@)
 set(OverkitParallel_HEADERS @OverkitParallel_CMAKE_HEADERS@)
 

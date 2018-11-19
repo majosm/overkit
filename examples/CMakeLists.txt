@@ -49,12 +49,12 @@ foreach(EXAMPLE ${LOCAL_TARGETS})
 
   # MPI
   if(EXTERNAL_MPI)
-    target_include_directories(${EXAMPLE} SYSTEM PRIVATE "${MPI_INCLUDE_PATH}")
+    target_include_directories(${EXAMPLE} SYSTEM PRIVATE ${MPI_INCLUDE_PATH})
     target_link_libraries(${EXAMPLE} ${MPI_C_LIBRARIES} ${MPI_CXX_LIBRARIES})
   endif()
 
   # C math library
-  target_link_libraries(${EXAMPLE} "${C_MATH_LIBRARY}")
+  target_link_libraries(${EXAMPLE} ${C_MATH_LIBRARY})
 
   # Overkit library
   target_link_libraries(${EXAMPLE} overkit-parallel)

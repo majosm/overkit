@@ -9,7 +9,7 @@
 set(GLOBAL_WARNING_FLAG FALSE CACHE INTERNAL "")
 
 # Forbid in-source builds
-if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
   message(FATAL_ERROR "In-source builds are not allowed. Please run CMake from a separate directory (you may need to remove CMakeFiles and CMakeCache.txt).")
 endif()
 
@@ -35,7 +35,7 @@ set(OverkitParallel_VERSION_MINOR 1)
 set(OverkitParallel_VERSION_PATCH 0)
 set(OverkitParallel_VERSION ${OverkitParallel_VERSION_MAJOR}.${OverkitParallel_VERSION_MINOR}.${OverkitParallel_VERSION_PATCH})
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/config/modules")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/config/modules)
 
 #=========================
 # Build types and options
@@ -79,9 +79,9 @@ if(NOT COMPILER_BUILT_IN_MPI AND NOT EXTERNAL_MPI)
   set(COMPILER_BUILT_IN_MPI FALSE CACHE INTERNAL "")
   set(EXTERNAL_MPI FALSE CACHE INTERNAL "")
   # If the user specified MPI wrappers as compilers, use them
-  check_include_file("mpi.h" MPI_HEADER_FOUND)
+  check_include_file(mpi.h MPI_HEADER_FOUND)
   if(MPI_HEADER_FOUND)
-    check_symbol_exists(MPI_Init "mpi.h" MPI_WORKS)
+    check_symbol_exists(MPI_Init mpi.h MPI_WORKS)
     if(MPI_WORKS)
       set(COMPILER_BUILT_IN_MPI TRUE CACHE INTERNAL "")
       set(MPI_INCLUDE_PATH "" CACHE INTERNAL "")
@@ -109,7 +109,7 @@ endif()
 # Check if MPI_Ibarrier is supported
 set(CMAKE_REQUIRED_INCLUDES ${MPI_INCLUDE_PATH})
 set(CMAKE_REQUIRED_LIBRARIES ${MPI_C_LIBRARIES})
-check_symbol_exists(MPI_Ibarrier "mpi.h" HAVE_MPI_IBARRIER)
+check_symbol_exists(MPI_Ibarrier mpi.h HAVE_MPI_IBARRIER)
 if(NOT HAVE_MPI_IBARRIER)
   message(WARNING "MPI non-blocking collectives aren't supported. Performance may be degraded for certain operations.")
   set(GLOBAL_WARNING_FLAG TRUE CACHE INTERNAL "")
@@ -210,7 +210,7 @@ endif()
 if(COVERAGE)
 
   # Requires GNU
-  if (NOT "${CMAKE_C_COMPILER_ID}" MATCHES "GNU")
+  if (NOT ${CMAKE_C_COMPILER_ID} MATCHES GNU)
     message(FATAL_ERROR "Building with coverage analysis requires GNU compilers.")
   endif()
 
@@ -283,7 +283,7 @@ if(BUILD_SHARED_LIBS)
   endif()
 
   # Add install lib dir to any executables' RPATH, as well as any paths to external libraries
-  set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+  set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
   set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 endif()
@@ -303,12 +303,12 @@ if(APPLE)
 endif()
 
 # API headers end up in the include directory of the build tree
-file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/include")
-include_directories("${CMAKE_BINARY_DIR}/include")
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/include)
+include_directories(${CMAKE_BINARY_DIR}/include)
 
 # Internal headers end up in the include-internal directory of the build tree
-file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/include-internal")
-include_directories("${CMAKE_BINARY_DIR}/include-internal")
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/include-internal)
+include_directories(${CMAKE_BINARY_DIR}/include-internal)
 
 #==================
 # Pre-build checks
@@ -358,11 +358,11 @@ endif()
 
 # CMake
 if(SUBPROJECT)
-  set(OverkitParallel_CMAKE_DIR "${CMAKE_BINARY_DIR}")
-  set(OverkitParallel_CMAKE_INCLUDES "${CMAKE_BINARY_DIR}/include")
+  set(OverkitParallel_CMAKE_DIR ${CMAKE_BINARY_DIR})
+  set(OverkitParallel_CMAKE_INCLUDES ${CMAKE_BINARY_DIR}/include)
 else()
-  set(OverkitParallel_CMAKE_DIR "${CMAKE_INSTALL_PREFIX}")
-  set(OverkitParallel_CMAKE_INCLUDES "${CMAKE_INSTALL_PREFIX}/include")
+  set(OverkitParallel_CMAKE_DIR ${CMAKE_INSTALL_PREFIX})
+  set(OverkitParallel_CMAKE_INCLUDES ${CMAKE_INSTALL_PREFIX}/include)
 endif()
 set(OverkitParallel_CMAKE_LIBRARIES OverkitParallel::overkit-parallel)
 set(OverkitParallel_CMAKE_HEADERS overkit.h)
@@ -375,22 +375,22 @@ set(OverkitParallel_CMAKE_OPTION_PROFILE ${PROFILE})
 set(OverkitParallel_CMAKE_OPTION_TIMERS ${TIMERS})
 set(OverkitParallel_CMAKE_OPTION_XPACC ${XPACC})
 
-configure_file("${CMAKE_SOURCE_DIR}/config/OverkitDefs.cmake.in"
-  "${CMAKE_BINARY_DIR}/OverkitParallelDefs.cmake" @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/config/OverkitDefs.cmake.in
+  ${CMAKE_BINARY_DIR}/OverkitParallelDefs.cmake @ONLY)
 
-install(FILES "${CMAKE_BINARY_DIR}/OverkitParallelDefs.cmake" DESTINATION lib/OverkitParallel/CMake)
+install(FILES ${CMAKE_BINARY_DIR}/OverkitParallelDefs.cmake DESTINATION lib/OverkitParallel/CMake)
 
 # Make
 if(SUBPROJECT)
-  set(OverkitParallel_MAKE_DIR "${CMAKE_BINARY_DIR}")
-  set(OverkitParallel_MAKE_CPPFLAGS "-I\"${CMAKE_BINARY_DIR}/include\"")
-  set(OverkitParallel_MAKE_LDFLAGS "-L\"${CMAKE_BINARY_DIR}/lib\"")
+  set(OverkitParallel_MAKE_DIR ${CMAKE_BINARY_DIR})
+  set(OverkitParallel_MAKE_CPPFLAGS -I\"${CMAKE_BINARY_DIR}/include\")
+  set(OverkitParallel_MAKE_LDFLAGS -L\"${CMAKE_BINARY_DIR}/lib\")
 else()
-  set(OverkitParallel_MAKE_DIR "${CMAKE_INSTALL_PREFIX}")
-  set(OverkitParallel_MAKE_CPPFLAGS "-I\"${CMAKE_INSTALL_PREFIX}/include\"")
-  set(OverkitParallel_MAKE_LDFLAGS "-L\"${CMAKE_INSTALL_PREFIX}/lib\"")
+  set(OverkitParallel_MAKE_DIR ${CMAKE_INSTALL_PREFIX})
+  set(OverkitParallel_MAKE_CPPFLAGS -I\"${CMAKE_INSTALL_PREFIX}/include\")
+  set(OverkitParallel_MAKE_LDFLAGS -L\"${CMAKE_INSTALL_PREFIX}/lib\")
 endif()
-set(OverkitParallel_MAKE_LIBS "-loverkit-parallel")
+set(OverkitParallel_MAKE_LIBS -loverkit-parallel)
 set(OverkitParallel_MAKE_HEADERS overkit.h)
 
 macro(convert_to_01 IN OUT)
@@ -409,29 +409,29 @@ convert_to_01(PROFILE OverkitParallel_MAKE_OPTION_PROFILE)
 convert_to_01(TIMERS OverkitParallel_MAKE_OPTION_TIMERS)
 convert_to_01(XPACC OverkitParallel_MAKE_OPTION_XPACC)
 
-configure_file("${CMAKE_SOURCE_DIR}/config/OverkitDefs.mk.in"
-  "${CMAKE_BINARY_DIR}/OverkitParallelDefs.mk" @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/config/OverkitDefs.mk.in
+  ${CMAKE_BINARY_DIR}/OverkitParallelDefs.mk @ONLY)
 
-install(FILES "${CMAKE_BINARY_DIR}/OverkitParallelDefs.mk" DESTINATION lib/OverkitParallel/Make)
+install(FILES ${CMAKE_BINARY_DIR}/OverkitParallelDefs.mk DESTINATION lib/OverkitParallel/Make)
 
 #--------------------------
 # Exports and version info
 #--------------------------
 
-configure_file("${CMAKE_SOURCE_DIR}/config/OverkitConfig.cmake"
-  "${CMAKE_BINARY_DIR}/OverkitParallelConfig.cmake" COPYONLY)
+configure_file(${CMAKE_SOURCE_DIR}/config/OverkitConfig.cmake
+  ${CMAKE_BINARY_DIR}/OverkitParallelConfig.cmake COPYONLY)
 
-write_basic_package_version_file("${CMAKE_BINARY_DIR}/OverkitParallelConfigVersion.cmake"
+write_basic_package_version_file(${CMAKE_BINARY_DIR}/OverkitParallelConfigVersion.cmake
   VERSION ${OverkitParallel_VERSION}
   COMPATIBILITY SameMajorVersion
 )
 
-export(EXPORT OverkitParallelTargets NAMESPACE OverkitParallel:: FILE "${CMAKE_BINARY_DIR}/OverkitParallelTargets.cmake")
+export(EXPORT OverkitParallelTargets NAMESPACE OverkitParallel:: FILE ${CMAKE_BINARY_DIR}/OverkitParallelTargets.cmake)
 
 install(
   FILES
-    "${CMAKE_BINARY_DIR}/OverkitParallelConfig.cmake"
-    "${CMAKE_BINARY_DIR}/OverkitParallelConfigVersion.cmake"
+    ${CMAKE_BINARY_DIR}/OverkitParallelConfig.cmake
+    ${CMAKE_BINARY_DIR}/OverkitParallelConfigVersion.cmake
   DESTINATION lib/OverkitParallel/CMake
 )
 
