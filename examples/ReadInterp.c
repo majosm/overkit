@@ -3,7 +3,7 @@
 
 #include <overkit.h>
 
-#include "ovk/core/ProfileUtils.h"
+// #include "ovk/core/ProfileUtils.h"
 
 #include <mpi.h>
 #include <math.h>
@@ -11,6 +11,11 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+// #include <sys/types.h>
+// #include <unistd.h>
+
+#define min(a, b) ovk_min(a, b)
+#define max(a, b) ovk_max(a, b)
 
 #define Printf(...) printf(__VA_ARGS__); fflush(stdout)
 
@@ -64,25 +69,36 @@ int main(int argc, char **argv) {
     Printf("Running with %i processes.\n", NumProcs);
   }
 
-  int N = 100;
+  for (OtherRank = 0; OtherRank < NumProcs; ++OtherRank) {
+    if (OtherRank == Rank) {
+      Printf("Rank %i reporting for duty.\n", Rank);
+//       pid_t ProcessID = getpid();
+//       Printf("Rank %i (pid %i) reporting for duty.\n", Rank, ProcessID);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+  }
+
+//   sleep(10);
+
+  int N = 1000;
   const char *HOPath = "../../data/small/XINTOUT.HO.2D";
   const char *XPath = "../../data/small/XINTOUT.X.2D";
 
-  t_profiler *Profiler;
-  CreateProfiler(&Profiler, MPI_COMM_WORLD);
-  if (OVK_TIMERS) EnableProfiler(Profiler);
-  int OverallTime = AddProfilerTimer(Profiler, "ReadInterp");
-  int CreateTime = AddProfilerTimer(Profiler, "ReadInterp::Create");
-  int DestroyTime = AddProfilerTimer(Profiler, "ReadInterp::Destroy");
-  int ImportTime = AddProfilerTimer(Profiler, "ReadInterp::Import");
-  int AssembleTime = AddProfilerTimer(Profiler, "ReadInterp::Assemble");
-  int ExchangeTime = AddProfilerTimer(Profiler, "ReadInterp::Exchange");
-  int CollectTime = AddProfilerTimer(Profiler, "ReadInterp::Exchange::Collect");
-  int SendRecvTime = AddProfilerTimer(Profiler, "ReadInterp::Exchange::SendRecv");
-  int DisperseTime = AddProfilerTimer(Profiler, "ReadInterp::Exchange::Disperse");
+//   t_profiler *Profiler;
+//   CreateProfiler(&Profiler, MPI_COMM_WORLD);
+//   if (OVK_TIMERS) EnableProfiler(Profiler);
+//   int OverallTime = AddProfilerTimer(Profiler, "ReadInterp");
+//   int CreateTime = AddProfilerTimer(Profiler, "ReadInterp::Create");
+//   int DestroyTime = AddProfilerTimer(Profiler, "ReadInterp::Destroy");
+//   int ImportTime = AddProfilerTimer(Profiler, "ReadInterp::Import");
+//   int AssembleTime = AddProfilerTimer(Profiler, "ReadInterp::Assemble");
+//   int ExchangeTime = AddProfilerTimer(Profiler, "ReadInterp::Exchange");
+//   int CollectTime = AddProfilerTimer(Profiler, "ReadInterp::Exchange::Collect");
+//   int SendRecvTime = AddProfilerTimer(Profiler, "ReadInterp::Exchange::SendRecv");
+//   int DisperseTime = AddProfilerTimer(Profiler, "ReadInterp::Exchange::Disperse");
 
-  StartProfileSync(Profiler, OverallTime, MPI_COMM_WORLD);
-  StartProfileSync(Profiler, CreateTime, MPI_COMM_WORLD);
+//   StartProfileSync(Profiler, OverallTime, MPI_COMM_WORLD);
+//   StartProfileSync(Profiler, CreateTime, MPI_COMM_WORLD);
 
   int NumLocalGrids;
   input_grid *InputGrids;
@@ -134,13 +150,13 @@ int main(int argc, char **argv) {
     }
   }
 
-  EndProfile(Profiler, CreateTime);
-  StartProfileSync(Profiler, ImportTime, MPI_COMM_WORLD);
+//   EndProfile(Profiler, CreateTime);
+//   StartProfileSync(Profiler, ImportTime, MPI_COMM_WORLD);
 
-  ovkEXTImportXINTOUT(Domain, HOPath, XPath, 0, MPI_INFO_NULL);
+  ovkImportXINTOUT(Domain, HOPath, XPath, 0, MPI_INFO_NULL);
 
-  EndProfile(Profiler, ImportTime);
-  StartProfileSync(Profiler, AssembleTime, MPI_COMM_WORLD);
+//   EndProfile(Profiler, ImportTime);
+//   StartProfileSync(Profiler, AssembleTime, MPI_COMM_WORLD);
 
   ovk_assembly_options *Options;
   int GridIDs[2] = {1, 2};
@@ -150,8 +166,8 @@ int main(int argc, char **argv) {
 
   ovkDestroyAssemblyOptions(&Options);
 
-  EndProfile(Profiler, AssembleTime);
-  StartProfileSync(Profiler, ExchangeTime, MPI_COMM_WORLD);
+//   EndProfile(Profiler, AssembleTime);
+// //   StartProfileSync(Profiler, ExchangeTime, MPI_COMM_WORLD);
 
   int NumSends = 0;
   int NumReceives = 0;
@@ -193,7 +209,7 @@ int main(int argc, char **argv) {
 
   for (iExchange = 0; iExchange < NumExchanges; ++iExchange) {
 
-    StartProfileSync(Profiler, CollectTime, MPI_COMM_WORLD);
+//     StartProfileSync(Profiler, CollectTime, MPI_COMM_WORLD);
 
     iSend = 0;
     for (iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
@@ -214,8 +230,8 @@ int main(int argc, char **argv) {
       }
     }
 
-    EndProfile(Profiler, CollectTime);
-    StartProfileSync(Profiler, SendRecvTime, MPI_COMM_WORLD);
+//     EndProfile(Profiler, CollectTime);
+//     StartProfileSync(Profiler, SendRecvTime, MPI_COMM_WORLD);
 
     ovk_request **Requests = malloc((NumSends+NumReceives)*sizeof(ovk_request *));
 
@@ -251,8 +267,8 @@ int main(int argc, char **argv) {
 
     free(Requests);
 
-    EndProfile(Profiler, SendRecvTime);
-    StartProfileSync(Profiler, DisperseTime, MPI_COMM_WORLD);
+//     EndProfile(Profiler, SendRecvTime);
+//     StartProfileSync(Profiler, DisperseTime, MPI_COMM_WORLD);
 
     iReceive = 0;
     for (iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
@@ -273,7 +289,7 @@ int main(int argc, char **argv) {
       }
     }
 
-    EndProfile(Profiler, DisperseTime);
+//     EndProfile(Profiler, DisperseTime);
 
   }
 
@@ -287,7 +303,7 @@ int main(int argc, char **argv) {
   }
   free(ReceiveBuffers);
 
-  EndProfile(Profiler, ExchangeTime);
+//   EndProfile(Profiler, ExchangeTime);
 
   for (OtherRank = 0; OtherRank < NumProcs; ++OtherRank) {
     if (OtherRank == Rank) {
@@ -319,17 +335,17 @@ int main(int argc, char **argv) {
     MPI_Barrier(MPI_COMM_WORLD);
   }
 
-  StartProfileSync(Profiler, DestroyTime, MPI_COMM_WORLD);
+//   StartProfileSync(Profiler, DestroyTime, MPI_COMM_WORLD);
 
   ovkDestroyContext(&Context);
 
   DestroyInputs(NumLocalGrids, &InputGrids, &InputStates);
 
-  EndProfile(Profiler, DestroyTime);
-  EndProfile(Profiler, OverallTime);
+//   EndProfile(Profiler, DestroyTime);
+//   EndProfile(Profiler, OverallTime);
 
-  WriteProfileTimes(Profiler, stdout);
-  DestroyProfiler(&Profiler);
+//   WriteProfileTimes(Profiler, stdout);
+//   DestroyProfiler(&Profiler);
 
   MPI_Finalize();
 

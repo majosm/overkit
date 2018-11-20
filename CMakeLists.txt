@@ -19,17 +19,17 @@ endif()
 
 cmake_minimum_required(VERSION 3.0.2)
 
-include(CheckIncludeFile)
+include(CheckIncludeFileCXX)
 include(CheckSymbolExists)
-include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
+include(CheckCCompilerFlag)
 include(CMakePackageConfigHelpers)
 
 #--------------------
 # Project definition
 #--------------------
 
-project(OverkitParallel C CXX)
+project(OverkitParallel CXX C)
 set(OverkitParallel_VERSION_MAJOR 0)
 set(OverkitParallel_VERSION_MINOR 1)
 set(OverkitParallel_VERSION_PATCH 0)
@@ -79,7 +79,7 @@ if(NOT COMPILER_BUILT_IN_MPI AND NOT EXTERNAL_MPI)
   set(COMPILER_BUILT_IN_MPI FALSE CACHE INTERNAL "")
   set(EXTERNAL_MPI FALSE CACHE INTERNAL "")
   # If the user specified MPI wrappers as compilers, use them
-  check_include_file(mpi.h MPI_HEADER_FOUND)
+  check_include_file_cxx(mpi.h MPI_HEADER_FOUND)
   if(MPI_HEADER_FOUND)
     check_symbol_exists(MPI_Init mpi.h MPI_WORKS)
     if(MPI_WORKS)
@@ -93,7 +93,7 @@ if(NOT COMPILER_BUILT_IN_MPI AND NOT EXTERNAL_MPI)
     message(STATUS "Not using MPI compiler wrappers; searching for external MPI installation")
     find_package(MPI REQUIRED)
     set(CMAKE_REQUIRED_INCLUDES ${MPI_INCLUDE_PATH})
-    check_include_file(mpi.h FOUND_MPI_HEADER)
+    check_include_file_cxx(mpi.h FOUND_MPI_HEADER)
     set(CMAKE_REQUIRED_INCLUDES)
     if(FOUND_MPI_HEADER)
       set(EXTERNAL_MPI TRUE CACHE INTERNAL "")
@@ -134,18 +134,18 @@ endif()
 # Baseline compiler flags
 #-------------------------
 
-# Language dialect flags (only if target_compile_features isn't supported, CMake < 3.6)
+# Language dialect flags (only needed for CMake < 3.1)
 if(NOT DETECTED_DIALECT_FLAGS)
-  set(DIALECT_C_FLAGS "" CACHE INTERNAL "")
   set(DIALECT_CXX_FLAGS "" CACHE INTERNAL "")
-  if(CMAKE_VERSION VERSION_LESS 3.6)
-    check_c_compiler_flag(-std=c99 STD_C99_FLAG_SUPPORTED)
-    if(STD_C99_FLAG_SUPPORTED)
-      set(DIALECT_C_FLAGS -std=c99 CACHE INTERNAL "")
-    endif()
+  set(DIALECT_C_FLAGS "" CACHE INTERNAL "")
+  if(CMAKE_VERSION VERSION_LESS 3.1)
     check_cxx_compiler_flag(-std=c++11 STD_CXX11_FLAG_SUPPORTED)
     if(STD_CXX11_FLAG_SUPPORTED)
       set(DIALECT_CXX_FLAGS -std=c++11 CACHE INTERNAL "")
+    endif()
+    check_c_compiler_flag(-std=c99 STD_C99_FLAG_SUPPORTED)
+    if(STD_C99_FLAG_SUPPORTED)
+      set(DIALECT_C_FLAGS -std=c99 CACHE INTERNAL "")
     endif()
   endif()
   set(DETECTED_DIALECT_FLAGS TRUE CACHE INTERNAL "")
@@ -153,39 +153,39 @@ endif()
 
 # Warnings
 if(NOT DETECTED_WARNING_FLAGS)
-  set(WARNING_C_FLAGS CACHE INTERNAL "")
   set(WARNING_CXX_FLAGS CACHE INTERNAL "")
-  check_c_compiler_flag(-Wall WALL_FLAG_SUPPORTED)
+  set(WARNING_C_FLAGS CACHE INTERNAL "")
+  check_cxx_compiler_flag(-Wall WALL_FLAG_SUPPORTED)
   if(WALL_FLAG_SUPPORTED)
-    set(WARNING_C_FLAGS -Wall CACHE INTERNAL "")
     set(WARNING_CXX_FLAGS -Wall CACHE INTERNAL "")
+    set(WARNING_C_FLAGS -Wall CACHE INTERNAL "")
   endif()
   set(DETECTED_WARNING_FLAGS TRUE CACHE INTERNAL "")
 endif()
 
 # Optimizations
 if(NOT DETECTED_OPT_FLAGS)
-  set(OPT_C_FLAGS "" CACHE INTERNAL "")
   set(OPT_CXX_FLAGS "" CACHE INTERNAL "")
-  check_c_compiler_flag(-ffast-math FAST_MATH_FLAG_SUPPORTED)
+  set(OPT_C_FLAGS "" CACHE INTERNAL "")
+  check_cxx_compiler_flag(-ffast-math FAST_MATH_FLAG_SUPPORTED)
   if(FAST_MATH_FLAG_SUPPORTED)
-    set(OPT_C_FLAGS ${OPT_C_FLAGS} -ffast-math CACHE INTERNAL "")
     set(OPT_CXX_FLAGS ${OPT_CXX_FLAGS} -ffast-math CACHE INTERNAL "")
+    set(OPT_C_FLAGS ${OPT_C_FLAGS} -ffast-math CACHE INTERNAL "")
   endif()
-  check_c_compiler_flag(-funroll-loops UNROLL_LOOPS_FLAG_SUPPORTED)
+  check_cxx_compiler_flag(-funroll-loops UNROLL_LOOPS_FLAG_SUPPORTED)
   if(UNROLL_LOOPS_FLAG_SUPPORTED)
-    set(OPT_C_FLAGS ${OPT_C_FLAGS} -funroll-loops CACHE INTERNAL "")
     set(OPT_CXX_FLAGS ${OPT_CXX_FLAGS} -funroll-loops CACHE INTERNAL "")
+    set(OPT_C_FLAGS ${OPT_C_FLAGS} -funroll-loops CACHE INTERNAL "")
   endif()
-  check_c_compiler_flag(-ip IP_FLAG_SUPPORTED)
+  check_cxx_compiler_flag(-ip IP_FLAG_SUPPORTED)
   if(IP_FLAG_SUPPORTED)
-    set(OPT_C_FLAGS ${OPT_C_FLAGS} -ip CACHE INTERNAL "")
     set(OPT_CXX_FLAGS ${OPT_CXX_FLAGS} -ip CACHE INTERNAL "")
+    set(OPT_C_FLAGS ${OPT_C_FLAGS} -ip CACHE INTERNAL "")
   endif()
-  check_c_compiler_flag(-no-prec-div NO_PREC_DIV_FLAG_SUPPORTED)
+  check_cxx_compiler_flag(-no-prec-div NO_PREC_DIV_FLAG_SUPPORTED)
   if(NO_PREC_DIV_FLAG_SUPPORTED)
-    set(OPT_C_FLAGS ${OPT_C_FLAGS} -no-prec-div CACHE INTERNAL "")
     set(OPT_CXX_FLAGS ${OPT_CXX_FLAGS} -no-prec-div CACHE INTERNAL "")
+    set(OPT_C_FLAGS ${OPT_C_FLAGS} -no-prec-div CACHE INTERNAL "")
   endif()
   set(DETECTED_OPT_FLAGS TRUE CACHE INTERNAL "")
 endif()
@@ -217,7 +217,7 @@ if(COVERAGE)
   # Compiler flags
   if(NOT FOUND_COVERAGE_FLAGS)
     set(CMAKE_REQUIRED_LIBRARIES --coverage)
-    check_c_compiler_flag(--coverage COVERAGE_FLAG_SUPPORTED)
+    check_cxx_compiler_flag(--coverage COVERAGE_FLAG_SUPPORTED)
     set(CMAKE_REQUIRED_LIBRARIES)
     if(COVERAGE_FLAG_SUPPORTED)
       set(COVERAGE_COMPILE_FLAGS --coverage CACHE INTERNAL "")
@@ -232,7 +232,8 @@ if(COVERAGE)
   # Coverage report
   add_custom_target(coverage
     COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR="${CMAKE_SOURCE_DIR}" -DBINARY_DIR="${CMAKE_BINARY_DIR}"
-      -DCOVERAGE_DIRS="ovk/core;ovk/extras" -P "${CMAKE_SOURCE_DIR}/config/scripts/gen-coverage-report.cmake"
+      -DCOVERAGE_DIRS="src/core;src/extras;src/core-c;src/extras-c"
+      -P "${CMAKE_SOURCE_DIR}/config/scripts/gen-coverage-report.cmake"
   )
 
   # Reset coverage data
@@ -251,7 +252,7 @@ if(PROFILE)
 
   if(NOT FOUND_PROFILE_FLAGS)
     # GNU-style
-    check_c_compiler_flag(-pg PG_FLAG_SUPPORTED)
+    check_cxx_compiler_flag(-pg PG_FLAG_SUPPORTED)
     if(PG_FLAG_SUPPORTED)
       set(PROFILE_COMPILE_FLAGS -pg CACHE INTERNAL "")
       set(FOUND_PROFILE_FLAGS TRUE CACHE INTERNAL "")
@@ -259,7 +260,7 @@ if(PROFILE)
   endif()
   if(NOT FOUND_PROFILE_FLAGS)
     # Intel-style
-    check_c_compiler_flag(-p P_FLAG_SUPPORTED)
+    check_cxx_compiler_flag(-p P_FLAG_SUPPORTED)
     if(P_FLAG_SUPPORTED)
       set(PROFILE_COMPILE_FLAGS -p CACHE INTERNAL "")
       set(FOUND_PROFILE_FLAGS TRUE CACHE INTERNAL "")
@@ -302,13 +303,9 @@ if(APPLE)
   set(CMAKE_C_ARCHIVE_FINISH "<CMAKE_RANLIB> -no_warning_for_no_symbols -c <TARGET>")
 endif()
 
-# API headers end up in the include directory of the build tree
+# Headers end up in the include directory of the build tree
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/include)
 include_directories(${CMAKE_BINARY_DIR}/include)
-
-# Internal headers end up in the include-internal directory of the build tree
-file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/include-internal)
-include_directories(${CMAKE_BINARY_DIR}/include-internal)
 
 #==================
 # Pre-build checks
@@ -330,7 +327,7 @@ add_dependencies(pre-build config-check)
 #================
 
 # Main library code
-add_subdirectory(ovk)
+add_subdirectory(src)
 
 # Supporting code for tests, examples, utils
 add_subdirectory(support)
@@ -451,8 +448,8 @@ message(STATUS "Configuration types: ${CMAKE_CONFIGURATION_TYPES}")
 else()
 message(STATUS "Build type:          ${CMAKE_BUILD_TYPE}")
 endif()
-message(STATUS "C compiler:          ${CMAKE_C_COMPILER}")
 message(STATUS "C++ compiler:        ${CMAKE_CXX_COMPILER}")
+message(STATUS "C compiler:          ${CMAKE_C_COMPILER}")
 message(STATUS "Shared libraries:    ${BUILD_SHARED_LIBS}")
 message(STATUS "Install prefix:      ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "Examples:            ${EXAMPLES}")

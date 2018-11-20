@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+// #include <sys/types.h>
+// #include <unistd.h>
 
 #define min(a, b) ovk_min(a, b)
 #define max(a, b) ovk_max(a, b)
@@ -15,7 +17,7 @@
 #define Printf(...) printf(__VA_ARGS__); fflush(stdout)
 
 enum {
-  MAX_DIMS = OVK_MAX_DIMS
+  MAX_DIMS = 3
 };
 
 typedef struct {
@@ -48,7 +50,7 @@ void AssembleTest(int argc, char **argv);
 int main(int argc, char **argv) {
 
   ExchangeTest(argc, argv);
-//   AssembleTest(argc, argv);
+// //   AssembleTest(argc, argv);
 
   return 0;
 
@@ -76,9 +78,13 @@ void ExchangeTest(int argc, char **argv) {
   for (OtherRank = 0; OtherRank < NumProcs; ++OtherRank) {
     if (OtherRank == Rank) {
       Printf("Rank %i reporting for duty.\n", Rank);
+//       pid_t ProcessID = getpid();
+//       Printf("Rank %i (pid %i) reporting for duty.\n", Rank, ProcessID);
     }
     MPI_Barrier(MPI_COMM_WORLD);
   }
+
+//   sleep(10);
 
   int N = 100;
 
@@ -661,158 +667,158 @@ void ExchangeTest(int argc, char **argv) {
 
 }
 
-void AssembleTest(int argc, char **argv) {
+// void AssembleTest(int argc, char **argv) {
 
-  int OtherRank;
-//   int iDim;
-  int iGrid, iLocalGrid;
-//   long long iPoint;
-//   int i, j;
+//   int OtherRank;
+// //   int iDim;
+//   int iGrid, iLocalGrid;
+// //   long long iPoint;
+// //   int i, j;
 
-  MPI_Init(&argc, &argv);
+//   MPI_Init(&argc, &argv);
 
-  int NumProcs, Rank;
-  MPI_Comm_size(MPI_COMM_WORLD, &NumProcs);
-  MPI_Comm_rank(MPI_COMM_WORLD, &Rank);
+//   int NumProcs, Rank;
+//   MPI_Comm_size(MPI_COMM_WORLD, &NumProcs);
+//   MPI_Comm_rank(MPI_COMM_WORLD, &Rank);
 
-  if (Rank == 0) {
-    Printf("Running with %i processes.\n", NumProcs);
-  }
+//   if (Rank == 0) {
+//     Printf("Running with %i processes.\n", NumProcs);
+//   }
 
-  for (OtherRank = 0; OtherRank < NumProcs; ++OtherRank) {
-    if (OtherRank == Rank) {
-      Printf("Rank %i reporting for duty.\n", Rank);
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-  }
+//   for (OtherRank = 0; OtherRank < NumProcs; ++OtherRank) {
+//     if (OtherRank == Rank) {
+//       Printf("Rank %i reporting for duty.\n", Rank);
+//     }
+//     MPI_Barrier(MPI_COMM_WORLD);
+//   }
 
-  int N = 100;
+//   int N = 100;
 
-  int NumLocalGrids;
-  input_grid *InputGrids;
-  input_state *InputStates;
-  CreateInputs(N, &NumLocalGrids, &InputGrids, &InputStates);
+//   int NumLocalGrids;
+//   input_grid *InputGrids;
+//   input_state *InputStates;
+//   CreateInputs(N, &NumLocalGrids, &InputGrids, &InputStates);
 
-  ovk_context_params *ContextParams;
-  ovkCreateContextParams(&ContextParams);
-  ovkSetContextParamComm(ContextParams, MPI_COMM_WORLD);
-  ovkSetContextParamLogLevel(ContextParams, OVK_LOG_ALL);
-  ovkSetContextParamErrorHandlerType(ContextParams, OVK_ERROR_HANDLER_ABORT);
+//   ovk_context_params *ContextParams;
+//   ovkCreateContextParams(&ContextParams);
+//   ovkSetContextParamComm(ContextParams, MPI_COMM_WORLD);
+//   ovkSetContextParamLogLevel(ContextParams, OVK_LOG_ALL);
+//   ovkSetContextParamErrorHandlerType(ContextParams, OVK_ERROR_HANDLER_ABORT);
 
-  ovk_context *Context;
-  ovkCreateContext(&Context, ContextParams);
+//   ovk_context *Context;
+//   ovkCreateContext(&Context, ContextParams);
 
-  ovkDestroyContextParams(&ContextParams);
+//   ovkDestroyContextParams(&ContextParams);
 
-  ovk_domain_params *DomainParams;
-  ovkCreateDomainParams(&DomainParams, 2);
-  ovkSetDomainParamName(DomainParams, "Domain");
-  ovkSetDomainParamComm(DomainParams, MPI_COMM_WORLD);
+//   ovk_domain_params *DomainParams;
+//   ovkCreateDomainParams(&DomainParams, 2);
+//   ovkSetDomainParamName(DomainParams, "Domain");
+//   ovkSetDomainParamComm(DomainParams, MPI_COMM_WORLD);
 
-  ovk_domain *Domain;
-  ovkCreateDomain(Context, &Domain, DomainParams);
+//   ovk_domain *Domain;
+//   ovkCreateDomain(Context, &Domain, DomainParams);
 
-  ovkDestroyDomainParams(&DomainParams);
+//   ovkDestroyDomainParams(&DomainParams);
 
-  ovkConfigureDomain(Domain, OVK_DOMAIN_CONFIG_GEOMETRY | OVK_DOMAIN_CONFIG_OVERLAP |
-    OVK_DOMAIN_CONFIG_CONNECTIVITY);
+//   ovkConfigureDomain(Domain, OVK_DOMAIN_CONFIG_GEOMETRY | OVK_DOMAIN_CONFIG_OVERLAP |
+//     OVK_DOMAIN_CONFIG_CONNECTIVITY);
 
-  for (iGrid = 0; iGrid < 2; ++iGrid) {
-    int GridID = iGrid+1;
-    input_grid *InputGrid = FindLocalGrid(NumLocalGrids, InputGrids, GridID);
-    if (InputGrid) {
-      ovk_grid_params *GridParams;
-      ovkCreateGridParams(&GridParams, 2);
-      ovkSetGridParamName(GridParams, InputGrid->name);
-      ovkSetGridParamComm(GridParams, InputGrid->comm);
-      ovkSetGridParamSize(GridParams, InputGrid->global_size);
-      ovk_range LocalRange;
-      ovkSetRange(&LocalRange, 2, InputGrid->is, InputGrid->ie);
-      ovkSetGridParamLocalRange(GridParams, &LocalRange);
-      ovkCreateGridLocal(Domain, GridID, GridParams);
-      ovkDestroyGridParams(&GridParams);
-    } else {
-      ovkCreateGridRemote(Domain, GridID);
-    }
-  }
+//   for (iGrid = 0; iGrid < 2; ++iGrid) {
+//     int GridID = iGrid+1;
+//     input_grid *InputGrid = FindLocalGrid(NumLocalGrids, InputGrids, GridID);
+//     if (InputGrid) {
+//       ovk_grid_params *GridParams;
+//       ovkCreateGridParams(&GridParams, 2);
+//       ovkSetGridParamName(GridParams, InputGrid->name);
+//       ovkSetGridParamComm(GridParams, InputGrid->comm);
+//       ovkSetGridParamSize(GridParams, InputGrid->global_size);
+//       ovk_range LocalRange;
+//       ovkSetRange(&LocalRange, 2, InputGrid->is, InputGrid->ie);
+//       ovkSetGridParamLocalRange(GridParams, &LocalRange);
+//       ovkCreateGridLocal(Domain, GridID, GridParams);
+//       ovkDestroyGridParams(&GridParams);
+//     } else {
+//       ovkCreateGridRemote(Domain, GridID);
+//     }
+//   }
 
-  ovk_grid **Grids = malloc(NumLocalGrids*sizeof(ovk_grid *));
-  iLocalGrid = 0;
-  for (iGrid = 0; iGrid < 2; ++iGrid) {
-    int GridID = iGrid+1;
-    if (ovkRankHasGrid(Domain, GridID)) {
-      ovkEditGridLocal(Domain, GridID, &Grids[iLocalGrid]);
-      ++iLocalGrid;
-    } else {
-      ovkEditGridRemote(Domain, GridID);
-    }
-  }
+//   ovk_grid **Grids = malloc(NumLocalGrids*sizeof(ovk_grid *));
+//   iLocalGrid = 0;
+//   for (iGrid = 0; iGrid < 2; ++iGrid) {
+//     int GridID = iGrid+1;
+//     if (ovkRankHasGrid(Domain, GridID)) {
+//       ovkEditGridLocal(Domain, GridID, &Grids[iLocalGrid]);
+//       ++iLocalGrid;
+//     } else {
+//       ovkEditGridRemote(Domain, GridID);
+//     }
+//   }
 
-#ifdef NOPE
-  for (iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
-    input_grid *InputGrid = InputGrids + iLocalGrid;
-    ovk_grid *Grid = Grids[iLocalGrid];
-    ovk_range LocalRange;
-    ovkGetGridLocalRange(Grid, &LocalRange);
-    double *XYZ[2];
-    for (iDim = 0; iDim < 2; ++iDim) {
-      ovkEditGridCoords(Grid, iDim, &XYZ[iDim]);
-    }
-    for (j = Grid->is[1]; j < Grid->ie[1]; ++j) {
-      for (i = Grid->is[0]; i < Grid->ie[0]; ++i) {
-        int Point[2] = {i, j};
-        long long iInputPoint = (i-Grid->is[0]) + (j-Grid->is[1]) * Grid->local_size[0];
-        ovkRangeTupleToIndex(&LocalRange, OVK_GRID_LAYOUT, Point, &iPoint);
-        XYZ[0][iPoint] = Grid->xyz[iInputPoint];
-        YYZ[1][iPoint] = Grid->xyz[iInputPoint+Grid->local_count];
-      }
-    }
-    for (iDim = 0; iDim < 2; ++iDim) {
-      ovkReleaseGridCoords(Grid, iDim, &XYZ[iDim]);
-    }
-  }
-#endif
+// #ifdef NOPE
+//   for (iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
+//     input_grid *InputGrid = InputGrids + iLocalGrid;
+//     ovk_grid *Grid = Grids[iLocalGrid];
+//     ovk_range LocalRange;
+//     ovkGetGridLocalRange(Grid, &LocalRange);
+//     double *XYZ[2];
+//     for (iDim = 0; iDim < 2; ++iDim) {
+//       ovkEditGridCoords(Grid, iDim, &XYZ[iDim]);
+//     }
+//     for (j = Grid->is[1]; j < Grid->ie[1]; ++j) {
+//       for (i = Grid->is[0]; i < Grid->ie[0]; ++i) {
+//         int Point[2] = {i, j};
+//         long long iInputPoint = (i-Grid->is[0]) + (j-Grid->is[1]) * Grid->local_size[0];
+//         ovkRangeTupleToIndex(&LocalRange, OVK_GRID_LAYOUT, Point, &iPoint);
+//         XYZ[0][iPoint] = Grid->xyz[iInputPoint];
+//         YYZ[1][iPoint] = Grid->xyz[iInputPoint+Grid->local_count];
+//       }
+//     }
+//     for (iDim = 0; iDim < 2; ++iDim) {
+//       ovkReleaseGridCoords(Grid, iDim, &XYZ[iDim]);
+//     }
+//   }
+// #endif
 
-  iLocalGrid = 0;
-  for (iGrid = 0; iGrid < 2; ++iGrid) {
-    int GridID = iGrid+1;
-    if (ovkRankHasGrid(Domain, GridID)) {
-      ovkReleaseGridLocal(Domain, GridID, &Grids[iLocalGrid]);
-      ++iLocalGrid;
-    } else {
-      ovkReleaseGridRemote(Domain, GridID);
-    }
-  }
-  free(Grids);
+//   iLocalGrid = 0;
+//   for (iGrid = 0; iGrid < 2; ++iGrid) {
+//     int GridID = iGrid+1;
+//     if (ovkRankHasGrid(Domain, GridID)) {
+//       ovkReleaseGridLocal(Domain, GridID, &Grids[iLocalGrid]);
+//       ++iLocalGrid;
+//     } else {
+//       ovkReleaseGridRemote(Domain, GridID);
+//     }
+//   }
+//   free(Grids);
 
-#ifdef NOPE
-  ovk_assembly_options *Options;
-  int GridIDs[2] = {1, 2};
-  ovkCreateAssemblyOptions(&Options, 2, 2, GridIDs);
-  ovkSetAssemblyOptionOverlappable(Options, OVK_ALL_GRIDS, OVK_ALL_GRIDS, OVK_TRUE);
-  ovkSetAssemblyOptionTolerance(Options, OVK_ALL_GRIDS, OVK_ALL_GRIDS, 0.1);
-  ovkSetAssemblyOptionAccelQualityAdjust(Options, OVK_ALL_GRIDS, OVK_ALL_GRIDS, 0.);
-  ovkSetAssemblyOptionInferBoundaries(Options, OVK_ALL_GRIDS, OVK_TRUE);
-  ovkSetAssemblyOptionCutBoundaryHoles(Options, OVK_ALL_GRIDS, OVK_ALL_GRIDS, OVK_TRUE);
-  ovkSetAssemblyOptionOccludes(Options, OVK_ALL_GRIDS, OVK_ALL_GRIDS, OVK_OCCLUDES_COARSE);
-  ovkSetAssemblyOptionEdgePadding(Options, OVK_ALL_GRIDS, OVK_ALL_GRIDS, 2);
-  ovkSetAssemblyOptionEdgeSmoothing(Options, OVK_ALL_GRIDS, 2);
-  ovkSetAssemblyOptionConnectionType(Options, OVK_ALL_GRIDS, OVK_ALL_GRIDS, OVK_CONNECTION_CUBIC);
-  ovkSetAssemblyOptionFringeSize(Options, OVK_ALL_GRIDS, 2);
-  ovkSetAssemblyOptionMinimizeOverlap(Options, OVK_ALL_GRIDS, OVK_ALL_GRIDS, OVK_TRUE);
+// #ifdef NOPE
+//   ovk_assembly_options *Options;
+//   int GridIDs[2] = {1, 2};
+//   ovkCreateAssemblyOptions(&Options, 2, 2, GridIDs);
+//   ovkSetAssemblyOptionOverlappable(Options, OVK_ALL_GRIDS, OVK_ALL_GRIDS, OVK_TRUE);
+//   ovkSetAssemblyOptionTolerance(Options, OVK_ALL_GRIDS, OVK_ALL_GRIDS, 0.1);
+//   ovkSetAssemblyOptionAccelQualityAdjust(Options, OVK_ALL_GRIDS, OVK_ALL_GRIDS, 0.);
+//   ovkSetAssemblyOptionInferBoundaries(Options, OVK_ALL_GRIDS, OVK_TRUE);
+//   ovkSetAssemblyOptionCutBoundaryHoles(Options, OVK_ALL_GRIDS, OVK_ALL_GRIDS, OVK_TRUE);
+//   ovkSetAssemblyOptionOccludes(Options, OVK_ALL_GRIDS, OVK_ALL_GRIDS, OVK_OCCLUDES_COARSE);
+//   ovkSetAssemblyOptionEdgePadding(Options, OVK_ALL_GRIDS, OVK_ALL_GRIDS, 2);
+//   ovkSetAssemblyOptionEdgeSmoothing(Options, OVK_ALL_GRIDS, 2);
+//   ovkSetAssemblyOptionConnectionType(Options, OVK_ALL_GRIDS, OVK_ALL_GRIDS, OVK_CONNECTION_CUBIC);
+//   ovkSetAssemblyOptionFringeSize(Options, OVK_ALL_GRIDS, 2);
+//   ovkSetAssemblyOptionMinimizeOverlap(Options, OVK_ALL_GRIDS, OVK_ALL_GRIDS, OVK_TRUE);
 
-  ovkAssemble(Domain, Options);
+//   ovkAssemble(Domain, Options);
 
-  ovkDestroyAssemblyOptions(&Options);
-#endif
+//   ovkDestroyAssemblyOptions(&Options);
+// #endif
 
-  ovkDestroyContext(&Context);
+//   ovkDestroyContext(&Context);
 
-  DestroyInputs(NumLocalGrids, &InputGrids, &InputStates);
+//   DestroyInputs(NumLocalGrids, &InputGrids, &InputStates);
 
-  MPI_Finalize();
+//   MPI_Finalize();
 
-}
+// }
 
 void CreateInputs(int N, int *NumLocalGrids, input_grid **Grids, input_state **States) {
 
@@ -918,7 +924,7 @@ void CreateInputs(int N, int *NumLocalGrids, input_grid **Grids, input_state **S
   for (n = 0; n < *NumLocalGrids; ++n) {
     input_grid *Grid = &Grids_[n];
     Grid->xyz = malloc(Grid->local_count*2*sizeof(double));
-    double xs, xe, ys, ye;
+    double xs = 0., xe = 0., ys = 0., ye = 0.;
     switch (Grid->id) {
     case 1:
       xs = -1.; xe = 0.;
@@ -948,7 +954,7 @@ void CreateInputs(int N, int *NumLocalGrids, input_grid **Grids, input_state **S
     input_grid *Grid = &Grids_[n];
     input_state *State = &States_[n];
     State->values = malloc(Grid->local_count*sizeof(double));
-    double fs, fe;
+    double fs = 0., fe = 0.;
     switch (Grid->id) {
     case 1:
       fs = -1.; fe = 1.;
