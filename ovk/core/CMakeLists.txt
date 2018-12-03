@@ -91,10 +91,8 @@ add_dependencies(overkit-core core-internal-headers)
 #-------------------
 
 # C++11 standard
-if(NOT CMAKE_VERSION VERSION_LESS "3.6")
-  target_compile_features(overkit-core PRIVATE
-    cxx_std_11
-  )
+if(NOT CMAKE_VERSION VERSION_LESS "3.8")
+  target_compile_features(overkit-core PRIVATE cxx_std_11)
 else()
   target_compile_options(overkit-core PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-std=c++11>)
 endif()
