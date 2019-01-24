@@ -155,7 +155,8 @@ enum class collect_op {
 };
 
 enum class disperse_op {
-  OVERWRITE = OVK_DISPERSE_OVERWRITE
+  OVERWRITE = OVK_DISPERSE_OVERWRITE,
+  APPEND = OVK_DISPERSE_APPEND
 };
 
 inline bool ValidLogLevel(log_level LogLevel) { return ovkValidLogLevel(ovk_log_level(LogLevel)); }

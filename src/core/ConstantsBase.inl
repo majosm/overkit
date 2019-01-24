@@ -140,6 +140,7 @@ static inline bool ovkValidDisperseOp(ovk_disperse_op DisperseOp) {
 
   switch (DisperseOp) {
   case OVK_DISPERSE_OVERWRITE:
+  case OVK_DISPERSE_APPEND:
     return true;
   default:
     return false;

@@ -2617,6 +2617,58 @@ public:
 
 };
 
+template <typename T> class disperse_append : public disperse_base<T> {
+
+protected:
+
+  using parent_type = disperse_base<T>;
+
+  using parent_type::Receivers_;
+  using parent_type::Grid_;
+  using parent_type::Count_;
+  using parent_type::GridValuesRange_;
+  using parent_type::GridValuesLayout_;
+
+public:
+
+  using typename parent_type::user_value_type;
+  using typename parent_type::value_type;
+
+  disperse_append() = default;
+
+  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange, array_layout
+    GridValuesLayout) {
+
+    parent_type::Initialize(Exchange, Count, GridValuesRange, GridValuesLayout);
+
+  }
+
+  void Disperse(const user_value_type * const *ReceiverValues, user_value_type **GridValues) {
+
+    const connectivity_r &Receivers = *Receivers_;
+
+    long long NumReceivers;
+    GetConnectivityReceiverSideCount(Receivers, NumReceivers);
+
+    if (OVK_DEBUG) parent_type::CheckValuesPointers(ReceiverValues, GridValues);
+
+    for (long long iReceiver = 0; iReceiver < NumReceivers; ++iReceiver) {
+      int Point[MAX_DIMS] = {
+        Receivers.Points_[0][iReceiver],
+        Receivers.Points_[1][iReceiver],
+        Receivers.Points_[2][iReceiver]
+      };
+      long long iPoint;
+      RangeTupleToIndex(GridValuesRange_, GridValuesLayout_, Point, iPoint);
+      for (int iCount = 0; iCount < Count_; ++iCount) {
+        GridValues[iCount][iPoint] += ReceiverValues[iCount][iReceiver];
+      }
+    }
+
+  }
+
+};
+
 }
 
 namespace core {
@@ -2640,6 +2692,22 @@ void Disperse(const exchange &Exchange, data_type ValueType, int Count, disperse
     case data_type::UNSIGNED_LONG_LONG: DisperseWrapper = disperse_overwrite<unsigned long long>(); break;
     case data_type::FLOAT: DisperseWrapper = disperse_overwrite<float>(); break;
     case data_type::DOUBLE: DisperseWrapper = disperse_overwrite<double>(); break;
+    }
+    break;
+  case disperse_op::APPEND:
+    switch (ValueType) {
+    case data_type::BYTE: DisperseWrapper = disperse_append<unsigned char>(); break;
+    case data_type::INT: DisperseWrapper = disperse_append<int>(); break;
+    case data_type::LONG: DisperseWrapper = disperse_append<long>(); break;
+    case data_type::LONG_LONG: DisperseWrapper = disperse_append<long long>(); break;
+    case data_type::UNSIGNED_INT: DisperseWrapper = disperse_append<unsigned int>(); break;
+    case data_type::UNSIGNED_LONG: DisperseWrapper = disperse_append<unsigned long>(); break;
+    case data_type::UNSIGNED_LONG_LONG: DisperseWrapper = disperse_append<unsigned long long>(); break;
+    case data_type::FLOAT: DisperseWrapper = disperse_append<float>(); break;
+    case data_type::DOUBLE: DisperseWrapper = disperse_append<double>(); break;
+    default:
+      OVK_DEBUG_ASSERT(false, "Invalid data type for append disperse operation.");
+      break;
     }
     break;
   }

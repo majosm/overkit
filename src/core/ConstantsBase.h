@@ -122,7 +122,8 @@ typedef enum {
 } ovk_collect_op;
 
 typedef enum {
-  OVK_DISPERSE_OVERWRITE
+  OVK_DISPERSE_OVERWRITE,
+  OVK_DISPERSE_APPEND
 } ovk_disperse_op;
 
 static inline bool ovkValidLogLevel(ovk_log_level LogLevel);
