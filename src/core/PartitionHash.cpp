@@ -3,6 +3,7 @@
 
 #include "ovk/core/PartitionHash.hpp"
 
+#include "ovk/core/Comm.hpp"
 #include "ovk/core/Constants.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Misc.hpp"
@@ -32,14 +33,12 @@ inline void MapToUniformCell(const int *Origin, const int *CellSize, const int *
 
 }
 
-void CreatePartitionHash(partition_hash &Hash, int NumDims, MPI_Comm Comm, const range &GlobalRange,
-  const range &LocalRange) {
+void CreatePartitionHash(partition_hash &Hash, int NumDims, const comm &Comm, const range
+  &GlobalRange, const range &LocalRange) {
 
   Hash.NumDims_ = NumDims;
 
   Hash.Comm_ = Comm;
-  MPI_Comm_size(Hash.Comm_, &Hash.CommSize_);
-  MPI_Comm_rank(Hash.Comm_, &Hash.CommRank_);
 
   Hash.GlobalRange_ = GlobalRange;
   Hash.LocalRange_ = LocalRange;
@@ -48,7 +47,7 @@ void CreatePartitionHash(partition_hash &Hash, int NumDims, MPI_Comm Comm, const
   RangeSize(GlobalRange, GlobalSize);
 
   int NumBins[MAX_DIMS] = {1, 1, 1};
-  BinDecomp(Hash.NumDims_, GlobalSize, Hash.CommSize_, NumBins);
+  BinDecomp(Hash.NumDims_, GlobalSize, Hash.Comm_.Size(), NumBins);
 
   int TotalBins = 1;
   for (int iDim = 0; iDim < NumDims; ++iDim) {
@@ -61,7 +60,7 @@ void CreatePartitionHash(partition_hash &Hash, int NumDims, MPI_Comm Comm, const
     Hash.BinRange_.End[iDim] = NumBins[iDim];
   }
 
-  Hash.RankHasBin_ = Hash.CommRank_ < TotalBins;
+  Hash.RankHasBin_ = Hash.Comm_.Rank() < TotalBins;
 
   for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
     Hash.BinSize_[iDim] = (GlobalSize[iDim]+NumBins[iDim]-1)/NumBins[iDim];
@@ -144,7 +143,7 @@ void CreatePartitionHash(partition_hash &Hash, int NumDims, MPI_Comm Comm, const
 
   if (Hash.RankHasBin_) {
 
-    int BinIndex = Hash.CommRank_;
+    int BinIndex = Hash.Comm_.Rank();
 
     int BinLoc[MAX_DIMS];
     RangeIndexToTuple(Hash.BinRange_, array_layout::ROW_MAJOR, BinIndex, BinLoc);
@@ -258,8 +257,8 @@ void RetrievePartitionBins(const partition_hash &Hash, std::map<int, partition_b
         SendRequests.data()+3*iRetrieve);
       MPI_Isend(LocalBinPartitionRangesFlat.data(), 2*MAX_DIMS*Bin.NumPartitions_, MPI_INT,
         RetrieveRank, 0, Hash.Comm_, SendRequests.data()+3*iRetrieve+1);
-      MPI_Isend(Bin.PartitionRanks_.data(), Bin.NumPartitions_, MPI_INT, RetrieveRank, 0, Hash.Comm_,
-        SendRequests.data()+3*iRetrieve+2);
+      MPI_Isend(Bin.PartitionRanks_.data(), Bin.NumPartitions_, MPI_INT, RetrieveRank, 0,
+        Hash.Comm_, SendRequests.data()+3*iRetrieve+2);
       ++RankIter;
     }
     MPI_Waitall(3*NumRetrieves, SendRequests.data(), MPI_STATUSES_IGNORE);

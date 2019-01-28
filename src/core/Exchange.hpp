@@ -4,6 +4,7 @@
 #ifndef OVK_CORE_EXCHANGE_HPP_INCLUDED
 #define OVK_CORE_EXCHANGE_HPP_INCLUDED
 
+#include <ovk/core/Comm.hpp>
 #include <ovk/core/Constants.hpp>
 #include <ovk/core/Connectivity.hpp>
 #include <ovk/core/DataType.hpp>
@@ -50,9 +51,7 @@ struct exchange {
   mutable core::logger *Logger_;
   mutable core::error_handler *ErrorHandler_;
   int NumDims_;
-  MPI_Comm Comm_;
-  int CommSize_;
-  int CommRank_;
+  core::comm Comm_;
 
   std::vector<long long> DonorsSorted_;
   std::vector<long long> ReceiversSorted_;
@@ -96,7 +95,7 @@ void CreateExchange(exchange &Exchange, const connectivity &Connectivity, logger
   error_handler &ErrorHandler);
 void DestroyExchange(exchange &Exchange);
 
-void CreateExchangeInfo(exchange_info &Info, const exchange *Exchange, MPI_Comm Comm, int CommRank);
+void CreateExchangeInfo(exchange_info &Info, const exchange *Exchange, const comm &Comm);
 void DestroyExchangeInfo(exchange_info &Info);
 
 }

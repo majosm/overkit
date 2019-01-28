@@ -4,6 +4,7 @@
 #ifndef OVK_CORE_CONNECTIVITY_R_HPP_INCLUDED
 #define OVK_CORE_CONNECTIVITY_R_HPP_INCLUDED
 
+#include <ovk/core/Comm.hpp>
 #include <ovk/core/Constants.hpp>
 #include <ovk/core/ErrorHandler.hpp>
 #include <ovk/core/Global.hpp>
@@ -29,9 +30,7 @@ struct connectivity_r {
   int GridID_;
   int SourceGridID_;
   int NumDims_;
-  MPI_Comm Comm_;
-  int CommSize_;
-  int CommRank_;
+  core::comm Comm_;
   long long Count_;
   const grid *Grid_;
   edits Edits_;

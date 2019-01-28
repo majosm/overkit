@@ -4,6 +4,7 @@
 #ifndef OVK_CORE_PARTITION_HASH_HPP_INCLUDED
 #define OVK_CORE_PARTITION_HASH_HPP_INCLUDED
 
+#include <ovk/core/Comm.hpp>
 #include <ovk/core/Constants.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Range.hpp>
@@ -31,9 +32,7 @@ struct partition_bin {
 
 struct partition_hash {
   int NumDims_;
-  MPI_Comm Comm_;
-  int CommSize_;
-  int CommRank_;
+  comm Comm_;
   range GlobalRange_;
   range LocalRange_;
   range BinRange_;
@@ -44,8 +43,8 @@ struct partition_hash {
 //   optional<partition_bin> Bin_;
 };
 
-void CreatePartitionHash(partition_hash &Hash, int NumDims, MPI_Comm Comm, const range &GlobalRange,
-  const range &LocalRange);
+void CreatePartitionHash(partition_hash &Hash, int NumDims, const comm &Comm, const range
+  &GlobalRange, const range &LocalRange);
 void DestroyPartitionHash(partition_hash &Hash);
 
 void MapToPartitionBins(const partition_hash &Hash, long long NumPoints, const int * const *Points,

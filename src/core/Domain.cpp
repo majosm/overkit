@@ -4,6 +4,7 @@
 #include "ovk/core/Domain.hpp"
 
 #include "ovk/core/AssemblyOptions.hpp"
+#include "ovk/core/Comm.hpp"
 #include "ovk/core/Connectivity.hpp"
 #include "ovk/core/Constants.hpp"
 #include "ovk/core/DataType.hpp"
@@ -61,11 +62,11 @@ void AssembleExchange(domain &Domain);
 
 void ResetAllConnectivityEdits(domain &Domain);
 
-void CreateDomainGridInfo(domain::grid_info &GridInfo, grid *Grid, MPI_Comm Comm, int CommRank);
+void CreateDomainGridInfo(domain::grid_info &GridInfo, grid *Grid, const core::comm &Comm);
 void DestroyDomainGridInfo(domain::grid_info &GridInfo);
 
 void CreateDomainConnectivityInfo(domain::connectivity_info &ConnectivityInfo, connectivity
-  *Connectivity, MPI_Comm Comm, int CommRank);
+  *Connectivity, const core::comm &Comm);
 void DestroyDomainConnectivityInfo(domain::connectivity_info &ConnectivityInfo);
 
 }
@@ -75,12 +76,9 @@ namespace core {
 void CreateDomain(domain &Domain, const domain_params &Params, logger &Logger, error_handler
   &ErrorHandler) {
 
-  MPI_Comm_dup(Params.Comm_, &Domain.Comm_);
+  Domain.Comm_ = core::comm(Params.Comm_);
 
   MPI_Barrier(Domain.Comm_);
-
-  MPI_Comm_size(Domain.Comm_, &Domain.CommSize_);
-  MPI_Comm_rank(Domain.Comm_, &Domain.CommRank_);
 
   Domain.Logger_ = &Logger;
   Domain.ErrorHandler_ = &ErrorHandler;
@@ -99,8 +97,8 @@ void CreateDomain(domain &Domain, const domain_params &Params, logger &Logger, e
   Domain.AllGridsEditRefCount_ = 0;
   Domain.AllConnectivitiesEditRefCount_ = 0;
 
-  if (Domain.CommRank_ == 0) {
-    std::string ProcessesString = FormatNumber(Domain.CommSize_, "processes", "process");
+  if (Domain.Comm_.Rank() == 0) {
+    std::string ProcessesString = FormatNumber(Domain.Comm_.Size(), "processes", "process");
     core::LogStatus(*Domain.Logger_, true, 0, "Created %1iD domain %s on %s.", Domain.NumDims_,
       Domain.Name_, ProcessesString);
   }
@@ -135,10 +133,10 @@ void DestroyDomain(domain &Domain) {
 
   MPI_Barrier(Domain.Comm_);
 
-  core::LogStatus(*Domain.Logger_, Domain.CommRank_ == 0, 0, "Destroyed domain %s.",
+  core::LogStatus(*Domain.Logger_, Domain.Comm_.Rank() == 0, 0, "Destroyed domain %s.",
     Domain.Name_);
 
-  MPI_Comm_free(&Domain.Comm_);
+  Domain.Comm_.Reset();
 
 }
 
@@ -158,19 +156,19 @@ void GetDomainDimension(const domain &Domain, int &NumDims) {
 
 void GetDomainComm(const domain &Domain, MPI_Comm &Comm) {
 
-  Comm = Domain.Comm_;
+  Comm = Domain.Comm_.Get();
 
 }
 
 void GetDomainCommSize(const domain &Domain, int &CommSize) {
 
-  CommSize = Domain.CommSize_;
+  CommSize = Domain.Comm_.Size();
 
 }
 
 void GetDomainCommRank(const domain &Domain, int &CommRank) {
 
-  CommRank = Domain.CommRank_;
+  CommRank = Domain.Comm_.Rank();
 
 }
 
@@ -262,6 +260,28 @@ void GetNextAvailableGridID(const domain &Domain, int &GridID) {
 
 }
 
+namespace core {
+
+const comm &GetDomainComm(const domain &Domain) {
+
+  return Domain.Comm_;
+
+}
+
+logger &GetDomainLogger(const domain &Domain) {
+
+  return *Domain.Logger_;
+
+}
+
+error_handler &GetDomainErrorHandler(const domain &Domain) {
+
+  return *Domain.ErrorHandler_;
+
+}
+
+}
+
 void CreateGridLocal(domain &Domain, int GridID, const grid_params &Params) {
 
   CreateGridGlobal(Domain, GridID, &Params, true);
@@ -299,10 +319,10 @@ void CreateGridGlobal(domain &Domain, int GridID, const grid_params *Params, boo
   if (IsLocal) {
     grid Grid;
     core::CreateGrid(Grid, GridID, *Params, *Domain.Logger_, *Domain.ErrorHandler_);
-    CreateDomainGridInfo(GridInfo, &Grid, Domain.Comm_, Domain.CommRank_);
+    CreateDomainGridInfo(GridInfo, &Grid, Domain.Comm_);
     Domain.LocalGrids_.emplace(GridID, std::move(Grid));
   } else {
-    CreateDomainGridInfo(GridInfo, nullptr, Domain.Comm_, Domain.CommRank_);
+    CreateDomainGridInfo(GridInfo, nullptr, Domain.Comm_);
   }
 
   Domain.GridInfo_.emplace(GridID, std::move(GridInfo));
@@ -559,8 +579,7 @@ void CreateConnectivityGlobal(domain &Domain, int DonorGridID, int ReceiverGridI
 
   bool IsLocal = DonorGridIsLocal || ReceiverGridIsLocal;
 
-  MPI_Comm ConnectivityComm;
-  MPI_Comm_split(Domain.Comm_, IsLocal, Domain.CommRank_, &ConnectivityComm);
+  core::comm ConnectivityComm = core::CreateSubsetComm(Domain.Comm_, IsLocal);
 
   domain::connectivity_info ConnectivityInfo;
 
@@ -570,17 +589,15 @@ void CreateConnectivityGlobal(domain &Domain, int DonorGridID, int ReceiverGridI
     const grid *ReceiverGrid = nullptr;
     if (ReceiverGridIsLocal) ReceiverGrid = &Domain.LocalGrids_[ReceiverGridID];
     connectivity Connectivity;
-    core::CreateConnectivity(Connectivity, Domain.NumDims_, ConnectivityComm, DonorGrid,
+    core::CreateConnectivity(Connectivity, Domain.NumDims_, std::move(ConnectivityComm), DonorGrid,
       ReceiverGrid, *Domain.Logger_, *Domain.ErrorHandler_);
-    CreateDomainConnectivityInfo(ConnectivityInfo, &Connectivity, Domain.Comm_, Domain.CommRank_);
+    CreateDomainConnectivityInfo(ConnectivityInfo, &Connectivity, Domain.Comm_);
     Domain.LocalConnectivities_[DonorGridID].emplace(ReceiverGridID, std::move(Connectivity));
   } else {
-    CreateDomainConnectivityInfo(ConnectivityInfo, nullptr, Domain.Comm_, Domain.CommRank_);
+    CreateDomainConnectivityInfo(ConnectivityInfo, nullptr, Domain.Comm_);
   }
 
   Domain.ConnectivityInfo_[DonorGridID].emplace(ReceiverGridID, std::move(ConnectivityInfo));
-
-  MPI_Comm_free(&ConnectivityComm);
 
   MPI_Barrier(Domain.Comm_);
 
@@ -854,10 +871,10 @@ void CreateExchangeGlobal(domain &Domain, int DonorGridID, int ReceiverGridID) {
     const connectivity &Connectivity = Domain.LocalConnectivities_[DonorGridID][ReceiverGridID];
     exchange Exchange;
     core::CreateExchange(Exchange, Connectivity, *Domain.Logger_, *Domain.ErrorHandler_);
-    core::CreateExchangeInfo(ExchangeInfo, &Exchange, Domain.Comm_, Domain.CommRank_);
+    core::CreateExchangeInfo(ExchangeInfo, &Exchange, Domain.Comm_);
     Domain.LocalExchanges_[DonorGridID].emplace(ReceiverGridID, std::move(Exchange));
   } else {
-    core::CreateExchangeInfo(ExchangeInfo, nullptr, Domain.Comm_, Domain.CommRank_);
+    core::CreateExchangeInfo(ExchangeInfo, nullptr, Domain.Comm_);
   }
 
   Domain.ExchangeInfo_[DonorGridID].emplace(ReceiverGridID, std::move(ExchangeInfo));
@@ -1034,7 +1051,7 @@ void GetLocalReceiverCount(const domain &Domain, int DonorGridID, int ReceiverGr
 
 void Assemble(domain &Domain, const assembly_options &Options) {
 
-  bool IsDomainRoot = Domain.CommRank_ == 0;
+  bool IsDomainRoot = Domain.Comm_.Rank() == 0;
 
   core::LogStatus(*Domain.Logger_, IsDomainRoot, 0, "Beginning overset assembly on domain %s.",
     Domain.Name_);
@@ -1202,10 +1219,9 @@ void Disperse(const domain &Domain, int DonorGridID, int ReceiverGridID, data_ty
 
 namespace {
 
-void CreateDomainGridInfo(domain::grid_info &GridInfo, grid *Grid, MPI_Comm Comm,
-  int CommRank) {
+void CreateDomainGridInfo(domain::grid_info &GridInfo, grid *Grid, const core::comm &Comm) {
 
-  core::CreateGridInfo(GridInfo, Grid, Comm, CommRank);
+  core::CreateGridInfo(GridInfo, Grid, Comm);
   GridInfo.EditRefCount_ = 0;
 
 }
@@ -1217,9 +1233,9 @@ void DestroyDomainGridInfo(domain::grid_info &GridInfo) {
 }
 
 void CreateDomainConnectivityInfo(domain::connectivity_info &ConnectivityInfo, connectivity
-  *Connectivity, MPI_Comm Comm, int CommRank) {
+  *Connectivity, const core::comm &Comm) {
 
-  core::CreateConnectivityInfo(ConnectivityInfo, Connectivity, Comm, CommRank);
+  core::CreateConnectivityInfo(ConnectivityInfo, Connectivity, Comm);
   ConnectivityInfo.EditRefCount_ = 0;
 
 }

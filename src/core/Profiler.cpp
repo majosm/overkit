@@ -3,6 +3,7 @@
 
 #include "ovk/core/Profiler.hpp"
 
+#include "ovk/core/Comm.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/TextProcessing.hpp"
@@ -18,11 +19,9 @@
 namespace ovk {
 namespace core {
 
-void CreateProfiler(profiler &Profiler, MPI_Comm Comm) {
+void CreateProfiler(profiler &Profiler, const comm &Comm) {
 
-  MPI_Comm_dup(Comm, &Profiler.Comm_);
-  MPI_Comm_size(Profiler.Comm_, &Profiler.CommSize_);
-  MPI_Comm_rank(Profiler.Comm_, &Profiler.CommRank_);
+  Profiler.Comm_ = DuplicateComm(Comm);
 
   Profiler.Enabled_ = false;
 
@@ -31,8 +30,7 @@ void CreateProfiler(profiler &Profiler, MPI_Comm Comm) {
 void DestroyProfiler(profiler &Profiler) {
 
   Profiler.Timers_.clear();
-
-  MPI_Comm_free(&Profiler.Comm_);
+  Profiler.Comm_.Reset();
 
 }
 
@@ -145,7 +143,7 @@ std::string WriteProfileTimes(const profiler &Profiler) {
       Profiler.Comm_);
 
     for (int iTimer = 0; iTimer < int(Profiler.Timers_.size()); ++iTimer) {
-      AvgTimes[iTimer] /= (double)Profiler.CommSize_;
+      AvgTimes[iTimer] /= double(Profiler.Comm_.Size());
     }
 
     for (int iTimer = 0; iTimer < int(Profiler.Timers_.size()); ++iTimer) {

@@ -3,6 +3,7 @@
 
 #include "ovk/core/Exchange.hpp"
 
+#include "ovk/core/Comm.hpp"
 #include "ovk/core/Constants.hpp"
 #include "ovk/core/Connectivity.hpp"
 #include "ovk/core/DataType.hpp"
@@ -52,9 +53,8 @@ void CreateExchange(exchange &Exchange, const connectivity &Connectivity, logger
   Exchange.ErrorHandler_ = &ErrorHandler;
 
   GetConnectivityDimension(Connectivity, Exchange.NumDims_);
-  GetConnectivityComm(Connectivity, Exchange.Comm_);
-  GetConnectivityCommSize(Connectivity, Exchange.CommSize_);
-  GetConnectivityCommRank(Connectivity, Exchange.CommRank_);
+
+  Exchange.Comm_ = core::GetConnectivityComm(Connectivity);
 
   MPI_Barrier(Exchange.Comm_);
 
@@ -110,7 +110,7 @@ void CreateExchange(exchange &Exchange, const connectivity &Connectivity, logger
 
   MPI_Barrier(Exchange.Comm_);
 
-  core::LogStatus(*Exchange.Logger_, Exchange.CommRank_ == 0, 0, "Created exchange %s.",
+  core::LogStatus(*Exchange.Logger_, Exchange.Comm_.Rank() == 0, 0, "Created exchange %s.",
     Connectivity.Name_);
 
 }
@@ -149,17 +149,19 @@ void DestroyExchange(exchange &Exchange) {
 
   MPI_Barrier(Exchange.Comm_);
 
-  LogStatus(*Exchange.Logger_, Exchange.CommRank_ == 0, 0, "Destroyed exchange %s.",
+  LogStatus(*Exchange.Logger_, Exchange.Comm_.Rank() == 0, 0, "Destroyed exchange %s.",
     Connectivity.Name_);
+
+  Exchange.Comm_.Reset();
 
 }
 
-void CreateExchangeInfo(exchange_info &Info, const exchange *Exchange, MPI_Comm Comm, int CommRank) {
+void CreateExchangeInfo(exchange_info &Info, const exchange *Exchange, const comm &Comm) {
 
   bool IsLocal = Exchange != nullptr;
   bool IsRoot = false;
   if (IsLocal) {
-    IsRoot = Exchange->CommRank_ == 0;
+    IsRoot = Exchange->Comm_.Rank() == 0;
   }
 
   const connectivity *Connectivity = nullptr;
@@ -168,7 +170,7 @@ void CreateExchangeInfo(exchange_info &Info, const exchange *Exchange, MPI_Comm 
   }
 
   int RootRank;
-  if (IsRoot) RootRank = CommRank;
+  if (IsRoot) RootRank = Comm.Rank();
   core::BroadcastAnySource(&RootRank, 1, MPI_INT, IsRoot, Comm);
 
   if (IsRoot) {
@@ -222,7 +224,7 @@ void UpdateExchange(exchange &Exchange) {
 
   const connectivity &Connectivity = *Exchange.Connectivity_;
 
-  core::LogStatus(*Exchange.Logger_, Connectivity.CommRank_ == 0, 0, "Updating exchange %s...",
+  core::LogStatus(*Exchange.Logger_, Exchange.Comm_.Rank() == 0, 0, "Updating exchange %s...",
     Connectivity.Name_);
 
   const connectivity::edits *Edits;
@@ -283,7 +285,7 @@ void UpdateExchange(exchange &Exchange) {
 
   MPI_Barrier(Exchange.Comm_);
 
-  core::LogStatus(*Exchange.Logger_, Connectivity.CommRank_ == 0, 0, "Done updating exchange %s.",
+  core::LogStatus(*Exchange.Logger_, Exchange.Comm_.Rank() == 0, 0, "Done updating exchange %s.",
     Connectivity.Name_);
 
 }

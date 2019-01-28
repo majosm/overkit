@@ -4,6 +4,7 @@
 #include "ovk/core/Connectivity.hpp"
 
 #include "ovk/core/Cart.hpp"
+#include "ovk/core/Comm.hpp"
 #include "ovk/core/ConnectivityD.hpp"
 #include "ovk/core/ConnectivityR.hpp"
 #include "ovk/core/Debug.hpp"
@@ -29,11 +30,11 @@ bool EditingDonorSide(const connectivity &Connectivity);
 bool EditingReceiverSide(const connectivity &Connectivity);
 
 void CreateDonorInfo(connectivity::donor_info &DonorInfo, const grid *DonorGrid,
-  int DestinationGridID, MPI_Comm Comm, int CommRank);
+  int DestinationGridID, const core::comm &Comm);
 void DestroyDonorInfo(connectivity::donor_info &DonorInfo);
 
 void CreateReceiverInfo(connectivity::receiver_info &ReceiverInfo, const grid *ReceiverGrid,
-  int SourceGridID, MPI_Comm Comm, int CommRank);
+  int SourceGridID, const core::comm &Comm);
 void DestroyReceiverInfo(connectivity::receiver_info &ReceiverInfo);
 
 void EditDonorSideGlobal(connectivity &Connectivity, connectivity_d *&Donors, bool IsLocal);
@@ -47,25 +48,19 @@ void DefaultEdits(connectivity::edits &Edits);
 
 namespace core {
 
-void CreateConnectivity(connectivity &Connectivity, int NumDims, MPI_Comm Comm,
-  const grid *DonorGrid, const grid *ReceiverGrid, core::logger &Logger, core::error_handler
-  &ErrorHandler) {
+void CreateConnectivity(connectivity &Connectivity, int NumDims, core::comm Comm, const grid
+  *DonorGrid, const grid *ReceiverGrid, core::logger &Logger, core::error_handler &ErrorHandler) {
 
-  MPI_Comm_dup(Comm, &Connectivity.Comm_);
+  Connectivity.Comm_ = std::move(Comm);
 
   MPI_Barrier(Connectivity.Comm_);
-
-  MPI_Comm_size(Connectivity.Comm_, &Connectivity.CommSize_);
-  MPI_Comm_rank(Connectivity.Comm_, &Connectivity.CommRank_);
 
   Connectivity.Logger_ = &Logger;
   Connectivity.ErrorHandler_ = &ErrorHandler;
 
   // Don't know source/destination grid IDs globally yet, so use -1 as placeholder
-  CreateDonorInfo(Connectivity.DonorInfo_, DonorGrid, -1, Connectivity.Comm_,
-    Connectivity.CommRank_);
-  CreateReceiverInfo(Connectivity.ReceiverInfo_, ReceiverGrid, -1, Connectivity.Comm_,
-    Connectivity.CommRank_);
+  CreateDonorInfo(Connectivity.DonorInfo_, DonorGrid, -1, Connectivity.Comm_);
+  CreateReceiverInfo(Connectivity.ReceiverInfo_, ReceiverGrid, -1, Connectivity.Comm_);
 
   GetGridInfoID(Connectivity.DonorInfo_, Connectivity.DonorGridID_);
   GetGridInfoID(Connectivity.ReceiverInfo_, Connectivity.ReceiverGridID_);
@@ -98,8 +93,8 @@ void CreateConnectivity(connectivity &Connectivity, int NumDims, MPI_Comm Comm,
 
   MPI_Barrier(Connectivity.Comm_);
 
-  core::LogStatus(*Connectivity.Logger_, Connectivity.CommRank_ == 0, 0, "Created connectivity %s.",
-    Connectivity.Name_);
+  core::LogStatus(*Connectivity.Logger_, Connectivity.Comm_.Rank() == 0, 0, "Created connectivity "
+    " %s.", Connectivity.Name_);
 
 }
 
@@ -122,24 +117,24 @@ void DestroyConnectivity(connectivity &Connectivity) {
 
   MPI_Barrier(Connectivity.Comm_);
 
-  LogStatus(*Connectivity.Logger_, Connectivity.CommRank_ == 0, 0, "Destroyed connectivity %s.",
+  LogStatus(*Connectivity.Logger_, Connectivity.Comm_.Rank() == 0, 0, "Destroyed connectivity %s.",
     Connectivity.Name_);
 
-  MPI_Comm_free(&Connectivity.Comm_);
+  Connectivity.Comm_.Reset();
 
 }
 
-void CreateConnectivityInfo(connectivity_info &Info, const connectivity *Connectivity,
-  MPI_Comm Comm, int CommRank) {
+void CreateConnectivityInfo(connectivity_info &Info, const connectivity *Connectivity, const comm
+  &Comm) {
 
   bool IsLocal = Connectivity != nullptr;
   bool IsRoot = false;
   if (IsLocal) {
-    IsRoot = Connectivity->CommRank_ == 0;
+    IsRoot = Connectivity->Comm_.Rank() == 0;
   }
 
   int RootRank;
-  if (IsRoot) RootRank = CommRank;
+  if (IsRoot) RootRank = Comm.Rank();
   BroadcastAnySource(&RootRank, 1, MPI_INT, IsRoot, Comm);
 
   if (IsRoot) {
@@ -177,9 +172,9 @@ void DestroyConnectivityInfo(connectivity_info &Info) {
 namespace {
 
 void CreateDonorInfo(connectivity::donor_info &DonorInfo, const grid *DonorGrid,
-  int DestinationGridID, MPI_Comm Comm, int CommRank) {
+  int DestinationGridID, const core::comm &Comm) {
 
-  core::CreateGridInfo(DonorInfo, DonorGrid, Comm, CommRank);
+  core::CreateGridInfo(DonorInfo, DonorGrid, Comm);
 
   DonorInfo.DestinationGridID_ = DestinationGridID;
   DonorInfo.EditRefCount_ = 0;
@@ -193,9 +188,9 @@ void DestroyDonorInfo(connectivity::donor_info &DonorInfo) {
 }
 
 void CreateReceiverInfo(connectivity::receiver_info &ReceiverInfo, const grid *ReceiverGrid,
-  int SourceGridID, MPI_Comm Comm, int CommRank) {
+  int SourceGridID, const core::comm &Comm) {
 
-  core::CreateGridInfo(ReceiverInfo, ReceiverGrid, Comm, CommRank);
+  core::CreateGridInfo(ReceiverInfo, ReceiverGrid, Comm);
 
   ReceiverInfo.SourceGridID_ = SourceGridID;
   ReceiverInfo.EditRefCount_ = 0;
@@ -236,19 +231,29 @@ void GetConnectivityDimension(const connectivity &Connectivity, int &NumDims) {
 
 void GetConnectivityComm(const connectivity &Connectivity, MPI_Comm &Comm) {
 
-  Comm = Connectivity.Comm_;
+  Comm = Connectivity.Comm_.Get();
 
 }
 
 void GetConnectivityCommSize(const connectivity &Connectivity, int &CommSize) {
 
-  CommSize = Connectivity.CommSize_;
+  CommSize = Connectivity.Comm_.Size();
 
 }
 
 void GetConnectivityCommRank(const connectivity &Connectivity, int &CommRank) {
 
-  CommRank = Connectivity.CommRank_;
+  CommRank = Connectivity.Comm_.Rank();
+
+}
+
+namespace core {
+
+const comm &GetConnectivityComm(const connectivity &Connectivity) {
+
+  return Connectivity.Comm_;
+
+}
 
 }
 
@@ -363,7 +368,7 @@ void ReleaseDonorSideGlobal(connectivity &Connectivity, connectivity_d *&Donors,
     int RootRank;
     GetGridInfoRootRank(Connectivity.DonorInfo_, RootRank);
 
-    bool IsGridRoot = Connectivity.CommRank_ == RootRank;
+    bool IsGridRoot = Connectivity.Comm_.Rank() == RootRank;
 
     int EditedNumDonors = 0;
     if (IsGridRoot) EditedNumDonors = DonorEdits->Count_;
@@ -495,7 +500,7 @@ void ReleaseReceiverSideGlobal(connectivity &Connectivity, connectivity_r *&Rece
     int RootRank;
     GetGridInfoRootRank(Connectivity.ReceiverInfo_, RootRank);
 
-    bool IsGridRoot = Connectivity.CommRank_ == RootRank;
+    bool IsGridRoot = Connectivity.Comm_.Rank() == RootRank;
 
     int EditedNumReceivers = 0;
     if (IsGridRoot) EditedNumReceivers = ReceiverEdits->Count_;

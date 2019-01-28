@@ -4,6 +4,7 @@
 #include "ovk/core/Grid.hpp"
 
 #include "ovk/core/Cart.hpp"
+#include "ovk/core/Comm.hpp"
 #include "ovk/core/Constants.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/ErrorHandler.hpp"
@@ -37,12 +38,9 @@ void CreateGrid(grid &Grid, int ID, const grid_params &Params, core::logger &Log
 
   int NumDims = Params.NumDims_;
 
-  MPI_Comm_dup(Params.Comm_, &Grid.Comm_);
+  Grid.Comm_ = core::comm(Params.Comm_);
 
   MPI_Barrier(Grid.Comm_);
-
-  MPI_Comm_size(Grid.Comm_, &Grid.CommSize_);
-  MPI_Comm_rank(Grid.Comm_, &Grid.CommRank_);
 
   Grid.Logger_ = &Logger;
   Grid.ErrorHandler_ = &ErrorHandler;
@@ -88,7 +86,7 @@ void CreateGrid(grid &Grid, int ID, const grid_params &Params, core::logger &Log
 
   CreateNeighbors(Grid);
 
-  if (Grid.CommRank_ == 0) {
+  if (Grid.Comm_.Rank() == 0) {
     PrintGridSummary(Grid);
   }
 
@@ -110,9 +108,9 @@ void DestroyGrid(grid &Grid) {
 
   MPI_Barrier(Grid.Comm_);
 
-  LogStatus(*Grid.Logger_, Grid.CommRank_ == 0, 0, "Destroyed grid %s.", Grid.Name_);
+  LogStatus(*Grid.Logger_, Grid.Comm_.Rank() == 0, 0, "Destroyed grid %s.", Grid.Name_);
 
-  MPI_Comm_free(&Grid.Comm_);
+  Grid.Comm_.Reset();
 
 }
 
@@ -138,19 +136,19 @@ void GetGridDimension(const grid &Grid, int &NumDims) {
 
 void GetGridComm(const grid &Grid, MPI_Comm &Comm) {
 
-  Comm = Grid.Comm_;
+  Comm = Grid.Comm_.Get();
 
 }
 
 void GetGridCommSize(const grid &Grid, int &CommSize) {
 
-  CommSize = Grid.CommSize_;
+  CommSize = Grid.Comm_.Size();
 
 }
 
 void GetGridCommRank(const grid &Grid, int &CommRank) {
 
-  CommRank = Grid.CommRank_;
+  CommRank = Grid.Comm_.Rank();
 
 }
 
@@ -399,7 +397,7 @@ void PrintGridSummary(const grid &Grid) {
   RangeCount(Grid.GlobalRange_, TotalPoints);
 
   std::string TotalPointsString = core::FormatNumber(TotalPoints, "points", "point");
-  std::string ProcessesString = core::FormatNumber(Grid.CommSize_, "processes", "process");
+  std::string ProcessesString = core::FormatNumber(Grid.Comm_.Size(), "processes", "process");
 
   LogStatus(*Grid.Logger_, true, 0, "Created grid %s (ID=%i): %s (%s) on %s.", Grid.Name_, Grid.ID_,
     GlobalSizeString, TotalPointsString, ProcessesString);
@@ -428,13 +426,13 @@ void PrintGridDecomposition(const grid &Grid) {
     if (iNeighbor != int(Grid.Neighbors_.size())-1) NeighborRanksString += ", ";
   }
 
-  LogStatus(*Grid.Logger_, Grid.CommRank_ == 0, 0, "Grid %s decomposition info:", Grid.Name_);
+  LogStatus(*Grid.Logger_, Grid.Comm_.Rank() == 0, 0, "Grid %s decomposition info:", Grid.Name_);
 
   MPI_Barrier(Grid.Comm_);
 
-  for (int OtherRank = 0; OtherRank < Grid.CommSize_; ++OtherRank) {
-    if (OtherRank == Grid.CommRank_) {
-      std::string RankString = core::FormatNumber(Grid.CommRank_);
+  for (int OtherRank = 0; OtherRank < Grid.Comm_.Size(); ++OtherRank) {
+    if (OtherRank == Grid.Comm_.Rank()) {
+      std::string RankString = core::FormatNumber(Grid.Comm_.Rank());
       LogStatus(*Grid.Logger_, true, 1, "Rank %s (global rank @rank@) contains %s (%s).",
         RankString, LocalRangeString, TotalLocalPointsString);
       if (Grid.Neighbors_.size() > 0) {
@@ -450,6 +448,12 @@ void PrintGridDecomposition(const grid &Grid) {
 }
 
 namespace core {
+
+const comm &GetGridComm(const grid &Grid) {
+
+  return Grid.Comm_;
+
+}
 
 const std::vector<grid_neighbor> &GetGridNeighbors(const grid &Grid) {
 
@@ -633,16 +637,16 @@ void SetGridParamLocalRange(grid_params &Params, const range &LocalRange) {
 
 namespace core {
 
-void CreateGridInfo(grid_info &Info, const grid *Grid, MPI_Comm Comm, int CommRank) {
+void CreateGridInfo(grid_info &Info, const grid *Grid, const comm &Comm) {
 
   bool IsLocal = Grid != nullptr;
   bool IsRoot = false;
   if (IsLocal) {
-    IsRoot = Grid->CommRank_ == 0;
+    IsRoot = Grid->Comm_.Rank() == 0;
   }
 
   int RootRank;
-  if (IsRoot) RootRank = CommRank;
+  if (IsRoot) RootRank = Comm.Rank();
   core::BroadcastAnySource(&RootRank, 1, MPI_INT, IsRoot, Comm);
 
   if (IsRoot) {

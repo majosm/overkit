@@ -57,6 +57,8 @@ set(INTERNAL_HEADERS
   BoxBase.inl
   CartBase.h
   CartBase.inl
+  Comm.hpp
+  Comm.inl
   ConstantsBase.h
   ConstantsBase.inl
   DataTypeBase.h

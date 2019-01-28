@@ -4,6 +4,7 @@
 #ifndef OVK_CORE_CONNECTIVITY_HPP_INCLUDED
 #define OVK_CORE_CONNECTIVITY_HPP_INCLUDED
 
+#include <ovk/core/Comm.hpp>
 #include <ovk/core/ConnectivityD.hpp>
 #include <ovk/core/ConnectivityR.hpp>
 #include <ovk/core/ErrorHandler.hpp>
@@ -47,9 +48,7 @@ struct connectivity {
   int ReceiverGridID_;
   std::string Name_;
   int NumDims_;
-  MPI_Comm Comm_;
-  int CommSize_;
-  int CommRank_;
+  core::comm Comm_;
   edits Edits_;
   donor_info DonorInfo_;
   receiver_info ReceiverInfo_;
@@ -71,13 +70,12 @@ struct connectivity_info {
 
 namespace core {
 
-void CreateConnectivity(connectivity &Connectivity, int NumDims, MPI_Comm Comm,
-  const grid *DonorGrid, const grid *ReceiverGrid, core::logger &Logger, core::error_handler
-  &ErrorHandler);
+void CreateConnectivity(connectivity &Connectivity, int NumDims, core::comm Comm, const grid
+  *DonorGrid, const grid *ReceiverGrid, core::logger &Logger, core::error_handler &ErrorHandler);
 void DestroyConnectivity(connectivity &Connectivity);
 
-void CreateConnectivityInfo(connectivity_info &Info, const connectivity *Connectivity,
-  MPI_Comm Comm, int CommRank);
+void CreateConnectivityInfo(connectivity_info &Info, const connectivity *Connectivity, const comm
+  &Comm);
 void DestroyConnectivityInfo(connectivity_info &Info);
 
 }
@@ -89,6 +87,10 @@ void GetConnectivityDimension(const connectivity &Connectivity, int &NumDims);
 void GetConnectivityComm(const connectivity &Connectivity, MPI_Comm &Comm);
 void GetConnectivityCommSize(const connectivity &Connectivity, int &CommSize);
 void GetConnectivityCommRank(const connectivity &Connectivity, int &CommRank);
+
+namespace core {
+const comm &GetConnectivityComm(const connectivity &Connectivity);
+}
 
 void GetConnectivityDonorGridInfo(const connectivity &Connectivity, const grid_info
   *&DonorGridInfo);

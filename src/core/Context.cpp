@@ -3,6 +3,7 @@
 
 #include "ovk/core/Context.hpp"
 
+#include "ovk/core/Comm.hpp"
 #include "ovk/core/Constants.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Domain.hpp"
@@ -32,14 +33,11 @@ error CreateContext(context &Context, const context_params &Params) {
     }
   }
 
-  MPI_Comm_dup(Params.Comm_, &Context.Comm_);
+  Context.Comm_ = core::comm(Params.Comm_);
 
   MPI_Barrier(Context.Comm_);
 
-  MPI_Comm_size(Context.Comm_, &Context.CommSize_);
-  MPI_Comm_rank(Context.Comm_, &Context.CommRank_);
-
-  core::CreateLogger(Context.Logger_, Params.LogLevel_, Context.CommRank_);
+  core::CreateLogger(Context.Logger_, Params.LogLevel_, Context.Comm_.Rank());
   core::CreateErrorHandler(Context.ErrorHandler_, Params.ErrorHandlerType_);
 
   switch (Params.ErrorHandlerType_) {
@@ -53,8 +51,8 @@ error CreateContext(context &Context, const context_params &Params) {
 
   MPI_Barrier(Context.Comm_);
 
-  if (Context.CommRank_ == 0 && LoggingStatus(Context.Logger_)) {
-    std::string ProcessesString = core::FormatNumber(Context.CommSize_, "processes", "process");
+  if (Context.Comm_.Rank() == 0 && LoggingStatus(Context.Logger_)) {
+    std::string ProcessesString = core::FormatNumber(Context.Comm_.Size(), "processes", "process");
     core::LogStatus(Context.Logger_, true, 0, "Created context on %s.", ProcessesString);
   }
 
@@ -75,16 +73,16 @@ void DestroyContext(context &Context) {
 
   MPI_Barrier(Context.Comm_);
 
-  core::LogStatus(Context.Logger_, Context.CommRank_ == 0, 0, "Destroyed context.");
+  core::LogStatus(Context.Logger_, Context.Comm_.Rank() == 0, 0, "Destroyed context.");
   core::DestroyLogger(Context.Logger_);
 
-  MPI_Comm_free(&Context.Comm_);
+  Context.Comm_.Reset();
 
 }
 
 void GetContextComm(const context &Context, MPI_Comm &Comm) {
 
-  Comm = Context.Comm_;
+  Comm = Context.Comm_.Get();
 
 }
 

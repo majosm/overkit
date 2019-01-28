@@ -5,6 +5,7 @@
 #define OVK_CORE_DOMAIN_HPP_INCLUDED
 
 #include <ovk/core/AssemblyOptions.hpp>
+#include <ovk/core/Comm.hpp>
 #include <ovk/core/Connectivity.hpp>
 #include <ovk/core/Constants.hpp>
 #include <ovk/core/ErrorHandler.hpp>
@@ -40,9 +41,7 @@ struct domain {
   mutable core::error_handler *ErrorHandler_;
   std::string Name_;
   int NumDims_;
-  MPI_Comm Comm_;
-  int CommSize_;
-  int CommRank_;
+  core::comm Comm_;
   domain_config Config_;
   int NumGrids_;
   std::map<int, grid_info> GridInfo_;
@@ -74,6 +73,12 @@ void GetDomainConfiguration(const domain &Domain, domain_config &Config);
 void GetDomainGridCount(const domain &Domain, int &NumGrids);
 void GetDomainGridIDs(const domain &Domain, int *GridIDs);
 void GetNextAvailableGridID(const domain &Domain, int &GridID);
+
+namespace core {
+const comm &GetDomainComm(const domain &Domain);
+logger &GetDomainLogger(const domain &Domain);
+error_handler &GetDomainErrorHandler(const domain &Domain);
+}
 
 void CreateGridLocal(domain &Domain, int GridID, const grid_params &Params);
 void CreateGridRemote(domain &Domain, int GridID);
@@ -137,15 +142,6 @@ void SetDomainParamName(domain_params &Params, std::string Name);
 void GetDomainParamDimension(const domain_params &Params, int &NumDims);
 void GetDomainParamComm(const domain_params &Params, MPI_Comm &Comm);
 void SetDomainParamComm(domain_params &Params, MPI_Comm Comm);
-
-namespace core {
-inline logger &GetDomainLogger(const domain &Domain) {
-  return *Domain.Logger_;
-}
-inline error_handler &GetDomainErrorHandler(const domain &Domain) {
-  return *Domain.ErrorHandler_;
-}
-}
 
 }
 

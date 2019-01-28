@@ -5,6 +5,7 @@
 #define OVK_CORE_GRID_HPP_INCLUDED
 
 #include <ovk/core/Cart.hpp>
+#include <ovk/core/Comm.hpp>
 #include <ovk/core/Constants.hpp>
 #include <ovk/core/ErrorHandler.hpp>
 #include <ovk/core/Global.hpp>
@@ -46,9 +47,7 @@ struct grid {
   int ID_;
   std::string Name_;
   int NumDims_;
-  MPI_Comm Comm_;
-  int CommSize_;
-  int CommRank_;
+  core::comm Comm_;
   cart Cart_;
   periodic_storage PeriodicStorage_;
   double PeriodicLength_[MAX_DIMS];
@@ -95,6 +94,7 @@ void GetGridGlobalCount(const grid &Grid, long long &NumGlobal);
 void GetGridLocalCount(const grid &Grid, long long &NumLocal);
 
 namespace core {
+const comm &GetGridComm(const grid &Grid);
 const std::vector<grid_neighbor> &GetGridNeighbors(const grid &Grid);
 const partition_hash &GetGridPartitionHash(const grid &Grid);
 }
@@ -121,7 +121,7 @@ void SetGridParamLocalRange(grid_params &Params, const range &LocalRange);
 void GetGridParamLocalRange(const grid_params &Params, range &LocalRange);
 
 namespace core {
-void CreateGridInfo(grid_info &Info, const grid *Grid, MPI_Comm Comm, int CommRank);
+void CreateGridInfo(grid_info &Info, const grid *Grid, const comm &Comm);
 void DestroyGridInfo(grid_info &Info);
 }
 

@@ -3,6 +3,7 @@
 
 #include "ovk/core/ConnectivityR.hpp"
 
+#include "ovk/core/Comm.hpp"
 #include "ovk/core/Constants.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/ErrorHandler.hpp"
@@ -31,27 +32,17 @@ namespace core {
 void CreateConnectivityReceiverSide(connectivity_r &Receivers, const grid &Grid, int SourceGridID,
   core::logger &Logger, core::error_handler &ErrorHandler) {
 
-  int GridID;
-  int NumDims;
-  MPI_Comm Comm;
-  int CommSize, CommRank;
-  GetGridID(Grid, GridID);
-  GetGridDimension(Grid, NumDims);
-  GetGridComm(Grid, Comm);
-  GetGridCommSize(Grid, CommSize);
-  GetGridCommRank(Grid, CommRank);
+  Receivers.Comm_ = core::GetGridComm(Grid);
 
-  MPI_Barrier(Comm);
+  MPI_Barrier(Receivers.Comm_);
 
   Receivers.Logger_ = &Logger;
   Receivers.ErrorHandler_ = &ErrorHandler;
 
-  Receivers.GridID_ = GridID;
+  GetGridID(Grid, Receivers.GridID_);
+  GetGridDimension(Grid, Receivers.NumDims_);
+
   Receivers.SourceGridID_ = SourceGridID;
-  Receivers.NumDims_ = NumDims;
-  Receivers.Comm_ = Comm;
-  Receivers.CommSize_ = CommSize;
-  Receivers.CommRank_ = CommRank;
   Receivers.Count_ = 0;
 
   Receivers.Grid_ = &Grid;
@@ -84,6 +75,8 @@ void DestroyConnectivityReceiverSide(connectivity_r &Receivers) {
 
   MPI_Barrier(Receivers.Comm_);
 
+  Receivers.Comm_.Reset();
+
 }
 
 }
@@ -108,19 +101,19 @@ void GetConnectivityReceiverSideDimension(const connectivity_r &Receivers, int &
 
 void GetConnectivityReceiverSideComm(const connectivity_r &Receivers, MPI_Comm &Comm) {
 
-  Comm = Receivers.Comm_;
+  Comm = Receivers.Comm_.Get();
 
 }
 
 void GetConnectivityReceiverSideCommSize(const connectivity_r &Receivers, int &CommSize) {
 
-  CommSize = Receivers.CommSize_;
+  CommSize = Receivers.Comm_.Size();
 
 }
 
 void GetConnectivityReceiverSideCommRank(const connectivity_r &Receivers, int &CommRank) {
 
-  CommRank = Receivers.CommRank_;
+  CommRank = Receivers.Comm_.Rank();
 
 }
 

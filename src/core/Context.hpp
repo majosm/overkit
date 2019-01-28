@@ -4,6 +4,7 @@
 #ifndef OVK_CORE_CONTEXT_HPP_INCLUDED
 #define OVK_CORE_CONTEXT_HPP_INCLUDED
 
+#include <ovk/core/Comm.hpp>
 #include <ovk/core/Constants.hpp>
 #include <ovk/core/Domain.hpp>
 #include <ovk/core/ErrorHandler.hpp>
@@ -25,9 +26,7 @@ struct context_params {
 struct context {
   mutable core::logger Logger_;
   mutable core::error_handler ErrorHandler_;
-  MPI_Comm Comm_;
-  int CommSize_;
-  int CommRank_;
+  core::comm Comm_;
   std::list<domain> Domains_;
 };
 

@@ -4,6 +4,7 @@
 #ifndef OVK_CORE_PROFILER_HPP_INCLUDED
 #define OVK_CORE_PROFILER_HPP_INCLUDED
 
+#include <ovk/core/Comm.hpp>
 #include <ovk/core/Debug.hpp>
 #include <ovk/core/Global.hpp>
 
@@ -38,15 +39,13 @@ struct profiler {
   using timer = profiler_internal::timer;
   using timer_entry = std::pair<std::string, timer>;
 
-  MPI_Comm Comm_;
-  int CommSize_;
-  int CommRank_;
+  core::comm Comm_;
   bool Enabled_;
   std::vector<timer_entry> Timers_;
 
 };
 
-void CreateProfiler(profiler &Profiler, MPI_Comm Comm);
+void CreateProfiler(profiler &Profiler, const comm &Comm);
 void DestroyProfiler(profiler &Profiler);
 
 void EnableProfiler(profiler &Profiler);
@@ -59,7 +58,7 @@ void RemoveProfilerTimer(profiler &Profiler, const std::string &TimerName);
 int GetProfilerTimerID(const profiler &Profiler, const std::string &TimerName);
 
 inline void StartProfile(profiler &Profiler, int TimerID);
-inline void StartProfileSync(profiler &Profiler, int TimerID, MPI_Comm Comm);
+inline void StartProfileSync(profiler &Profiler, int TimerID, const comm &Comm);
 inline void EndProfile(profiler &Profiler, int TimerID);
 
 std::string WriteProfileTimes(const profiler &Profiler);

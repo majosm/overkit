@@ -3,6 +3,7 @@
 
 #include "ovk/core/ConnectivityD.hpp"
 
+#include "ovk/core/Comm.hpp"
 #include "ovk/core/Constants.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/ErrorHandler.hpp"
@@ -34,27 +35,17 @@ namespace core {
 void CreateConnectivityDonorSide(connectivity_d &Donors, const grid &Grid, int DestinationGridID,
   core::logger &Logger, core::error_handler &ErrorHandler) {
 
-  int GridID;
-  int NumDims;
-  MPI_Comm Comm;
-  int CommSize, CommRank;
-  GetGridID(Grid, GridID);
-  GetGridDimension(Grid, NumDims);
-  GetGridComm(Grid, Comm);
-  GetGridCommSize(Grid, CommSize);
-  GetGridCommRank(Grid, CommRank);
+  Donors.Comm_ = core::GetGridComm(Grid);
 
-  MPI_Barrier(Comm);
+  MPI_Barrier(Donors.Comm_);
 
   Donors.Logger_ = &Logger;
   Donors.ErrorHandler_ = &ErrorHandler;
 
-  Donors.GridID_ = GridID;
+  GetGridID(Grid, Donors.GridID_);
+  GetGridDimension(Grid, Donors.NumDims_);
+
   Donors.DestinationGridID_ = DestinationGridID;
-  Donors.NumDims_ = NumDims;
-  Donors.Comm_ = Comm;
-  Donors.CommSize_ = CommSize;
-  Donors.CommRank_ = CommRank;
   Donors.Count_ = 0;
   Donors.MaxSize_ = 1;
 
@@ -103,6 +94,8 @@ void DestroyConnectivityDonorSide(connectivity_d &Donors) {
 
   MPI_Barrier(Donors.Comm_);
 
+  Donors.Comm_.Reset();
+
 }
 
 }
@@ -128,19 +121,19 @@ void GetConnectivityDonorSideDimension(const connectivity_d &Donors, int &NumDim
 
 void GetConnectivityDonorSideComm(const connectivity_d &Donors, MPI_Comm &Comm) {
 
-  Comm = Donors.Comm_;
+  Comm = Donors.Comm_.Get();
 
 }
 
 void GetConnectivityDonorSideCommSize(const connectivity_d &Donors, int &CommSize) {
 
-  CommSize = Donors.CommSize_;
+  CommSize = Donors.Comm_.Size();
 
 }
 
 void GetConnectivityDonorSideCommRank(const connectivity_d &Donors, int &CommRank) {
 
-  CommRank = Donors.CommRank_;
+  CommRank = Donors.Comm_.Rank();
 
 }
 
