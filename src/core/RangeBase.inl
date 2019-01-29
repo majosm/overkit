@@ -37,6 +37,18 @@ static inline void ovkSetRange(ovk_range *Range, int NumDims, const int *Begin, 
 
 }
 
+static inline bool ovkRangeEquals(const ovk_range *LeftRange, const ovk_range *RightRange) {
+
+  return LeftRange->NumDims == RightRange->NumDims &&
+    LeftRange->Begin[0] == RightRange->Begin[0] &&
+    LeftRange->Begin[1] == RightRange->Begin[1] &&
+    LeftRange->Begin[2] == RightRange->Begin[2] &&
+    LeftRange->End[0] == RightRange->End[0] &&
+    LeftRange->End[1] == RightRange->End[1] &&
+    LeftRange->End[2] == RightRange->End[2];
+
+}
+
 static inline void ovkRangeSize(const ovk_range *Range, int *Size) {
 
   int iDim;
@@ -59,24 +71,28 @@ static inline void ovkRangeCount(const ovk_range *Range, long long *Count) {
 
 }
 
-static inline void ovkRangeCountSmall(const ovk_range *Range, int *Count) {
+static inline bool ovkRangeIsEmpty(const ovk_range *Range) {
 
-  long long CountLarge;
-
-  ovkRangeCount(Range, &CountLarge);
-
-  *Count = (int)CountLarge;
+  return
+    Range->End[0] <= Range->Begin[0] ||
+    Range->End[1] <= Range->Begin[1] ||
+    Range->End[2] <= Range->Begin[2];
 
 }
 
 static inline void ovkRangeTupleToIndex(const ovk_range *Range, ovk_array_layout Layout,
   const int *Tuple, long long *Index) {
 
-  long long Offset[OVK_MAX_DIMS] = {
-    Tuple[0]-Range->Begin[0],
-    Tuple[1]-Range->Begin[1],
-    Tuple[2]-Range->Begin[2]
-  };
+  int iDim;
+
+  long long Offset[OVK_MAX_DIMS];
+  for (iDim = 0; iDim < Range->NumDims; ++iDim) {
+    Offset[iDim] = Tuple[iDim]-Range->Begin[iDim];
+  }
+  for (iDim = Range->NumDims; iDim < OVK_MAX_DIMS; ++iDim) {
+    Offset[iDim] = 0;
+  }
+
   long long Size[OVK_MAX_DIMS];
 
   switch (Layout) {
@@ -91,17 +107,6 @@ static inline void ovkRangeTupleToIndex(const ovk_range *Range, ovk_array_layout
     *Index = Offset[0] + Size[0]*(Offset[1] + Size[1]*Offset[2]);
     break;
   }
-
-}
-
-static inline void ovkRangeTupleToIndexSmall(const ovk_range *Range, ovk_array_layout Layout,
-  const int *Tuple, int *Index) {
-
-  long long IndexLarge;
-
-  ovkRangeTupleToIndex(Range, Layout, Tuple, &IndexLarge);
-
-  *Index = (int)IndexLarge;
 
 }
 
@@ -140,27 +145,6 @@ static inline void ovkRangeIndexToTuple(const ovk_range *Range, ovk_array_layout
   for (iDim = Range->NumDims; iDim < OVK_MAX_DIMS; ++iDim) {
     Tuple[iDim] = 0;
   }
-
-}
-
-static inline bool ovkRangeIsEmpty(const ovk_range *Range) {
-
-  return
-    Range->End[0] <= Range->Begin[0] ||
-    Range->End[1] <= Range->Begin[1] ||
-    Range->End[2] <= Range->Begin[2];
-
-}
-
-static inline bool ovkRangeEquals(const ovk_range *LeftRange, const ovk_range *RightRange) {
-
-  return LeftRange->NumDims == RightRange->NumDims &&
-    LeftRange->Begin[0] == RightRange->Begin[0] &&
-    LeftRange->Begin[1] == RightRange->Begin[1] &&
-    LeftRange->Begin[2] == RightRange->Begin[2] &&
-    LeftRange->End[0] == RightRange->End[0] &&
-    LeftRange->End[1] == RightRange->End[1] &&
-    LeftRange->End[2] == RightRange->End[2];
 
 }
 

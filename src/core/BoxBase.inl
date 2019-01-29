@@ -37,6 +37,18 @@ static inline void ovkSetBox(ovk_box *Box, int NumDims, const double *Begin, con
 
 }
 
+static inline bool ovkBoxEquals(const ovk_box *LeftBox, const ovk_box *RightBox) {
+
+  return LeftBox->NumDims == RightBox->NumDims &&
+    LeftBox->Begin[0] == RightBox->Begin[0] &&
+    LeftBox->Begin[1] == RightBox->Begin[1] &&
+    LeftBox->Begin[2] == RightBox->Begin[2] &&
+    LeftBox->End[0] == RightBox->End[0] &&
+    LeftBox->End[1] == RightBox->End[1] &&
+    LeftBox->End[2] == RightBox->End[2];
+
+}
+
 static inline void ovkBoxSize(const ovk_box *Box, double *Size) {
 
   int iDim;
@@ -62,18 +74,6 @@ static inline void ovkBoxVolume(const ovk_box *Box, double *Volume) {
 static inline bool ovkBoxIsEmpty(const ovk_box *Box) {
 
   return Box->End[0] < Box->Begin[0] || Box->End[1] < Box->Begin[1] || Box->End[2] < Box->Begin[2];
-
-}
-
-static inline bool ovkBoxEquals(const ovk_box *LeftBox, const ovk_box *RightBox) {
-
-  return LeftBox->NumDims == RightBox->NumDims &&
-    LeftBox->Begin[0] == RightBox->Begin[0] &&
-    LeftBox->Begin[1] == RightBox->Begin[1] &&
-    LeftBox->Begin[2] == RightBox->Begin[2] &&
-    LeftBox->End[0] == RightBox->End[0] &&
-    LeftBox->End[1] == RightBox->End[1] &&
-    LeftBox->End[2] == RightBox->End[2];
 
 }
 

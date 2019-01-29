@@ -12,24 +12,32 @@ namespace ovk {
 
 using range = ovk_range;
 
-inline void DefaultRange(range &Range, int NumDims) { ovkDefaultRange(&Range, NumDims); }
-inline void SetRange(range &Range, int NumDims, const int *Begin, const int *End) { ovkSetRange(&Range, NumDims, Begin, End); }
-inline void RangeSize(const range &Range, int *Size) { ovkRangeSize(&Range, Size); }
-inline void RangeCount(const range &Range, long long &Count) { ovkRangeCount(&Range, &Count); }
-inline void RangeCount(const range &Range, int &Count) { ovkRangeCountSmall(&Range, &Count); }
-inline void RangeTupleToIndex(const range &Range, array_layout Layout, const int *Tuple, long long &Index) { ovkRangeTupleToIndex(&Range, ovk_array_layout(Layout), Tuple, &Index); }
-inline void RangeTupleToIndex(const range &Range, array_layout Layout, const int *Tuple, int &Index) { ovkRangeTupleToIndexSmall(&Range, ovk_array_layout(Layout), Tuple, &Index); }
-inline void RangeIndexToTuple(const range &Range, array_layout Layout, long long Index, int *Tuple) { ovkRangeIndexToTuple(&Range, ovk_array_layout(Layout), Index, Tuple); }
-inline bool RangeIsEmpty(const range &Range) { return ovkRangeIsEmpty(&Range); }
-inline bool RangeEquals(const range &LeftRange, const range &RightRange) { return ovkRangeEquals(&LeftRange, &RightRange); }
-inline bool RangeContains(const range &Range, const int *Point) { return ovkRangeContains(&Range, Point); }
-inline bool RangeIncludes(const range &Range, const range &OtherRange) { return ovkRangeIncludes(&Range, &OtherRange); }
-inline bool RangeOverlaps(const range &LeftRange, const range &RightRange) { return ovkRangeOverlaps(&LeftRange, &RightRange); }
-inline void RangeUnion(const range &LeftRange, const range &RightRange, range &UnionRange) { ovkRangeUnion(&LeftRange, &RightRange, &UnionRange); }
-inline void RangeIntersect(const range &LeftRange, const range &RightRange, range &IntersectRange) { ovkRangeIntersect(&LeftRange, &RightRange, &IntersectRange); }
-inline void RangeClamp(const range &Range, int *Point) { ovkRangeClamp(&Range, Point); }
-inline void RangeExtend(const range &Range, const int *Point, range &ExtendRange) { ovkRangeExtend(&Range, Point, &ExtendRange); }
+inline void DefaultRange(range &Range, int NumDims);
+template <typename IntArrayType1, typename IntArrayType2> inline void SetRange(range &Range,
+  int NumDims, const IntArrayType1 &Begin, const IntArrayType2 &End);
+template <typename IntArrayType> inline void RangeSize(const range &Range, IntArrayType &Size);
+template <typename IntegerType> inline void RangeCount(const range &Range, IntegerType &Count);
+inline bool RangeIsEmpty(const range &Range);
+template <typename IntArrayType, typename IntegerType> inline void RangeTupleToIndex(const range
+  &Range, array_layout Layout, const IntArrayType &Tuple, IntegerType &Index);
+template <typename IntegerType, typename IntArrayType> inline void RangeIndexToTuple(const range
+  &Range, array_layout Layout, IntegerType Index, IntArrayType &Tuple);
+template <typename IntArrayType> inline bool RangeContains(const range &Range, const IntArrayType
+  &Point);
+inline bool RangeIncludes(const range &Range, const range &OtherRange);
+inline bool RangeOverlaps(const range &LeftRange, const range &RightRange);
+inline void RangeUnion(const range &LeftRange, const range &RightRange, range &UnionRange);
+inline void RangeIntersect(const range &LeftRange, const range &RightRange, range &IntersectRange);
+inline void RangeClamp(const range &Range, int *Point);
+template <typename IntArrayType> inline void RangeExtend(const range &Range, const IntArrayType
+  &Point, range &ExtendRange);
 
 }
+
+// Can't put these in the ovk namespace (ADL won't work since ovk_range isn't defined there)
+inline bool operator==(const ovk::range &LeftRange, const ovk::range &RightRange);
+inline bool operator!=(const ovk::range &LeftRange, const ovk::range &RightRange);
+
+#include <ovk/core/Range.inl>
 
 #endif

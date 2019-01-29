@@ -36,7 +36,9 @@ set(SOURCES
 set(PUBLIC_HEADERS
   AssemblyOptions.hpp
   Box.hpp
+  Box.inl
   Cart.hpp
+  Cart.inl
   Connectivity.hpp
   ConnectivityD.hpp
   ConnectivityR.hpp
@@ -49,6 +51,7 @@ set(PUBLIC_HEADERS
   Grid.hpp
   Misc.hpp
   Range.hpp
+  Range.inl
   Request.hpp
 )
 

@@ -37,6 +37,18 @@ static inline void ovkSetCart(ovk_cart *Cart, int NumDims, const int *Size, cons
 
 }
 
+static inline bool ovkCartEquals(const ovk_cart *LeftCart, const ovk_cart *RightCart) {
+
+  return LeftCart->NumDims == RightCart->NumDims &&
+    LeftCart->Size[0] == RightCart->Size[0] &&
+    LeftCart->Size[1] == RightCart->Size[1] &&
+    LeftCart->Size[2] == RightCart->Size[2] &&
+    LeftCart->Periodic[0] == RightCart->Periodic[0] &&
+    LeftCart->Periodic[1] == RightCart->Periodic[1] &&
+    LeftCart->Periodic[2] == RightCart->Periodic[2];
+
+}
+
 static inline void ovkCartCount(const ovk_cart *Cart, long long *Count) {
 
   int iDim;
@@ -46,18 +58,6 @@ static inline void ovkCartCount(const ovk_cart *Cart, long long *Count) {
   for (iDim = 0; iDim < Cart->NumDims; ++iDim) {
     *Count *= Cart->Size[iDim];
   }
-
-}
-
-static inline bool ovkCartEquals(const ovk_cart *Cart, const ovk_cart *OtherCart) {
-
-  return Cart->NumDims == OtherCart->NumDims &&
-    Cart->Size[0] == OtherCart->Size[0] &&
-    Cart->Size[1] == OtherCart->Size[1] &&
-    Cart->Size[2] == OtherCart->Size[2] &&
-    Cart->Periodic[0] == OtherCart->Periodic[0] &&
-    Cart->Periodic[1] == OtherCart->Periodic[1] &&
-    Cart->Periodic[2] == OtherCart->Periodic[2];
 
 }
 

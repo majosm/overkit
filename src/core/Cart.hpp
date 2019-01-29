@@ -11,14 +11,22 @@ namespace ovk {
 
 using cart = ovk_cart;
 
-inline void DefaultCart(cart &Cart, int NumDims) { ovkDefaultCart(&Cart, NumDims); }
-inline void SetCart(cart &Cart, int NumDims, const int *Size, const bool *Periodic) { ovkSetCart(&Cart, NumDims, Size, Periodic); }
-inline void CartCount(const cart &Cart, long long &Count) { ovkCartCount(&Cart, &Count); }
-inline bool CartEquals(const cart &Cart, const cart &OtherCart) { return ovkCartEquals(&Cart, &OtherCart); }
-inline void CartFindPeriod(const cart &Cart, const int *Point, int *Period) { ovkCartFindPeriod(&Cart, Point, Period); }
-inline void CartPeriodicAdjust(const cart &Cart, const int *Tuple, int *AdjustedTuple) { ovkCartPeriodicAdjust(&Cart, Tuple, AdjustedTuple); }
-inline void CartPointToCell(const cart &PointCart, cart &CellCart) { ovkCartPointToCell(&PointCart, &CellCart); }
+inline void DefaultCart(cart &Cart, int NumDims);
+template <typename IntArrayType, typename BoolArrayType> inline void SetCart(cart &Cart,
+  int NumDims, const IntArrayType &Size, const BoolArrayType &Periodic);
+template <typename IntegerType> inline void CartCount(const cart &Cart, IntegerType &Count);
+template <typename IntArrayType1, typename IntArrayType2> inline void CartFindPeriod(const cart
+  &Cart, const IntArrayType1 &Point, IntArrayType2 &Period);
+template <typename IntArrayType1, typename IntArrayType2> inline void CartPeriodicAdjust(const cart
+  &Cart, const IntArrayType1 &Tuple, IntArrayType2 &AdjustedTuple);
+inline void CartPointToCell(const cart &PointCart, cart &CellCart);
 
 }
+
+// Can't put these in the ovk namespace (ADL won't work since ovk_cart isn't defined there)
+inline bool operator==(const ovk::cart &LeftCart, const ovk::cart &RightCart);
+inline bool operator!=(const ovk::cart &LeftCart, const ovk::cart &RightCart);
+
+#include <ovk/core/Cart.inl>
 
 #endif
