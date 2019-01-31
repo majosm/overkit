@@ -442,8 +442,9 @@ void ovkCollect(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
   OVK_DEBUG_ASSERT(GridValuesRange, "Invalid grid data range pointer.");
 
   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+  auto &GridValuesRangeCPP = static_cast<const ovk::range &>(*GridValuesRange);
   ovk::Collect(DomainCPP, DonorGridID, ReceiverGridID, ovk::data_type(ValueType), Count,
-    ovk::collect_op(CollectOp), *GridValuesRange, ovk::array_layout(GridValuesLayout), GridValues,
+    ovk::collect_op(CollectOp), GridValuesRangeCPP, ovk::array_layout(GridValuesLayout), GridValues,
     DonorValues);
 
 }
@@ -488,8 +489,9 @@ void ovkDisperse(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
   OVK_DEBUG_ASSERT(GridValuesRange, "Invalid grid data range pointer.");
 
   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+  auto &GridValuesRangeCPP = static_cast<const ovk::range &>(*GridValuesRange);
   ovk::Disperse(DomainCPP, DonorGridID, ReceiverGridID, ovk::data_type(ValueType), Count,
-    ovk::disperse_op(DisperseOp), ReceiverValues, *GridValuesRange,
+    ovk::disperse_op(DisperseOp), ReceiverValues, GridValuesRangeCPP,
     ovk::array_layout(GridValuesLayout), GridValues);
 
 }

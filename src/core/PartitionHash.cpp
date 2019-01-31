@@ -11,6 +11,7 @@
 
 #include <mpi.h>
 
+#include <array>
 #include <cmath>
 #include <map>
 #include <memory>
@@ -43,22 +44,17 @@ void CreatePartitionHash(partition_hash &Hash, int NumDims, const comm &Comm, co
   Hash.GlobalRange_ = GlobalRange;
   Hash.LocalRange_ = LocalRange;
 
-  int GlobalSize[MAX_DIMS];
-  RangeSize(GlobalRange, GlobalSize);
+  std::array<int,MAX_DIMS> GlobalSize = GlobalRange.Size();
 
   int NumBins[MAX_DIMS] = {1, 1, 1};
-  BinDecomp(Hash.NumDims_, GlobalSize, Hash.Comm_.Size(), NumBins);
+  BinDecomp(Hash.NumDims_, GlobalSize.data(), Hash.Comm_.Size(), NumBins);
 
   int TotalBins = 1;
   for (int iDim = 0; iDim < NumDims; ++iDim) {
     TotalBins *= NumBins[iDim];
   }
 
-  DefaultRange(Hash.BinRange_, NumDims);
-  for (int iDim = 0; iDim < NumDims; ++iDim) {
-    Hash.BinRange_.Begin[iDim] = 0;
-    Hash.BinRange_.End[iDim] = NumBins[iDim];
-  }
+  Hash.BinRange_ = range(NumDims, std::array<int,MAX_DIMS>({}), NumBins);
 
   Hash.RankHasBin_ = Hash.Comm_.Rank() < TotalBins;
 
@@ -67,47 +63,42 @@ void CreatePartitionHash(partition_hash &Hash, int NumDims, const comm &Comm, co
   }
 
   // Figure out which bins the local partition overlaps with
-  range OverlappedBinRange;
-  DefaultRange(OverlappedBinRange, NumDims);
-  if (!RangeIsEmpty(Hash.LocalRange_)) {
-    int LowerCorner[MAX_DIMS] = {0, 0, 0};
-    int UpperCorner[MAX_DIMS] = {0, 0, 0};
+  int OverlappedBinBegin[MAX_DIMS] = {0, 0, 0};
+  int OverlappedBinEnd[MAX_DIMS] = {0, 0, 1};
+  if (!Hash.LocalRange_.Empty()) {
+    int LowerCorner[MAX_DIMS], UpperCorner[MAX_DIMS];
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      LowerCorner[iDim] = Hash.LocalRange_.Begin[iDim];
-      UpperCorner[iDim] = Hash.LocalRange_.End[iDim]-1;
+      LowerCorner[iDim] = Hash.LocalRange_.Begin(iDim);
+      UpperCorner[iDim] = Hash.LocalRange_.End(iDim)-1;
     }
     int LowerBinLoc[MAX_DIMS], UpperBinLoc[MAX_DIMS];
-    MapToUniformCell(Hash.GlobalRange_.Begin, Hash.BinSize_, LowerCorner, LowerBinLoc);
-    MapToUniformCell(Hash.GlobalRange_.Begin, Hash.BinSize_, UpperCorner, UpperBinLoc);
+    MapToUniformCell(Hash.GlobalRange_.BeginData(), Hash.BinSize_, LowerCorner, LowerBinLoc);
+    MapToUniformCell(Hash.GlobalRange_.BeginData(), Hash.BinSize_, UpperCorner, UpperBinLoc);
     for (int iDim = 0; iDim < NumDims; ++iDim) {
-      OverlappedBinRange.Begin[iDim] = LowerBinLoc[iDim];
-      OverlappedBinRange.End[iDim] = UpperBinLoc[iDim]+1;
+      OverlappedBinBegin[iDim] = LowerBinLoc[iDim];
+      OverlappedBinEnd[iDim] = UpperBinLoc[iDim]+1;
     }
   }
 
-  int NumOverlappedBins;
-  RangeCount(OverlappedBinRange, NumOverlappedBins);
+  range OverlappedBinRange(NumDims, OverlappedBinBegin, OverlappedBinEnd);
+
+  int NumOverlappedBins = OverlappedBinRange.Count<int>();
 
   std::vector<int> OverlappedBinIndices(NumOverlappedBins);
 
   int iBin = 0;
-  for (int k = OverlappedBinRange.Begin[2]; k < OverlappedBinRange.End[2]; ++k) {
-    for (int j = OverlappedBinRange.Begin[1]; j < OverlappedBinRange.End[1]; ++j) {
-      for (int i = OverlappedBinRange.Begin[0]; i < OverlappedBinRange.End[0]; ++i) {
+  for (int k = OverlappedBinRange.Begin(2); k < OverlappedBinRange.End(2); ++k) {
+    for (int j = OverlappedBinRange.Begin(1); j < OverlappedBinRange.End(1); ++j) {
+      for (int i = OverlappedBinRange.Begin(0); i < OverlappedBinRange.End(0); ++i) {
         int Bin[MAX_DIMS] = {i, j, k};
-        RangeTupleToIndex(Hash.BinRange_, array_layout::ROW_MAJOR, Bin, OverlappedBinIndices[iBin]);
+        OverlappedBinIndices[iBin] = RangeTupleToIndex<int>(Hash.BinRange_, array_layout::ROW_MAJOR,
+          Bin);
         ++iBin;
       }
     }
   }
 
   // Collect partitions into bins
-
-  int LocalRangeFlat[2*MAX_DIMS];
-  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    LocalRangeFlat[iDim] = Hash.LocalRange_.Begin[iDim];
-    LocalRangeFlat[MAX_DIMS+iDim] = Hash.LocalRange_.End[iDim];
-  }
 
   std::set<int> PartitionRanks;
 
@@ -129,11 +120,18 @@ void CreatePartitionHash(partition_hash &Hash, int NumDims, const comm &Comm, co
     }
   }
 
+  int LocalRangeFlat[2*MAX_DIMS];
+  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+    LocalRangeFlat[iDim] = Hash.LocalRange_.Begin(iDim);
+    LocalRangeFlat[MAX_DIMS+iDim] = Hash.LocalRange_.End(iDim);
+  }
+
   for (iBin = 0; iBin < NumOverlappedBins; ++iBin) {
     MPI_Isend(LocalRangeFlat, 2*MAX_DIMS, MPI_INT, OverlappedBinIndices[iBin], 0, Hash.Comm_,
       SendRequests.data()+iBin);
   }
 
+  // TODO: Merge SendRequests and RecvRequests arrays?
   MPI_Waitall(NumPartitions, RecvRequests.data(), MPI_STATUSES_IGNORE);
   MPI_Waitall(NumOverlappedBins, SendRequests.data(), MPI_STATUSES_IGNORE);
 
@@ -145,16 +143,16 @@ void CreatePartitionHash(partition_hash &Hash, int NumDims, const comm &Comm, co
 
     int BinIndex = Hash.Comm_.Rank();
 
-    int BinLoc[MAX_DIMS];
-    RangeIndexToTuple(Hash.BinRange_, array_layout::ROW_MAJOR, BinIndex, BinLoc);
+    std::array<int,MAX_DIMS> BinLoc = RangeIndexToTuple(Hash.BinRange_, array_layout::ROW_MAJOR,
+      BinIndex);
 
-    range Range;
-    DefaultRange(Range, NumDims);
+    int RangeBegin[MAX_DIMS], RangeEnd[MAX_DIMS];
     for (int iDim = 0; iDim < NumDims; ++iDim) {
-      Range.Begin[iDim] = Hash.GlobalRange_.Begin[iDim]+Hash.BinSize_[iDim]*BinLoc[iDim];
-      Range.End[iDim] = Hash.GlobalRange_.Begin[iDim]+Hash.BinSize_[iDim]*(BinLoc[iDim]+1);
+      RangeBegin[iDim] = Hash.GlobalRange_.Begin(iDim)+Hash.BinSize_[iDim]*BinLoc[iDim];
+      RangeEnd[iDim] = Hash.GlobalRange_.Begin(iDim)+Hash.BinSize_[iDim]*(BinLoc[iDim]+1);
     }
-    RangeIntersect(Range, Hash.GlobalRange_, Range);
+    range Range(NumDims, RangeBegin, RangeEnd);
+    Range = IntersectRanges(Range, Hash.GlobalRange_);
 
     Hash.Bin_.reset(new partition_bin());
 
@@ -164,7 +162,7 @@ void CreatePartitionHash(partition_hash &Hash, int NumDims, const comm &Comm, co
 
     int iPartition = 0;
     for (int Rank : PartitionRanks) {
-      SetRange(Bin.PartitionRanges_[iPartition], NumDims, PartitionRangesFlat.data()+
+      Bin.PartitionRanges_[iPartition] = range(NumDims, PartitionRangesFlat.data()+
         2*MAX_DIMS*iPartition, PartitionRangesFlat.data()+2*MAX_DIMS*iPartition+MAX_DIMS);
       Bin.PartitionRanks_[iPartition] = Rank;
       ++iPartition;
@@ -191,9 +189,9 @@ void MapToPartitionBins(const partition_hash &Hash, long long NumPoints, const i
   for (long long iPoint = 0; iPoint < NumPoints; ++iPoint) {
     int Point[MAX_DIMS] = {Points[0][iPoint], Points[1][iPoint], Points[2][iPoint]};
     int BinLoc[MAX_DIMS];
-    MapToUniformCell(Hash.GlobalRange_.Begin, Hash.BinSize_, Point, BinLoc);
-    RangeClamp(Hash.BinRange_, BinLoc);
-    RangeTupleToIndex(Hash.BinRange_, array_layout::ROW_MAJOR, BinLoc, BinIndices[iPoint]);
+    MapToUniformCell(Hash.GlobalRange_.BeginData(), Hash.BinSize_, Point, BinLoc);
+    ClampToRange(BinLoc, Hash.BinRange_);
+    BinIndices[iPoint] = RangeTupleToIndex(Hash.BinRange_, array_layout::ROW_MAJOR, BinLoc);
   }
 
 }
@@ -244,9 +242,9 @@ void RetrievePartitionBins(const partition_hash &Hash, std::map<int, partition_b
     for (int iPartition = 0; iPartition < Bin.NumPartitions_; ++iPartition) {
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
         LocalBinPartitionRangesFlat[2*MAX_DIMS*iPartition+iDim] =
-          Bin.PartitionRanges_[iPartition].Begin[iDim];
+          Bin.PartitionRanges_[iPartition].Begin(iDim);
         LocalBinPartitionRangesFlat[2*MAX_DIMS*iPartition+MAX_DIMS+iDim] =
-          Bin.PartitionRanges_[iPartition].End[iDim];
+          Bin.PartitionRanges_[iPartition].End(iDim);
       }
     }
     std::vector<MPI_Request> SendRequests(3*NumRetrieves);
@@ -271,18 +269,18 @@ void RetrievePartitionBins(const partition_hash &Hash, std::map<int, partition_b
 
   for (int iBin = 0; iBin < NumUnretrievedBins; ++iBin) {
     int BinIndex = UnretrievedBinIndices[iBin];
-    int BinLoc[MAX_DIMS];
-    RangeIndexToTuple(Hash.BinRange_, array_layout::ROW_MAJOR, BinIndex, BinLoc);
-    range Range;
-    DefaultRange(Range, NumDims);
+    std::array<int,MAX_DIMS> BinLoc = RangeIndexToTuple(Hash.BinRange_, array_layout::ROW_MAJOR,
+      BinIndex);
+    int RangeBegin[MAX_DIMS], RangeEnd[MAX_DIMS];
     for (int iDim = 0; iDim < NumDims; ++iDim) {
-      Range.Begin[iDim] = Hash.GlobalRange_.Begin[iDim]+Hash.BinSize_[iDim]*BinLoc[iDim];
-      Range.End[iDim] = Hash.GlobalRange_.Begin[iDim]+Hash.BinSize_[iDim]*(BinLoc[iDim]+1);
+      RangeBegin[iDim] = Hash.GlobalRange_.Begin(iDim)+Hash.BinSize_[iDim]*BinLoc[iDim];
+      RangeEnd[iDim] = Hash.GlobalRange_.Begin(iDim)+Hash.BinSize_[iDim]*(BinLoc[iDim]+1);
     }
+    range Range(NumDims, RangeBegin, RangeEnd);
     partition_bin &Bin = Bins[UnretrievedBinIndices[iBin]];
     CreatePartitionBin(Bin, NumDims, BinIndex, Range, NumPartitions[iBin]);
     for (int iPartition = 0; iPartition < NumPartitions[iBin]; ++iPartition) {
-      SetRange(Bin.PartitionRanges_[iPartition], NumDims, PartitionRangesFlat[iBin].data() +
+      Bin.PartitionRanges_[iPartition] = range(NumDims, PartitionRangesFlat[iBin].data() +
         2*MAX_DIMS*iPartition, PartitionRangesFlat[iBin].data()+2*MAX_DIMS*iPartition+MAX_DIMS);
       Bin.PartitionRanks_[iPartition] = PartitionRanks[iBin][iPartition];
     }

@@ -140,8 +140,7 @@ int main(int argc, char **argv) {
       ovkSetGridParamPeriodic(GridParams, InputGrid->periodic);
       ovkSetGridParamPeriodicStorage(GridParams, OVK_PERIODIC_STORAGE_UNIQUE);
       ovkSetGridParamPeriodicLength(GridParams, InputGrid->periodic_length);
-      ovk_range LocalRange;
-      ovkSetRange(&LocalRange, 2, InputGrid->is, InputGrid->ie);
+      ovk_range LocalRange = ovkRange(2, InputGrid->is, InputGrid->ie);
       ovkSetGridParamLocalRange(GridParams, &LocalRange);
       ovkCreateGridLocal(Domain, GridID, GridParams);
       ovkDestroyGridParams(&GridParams);
@@ -216,8 +215,7 @@ int main(int argc, char **argv) {
       input_grid *InputGrid = InputGrids+iLocalGrid;
       input_state *InputState = InputStates+iLocalGrid;
       int LocalGridID = InputGrid->id;
-      ovk_range GridDataRange;
-      ovkSetRange(&GridDataRange, 2, InputGrid->is, InputGrid->ie);
+      ovk_range GridDataRange = ovkRange(2, InputGrid->is, InputGrid->ie);
       for (iGrid = 0; iGrid < 2; ++iGrid) {
         int OtherGridID = iGrid+1;
         if (ovkConnectivityExists(Domain, LocalGridID, OtherGridID)) {
@@ -275,8 +273,7 @@ int main(int argc, char **argv) {
       input_grid *InputGrid = InputGrids+iLocalGrid;
       input_state *InputState = InputStates+iLocalGrid;
       int LocalGridID = InputGrid->id;
-      ovk_range GridDataRange;
-      ovkSetRange(&GridDataRange, 2, InputGrid->is, InputGrid->ie);
+      ovk_range GridDataRange = ovkRange(2, InputGrid->is, InputGrid->ie);
       for (iGrid = 0; iGrid < 2; ++iGrid) {
         int OtherGridID = iGrid+1;
         if (ovkConnectivityExists(Domain, OtherGridID, LocalGridID)) {

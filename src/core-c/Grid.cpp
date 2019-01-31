@@ -154,7 +154,8 @@ void ovkGetGridGlobalRange(const ovk_grid *Grid, ovk_range *GlobalRange) {
   OVK_DEBUG_ASSERT(GlobalRange, "Invalid global range pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-  ovk::GetGridGlobalRange(GridCPP, *GlobalRange);
+  auto &GlobalRangeCPP = static_cast<ovk::range &>(*GlobalRange);
+  ovk::GetGridGlobalRange(GridCPP, GlobalRangeCPP);
 
 }
 
@@ -164,7 +165,8 @@ void ovkGetGridLocalRange(const ovk_grid *Grid, ovk_range *LocalRange) {
   OVK_DEBUG_ASSERT(LocalRange, "Invalid local range pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-  ovk::GetGridLocalRange(GridCPP, *LocalRange);
+  auto &LocalRangeCPP = static_cast<ovk::range &>(*LocalRange);
+  ovk::GetGridLocalRange(GridCPP, LocalRangeCPP);
 
 }
 
@@ -375,7 +377,8 @@ void ovkGetGridParamLocalRange(const ovk_grid_params *Params, ovk_range *LocalRa
   OVK_DEBUG_ASSERT(LocalRange, "Invalid local range pointer.");
 
   auto &ParamsCPP = *reinterpret_cast<const ovk::grid_params *>(Params);
-  ovk::GetGridParamLocalRange(ParamsCPP, *LocalRange);
+  auto &LocalRangeCPP = static_cast<ovk::range &>(*LocalRange);
+  ovk::GetGridParamLocalRange(ParamsCPP, LocalRangeCPP);
 
 }
 
@@ -385,7 +388,8 @@ void ovkSetGridParamLocalRange(ovk_grid_params *Params, const ovk_range *LocalRa
   OVK_DEBUG_ASSERT(LocalRange, "Invalid local range pointer.");
 
   auto &ParamsCPP = *reinterpret_cast<ovk::grid_params *>(Params);
-  ovk::SetGridParamLocalRange(ParamsCPP, *LocalRange);
+  auto &LocalRangeCPP = static_cast<const ovk::range &>(*LocalRange);
+  ovk::SetGridParamLocalRange(ParamsCPP, LocalRangeCPP);
 
 }
 
@@ -472,7 +476,8 @@ void ovkGetGridInfoGlobalRange(const ovk_grid_info *Info, ovk_range *GlobalRange
   OVK_DEBUG_ASSERT(GlobalRange, "Invalid global range pointer.");
 
   auto &InfoCPP = *reinterpret_cast<const ovk::grid_info *>(Info);
-  ovk::GetGridInfoGlobalRange(InfoCPP, *GlobalRange);
+  auto &GlobalRangeCPP = static_cast<ovk::range &>(*GlobalRange);
+  ovk::GetGridInfoGlobalRange(InfoCPP, GlobalRangeCPP);
 
 }
 
