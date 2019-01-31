@@ -41,6 +41,7 @@ set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_SAVED})
 
 set(TEST_SOURCES
   ExampleTests.cpp
+  RangeTests.cpp
 )
 
 #-------------------
