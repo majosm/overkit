@@ -134,21 +134,42 @@ endif()
 # Baseline compiler flags
 #-------------------------
 
-# Language dialect flags (only needed for CMake < 3.1)
-if(NOT DETECTED_DIALECT_FLAGS)
-  set(DIALECT_CXX_FLAGS "" CACHE INTERNAL "")
-  set(DIALECT_C_FLAGS "" CACHE INTERNAL "")
-  if(CMAKE_VERSION VERSION_LESS 3.1)
+# Language dialect flags
+set(BUILT_IN_DIALECT_SUPPORT TRUE)
+# Native CMake support added in 3.1
+if(CMAKE_VERSION VERSION_LESS 3.1)
+  set(BUILT_IN_DIALECT_SUPPORT FALSE)
+endif()
+# Intel not supported until 3.6
+if(CMAKE_CXX_COMPILER_ID MATCHES Intel AND CMAKE_VERSION VERSION_LESS 3.6)
+  set(BUILT_IN_DIALECT_SUPPORT FALSE)
+endif()
+if(BUILT_IN_DIALECT_SUPPORT)
+  # Can set using target_compile_features in >= 3.8
+  set(DIALECT_COMPILE_FEATURE_SUPPORT TRUE)
+  if(CMAKE_VERSION VERSION_LESS 3.8)
+    set(DIALECT_COMPILE_FEATURE_SUPPORT FALSE)
+  endif()
+else()
+  if(NOT DETECTED_DIALECT_FLAGS)
+    set(DIALECT_CXX_FLAGS "" CACHE INTERNAL "")
+    set(DIALECT_C_FLAGS "" CACHE INTERNAL "")
     check_cxx_compiler_flag(-std=c++11 STD_CXX11_FLAG_SUPPORTED)
     if(STD_CXX11_FLAG_SUPPORTED)
       set(DIALECT_CXX_FLAGS -std=c++11 CACHE INTERNAL "")
+    else()
+      message(WARNING "Unable to detect whether compiler supports C++11.")
+      set(GLOBAL_WARNING_FLAG TRUE CACHE INTERNAL "")
     endif()
     check_c_compiler_flag(-std=c99 STD_C99_FLAG_SUPPORTED)
     if(STD_C99_FLAG_SUPPORTED)
       set(DIALECT_C_FLAGS -std=c99 CACHE INTERNAL "")
+    else()
+      message(WARNING "Unable to detect whether compiler supports C99.")
+      set(GLOBAL_WARNING_FLAG TRUE CACHE INTERNAL "")
     endif()
+    set(DETECTED_DIALECT_FLAGS TRUE CACHE INTERNAL "")
   endif()
-  set(DETECTED_DIALECT_FLAGS TRUE CACHE INTERNAL "")
 endif()
 
 # Warnings
@@ -210,7 +231,7 @@ endif()
 if(COVERAGE)
 
   # Requires GNU
-  if (NOT ${CMAKE_C_COMPILER_ID} MATCHES GNU)
+  if (NOT CMAKE_CXX_COMPILER_ID MATCHES GNU)
     message(FATAL_ERROR "Building with coverage analysis requires GNU compilers.")
   endif()
 
