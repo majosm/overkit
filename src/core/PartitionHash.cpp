@@ -107,16 +107,27 @@ void CreatePartitionHash(partition_hash &Hash, int NumDims, const comm &Comm, co
   int NumPartitions = PartitionRanks.size();
 
   std::vector<int> PartitionRangesFlat(2*MAX_DIMS*NumPartitions);
-  std::vector<MPI_Request> SendRequests(NumOverlappedBins);
-  std::vector<MPI_Request> RecvRequests(NumPartitions);
+  std::vector<MPI_Request> Requests;
+
+  Requests.reserve(NumOverlappedBins + NumPartitions);
+
+  auto Isend = [&Requests](void *Buffer, int Count, MPI_Datatype DataType, int DestRank, int Tag,
+    MPI_Comm Comm) {
+    Requests.emplace_back();
+    MPI_Isend(Buffer, Count, DataType, DestRank, Tag, Comm, &Requests.back());
+
+  };
+  auto Irecv = [&Requests](void *Buffer, int Count, MPI_Datatype DataType, int SourceRank, int Tag,
+    MPI_Comm Comm) {
+    Requests.emplace_back();
+    MPI_Irecv(Buffer, Count, DataType, SourceRank, Tag, Comm, &Requests.back());
+  };
 
   if (Hash.RankHasBin_) {
     int *PartitionRangeFlat = PartitionRangesFlat.data();
-    MPI_Request *RecvRequest = RecvRequests.data();
     for (int Rank : PartitionRanks) {
-      MPI_Irecv(PartitionRangeFlat, 2*MAX_DIMS, MPI_INT, Rank, 0, Hash.Comm_, RecvRequest);
+      Irecv(PartitionRangeFlat, 2*MAX_DIMS, MPI_INT, Rank, 0, Hash.Comm_);
       PartitionRangeFlat += 2*MAX_DIMS;
-      ++RecvRequest;
     }
   }
 
@@ -127,16 +138,12 @@ void CreatePartitionHash(partition_hash &Hash, int NumDims, const comm &Comm, co
   }
 
   for (iBin = 0; iBin < NumOverlappedBins; ++iBin) {
-    MPI_Isend(LocalRangeFlat, 2*MAX_DIMS, MPI_INT, OverlappedBinIndices[iBin], 0, Hash.Comm_,
-      SendRequests.data()+iBin);
+    Isend(LocalRangeFlat, 2*MAX_DIMS, MPI_INT, OverlappedBinIndices[iBin], 0, Hash.Comm_);
   }
 
-  // TODO: Merge SendRequests and RecvRequests arrays?
-  MPI_Waitall(NumPartitions, RecvRequests.data(), MPI_STATUSES_IGNORE);
-  MPI_Waitall(NumOverlappedBins, SendRequests.data(), MPI_STATUSES_IGNORE);
+  MPI_Waitall(Requests.size(), Requests.data(), MPI_STATUSES_IGNORE);
 
-  SendRequests.clear();
-  RecvRequests.clear();
+  Requests.clear();
   OverlappedBinIndices.clear();
 
   if (Hash.RankHasBin_) {
@@ -213,7 +220,8 @@ void RetrievePartitionBins(const partition_hash &Hash, std::map<int, partition_b
 
   std::set<int> RetrieveRanks;
 
-  core::DynamicHandshake(Hash.Comm_, NumUnretrievedBins, UnretrievedBinIndices.data(), RetrieveRanks);
+  core::DynamicHandshake(Hash.Comm_, NumUnretrievedBins, UnretrievedBinIndices.data(),
+    RetrieveRanks);
 
   int NumRetrieves = RetrieveRanks.size();
 
@@ -225,14 +233,28 @@ void RetrievePartitionBins(const partition_hash &Hash, std::map<int, partition_b
     PartitionRanks[iBin].resize(Hash.MaxBinPartitions_);
   }
 
-  std::vector<MPI_Request> RecvRequests(3*NumUnretrievedBins);
+  std::vector<MPI_Request> Requests;
+
+  Requests.reserve(3*NumUnretrievedBins + 3*NumRetrieves);
+
+  auto Isend = [&Requests](void *Buffer, int Count, MPI_Datatype DataType, int DestRank, int Tag,
+    MPI_Comm Comm) {
+    Requests.emplace_back();
+    MPI_Isend(Buffer, Count, DataType, DestRank, Tag, Comm, &Requests.back());
+
+  };
+  auto Irecv = [&Requests](void *Buffer, int Count, MPI_Datatype DataType, int SourceRank, int Tag,
+    MPI_Comm Comm) {
+    Requests.emplace_back();
+    MPI_Irecv(Buffer, Count, DataType, SourceRank, Tag, Comm, &Requests.back());
+  };
+
   for (int iBin = 0; iBin < NumUnretrievedBins; ++iBin) {
-    MPI_Irecv(NumPartitions.data()+iBin, 1, MPI_INT, UnretrievedBinIndices[iBin], 0, Hash.Comm_,
-      RecvRequests.data()+3*iBin);
-    MPI_Irecv(PartitionRangesFlat[iBin].data(), 2*MAX_DIMS*Hash.MaxBinPartitions_, MPI_INT,
-      UnretrievedBinIndices[iBin], 0, Hash.Comm_, RecvRequests.data()+3*iBin+1);
-    MPI_Irecv(PartitionRanks[iBin].data(), Hash.MaxBinPartitions_, MPI_INT,
-      UnretrievedBinIndices[iBin], 0, Hash.Comm_, RecvRequests.data()+3*iBin+2);
+    Irecv(NumPartitions.data()+iBin, 1, MPI_INT, UnretrievedBinIndices[iBin], 0, Hash.Comm_);
+    Irecv(PartitionRangesFlat[iBin].data(), 2*MAX_DIMS*Hash.MaxBinPartitions_, MPI_INT,
+      UnretrievedBinIndices[iBin], 0, Hash.Comm_);
+    Irecv(PartitionRanks[iBin].data(), Hash.MaxBinPartitions_, MPI_INT, UnretrievedBinIndices[iBin],
+      0, Hash.Comm_);
   }
 
   if (Hash.RankHasBin_) {
@@ -247,24 +269,20 @@ void RetrievePartitionBins(const partition_hash &Hash, std::map<int, partition_b
           Bin.PartitionRanges_[iPartition].End(iDim);
       }
     }
-    std::vector<MPI_Request> SendRequests(3*NumRetrieves);
     auto RankIter = RetrieveRanks.begin();
     for (int iRetrieve = 0; iRetrieve < NumRetrieves; ++iRetrieve) {
       int RetrieveRank = *RankIter;
-      MPI_Isend(&Bin.NumPartitions_, 1, MPI_INT, RetrieveRank, 0, Hash.Comm_,
-        SendRequests.data()+3*iRetrieve);
-      MPI_Isend(LocalBinPartitionRangesFlat.data(), 2*MAX_DIMS*Bin.NumPartitions_, MPI_INT,
-        RetrieveRank, 0, Hash.Comm_, SendRequests.data()+3*iRetrieve+1);
-      MPI_Isend(Bin.PartitionRanks_.data(), Bin.NumPartitions_, MPI_INT, RetrieveRank, 0,
-        Hash.Comm_, SendRequests.data()+3*iRetrieve+2);
+      Isend(&Bin.NumPartitions_, 1, MPI_INT, RetrieveRank, 0, Hash.Comm_);
+      Isend(LocalBinPartitionRangesFlat.data(), 2*MAX_DIMS*Bin.NumPartitions_, MPI_INT,
+        RetrieveRank, 0, Hash.Comm_);
+      Isend(Bin.PartitionRanks_.data(), Bin.NumPartitions_, MPI_INT, RetrieveRank, 0, Hash.Comm_);
       ++RankIter;
     }
-    MPI_Waitall(3*NumRetrieves, SendRequests.data(), MPI_STATUSES_IGNORE);
   }
 
-  MPI_Waitall(3*NumUnretrievedBins, RecvRequests.data(), MPI_STATUSES_IGNORE);
+  MPI_Waitall(Requests.size(), Requests.data(), MPI_STATUSES_IGNORE);
 
-  RecvRequests.clear();
+  Requests.clear();
   RetrieveRanks.clear();
 
   for (int iBin = 0; iBin < NumUnretrievedBins; ++iBin) {
