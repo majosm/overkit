@@ -16,7 +16,6 @@
 #include <map>
 #include <memory>
 #include <numeric>
-#include <set>
 #include <vector>
 
 namespace ovk {
@@ -100,9 +99,9 @@ void CreatePartitionHash(partition_hash &Hash, int NumDims, const comm &Comm, co
 
   // Collect partitions into bins
 
-  std::set<int> PartitionRanks;
+  std::vector<int> PartitionRanks;
 
-  core::DynamicHandshake(Hash.Comm_, NumOverlappedBins, OverlappedBinIndices.data(), PartitionRanks);
+  core::DynamicHandshake(Hash.Comm_, NumOverlappedBins, OverlappedBinIndices, PartitionRanks);
 
   int NumPartitions = PartitionRanks.size();
 
@@ -218,10 +217,9 @@ void RetrievePartitionBins(const partition_hash &Hash, std::map<int, partition_b
 
   int NumUnretrievedBins = UnretrievedBinIndices.size();
 
-  std::set<int> RetrieveRanks;
+  std::vector<int> RetrieveRanks;
 
-  core::DynamicHandshake(Hash.Comm_, NumUnretrievedBins, UnretrievedBinIndices.data(),
-    RetrieveRanks);
+  core::DynamicHandshake(Hash.Comm_, NumUnretrievedBins, UnretrievedBinIndices, RetrieveRanks);
 
   int NumRetrieves = RetrieveRanks.size();
 
@@ -269,14 +267,14 @@ void RetrievePartitionBins(const partition_hash &Hash, std::map<int, partition_b
           Bin.PartitionRanges_[iPartition].End(iDim);
       }
     }
-    auto RankIter = RetrieveRanks.begin();
+    int iRetrieveRank = 0;
     for (int iRetrieve = 0; iRetrieve < NumRetrieves; ++iRetrieve) {
-      int RetrieveRank = *RankIter;
+      int RetrieveRank = RetrieveRanks[iRetrieveRank];
       Isend(&Bin.NumPartitions_, 1, MPI_INT, RetrieveRank, 0, Hash.Comm_);
       Isend(LocalBinPartitionRangesFlat.data(), 2*MAX_DIMS*Bin.NumPartitions_, MPI_INT,
         RetrieveRank, 0, Hash.Comm_);
       Isend(Bin.PartitionRanks_.data(), Bin.NumPartitions_, MPI_INT, RetrieveRank, 0, Hash.Comm_);
-      ++RankIter;
+      ++iRetrieveRank;
     }
   }
 

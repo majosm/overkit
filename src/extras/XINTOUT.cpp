@@ -1678,10 +1678,10 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
   core::EndProfile(Profiler, MapToBinsTime);
   core::StartProfileSync(Profiler, HandshakeTime, Comm);
 
-  std::set<int> DonorRecvFromRanks, ReceiverRecvFromRanks;
+  std::vector<int> DonorRecvFromRanks, ReceiverRecvFromRanks;
 
-  core::DynamicHandshake(Comm, NumDonorSends, DonorSendToRanks.data(), DonorRecvFromRanks);
-  core::DynamicHandshake(Comm, NumReceiverSends, ReceiverSendToRanks.data(), ReceiverRecvFromRanks);
+  core::DynamicHandshake(Comm, NumDonorSends, DonorSendToRanks, DonorRecvFromRanks);
+  core::DynamicHandshake(Comm, NumReceiverSends, ReceiverSendToRanks, ReceiverRecvFromRanks);
 
   DonorSendToRanks.clear();
   ReceiverSendToRanks.clear();
@@ -1698,6 +1698,9 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
   for (int Rank : ReceiverRecvFromRanks) {
     ReceiverRecvs.emplace(Rank, send_recv());
   }
+
+  DonorRecvFromRanks.clear();
+  ReceiverRecvFromRanks.clear();
 
   int NumDonorRecvs = DonorRecvs.size();
   int NumReceiverRecvs = ReceiverRecvs.size();
@@ -2262,10 +2265,10 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
   core::EndProfile(Profiler, FindRanksTime);
   core::StartProfileSync(Profiler, HandshakeTime, Comm);
 
-  std::set<int> DonorRecvFromRanks, ReceiverRecvFromRanks;
+  std::vector<int> DonorRecvFromRanks, ReceiverRecvFromRanks;
 
-  core::DynamicHandshake(Comm, NumDonorSends, DonorSendToRanks.data(), DonorRecvFromRanks);
-  core::DynamicHandshake(Comm, NumReceiverSends, ReceiverSendToRanks.data(), ReceiverRecvFromRanks);
+  core::DynamicHandshake(Comm, NumDonorSends, DonorSendToRanks, DonorRecvFromRanks);
+  core::DynamicHandshake(Comm, NumReceiverSends, ReceiverSendToRanks, ReceiverRecvFromRanks);
 
   DonorSendToRanks.clear();
   ReceiverSendToRanks.clear();
@@ -2282,6 +2285,9 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
   for (int Rank : ReceiverRecvFromRanks) {
     ReceiverRecvs.emplace(Rank, receiver_send_recv());
   }
+
+  DonorRecvFromRanks.clear();
+  ReceiverRecvFromRanks.clear();
 
   int NumDonorRecvs = DonorRecvs.size();
   int NumReceiverRecvs = ReceiverRecvs.size();

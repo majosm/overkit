@@ -9,7 +9,7 @@
 #include <mpi.h>
 
 #include <algorithm>
-#include <set>
+#include <vector>
 
 namespace ovk {
 namespace core {
@@ -38,9 +38,9 @@ void StartSignal(signal &Signal);
 void CheckSignal(signal &Signal, bool &Done);
 void DestroySignal(signal &Signal);
 
-// Retrieve source ranks given destination ranks
-void DynamicHandshake(MPI_Comm Comm, int NumDestRanks, const int *DestRanks, std::set<int>
-  &SourceRanks);
+// Given known list of ranks sending to, get list of ranks receiving from
+void DynamicHandshake(MPI_Comm Comm, int NumDestRanks, const std::vector<int> &DestRanks,
+  std::vector<int> &SourceRanks);
 
 // Generate permutation corresponding to ascending-order sort
 template <typename T> void SortPermutation(long long N, const T *Array, long long *Permutation);

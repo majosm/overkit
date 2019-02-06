@@ -118,8 +118,8 @@ void DestroySignal(signal &Signal) {
 
 }
 
-void DynamicHandshake(MPI_Comm Comm, int NumDestRanks, const int *DestRanks, std::set<int>
-  &SourceRanks) {
+void DynamicHandshake(MPI_Comm Comm, int NumDestRanks, const std::vector<int> &DestRanks,
+  std::vector<int> &SourceRanks) {
 
   int iDestRank;
 
@@ -133,6 +133,8 @@ void DynamicHandshake(MPI_Comm Comm, int NumDestRanks, const int *DestRanks, std
   signal AllSendsDoneSignal;
   CreateSignal(AllSendsDoneSignal, Comm);
 
+  std::set<int> SourceRanksSet;
+
   bool Done = false;
   int SendsDone = false;
   while (!Done) {
@@ -143,7 +145,7 @@ void DynamicHandshake(MPI_Comm Comm, int NumDestRanks, const int *DestRanks, std
       if (!IncomingMessage) break;
       int SourceRank = Status.MPI_SOURCE;
       MPI_Recv(RecvBuffer, 1, MPI_CHAR, SourceRank, 0, Comm, MPI_STATUS_IGNORE);
-      SourceRanks.insert(SourceRank);
+      SourceRanksSet.insert(SourceRank);
     }
     if (SendsDone) {
       CheckSignal(AllSendsDoneSignal, Done);
@@ -158,6 +160,8 @@ void DynamicHandshake(MPI_Comm Comm, int NumDestRanks, const int *DestRanks, std
   MPI_Barrier(Comm);
 
   DestroySignal(AllSendsDoneSignal);
+
+  SourceRanks.assign(SourceRanksSet.begin(), SourceRanksSet.end());
 
 }
 
