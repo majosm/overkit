@@ -53,10 +53,12 @@ void request::core_WaitAll(int NumRequests, request **Requests) {
     }
   }
 
-  std::vector<MPI_Request> AllMPIRequests(TotalMPIRequests);
-  std::vector<int> MPIRequestToRequest(TotalMPIRequests);
+  std::vector<MPI_Request> AllMPIRequests;
+  std::vector<int> MPIRequestToRequest;
 
-  int iNextMPIRequest = 0;
+  AllMPIRequests.reserve(TotalMPIRequests);
+  MPIRequestToRequest.reserve(TotalMPIRequests);
+
   for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
     if (Requests[iRequest]) {
       request &Request = *Requests[iRequest];
@@ -64,9 +66,8 @@ void request::core_WaitAll(int NumRequests, request **Requests) {
         int NumMPIRequests = Request.NumMPIRequests();
         MPI_Request *MPIRequests = Request.MPIRequests();
         for (int iMPIRequest = 0; iMPIRequest < NumMPIRequests; ++iMPIRequest) {
-          AllMPIRequests[iNextMPIRequest] = MPIRequests[iMPIRequest];
-          MPIRequestToRequest[iNextMPIRequest] = iRequest;
-          ++iNextMPIRequest;
+          AllMPIRequests.push_back(MPIRequests[iMPIRequest]);
+          MPIRequestToRequest.push_back(iRequest);
         }
       }
     }
@@ -110,10 +111,12 @@ void request::core_WaitAny(int NumRequests, request **Requests, int &Index) {
     }
   }
 
-  std::vector<MPI_Request> AllMPIRequests(TotalMPIRequests);
-  std::vector<int> MPIRequestToRequest(TotalMPIRequests);
+  std::vector<MPI_Request> AllMPIRequests;
+  std::vector<int> MPIRequestToRequest;
 
-  int iNextMPIRequest = 0;
+  AllMPIRequests.reserve(TotalMPIRequests);
+  MPIRequestToRequest.reserve(TotalMPIRequests);
+
   for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
     if (Requests[iRequest]) {
       request &Request = *Requests[iRequest];
@@ -121,9 +124,8 @@ void request::core_WaitAny(int NumRequests, request **Requests, int &Index) {
         int NumMPIRequests = Request.NumMPIRequests();
         MPI_Request *MPIRequests = Request.MPIRequests();
         for (int iMPIRequest = 0; iMPIRequest < NumMPIRequests; ++iMPIRequest) {
-          AllMPIRequests[iNextMPIRequest] = MPIRequests[iMPIRequest];
-          MPIRequestToRequest[iNextMPIRequest] = iRequest;
-          ++iNextMPIRequest;
+          AllMPIRequests.push_back(MPIRequests[iMPIRequest]);
+          MPIRequestToRequest.push_back(iRequest);
         }
       }
     }
