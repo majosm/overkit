@@ -76,15 +76,25 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${DEBUG_OPTIM_FLAG}" CACHE STRIN
 # Build types
 if(NOT CMAKE_CONFIGURATION_TYPES)
   # Single-configuration generator
+  set(BUILD_TYPES None Debug SlowDebug Release RelWithDebInfo MinSizeRel)
   if(CMAKE_BUILD_TYPE)
-    set(BUILD_TYPE_VALUE ${CMAKE_BUILD_TYPE})
+    set(SELECTED_BUILD_TYPE ${CMAKE_BUILD_TYPE})
   else()
     message(STATUS "No build type specified; setting to 'Release'.")
-    set(BUILD_TYPE_VALUE Release)
+    set(SELECTED_BUILD_TYPE Release)
   endif()
-  set(CMAKE_BUILD_TYPE ${BUILD_TYPE_VALUE} CACHE STRING
-    "Choose the type of build, options are: None Debug SlowDebug Release RelWithDebInfo MinSizeRel."
-    FORCE)
+  set(VALID_BUILD_TYPE FALSE)
+  foreach(BUILD_TYPE ${BUILD_TYPES})
+    if(SELECTED_BUILD_TYPE STREQUAL BUILD_TYPE)
+      set(VALID_BUILD_TYPE TRUE)
+    endif()
+  endforeach()
+  if(NOT VALID_BUILD_TYPE)
+    message(FATAL_ERROR "Invalid build type '${SELECTED_BUILD_TYPE}'.")
+  endif()
+  string(REPLACE ";" " " BUILD_TYPES_STRING "${BUILD_TYPES}")
+  set(CMAKE_BUILD_TYPE ${SELECTED_BUILD_TYPE} CACHE STRING
+    "Choose the type of build, options are: ${BUILD_TYPES_STRING}." FORCE)
 endif()
 
 # Options
