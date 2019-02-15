@@ -9,8 +9,10 @@ inline range::range(int NumDims) {
 
 }
 
-template <typename BeginArrayType, typename EndArrayType> inline range::range(int NumDims,
-  const BeginArrayType &Begin, const EndArrayType &End) {
+template <typename BeginTupleType, typename EndTupleType, OVK_FUNCDEF_REQUIRES(
+  range_internal::is_compatible_tuple_type<BeginTupleType>() &&
+  range_internal::is_compatible_tuple_type<EndTupleType>())>
+  inline range::range(int NumDims, const BeginTupleType &Begin, const EndTupleType &End) {
 
   *this = static_cast<range &&>(ovkRange(NumDims, &Begin[0], &End[0]));
 
@@ -22,11 +24,11 @@ inline int range::Dimension() const {
 
 }
 
-template <int N> inline std::array<int,N> range::Begin() const {
+inline range::tuple_type range::Begin() const {
 
-  std::array<int,N> Result;
+  tuple_type Result;
 
-  ovkRangeBegin(this, N, Result.data());
+  ovkRangeBegin(this, MAX_DIMS, Result.Data());
 
   return Result;
 
@@ -44,11 +46,11 @@ inline const int *range::BeginData() const {
 
 }
 
-template <int N> inline std::array<int,N> range::End() const {
+inline range::tuple_type range::End() const {
 
-  std::array<int,N> Result;
+  tuple_type Result;
 
-  ovkRangeEnd(this, N, Result.data());
+  ovkRangeEnd(this, MAX_DIMS, Result.Data());
 
   return Result;
 
@@ -65,11 +67,11 @@ inline const int *range::EndData() const {
 
 }
 
-template <int N> inline std::array<int,N> range::Size() const {
+inline range::tuple_type range::Size() const {
 
-  std::array<int,N> Result;
+  tuple_type Result;
 
-  ovkRangeSize(this, N, Result.data());
+  ovkRangeSize(this, MAX_DIMS, Result.Data());
 
   return Result;
 
@@ -81,9 +83,10 @@ inline int range::Size(int iDim) const {
 
 }
 
-template <typename CountType> inline CountType range::Count() const {
+template <typename IntegerType, OVK_FUNCDEF_REQUIRES(std::is_integral<IntegerType>::value)> inline
+  IntegerType range::Count() const {
 
-  return CountType(ovkRangeCount(this));
+  return IntegerType(ovkRangeCount(this));
 
 }
 
@@ -105,28 +108,10 @@ inline bool operator!=(const ovk::range &LeftRange, const ovk::range &RightRange
 
 }
 
-template <typename IndexType, typename TupleArrayType> inline IndexType RangeTupleToIndex(const
-  range &Range, array_layout Layout, const TupleArrayType &Tuple) {
+template <typename TupleType, OVK_FUNCDEF_REQUIRES(range_internal::is_compatible_tuple_type<
+  TupleType>())> inline bool RangeContains(const range &Range, const TupleType &Point) {
 
-  return IndexType(ovkRangeTupleToIndex(&Range, ovk_array_layout(Layout), &Tuple[0]));
-
-}
-
-template <int N, typename IndexType> inline std::array<int,N> RangeIndexToTuple(const range &Range,
-  array_layout Layout, IndexType Index) {
-
-  std::array<int,N> Tuple;
-
-  ovkRangeIndexToTuple(&Range, ovk_array_layout(Layout), (long long)(Index), N, Tuple.data());
-
-  return Tuple;
-
-}
-
-template <typename TupleArrayType> inline bool RangeContains(const range &Range, const
-  TupleArrayType &Tuple) {
-
-  return ovkRangeContains(&Range, &Tuple[0]);
+  return ovkRangeContains(&Range, &Point[0]);
 
 }
 
@@ -136,10 +121,10 @@ inline bool RangeIncludes(const range &Range, const range &OtherRange) {
 
 }
 
-template <typename TupleArrayType> inline void ExtendRange(range &Range, const TupleArrayType
-  &Tuple) {
+template <typename TupleType, OVK_FUNCDEF_REQUIRES(range_internal::is_compatible_tuple_type<
+  TupleType>())> inline void ExtendRange(range &Range, const TupleType &Point) {
 
-  ovkExtendRange(&Range, &Tuple[0]);
+  ovkExtendRange(&Range, &Point[0]);
 
 }
 
@@ -161,10 +146,11 @@ inline range IntersectRanges(const range &LeftRange, const range &RightRange) {
 
 }
 
-template <typename TupleArrayType> inline void ClampToRange(TupleArrayType &Tuple, const range
-  &Range) {
+template <typename TupleType, OVK_FUNCDEF_REQUIRES(range_internal::is_compatible_tuple_type<
+  typename std::decay<TupleType>::type>() && !std::is_const<typename std::decay<TupleType>::type
+  >::value)> inline void ClampToRange(TupleType &&Point, const range &Range) {
 
-  ovkClampToRange(&Tuple[0], &Range);
+  ovkClampToRange(&Point[0], &Range);
 
 }
 

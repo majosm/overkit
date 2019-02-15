@@ -3,13 +3,17 @@
 
 #include "ovk/core/Exchange.hpp"
 
+#include "ovk/core/Array.hpp"
+#include "ovk/core/ArrayView.hpp"
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Constants.hpp"
 #include "ovk/core/Connectivity.hpp"
 #include "ovk/core/DataType.hpp"
 #include "ovk/core/Debug.hpp"
+#include "ovk/core/Elem.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
+#include "ovk/core/Indexer.hpp"
 #include "ovk/core/Misc.hpp"
 #include "ovk/core/PartitionHash.hpp"
 #include "ovk/core/Range.hpp"
@@ -18,12 +22,10 @@
 
 #include <mpi.h>
 
-#include <array>
 #include <map>
 #include <memory>
 #include <string>
 #include <utility>
-#include <vector>
 
 namespace ovk {
 
@@ -101,10 +103,6 @@ void CreateExchange(exchange &Exchange, const connectivity &Connectivity, logger
   CreatePartitionHash(Exchange.DestinationHash_, Exchange.NumDims_, Exchange.Comm_,
     ReceiverGridGlobalRange, ReceiverGridLocalRange);
 
-  Exchange.RemoteDonorPoints_ = nullptr;
-  Exchange.RemoteDonorPointCollectRecvs_ = nullptr;
-  Exchange.RemoteDonorPointCollectRecvBufferIndices_ = nullptr;
-
   MPI_Barrier(Exchange.Comm_);
 
   core::LogStatus(*Exchange.Logger_, Exchange.Comm_.Rank() == 0, 0, "Created exchange %s.",
@@ -118,31 +116,26 @@ void DestroyExchange(exchange &Exchange) {
 
   const connectivity &Connectivity = *Exchange.Connectivity_;
 
-  Exchange.Sends_.clear();
-  Exchange.Recvs_.clear();
+  Exchange.Sends_.Clear();
+  Exchange.Recvs_.Clear();
 
-  Exchange.NumRemoteDonorPoints_.clear();
+  Exchange.NumRemoteDonorPoints_.Clear();
 
-  Exchange.RemoteDonorPointsPtrs_.clear();
-  Exchange.RemoteDonorPointsData_.clear();
+  Exchange.RemoteDonorPointsData_.Clear();
+  Exchange.RemoteDonorPointCollectRecvsData_.Clear();
+  Exchange.RemoteDonorPointCollectRecvBufferIndicesData_.Clear();
 
-  Exchange.RemoteDonorPointCollectRecvsPtrs_.clear();
-  Exchange.RemoteDonorPointCollectRecvsData_.clear();
-
-  Exchange.RemoteDonorPointCollectRecvBufferIndicesPtrs_.clear();
-  Exchange.RemoteDonorPointCollectRecvBufferIndicesData_.clear();
-
-  Exchange.CollectSends_.clear();
-  Exchange.CollectRecvs_.clear();
+  Exchange.CollectSends_.Clear();
+  Exchange.CollectRecvs_.Clear();
 
   DestroyPartitionHash(Exchange.SourceHash_);
   DestroyPartitionHash(Exchange.DestinationHash_);
 
-  Exchange.DonorsSorted_.clear();
-  Exchange.ReceiversSorted_.clear();
+  Exchange.DonorsSorted_.Clear();
+  Exchange.ReceiversSorted_.Clear();
 
-  Exchange.DonorDestRanks_.clear();
-  Exchange.ReceiverSourceRanks_.clear();
+  Exchange.DonorDestRanks_.Clear();
+  Exchange.ReceiverSourceRanks_.Clear();
 
   MPI_Barrier(Exchange.Comm_);
 
@@ -182,10 +175,10 @@ void CreateExchangeInfo(exchange_info &Info, const exchange *Exchange, const com
   int NameLength;
   if (IsRoot) NameLength = Connectivity->Name_.length();
   MPI_Bcast(&NameLength, 1, MPI_INT, RootRank, Comm);
-  std::vector<char> NameChars(NameLength);
-  if (IsRoot) NameChars.assign(Connectivity->Name_.begin(), Connectivity->Name_.end());
-  MPI_Bcast(NameChars.data(), NameLength, MPI_CHAR, RootRank, Comm);
-  Info.Name_.assign(NameChars.begin(), NameChars.end());
+  array<char> NameChars({NameLength});
+  if (IsRoot) NameChars.Fill(Connectivity->Name_.begin());
+  MPI_Bcast(NameChars.Data(), NameLength, MPI_CHAR, RootRank, Comm);
+  Info.Name_.assign(NameChars.LinearBegin(), NameChars.LinearEnd());
 
   Info.RootRank_ = RootRank;
 
@@ -293,7 +286,7 @@ namespace {
 
 void UpdateCollectSendInfo(exchange &Exchange) {
 
-  Exchange.CollectSends_.clear();
+  Exchange.CollectSends_.Clear();
 
   int NumDims = Exchange.NumDims_;
   const connectivity &Connectivity = *Exchange.Connectivity_;
@@ -316,30 +309,30 @@ void UpdateCollectSendInfo(exchange &Exchange) {
     GetGridGlobalRange(*Grid, GlobalRange);
     GetGridLocalRange(*Grid, LocalRange);
 
-    const std::vector<core::grid_neighbor> &GridNeighbors = core::GetGridNeighbors(*Grid);
-    int NumNeighbors = GridNeighbors.size();
+    const array<core::grid_neighbor> &GridNeighbors = core::GetGridNeighbors(*Grid);
+    int NumNeighbors = GridNeighbors.Count();
 
     cart Cart;
     GetGridCart(*Grid, Cart);
 
-    std::vector<range> SendToNeighborRanges(NumNeighbors);
+    array<range> SendToNeighborRanges({NumNeighbors});
     for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
-      SendToNeighborRanges[iNeighbor] = range(NumDims);
+      SendToNeighborRanges(iNeighbor) = range(NumDims);
     }
 
     for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      int DonorBegin[MAX_DIMS], DonorEnd[MAX_DIMS];
+      elem<int,MAX_DIMS> DonorBegin, DonorEnd;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        DonorBegin[iDim] = Donors->Extents_[0][iDim][iDonor];
-        DonorEnd[iDim] = Donors->Extents_[1][iDim][iDonor];
+        DonorBegin[iDim] = Donors->Extents_(0,iDim,iDonor);
+        DonorEnd[iDim] = Donors->Extents_(1,iDim,iDonor);
       }
       range DonorRange(NumDims, DonorBegin, DonorEnd);
       bool AwayFromEdge = RangeIncludes(GlobalRange, DonorRange);
       for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
         if (AwayFromEdge) {
-          bool Overlaps = RangesOverlap(GridNeighbors[iNeighbor].LocalRange, DonorRange);
+          bool Overlaps = RangesOverlap(GridNeighbors(iNeighbor).LocalRange, DonorRange);
           if (Overlaps) {
-            SendToNeighborRanges[iNeighbor] = UnionRanges(SendToNeighborRanges[iNeighbor],
+            SendToNeighborRanges(iNeighbor) = UnionRanges(SendToNeighborRanges(iNeighbor),
               IntersectRanges(LocalRange, DonorRange));
           }
         } else {
@@ -347,9 +340,9 @@ void UpdateCollectSendInfo(exchange &Exchange) {
           for (int k = DonorBegin[2]; k < DonorEnd[2]; ++k) {
             for (int j = DonorBegin[1]; j < DonorEnd[1]; ++j) {
               for (int i = DonorBegin[0]; i < DonorEnd[0]; ++i) {
-                int Point[MAX_DIMS] = {i, j, k};
+                elem<int,MAX_DIMS> Point = {i,j,k};
                 CartPeriodicAdjust(Cart, Point, Point);
-                if (RangeContains(GridNeighbors[iNeighbor].LocalRange, Point)) {
+                if (RangeContains(GridNeighbors(iNeighbor).LocalRange, Point)) {
                   Overlaps = true;
                   goto done_checking_for_overlap1;
                 }
@@ -361,10 +354,10 @@ void UpdateCollectSendInfo(exchange &Exchange) {
             for (int k = DonorBegin[2]; k < DonorEnd[2]; ++k) {
               for (int j = DonorBegin[1]; j < DonorEnd[1]; ++j) {
                 for (int i = DonorBegin[0]; i < DonorEnd[0]; ++i) {
-                  int Point[MAX_DIMS] = {i, j, k};
+                  elem<int,MAX_DIMS> Point = {i,j,k};
                   CartPeriodicAdjust(Cart, Point, Point);
                   if (RangeContains(LocalRange, Point)) {
-                    ExtendRange(SendToNeighborRanges[iNeighbor], Point);
+                    ExtendRange(SendToNeighborRanges(iNeighbor), Point);
                   }
                 }
               }
@@ -374,48 +367,55 @@ void UpdateCollectSendInfo(exchange &Exchange) {
       }
     }
 
-    std::vector<int> CollectSendIndexToNeighbor;
+    using range_indexer = indexer<long long, int, MAX_DIMS, array_layout::GRID>;
+    array<range_indexer> SendToNeighborIndexers({NumNeighbors});
     for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
-      if (!SendToNeighborRanges[iNeighbor].Empty()) {
-        CollectSendIndexToNeighbor.push_back(iNeighbor);
+      const range &SendToNeighborRange = SendToNeighborRanges(iNeighbor);
+      SendToNeighborIndexers(iNeighbor) = range_indexer({SendToNeighborRange.Begin(),
+        SendToNeighborRange.End()});
+    }
+
+    array<int> CollectSendIndexToNeighbor;
+    for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
+      if (!SendToNeighborRanges(iNeighbor).Empty()) {
+        CollectSendIndexToNeighbor.Append(iNeighbor);
       }
     }
-    int NumCollectSends = CollectSendIndexToNeighbor.size();
+    int NumCollectSends = CollectSendIndexToNeighbor.Count();
 
-    Exchange.CollectSends_.resize(NumCollectSends);
+    Exchange.CollectSends_.Resize({NumCollectSends});
 
     for (int iCollectSend = 0; iCollectSend < NumCollectSends; ++iCollectSend) {
-      int iNeighbor = CollectSendIndexToNeighbor[iCollectSend];
-      Exchange.CollectSends_[iCollectSend].Rank = GridNeighbors[iNeighbor].Rank;
+      int iNeighbor = CollectSendIndexToNeighbor(iCollectSend);
+      Exchange.CollectSends_(iCollectSend).Rank = GridNeighbors(iNeighbor).Rank;
     }
 
-    std::vector<std::vector<char>> CollectSendMasks(NumCollectSends);
+    array<array<bool>> CollectSendMasks({NumCollectSends});
     for (int iCollectSend = 0; iCollectSend < NumCollectSends; ++iCollectSend) {
-      int iNeighbor = CollectSendIndexToNeighbor[iCollectSend];
-      CollectSendMasks[iCollectSend].resize(SendToNeighborRanges[iNeighbor].Count(), false);
+      int iNeighbor = CollectSendIndexToNeighbor(iCollectSend);
+      CollectSendMasks(iCollectSend).Resize({SendToNeighborRanges(iNeighbor).Count()}, false);
     }
 
     for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      int DonorBegin[MAX_DIMS], DonorEnd[MAX_DIMS];
+      elem<int,MAX_DIMS> DonorBegin, DonorEnd;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        DonorBegin[iDim] = Donors->Extents_[0][iDim][iDonor];
-        DonorEnd[iDim] = Donors->Extents_[1][iDim][iDonor];
+        DonorBegin[iDim] = Donors->Extents_(0,iDim,iDonor);
+        DonorEnd[iDim] = Donors->Extents_(1,iDim,iDonor);
       }
       range DonorRange(NumDims, DonorBegin, DonorEnd);
       bool AwayFromEdge = RangeIncludes(GlobalRange, DonorRange);
       for (int iCollectSend = 0; iCollectSend < NumCollectSends; ++iCollectSend) {
-        int iNeighbor = CollectSendIndexToNeighbor[iCollectSend];
+        int iNeighbor = CollectSendIndexToNeighbor(iCollectSend);
+        const range_indexer &Indexer = SendToNeighborIndexers(iNeighbor);
         if (AwayFromEdge) {
-          bool Overlaps = RangesOverlap(GridNeighbors[iNeighbor].LocalRange, DonorRange);
+          bool Overlaps = RangesOverlap(GridNeighbors(iNeighbor).LocalRange, DonorRange);
           if (Overlaps) {
             range LocalDonorRange = IntersectRanges(LocalRange, DonorRange);
             for (int k = LocalDonorRange.Begin(2); k < LocalDonorRange.End(2); ++k) {
               for (int j = LocalDonorRange.Begin(1); j < LocalDonorRange.End(1); ++j) {
                 for (int i = LocalDonorRange.Begin(0); i < LocalDonorRange.End(0); ++i) {
-                  int Point[MAX_DIMS] = {i, j, k};
-                  long long iPoint = RangeTupleToIndex(SendToNeighborRanges[iNeighbor],
-                    array_layout::COLUMN_MAJOR, Point);
-                  CollectSendMasks[iCollectSend][iPoint] = true;
+                  long long iPoint = Indexer.ToIndex(i,j,k);
+                  CollectSendMasks(iCollectSend)(iPoint) = true;
                 }
               }
             }
@@ -425,9 +425,9 @@ void UpdateCollectSendInfo(exchange &Exchange) {
           for (int k = DonorBegin[2]; k < DonorEnd[2]; ++k) {
             for (int j = DonorBegin[1]; j < DonorEnd[1]; ++j) {
               for (int i = DonorBegin[0]; i < DonorEnd[0]; ++i) {
-                int Point[MAX_DIMS] = {i, j, k};
+                elem<int,MAX_DIMS> Point = {i,j,k};
                 CartPeriodicAdjust(Cart, Point, Point);
-                if (RangeContains(GridNeighbors[iNeighbor].LocalRange, Point)) {
+                if (RangeContains(GridNeighbors(iNeighbor).LocalRange, Point)) {
                   Overlaps = true;
                   goto done_checking_for_overlap2;
                 }
@@ -439,12 +439,11 @@ void UpdateCollectSendInfo(exchange &Exchange) {
             for (int k = DonorBegin[2]; k < DonorEnd[2]; ++k) {
               for (int j = DonorBegin[1]; j < DonorEnd[1]; ++j) {
                 for (int i = DonorBegin[0]; i < DonorEnd[0]; ++i) {
-                  int Point[MAX_DIMS] = {i, j, k};
+                  elem<int,MAX_DIMS> Point = {i,j,k};
                   CartPeriodicAdjust(Cart, Point, Point);
                   if (RangeContains(LocalRange, Point)) {
-                    long long iPoint = RangeTupleToIndex(SendToNeighborRanges[iNeighbor],
-                      array_layout::COLUMN_MAJOR, Point);
-                    CollectSendMasks[iCollectSend][iPoint] = true;
+                    long long iPoint = Indexer.ToIndex(Point);
+                    CollectSendMasks(iCollectSend)(iPoint) = true;
                   }
                 }
               }
@@ -455,30 +454,27 @@ void UpdateCollectSendInfo(exchange &Exchange) {
     }
 
     for (int iCollectSend = 0; iCollectSend < NumCollectSends; ++iCollectSend) {
-      exchange::collect_send &CollectSend = Exchange.CollectSends_[iCollectSend];
-      int iNeighbor = CollectSendIndexToNeighbor[iCollectSend];
+      exchange::collect_send &CollectSend = Exchange.CollectSends_(iCollectSend);
+      int iNeighbor = CollectSendIndexToNeighbor(iCollectSend);
       CollectSend.NumPoints = 0;
-      for (long long iPoint = 0; iPoint < SendToNeighborRanges[iNeighbor].Count(); ++iPoint) {
-        if (CollectSendMasks[iCollectSend][iPoint]) {
+      for (long long iPoint = 0; iPoint < SendToNeighborRanges(iNeighbor).Count(); ++iPoint) {
+        if (CollectSendMasks(iCollectSend)(iPoint)) {
           ++CollectSend.NumPoints;
         }
       }
     }
 
     for (int iCollectSend = 0; iCollectSend < NumCollectSends; ++iCollectSend) {
-      exchange::collect_send &CollectSend = Exchange.CollectSends_[iCollectSend];
-      int iNeighbor = CollectSendIndexToNeighbor[iCollectSend];
-      CollectSend.PointsData.resize(MAX_DIMS*CollectSend.NumPoints);
-      for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        CollectSend.Points[iDim] = CollectSend.PointsData.data() + iDim*CollectSend.NumPoints;
-      }
+      exchange::collect_send &CollectSend = Exchange.CollectSends_(iCollectSend);
+      int iNeighbor = CollectSendIndexToNeighbor(iCollectSend);
+      CollectSend.Points.Resize({{MAX_DIMS,CollectSend.NumPoints}});
+      const range_indexer &Indexer = SendToNeighborIndexers(iNeighbor);
       long long iCollectSendPoint = 0;
-      for (long long iPoint = 0; iPoint < SendToNeighborRanges[iNeighbor].Count(); ++iPoint) {
-        if (CollectSendMasks[iCollectSend][iPoint]) {
-          std::array<int,MAX_DIMS> Point = RangeIndexToTuple(SendToNeighborRanges[iNeighbor],
-            array_layout::COLUMN_MAJOR, iPoint);
+      for (long long iPoint = 0; iPoint < SendToNeighborRanges(iNeighbor).Count(); ++iPoint) {
+        if (CollectSendMasks(iCollectSend)(iPoint)) {
+          elem<int,MAX_DIMS> Point = Indexer.ToTuple(iPoint);
           for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-            CollectSend.Points[iDim][iCollectSendPoint] = Point[iDim];
+            CollectSend.Points(iDim,iCollectSendPoint) = Point[iDim];
           }
           ++iCollectSendPoint;
         }
@@ -491,18 +487,15 @@ void UpdateCollectSendInfo(exchange &Exchange) {
 
 void UpdateCollectReceiveInfo(exchange &Exchange) {
 
-  Exchange.CollectRecvs_.clear();
+  Exchange.CollectRecvs_.Clear();
 
-  Exchange.RemoteDonorPoints_ = nullptr;
-  Exchange.RemoteDonorPointsPtrs_.clear();
-  Exchange.RemoteDonorPointsData_.clear();
-  Exchange.RemoteDonorPointCollectRecvs_ = nullptr;
-  Exchange.RemoteDonorPointCollectRecvsPtrs_.clear();
-  Exchange.RemoteDonorPointCollectRecvsData_.clear();
-  Exchange.RemoteDonorPointCollectRecvBufferIndices_ = nullptr;
-  Exchange.RemoteDonorPointCollectRecvBufferIndicesPtrs_.clear();
-  Exchange.RemoteDonorPointCollectRecvBufferIndicesData_.clear();
-  
+  Exchange.RemoteDonorPoints_.Clear();
+  Exchange.RemoteDonorPointsData_.Clear();
+  Exchange.RemoteDonorPointCollectRecvs_.Clear();
+  Exchange.RemoteDonorPointCollectRecvsData_.Clear();
+  Exchange.RemoteDonorPointCollectRecvBufferIndices_.Clear();
+  Exchange.RemoteDonorPointCollectRecvBufferIndicesData_.Clear();
+
   int NumDims = Exchange.NumDims_;
   const connectivity &Connectivity = *Exchange.Connectivity_;
 
@@ -524,37 +517,37 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
     GetGridGlobalRange(*Grid, GlobalRange);
     GetGridLocalRange(*Grid, LocalRange);
 
-    const std::vector<core::grid_neighbor> &GridNeighbors = core::GetGridNeighbors(*Grid);
-    int NumNeighbors = GridNeighbors.size();
+    const array<core::grid_neighbor> &GridNeighbors = core::GetGridNeighbors(*Grid);
+    int NumNeighbors = GridNeighbors.Count();
 
     cart Cart;
     GetGridCart(*Grid, Cart);
 
-    std::vector<range> RecvFromNeighborRanges(NumNeighbors);
+    array<range> RecvFromNeighborRanges({NumNeighbors});
     for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
-      RecvFromNeighborRanges[iNeighbor] = range(NumDims);
+      RecvFromNeighborRanges(iNeighbor) = range(NumDims);
     }
 
     for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      int DonorBegin[MAX_DIMS], DonorEnd[MAX_DIMS];
+      elem<int,MAX_DIMS> DonorBegin, DonorEnd;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        DonorBegin[iDim] = Donors->Extents_[0][iDim][iDonor];
-        DonorEnd[iDim] = Donors->Extents_[1][iDim][iDonor];
+        DonorBegin[iDim] = Donors->Extents_(0,iDim,iDonor);
+        DonorEnd[iDim] = Donors->Extents_(1,iDim,iDonor);
       }
       range DonorRange(NumDims, DonorBegin, DonorEnd);
       bool AwayFromEdge = RangeIncludes(GlobalRange, DonorRange);
       for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
         if (AwayFromEdge) {
-          RecvFromNeighborRanges[iNeighbor] = UnionRanges(RecvFromNeighborRanges[iNeighbor],
-            IntersectRanges(GridNeighbors[iNeighbor].LocalRange, DonorRange));
+          RecvFromNeighborRanges(iNeighbor) = UnionRanges(RecvFromNeighborRanges(iNeighbor),
+            IntersectRanges(GridNeighbors(iNeighbor).LocalRange, DonorRange));
         } else {
           for (int k = DonorBegin[2]; k < DonorEnd[2]; ++k) {
             for (int j = DonorBegin[1]; j < DonorEnd[1]; ++j) {
               for (int i = DonorBegin[0]; i < DonorEnd[0]; ++i) {
-                int Point[MAX_DIMS] = {i, j, k};
+                elem<int,MAX_DIMS> Point = {i,j,k};
                 CartPeriodicAdjust(Cart, Point, Point);
-                if (RangeContains(GridNeighbors[iNeighbor].LocalRange, Point)) {
-                  ExtendRange(RecvFromNeighborRanges[iNeighbor], Point);
+                if (RangeContains(GridNeighbors(iNeighbor).LocalRange, Point)) {
+                  ExtendRange(RecvFromNeighborRanges(iNeighbor), Point);
                 }
               }
             }
@@ -563,46 +556,53 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
       }
     }
 
-    std::vector<int> CollectRecvIndexToNeighbor;
+    using range_indexer = indexer<long long, int, MAX_DIMS, array_layout::GRID>;
+    array<range_indexer> RecvFromNeighborIndexers({NumNeighbors});
     for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
-      if (!RecvFromNeighborRanges[iNeighbor].Empty()) {
-        CollectRecvIndexToNeighbor.push_back(iNeighbor);
+      const range &RecvFromNeighborRange = RecvFromNeighborRanges(iNeighbor);
+      RecvFromNeighborIndexers(iNeighbor) = range_indexer({RecvFromNeighborRange.Begin(),
+        RecvFromNeighborRange.End()});
+    }
+
+    array<int> CollectRecvIndexToNeighbor;
+    for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
+      if (!RecvFromNeighborRanges(iNeighbor).Empty()) {
+        CollectRecvIndexToNeighbor.Append(iNeighbor);
       }
     }
-    int NumCollectRecvs = CollectRecvIndexToNeighbor.size();
+    int NumCollectRecvs = CollectRecvIndexToNeighbor.Count();
 
-    Exchange.CollectRecvs_.resize(NumCollectRecvs);
+    Exchange.CollectRecvs_.Resize({NumCollectRecvs});
 
     for (int iCollectRecv = 0; iCollectRecv < NumCollectRecvs; ++iCollectRecv) {
-      int iNeighbor = CollectRecvIndexToNeighbor[iCollectRecv];
-      Exchange.CollectRecvs_[iCollectRecv].Rank = GridNeighbors[iNeighbor].Rank;
+      int iNeighbor = CollectRecvIndexToNeighbor(iCollectRecv);
+      Exchange.CollectRecvs_(iCollectRecv).Rank = GridNeighbors(iNeighbor).Rank;
     }
 
-    std::vector<std::vector<char>> CollectRecvMasks(NumCollectRecvs);
+    array<array<bool>> CollectRecvMasks({NumCollectRecvs});
     for (int iCollectRecv = 0; iCollectRecv < NumCollectRecvs; ++iCollectRecv) {
-      int iNeighbor = CollectRecvIndexToNeighbor[iCollectRecv];
-      CollectRecvMasks[iCollectRecv].resize(RecvFromNeighborRanges[iNeighbor].Count(), false);
+      int iNeighbor = CollectRecvIndexToNeighbor(iCollectRecv);
+      CollectRecvMasks(iCollectRecv).Resize({RecvFromNeighborRanges(iNeighbor).Count()}, false);
     }
 
     for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      int DonorBegin[MAX_DIMS], DonorEnd[MAX_DIMS];
+      elem<int,MAX_DIMS> DonorBegin, DonorEnd;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        DonorBegin[iDim] = Donors->Extents_[0][iDim][iDonor];
-        DonorEnd[iDim] = Donors->Extents_[1][iDim][iDonor];
+        DonorBegin[iDim] = Donors->Extents_(0,iDim,iDonor);
+        DonorEnd[iDim] = Donors->Extents_(1,iDim,iDonor);
       }
       range DonorRange(NumDims, DonorBegin, DonorEnd);
       bool AwayFromEdge = RangeIncludes(GlobalRange, DonorRange);
       for (int iCollectRecv = 0; iCollectRecv < NumCollectRecvs; ++iCollectRecv) {
-        int iNeighbor = CollectRecvIndexToNeighbor[iCollectRecv];
+        int iNeighbor = CollectRecvIndexToNeighbor(iCollectRecv);
+        const range_indexer &Indexer = RecvFromNeighborIndexers(iNeighbor);
         if (AwayFromEdge) {
-          range RemoteDonorRange = IntersectRanges(GridNeighbors[iNeighbor].LocalRange, DonorRange);
+          range RemoteDonorRange = IntersectRanges(GridNeighbors(iNeighbor).LocalRange, DonorRange);
           for (int k = RemoteDonorRange.Begin(2); k < RemoteDonorRange.End(2); ++k) {
             for (int j = RemoteDonorRange.Begin(1); j < RemoteDonorRange.End(1); ++j) {
               for (int i = RemoteDonorRange.Begin(0); i < RemoteDonorRange.End(0); ++i) {
-                int Point[MAX_DIMS] = {i, j, k};
-                long long iPoint = RangeTupleToIndex(RecvFromNeighborRanges[iNeighbor],
-                  array_layout::COLUMN_MAJOR, Point);
-                CollectRecvMasks[iCollectRecv][iPoint] = true;
+                long long iPoint = Indexer.ToIndex(i,j,k);
+                CollectRecvMasks(iCollectRecv)(iPoint) = true;
               }
             }
           }
@@ -610,12 +610,11 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
           for (int k = DonorBegin[2]; k < DonorEnd[2]; ++k) {
             for (int j = DonorBegin[1]; j < DonorEnd[1]; ++j) {
               for (int i = DonorBegin[0]; i < DonorEnd[0]; ++i) {
-                int Point[MAX_DIMS] = {i, j, k};
+                elem<int,MAX_DIMS> Point = {i,j,k};
                 CartPeriodicAdjust(Cart, Point, Point);
-                if (RangeContains(GridNeighbors[iNeighbor].LocalRange, Point)) {
-                  long long iPoint = RangeTupleToIndex(RecvFromNeighborRanges[iNeighbor],
-                    array_layout::COLUMN_MAJOR, Point);
-                  CollectRecvMasks[iCollectRecv][iPoint] = true;
+                if (RangeContains(GridNeighbors(iNeighbor).LocalRange, Point)) {
+                  long long iPoint = Indexer.ToIndex(Point);
+                  CollectRecvMasks(iCollectRecv)(iPoint) = true;
                 }
               }
             }
@@ -625,52 +624,27 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
     }
 
     for (int iCollectRecv = 0; iCollectRecv < NumCollectRecvs; ++iCollectRecv) {
-      exchange::collect_recv &CollectRecv = Exchange.CollectRecvs_[iCollectRecv];
-      int iNeighbor = CollectRecvIndexToNeighbor[iCollectRecv];
+      exchange::collect_recv &CollectRecv = Exchange.CollectRecvs_(iCollectRecv);
+      int iNeighbor = CollectRecvIndexToNeighbor(iCollectRecv);
       CollectRecv.NumPoints = 0;
-      for (long long iPoint = 0; iPoint < RecvFromNeighborRanges[iNeighbor].Count(); ++iPoint) {
-        if (CollectRecvMasks[iCollectRecv][iPoint]) {
+      for (long long iPoint = 0; iPoint < RecvFromNeighborRanges(iNeighbor).Count(); ++iPoint) {
+        if (CollectRecvMasks(iCollectRecv)(iPoint)) {
           ++CollectRecv.NumPoints;
         }
       }
     }
 
-    for (int iCollectRecv = 0; iCollectRecv < NumCollectRecvs; ++iCollectRecv) {
-      exchange::collect_recv &CollectRecv = Exchange.CollectRecvs_[iCollectRecv];
-      int iNeighbor = CollectRecvIndexToNeighbor[iCollectRecv];
-      CollectRecv.PointsData.resize(MAX_DIMS*CollectRecv.NumPoints);
-      for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        CollectRecv.Points[iDim] = CollectRecv.PointsData.data() + iDim*CollectRecv.NumPoints;
-      }
-      long long iCollectRecvPoint = 0;
-      for (long long iPoint = 0; iPoint < RecvFromNeighborRanges[iNeighbor].Count(); ++iPoint) {
-        if (CollectRecvMasks[iCollectRecv][iPoint]) {
-          std::array<int,MAX_DIMS> Point = RangeIndexToTuple(RecvFromNeighborRanges[iNeighbor],
-            array_layout::COLUMN_MAJOR, iPoint);
-          for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-            CollectRecv.Points[iDim][iCollectRecvPoint] = Point[iDim];
-          }
-          ++iCollectRecvPoint;
-        }
-      }
-
-    }
-
-    Exchange.NumRemoteDonorPoints_.resize(NumDonors, 0);
-    Exchange.RemoteDonorPointsPtrs_.resize(NumDonors, nullptr);
-    Exchange.RemoteDonorPoints_ = Exchange.RemoteDonorPointsPtrs_.data();
-    Exchange.RemoteDonorPointCollectRecvsPtrs_.resize(NumDonors, nullptr);
-    Exchange.RemoteDonorPointCollectRecvs_ = Exchange.RemoteDonorPointCollectRecvsPtrs_.data();
-    Exchange.RemoteDonorPointCollectRecvBufferIndicesPtrs_.resize(NumDonors, nullptr);
-    Exchange.RemoteDonorPointCollectRecvBufferIndices_ =
-      Exchange.RemoteDonorPointCollectRecvBufferIndicesPtrs_.data();
+    Exchange.NumRemoteDonorPoints_.Resize({NumDonors}, 0);
+    Exchange.RemoteDonorPoints_.Resize({NumDonors}, nullptr);
+    Exchange.RemoteDonorPointCollectRecvs_.Resize({NumDonors}, nullptr);
+    Exchange.RemoteDonorPointCollectRecvBufferIndices_.Resize({NumDonors}, nullptr);
 
     long long TotalRemoteDonorPoints = 0;
     for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      int DonorBegin[MAX_DIMS], DonorEnd[MAX_DIMS];
+      elem<int,MAX_DIMS> DonorBegin, DonorEnd;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        DonorBegin[iDim] = Donors->Extents_[0][iDim][iDonor];
-        DonorEnd[iDim] = Donors->Extents_[1][iDim][iDonor];
+        DonorBegin[iDim] = Donors->Extents_(0,iDim,iDonor);
+        DonorEnd[iDim] = Donors->Extents_(1,iDim,iDonor);
       }
       range DonorRange(NumDims, DonorBegin, DonorEnd);
       bool AwayFromEdge = RangeIncludes(GlobalRange, DonorRange);
@@ -683,7 +657,7 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
         for (int k = DonorBegin[2]; k < DonorEnd[2]; ++k) {
           for (int j = DonorBegin[1]; j < DonorEnd[1]; ++j) {
             for (int i = DonorBegin[0]; i < DonorEnd[0]; ++i) {
-              int Point[MAX_DIMS] = {i, j, k};
+              elem<int,MAX_DIMS> Point = {i,j,k};
               CartPeriodicAdjust(Cart, Point, Point);
               if (!RangeContains(LocalRange, Point)) {
                 ++NumRemoteDonorPoints;
@@ -692,35 +666,34 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
           }
         }
       }
-      Exchange.NumRemoteDonorPoints_[iDonor] = NumRemoteDonorPoints;
+      Exchange.NumRemoteDonorPoints_(iDonor) = NumRemoteDonorPoints;
       TotalRemoteDonorPoints += NumRemoteDonorPoints;
     }
 
-    Exchange.RemoteDonorPointsData_.resize(TotalRemoteDonorPoints);
-    Exchange.RemoteDonorPointCollectRecvsData_.resize(TotalRemoteDonorPoints);
-    Exchange.RemoteDonorPointCollectRecvBufferIndicesData_.resize(TotalRemoteDonorPoints);
+    Exchange.RemoteDonorPointsData_.Resize({TotalRemoteDonorPoints});
+    Exchange.RemoteDonorPointCollectRecvsData_.Resize({TotalRemoteDonorPoints});
+    Exchange.RemoteDonorPointCollectRecvBufferIndicesData_.Resize({TotalRemoteDonorPoints});
 
-    long long RemoteDonorPointOffset = 0;
+    long long Offset = 0;
     for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      long long NumRemoteDonorPoints = Exchange.NumRemoteDonorPoints_[iDonor];
-      Exchange.RemoteDonorPoints_[iDonor] = Exchange.RemoteDonorPointsData_.data() +
-        RemoteDonorPointOffset;
-      Exchange.RemoteDonorPointCollectRecvs_[iDonor] =
-        Exchange.RemoteDonorPointCollectRecvsData_.data() + RemoteDonorPointOffset;
-      Exchange.RemoteDonorPointCollectRecvBufferIndices_[iDonor] =
-        Exchange.RemoteDonorPointCollectRecvBufferIndicesData_.data() + RemoteDonorPointOffset;
-      RemoteDonorPointOffset += NumRemoteDonorPoints;
+      long long NumRemoteDonorPoints = Exchange.NumRemoteDonorPoints_(iDonor);
+      Exchange.RemoteDonorPoints_(iDonor) = Exchange.RemoteDonorPointsData_.Data(Offset);
+      Exchange.RemoteDonorPointCollectRecvs_(iDonor) =
+        Exchange.RemoteDonorPointCollectRecvsData_.Data(Offset);
+      Exchange.RemoteDonorPointCollectRecvBufferIndices_(iDonor) =
+        Exchange.RemoteDonorPointCollectRecvBufferIndicesData_.Data(Offset);
+      Offset += NumRemoteDonorPoints;
     }
 
-    std::vector<std::vector<long long>> CollectRecvBufferIndices(NumCollectRecvs);
+    array<array<long long>> CollectRecvBufferIndices({NumCollectRecvs});
     for (int iCollectRecv = 0; iCollectRecv < NumCollectRecvs; ++iCollectRecv) {
-      int iNeighbor = CollectRecvIndexToNeighbor[iCollectRecv];
-      long long NumPoints = RecvFromNeighborRanges[iNeighbor].Count();
-      CollectRecvBufferIndices[iCollectRecv].resize(NumPoints, -1);
+      int iNeighbor = CollectRecvIndexToNeighbor(iCollectRecv);
+      long long NumPoints = RecvFromNeighborRanges(iNeighbor).Count();
+      CollectRecvBufferIndices(iCollectRecv).Resize({NumPoints}, -1);
       long long iRemotePoint = 0;
       for (long long iPoint = 0; iPoint < NumPoints; ++iPoint) {
-        if (CollectRecvMasks[iCollectRecv][iPoint]) {
-          CollectRecvBufferIndices[iCollectRecv][iPoint] = iRemotePoint;
+        if (CollectRecvMasks(iCollectRecv)(iPoint)) {
+          CollectRecvBufferIndices(iCollectRecv)(iPoint) = iRemotePoint;
           ++iRemotePoint;
         }
       }
@@ -730,36 +703,37 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
     for (int iDim = 0; iDim <= NumDims; ++iDim) {
       MaxPointsInCell *= MaxSize;
     }
-    std::vector<int> CellCollectRecvs(MaxPointsInCell);
-    std::vector<long long> CellCollectRecvBufferIndices(MaxPointsInCell);
+    array<int> CellCollectRecvs({MaxPointsInCell});
+    array<long long> CellCollectRecvBufferIndices({MaxPointsInCell});
+
+    using donor_indexer = indexer<int, int, MAX_DIMS, array_layout::GRID>;
 
     for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
       for (int iPointInCell = 0; iPointInCell < MaxPointsInCell; ++iPointInCell) {
-        CellCollectRecvs[iPointInCell] = -1;
-        CellCollectRecvBufferIndices[iPointInCell] = -1;
+        CellCollectRecvs(iPointInCell) = -1;
+        CellCollectRecvBufferIndices(iPointInCell) = -1;
       }
-      int DonorBegin[MAX_DIMS], DonorEnd[MAX_DIMS];
+      elem<int,MAX_DIMS> DonorBegin, DonorEnd;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        DonorBegin[iDim] = Donors->Extents_[0][iDim][iDonor];
-        DonorEnd[iDim] = Donors->Extents_[1][iDim][iDonor];
+        DonorBegin[iDim] = Donors->Extents_(0,iDim,iDonor);
+        DonorEnd[iDim] = Donors->Extents_(1,iDim,iDonor);
       }
       range DonorRange(NumDims, DonorBegin, DonorEnd);
+      donor_indexer DonorIndexer({DonorBegin, DonorEnd});
       bool AwayFromEdge = RangeIncludes(GlobalRange, DonorRange);
       for (int iCollectRecv = 0; iCollectRecv < NumCollectRecvs; ++iCollectRecv) {
-        int iNeighbor = CollectRecvIndexToNeighbor[iCollectRecv];
+        int iNeighbor = CollectRecvIndexToNeighbor(iCollectRecv);
+        const range_indexer &RecvFromNeighborIndexer = RecvFromNeighborIndexers(iNeighbor);
         if (AwayFromEdge) {
-          range RemoteDonorRange = IntersectRanges(GridNeighbors[iNeighbor].LocalRange, DonorRange);
+          range RemoteDonorRange = IntersectRanges(GridNeighbors(iNeighbor).LocalRange, DonorRange);
           for (int k = RemoteDonorRange.Begin(2); k < RemoteDonorRange.End(2); ++k) {
             for (int j = RemoteDonorRange.Begin(1); j < RemoteDonorRange.End(1); ++j) {
               for (int i = RemoteDonorRange.Begin(0); i < RemoteDonorRange.End(0); ++i) {
-                int Point[MAX_DIMS] = {i, j, k};
-                int iPointInCell = RangeTupleToIndex<int>(DonorRange, array_layout::COLUMN_MAJOR,
-                  Point);
-                long long iPoint = RangeTupleToIndex(RecvFromNeighborRanges[iNeighbor],
-                  array_layout::COLUMN_MAJOR, Point);
-                CellCollectRecvs[iPointInCell] = iCollectRecv;
-                CellCollectRecvBufferIndices[iPointInCell] = CollectRecvBufferIndices[iCollectRecv]
-                  [iPoint];
+                int iPointInCell = DonorIndexer.ToIndex(i,j,k);
+                long long iPoint = RecvFromNeighborIndexer.ToIndex(i,j,k);
+                CellCollectRecvs(iPointInCell) = iCollectRecv;
+                CellCollectRecvBufferIndices(iPointInCell) = CollectRecvBufferIndices(iCollectRecv)
+                  (iPoint);
               }
             }
           }
@@ -768,14 +742,13 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
           for (int k = DonorBegin[2]; k < DonorEnd[2]; ++k) {
             for (int j = DonorBegin[1]; j < DonorEnd[1]; ++j) {
               for (int i = DonorBegin[0]; i < DonorEnd[0]; ++i) {
-                int Point[MAX_DIMS] = {i, j, k};
+                elem<int,MAX_DIMS> Point = {i,j,k};
                 CartPeriodicAdjust(Cart, Point, Point);
-                if (RangeContains(GridNeighbors[iNeighbor].LocalRange, Point)) {
-                  long long iPoint = RangeTupleToIndex(RecvFromNeighborRanges[iNeighbor],
-                    array_layout::COLUMN_MAJOR, Point);
-                  CellCollectRecvs[iPointInCell] = iCollectRecv;
-                  CellCollectRecvBufferIndices[iPointInCell] = CollectRecvBufferIndices[iCollectRecv]
-                    [iPoint];
+                if (RangeContains(GridNeighbors(iNeighbor).LocalRange, Point)) {
+                  long long iPoint = RecvFromNeighborIndexer.ToIndex(Point);
+                  CellCollectRecvs(iPointInCell) = iCollectRecv;
+                  CellCollectRecvBufferIndices(iPointInCell) = CollectRecvBufferIndices
+                    (iCollectRecv)(iPoint);
                 }
                 ++iPointInCell;
               }
@@ -788,12 +761,12 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
       for (int k = DonorBegin[2]; k < DonorEnd[2]; ++k) {
         for (int j = DonorBegin[1]; j < DonorEnd[1]; ++j) {
           for (int i = DonorBegin[0]; i < DonorEnd[0]; ++i) {
-            if (CellCollectRecvs[iPointInCell] >= 0) {
-              Exchange.RemoteDonorPoints_[iDonor][iRemoteDonorPoint] = iPointInCell;
-              Exchange.RemoteDonorPointCollectRecvs_[iDonor][iRemoteDonorPoint] =
-                CellCollectRecvs[iPointInCell];
-              Exchange.RemoteDonorPointCollectRecvBufferIndices_[iDonor][iRemoteDonorPoint]
-                = CellCollectRecvBufferIndices[iPointInCell];
+            if (CellCollectRecvs(iPointInCell) >= 0) {
+              Exchange.RemoteDonorPoints_(iDonor)[iRemoteDonorPoint] = iPointInCell;
+              Exchange.RemoteDonorPointCollectRecvs_(iDonor)[iRemoteDonorPoint] =
+                CellCollectRecvs(iPointInCell);
+              Exchange.RemoteDonorPointCollectRecvBufferIndices_(iDonor)[iRemoteDonorPoint]
+                = CellCollectRecvBufferIndices(iPointInCell);
               ++iRemoteDonorPoint;
             }
             ++iPointInCell;
@@ -808,7 +781,7 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
 
 void UpdateDonorsSorted(exchange &Exchange) {
 
-  Exchange.DonorsSorted_.clear();
+  Exchange.DonorsSorted_.Clear();
 
   const connectivity &Connectivity = *Exchange.Connectivity_;
 
@@ -822,7 +795,7 @@ void UpdateDonorsSorted(exchange &Exchange) {
 
     if (NumDonors > 0) {
 
-      Exchange.DonorsSorted_.resize(NumDonors);
+      Exchange.DonorsSorted_.Resize({NumDonors});
 
       const grid_info *ReceiverGridInfo;
       GetConnectivityReceiverGridInfo(Connectivity, ReceiverGridInfo);
@@ -830,16 +803,19 @@ void UpdateDonorsSorted(exchange &Exchange) {
       range ReceiverGridGlobalRange;
       GetGridInfoGlobalRange(*ReceiverGridInfo, ReceiverGridGlobalRange);
 
-      std::vector<long long> DestinationIndices(NumDonors);
+      using range_indexer = indexer<long long, int, MAX_DIMS, array_layout::GRID>;
+      range_indexer ReceiverGridGlobalIndexer({ReceiverGridGlobalRange.Begin(),
+        ReceiverGridGlobalRange.End()});
+
+      array<long long> DestinationIndices({NumDonors});
 
       for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
-        int DestinationPoint[MAX_DIMS] = {
-          Donors->Destinations_[0][iDonor],
-          Donors->Destinations_[1][iDonor],
-          Donors->Destinations_[2][iDonor]
+        elem<int,MAX_DIMS> DestinationPoint = {
+          Donors->Destinations_(0,iDonor),
+          Donors->Destinations_(1,iDonor),
+          Donors->Destinations_(2,iDonor)
         };
-        DestinationIndices[iDonor] = RangeTupleToIndex(ReceiverGridGlobalRange,
-          array_layout::COLUMN_MAJOR, DestinationPoint);
+        DestinationIndices(iDonor) = ReceiverGridGlobalIndexer.ToIndex(DestinationPoint);
       }
 
       bool Sorted = true;
@@ -847,19 +823,19 @@ void UpdateDonorsSorted(exchange &Exchange) {
       // Check if they're already sorted
       long long PrevIndex = 0;
       for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
-        if (DestinationIndices[iDonor] < PrevIndex) {
+        if (DestinationIndices(iDonor) < PrevIndex) {
           Sorted = false;
           break;
         }
-        PrevIndex = DestinationIndices[iDonor];
+        PrevIndex = DestinationIndices(iDonor);
       }
 
       if (Sorted) {
         for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
-          Exchange.DonorsSorted_[iDonor] = iDonor;
+          Exchange.DonorsSorted_(iDonor) = iDonor;
         }
       } else {
-        core::SortPermutation(NumDonors, DestinationIndices.data(), Exchange.DonorsSorted_.data());
+        core::SortPermutation(DestinationIndices, Exchange.DonorsSorted_);
       }
 
     }
@@ -870,7 +846,7 @@ void UpdateDonorsSorted(exchange &Exchange) {
 
 void UpdateReceiversSorted(exchange &Exchange) {
 
-  Exchange.ReceiversSorted_.clear();
+  Exchange.ReceiversSorted_.Clear();
 
   const connectivity &Connectivity = *Exchange.Connectivity_;
 
@@ -884,7 +860,7 @@ void UpdateReceiversSorted(exchange &Exchange) {
 
     if (NumReceivers > 0) {
 
-      Exchange.ReceiversSorted_.resize(NumReceivers);
+      Exchange.ReceiversSorted_.Resize({NumReceivers});
 
       const grid *ReceiverGrid;
       GetConnectivityReceiverSideGrid(*Receivers, ReceiverGrid);
@@ -892,15 +868,18 @@ void UpdateReceiversSorted(exchange &Exchange) {
       range GlobalRange;
       GetGridGlobalRange(*ReceiverGrid, GlobalRange);
 
-      std::vector<long long> PointIndices(NumReceivers);
+      using range_indexer = indexer<long long, int, MAX_DIMS, array_layout::GRID>;
+      range_indexer GlobalIndexer({GlobalRange.Begin(), GlobalRange.End()});
+
+      array<long long> PointIndices({NumReceivers});
 
       for (long long iReceiver = 0; iReceiver < NumReceivers; ++iReceiver) {
-        int Point[MAX_DIMS] = {
-          Receivers->Points_[0][iReceiver],
-          Receivers->Points_[1][iReceiver],
-          Receivers->Points_[2][iReceiver]
+        elem<int,MAX_DIMS> Point = {
+          Receivers->Points_(0,iReceiver),
+          Receivers->Points_(1,iReceiver),
+          Receivers->Points_(2,iReceiver)
         };
-        PointIndices[iReceiver] = RangeTupleToIndex(GlobalRange, array_layout::COLUMN_MAJOR, Point);
+        PointIndices(iReceiver) = GlobalIndexer.ToIndex(Point);
       }
 
       bool Sorted = true;
@@ -908,19 +887,19 @@ void UpdateReceiversSorted(exchange &Exchange) {
       // Check if they're already sorted
       long long PrevIndex = 0;
       for (long long iReceiver = 0; iReceiver < NumReceivers; ++iReceiver) {
-        if (PointIndices[iReceiver] < PrevIndex) {
+        if (PointIndices(iReceiver) < PrevIndex) {
           Sorted = false;
           break;
         }
-        PrevIndex = PointIndices[iReceiver];
+        PrevIndex = PointIndices(iReceiver);
       }
 
       if (Sorted) {
         for (long long iReceiver = 0; iReceiver < NumReceivers; ++iReceiver) {
-          Exchange.ReceiversSorted_[iReceiver] = iReceiver;
+          Exchange.ReceiversSorted_(iReceiver) = iReceiver;
         }
       } else {
-        core::SortPermutation(NumReceivers, PointIndices.data(), Exchange.ReceiversSorted_.data());
+        core::SortPermutation(PointIndices, Exchange.ReceiversSorted_);
       }
 
     }
@@ -931,7 +910,7 @@ void UpdateReceiversSorted(exchange &Exchange) {
 
 void UpdateDestRanks(exchange &Exchange) {
 
-  Exchange.DonorDestRanks_.clear();
+  Exchange.DonorDestRanks_.Clear();
 
   const connectivity &Connectivity = *Exchange.Connectivity_;
 
@@ -945,17 +924,17 @@ void UpdateDestRanks(exchange &Exchange) {
     GetConnectivityDonorSideCount(*Donors, NumDonors);
   }
 
-  Exchange.DonorDestRanks_.resize(NumDonors, -1);
+  Exchange.DonorDestRanks_.Resize({NumDonors}, -1);
 
   std::map<int, core::partition_bin> Bins;
 
-  std::vector<int> DestinationBinIndices;
+  array<int> DestinationBinIndices;
   if (DonorGridIsLocal) {
-    DestinationBinIndices.resize(NumDonors);
-    core::MapToPartitionBins(Exchange.DestinationHash_, NumDonors, Donors->Destinations_,
-      DestinationBinIndices.data());
+    DestinationBinIndices.Resize({NumDonors});
+    core::MapToPartitionBins(Exchange.DestinationHash_, Donors->Destinations_,
+      DestinationBinIndices);
     for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      int BinIndex = DestinationBinIndices[iDonor];
+      int BinIndex = DestinationBinIndices(iDonor);
       auto Iter = Bins.lower_bound(BinIndex);
       if (Iter == Bins.end() || Iter->first > BinIndex) {
         Bins.emplace_hint(Iter, BinIndex, core::partition_bin());
@@ -966,15 +945,15 @@ void UpdateDestRanks(exchange &Exchange) {
   core::RetrievePartitionBins(Exchange.DestinationHash_, Bins);
 
   if (DonorGridIsLocal) {
-    core::FindPartitions(Exchange.DestinationHash_, Bins, NumDonors, Donors->Destinations_,
-      DestinationBinIndices.data(), Exchange.DonorDestRanks_.data());
+    core::FindPartitions(Exchange.DestinationHash_, Bins, Donors->Destinations_,
+      DestinationBinIndices, Exchange.DonorDestRanks_);
   }
 
 }
 
 void UpdateSourceRanks(exchange &Exchange) {
 
-  Exchange.ReceiverSourceRanks_.clear();
+  Exchange.ReceiverSourceRanks_.Clear();
 
   const connectivity &Connectivity = *Exchange.Connectivity_;
 
@@ -988,17 +967,16 @@ void UpdateSourceRanks(exchange &Exchange) {
     GetConnectivityReceiverSideCount(*Receivers, NumReceivers);
   }
 
-  Exchange.ReceiverSourceRanks_.resize(NumReceivers, -1);
+  Exchange.ReceiverSourceRanks_.Resize({NumReceivers}, -1);
 
   std::map<int, core::partition_bin> Bins;
 
-  std::vector<int> SourceBinIndices;
+  array<int> SourceBinIndices;
   if (ReceiverGridIsLocal) {
-    SourceBinIndices.resize(NumReceivers);
-    core::MapToPartitionBins(Exchange.SourceHash_, NumReceivers, Receivers->Sources_,
-      SourceBinIndices.data());
+    SourceBinIndices.Resize({NumReceivers});
+    core::MapToPartitionBins(Exchange.SourceHash_, Receivers->Sources_, SourceBinIndices);
     for (long long iReceiver = 0; iReceiver < NumReceivers; ++iReceiver) {
-      int BinIndex = SourceBinIndices[iReceiver];
+      int BinIndex = SourceBinIndices(iReceiver);
       auto Iter = Bins.lower_bound(BinIndex);
       if (Iter == Bins.end() || Iter->first > BinIndex) {
         Bins.emplace_hint(Iter, BinIndex, core::partition_bin());
@@ -1009,17 +987,17 @@ void UpdateSourceRanks(exchange &Exchange) {
   core::RetrievePartitionBins(Exchange.SourceHash_, Bins);
 
   if (ReceiverGridIsLocal) {
-    core::FindPartitions(Exchange.SourceHash_, Bins, NumReceivers, Receivers->Sources_,
-      SourceBinIndices.data(), Exchange.ReceiverSourceRanks_.data());
+    core::FindPartitions(Exchange.SourceHash_, Bins, Receivers->Sources_, SourceBinIndices,
+      Exchange.ReceiverSourceRanks_);
   }
 
 }
 
 void UpdateSendInfo(exchange &Exchange) {
 
-  Exchange.Sends_.clear();
+  Exchange.Sends_.Clear();
 
-  Exchange.DonorSendIndices_.clear();
+  Exchange.DonorSendIndices_.Clear();
 
   const connectivity &Connectivity = *Exchange.Connectivity_;
 
@@ -1038,29 +1016,29 @@ void UpdateSendInfo(exchange &Exchange) {
 
   if (NumDonors > 0) {
 
-    Exchange.DonorSendIndices_.resize(NumDonors, -1);
+    Exchange.DonorSendIndices_.Resize({NumDonors}, -1);
 
-    std::vector<char> DonorCommunicates(NumDonors);
+    array<bool> DonorCommunicates({NumDonors});
 
     for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      bool Communicates = Exchange.DonorDestRanks_[iDonor] >= 0;
+      bool Communicates = Exchange.DonorDestRanks_(iDonor) >= 0;
       if (Communicates) {
-        int DonorCell[MAX_DIMS] = {
-          Donors->Extents_[0][0][iDonor],
-          Donors->Extents_[0][1][iDonor],
-          Donors->Extents_[0][2][iDonor]
+        elem<int,MAX_DIMS> DonorCell = {
+          Donors->Extents_(0,0,iDonor),
+          Donors->Extents_(0,1,iDonor),
+          Donors->Extents_(0,2,iDonor)
         };
         CartPeriodicAdjust(Cart, DonorCell, DonorCell);
         Communicates = RangeContains(LocalRange, DonorCell);
       }
-      DonorCommunicates[iDonor] = Communicates;
+      DonorCommunicates(iDonor) = Communicates;
     }
 
     std::map<int, long long> SendCounts;
 
     for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      if (DonorCommunicates[iDonor]) {
-        int DestRank = Exchange.DonorDestRanks_[iDonor];
+      if (DonorCommunicates(iDonor)) {
+        int DestRank = Exchange.DonorDestRanks_(iDonor);
         auto Iter = SendCounts.lower_bound(DestRank);
         if (Iter != SendCounts.end() && Iter->first == DestRank) {
           ++Iter->second;
@@ -1073,8 +1051,7 @@ void UpdateSendInfo(exchange &Exchange) {
     int NumSends = SendCounts.size();
 
     for (auto &Pair : SendCounts) {
-      Exchange.Sends_.emplace_back();
-      exchange::send &Send = Exchange.Sends_.back();
+      exchange::send &Send = Exchange.Sends_.Append();
       Send.Rank = Pair.first;
       Send.Count = Pair.second;
     }
@@ -1084,13 +1061,13 @@ void UpdateSendInfo(exchange &Exchange) {
     std::map<int, int> RankToSendIndex;
 
     for (int iSend = 0; iSend < NumSends; ++iSend) {
-      RankToSendIndex.emplace(Exchange.Sends_[iSend].Rank, iSend);
+      RankToSendIndex.emplace(Exchange.Sends_(iSend).Rank, iSend);
     }
 
     for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      if (DonorCommunicates[iDonor]) {
-        int DestRank = Exchange.DonorDestRanks_[iDonor];
-        Exchange.DonorSendIndices_[iDonor] = RankToSendIndex[DestRank];
+      if (DonorCommunicates(iDonor)) {
+        int DestRank = Exchange.DonorDestRanks_(iDonor);
+        Exchange.DonorSendIndices_(iDonor) = RankToSendIndex[DestRank];
       }
     }
 
@@ -1100,9 +1077,9 @@ void UpdateSendInfo(exchange &Exchange) {
 
 void UpdateReceiveInfo(exchange &Exchange) {
 
-  Exchange.Recvs_.clear();
+  Exchange.Recvs_.Clear();
 
-  Exchange.ReceiverRecvIndices_.clear();
+  Exchange.ReceiverRecvIndices_.Clear();
 
   const connectivity &Connectivity = *Exchange.Connectivity_;
 
@@ -1115,13 +1092,13 @@ void UpdateReceiveInfo(exchange &Exchange) {
 
   if (NumReceivers > 0) {
 
-    Exchange.ReceiverRecvIndices_.resize(NumReceivers, -1);
+    Exchange.ReceiverRecvIndices_.Resize({NumReceivers}, -1);
 
     std::map<int, long long> RecvCounts;
 
     for (long long iReceiver = 0; iReceiver < NumReceivers; ++iReceiver) {
-      if (Exchange.ReceiverSourceRanks_[iReceiver] >= 0) {
-        int SourceRank = Exchange.ReceiverSourceRanks_[iReceiver];
+      if (Exchange.ReceiverSourceRanks_(iReceiver) >= 0) {
+        int SourceRank = Exchange.ReceiverSourceRanks_(iReceiver);
         auto Iter = RecvCounts.lower_bound(SourceRank);
         if (Iter != RecvCounts.end() && Iter->first == SourceRank) {
           ++Iter->second;
@@ -1134,8 +1111,7 @@ void UpdateReceiveInfo(exchange &Exchange) {
     int NumRecvs = RecvCounts.size();
 
     for (auto &Pair : RecvCounts) {
-      Exchange.Recvs_.emplace_back();
-      exchange::recv &Recv = Exchange.Recvs_.back();
+      exchange::recv &Recv = Exchange.Recvs_.Append();
       Recv.Rank = Pair.first;
       Recv.Count = Pair.second;
     }
@@ -1145,13 +1121,13 @@ void UpdateReceiveInfo(exchange &Exchange) {
     std::map<int, int> RankToRecvIndex;
 
     for (int iRecv = 0; iRecv < NumRecvs; ++iRecv) {
-      RankToRecvIndex.emplace(Exchange.Recvs_[iRecv].Rank, iRecv);
+      RankToRecvIndex.emplace(Exchange.Recvs_(iRecv).Rank, iRecv);
     }
 
     for (long long iReceiver = 0; iReceiver < NumReceivers; ++iReceiver) {
-      int SourceRank = Exchange.ReceiverSourceRanks_[iReceiver];
+      int SourceRank = Exchange.ReceiverSourceRanks_(iReceiver);
       if (SourceRank >= 0) {
-        Exchange.ReceiverRecvIndices_[iReceiver] = RankToRecvIndex[SourceRank];
+        Exchange.ReceiverRecvIndices_(iReceiver) = RankToRecvIndex[SourceRank];
       }
     }
 
@@ -1176,9 +1152,8 @@ public:
     return *this;
   }
 
-  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange, array_layout
-    GridValuesLayout) {
-    Collect_->Initialize(Exchange, Count, GridValuesRange, GridValuesLayout);
+  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) {
+    Collect_->Initialize(Exchange, Count, GridValuesRange);
   }
 
   void Collect(const void * const *GridValues, void **DonorValues) {
@@ -1190,8 +1165,7 @@ private:
   class concept {
   public:
     virtual ~concept() {}
-    virtual void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange,
-      array_layout GridValuesLayout) = 0;
+    virtual void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) = 0;
     virtual void Collect(const void * const *GridValues, void **DonorValues) = 0;
   };
 
@@ -1201,26 +1175,38 @@ private:
     explicit model(T Collect):
       Collect_(std::move(Collect))
     {}
-    virtual void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange,
-      array_layout GridValuesLayout) override {
-      Collect_.Initialize(Exchange, Count, GridValuesRange, GridValuesLayout);
-      GridValues_.resize(Count);
-      DonorValues_.resize(Count);
+    virtual void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange)
+      override {
+      Collect_.Initialize(Exchange, Count, GridValuesRange);
+      GridValuesRange_ = GridValuesRange;
+      const connectivity_d *Donors;
+      GetConnectivityDonorSide(*Exchange.Connectivity_, Donors);
+      GetConnectivityDonorSideCount(*Donors, NumDonors_);
+      GridValues_.Resize({Count});
+      DonorValues_.Resize({Count});
     }
     virtual void Collect(const void * const *GridValuesVoid, void **DonorValuesVoid) override {
-      OVK_DEBUG_ASSERT(GridValuesVoid || GridValues_.size() == 0, "Invalid grid values pointer.");
-      OVK_DEBUG_ASSERT(DonorValuesVoid || DonorValues_.size() == 0, "Invalid donor values pointer.");
-      for (int iCount = 0; iCount < int(GridValues_.size()); ++iCount) {
-        GridValues_[iCount] = static_cast<const user_value_type *>(GridValuesVoid[iCount]);
+      OVK_DEBUG_ASSERT(GridValuesVoid || GridValues_.Count() == 0, "Invalid grid values pointer.");
+      OVK_DEBUG_ASSERT(DonorValuesVoid || DonorValues_.Count() == 0, "Invalid donor values pointer.");
+      for (int iCount = 0; iCount < GridValues_.Count(); ++iCount) {
+        OVK_DEBUG_ASSERT(GridValuesVoid[iCount] || NumDonors_ == 0, "Invalid grid values pointer.");
+        GridValues_(iCount) = {static_cast<const user_value_type *>(GridValuesVoid[iCount]),
+          {GridValuesRange_.Count()}};
       }
-      for (int iCount = 0; iCount < int(DonorValues_.size()); ++iCount) {
-        DonorValues_[iCount] = static_cast<user_value_type *>(DonorValuesVoid[iCount]);
+      for (int iCount = 0; iCount < DonorValues_.Count(); ++iCount) {
+        OVK_DEBUG_ASSERT(DonorValuesVoid[iCount] || NumDonors_ == 0, "Invalid donor values "
+          "pointer.");
+        DonorValues_(iCount) = {static_cast<user_value_type *>(DonorValuesVoid[iCount]),
+          {NumDonors_}};
       }
-      Collect_.Collect(GridValues_.data(), DonorValues_.data());
+      Collect_.Collect(GridValues_, DonorValues_);
     }
+  private:
     T Collect_;
-    std::vector<const user_value_type *> GridValues_;
-    std::vector<user_value_type *> DonorValues_;
+    range GridValuesRange_;
+    long long NumDonors_;
+    array<array_view<const user_value_type>> GridValues_;
+    array<array_view<user_value_type>> DonorValues_;
   };
 
   std::unique_ptr<concept> Collect_;
@@ -1234,7 +1220,7 @@ template <> struct helper<bool> { using type = unsigned char; };
 }
 template <typename T> using no_bool = typename no_bool_internal::helper<T>::type;
 
-template <typename T> class collect_base {
+template <typename T, array_layout Layout> class collect_base {
 
 public:
 
@@ -1245,13 +1231,10 @@ public:
   collect_base(const collect_base &) = delete;
   collect_base(collect_base &&) = default;
 
-  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange, array_layout
-    GridValuesLayout) {
+  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) {
 
     NumDims_ = Exchange.NumDims_;
     Count_ = Count;
-    GridValuesRange_ = GridValuesRange;
-    GridValuesLayout_ = GridValuesLayout;
 
     const connectivity &Connectivity = *Exchange.Connectivity_;
 
@@ -1267,9 +1250,8 @@ public:
 
     OVK_DEBUG_ASSERT(RangeIncludes(GridValuesRange, LocalRange_), "Invalid grid values range.");
 
-    long long NumDonors;
     int MaxSize;
-    GetConnectivityDonorSideCount(Donors, NumDonors);
+    GetConnectivityDonorSideCount(Donors, NumDonors_);
     GetConnectivityDonorSideMaxSize(Donors, MaxSize);
 
     MaxPointsInCell_ = 1;
@@ -1277,22 +1259,22 @@ public:
       MaxPointsInCell_ *= MaxSize;
     }
 
-    NumSends_ = Exchange.CollectSends_.size();
-    Sends_ = Exchange.CollectSends_.data();
-    NumRecvs_ = Exchange.CollectRecvs_.size();
-    Recvs_ = Exchange.CollectRecvs_.data();
+    GridValuesIndexer_ = range_indexer({GridValuesRange.Begin(), GridValuesRange.End()});
 
-    SendBuffers_.resize(NumSends_);
-    for (int iSend = 0; iSend < NumSends_; ++iSend) {
-      SendBuffers_[iSend].resize(Count_);
-      for (int iCount = 0; iCount < Count_; ++iCount) {
-        SendBuffers_[iSend][iCount].resize(Exchange.CollectSends_[iSend].NumPoints);
-      }
+    Sends_ = Exchange.CollectSends_;
+    Recvs_ = Exchange.CollectRecvs_;
+
+    int NumSends = Sends_.Count();
+    int NumRecvs = Recvs_.Count();
+
+    SendBuffers_.Resize({NumSends});
+    for (int iSend = 0; iSend < NumSends; ++iSend) {
+      SendBuffers_(iSend).Resize({{Count_,Exchange.CollectSends_(iSend).NumPoints}});
     }
 
-    Requests_.resize(Count_*(NumSends_+NumRecvs_));
+    Requests_.Reserve(NumSends+NumRecvs);
 
-    NumRemoteDonorPoints_ = Exchange.NumRemoteDonorPoints_.data();
+    NumRemoteDonorPoints_ = Exchange.NumRemoteDonorPoints_;
     RemoteDonorPoints_ = Exchange.RemoteDonorPoints_;
     RemoteDonorPointCollectRecvs_ = Exchange.RemoteDonorPointCollectRecvs_;
     RemoteDonorPointCollectRecvBufferIndices_ = Exchange.RemoteDonorPointCollectRecvBufferIndices_;
@@ -1301,101 +1283,81 @@ public:
 
 protected:
 
-  using remote_donor_values = std::vector<std::vector<std::vector<value_type>>>;
+  using range_indexer = indexer<long long, int, MAX_DIMS, Layout>;
+  using donor_indexer = indexer<int, int, MAX_DIMS, Layout>;
 
   const connectivity_d *Donors_;
   const grid *Grid_;
+  int NumDims_;
   int Count_;
-  range GridValuesRange_;
-  array_layout GridValuesLayout_;
+  long long NumDonors_;
   int MaxPointsInCell_;
+  range_indexer GridValuesIndexer_;
 
-  void CheckValuesPointers(const user_value_type * const *GridValues, const user_value_type * const
-    *DonorValues) {
+  void AllocateRemoteDonorValues(array<array<value_type,2>> &RemoteDonorValues) {
 
-    const connectivity_d &Donors = *Donors_;
-    long long NumDonors;
-    GetConnectivityDonorSideCount(Donors, NumDonors);
+    int NumRecvs = Recvs_.Count();
 
-    if (NumDonors > 0) {
-      for (int iCount = 0; iCount < Count_; ++iCount) {
-        OVK_DEBUG_ASSERT(GridValues[iCount], "Invalid grid values pointer.");
-      }
-      for (int iCount = 0; iCount < Count_; ++iCount) {
-        OVK_DEBUG_ASSERT(DonorValues[iCount], "Invalid donor values pointer.");
-      }
+    RemoteDonorValues.Resize({NumRecvs});
+    for (int iRecv = 0; iRecv < NumRecvs; ++iRecv) {
+      RemoteDonorValues(iRecv).Resize({{Count_,Recvs_(iRecv).NumPoints}});
     }
 
   }
 
-  void AllocateRemoteDonorValues(remote_donor_values &RemoteDonorValues) {
-
-    RemoteDonorValues.resize(NumRecvs_);
-    for (int iRecv = 0; iRecv < NumRecvs_; ++iRecv) {
-      RemoteDonorValues[iRecv].resize(Count_);
-      for (int iCount = 0; iCount < Count_; ++iCount) {
-        RemoteDonorValues[iRecv][iCount].resize(Recvs_[iRecv].NumPoints);
-      }
-    }
-    
-  }
-
-  void RetrieveRemoteDonorValues(const user_value_type * const *GridValues, remote_donor_values
-    &RemoteDonorValues) {
+  void RetrieveRemoteDonorValues(array_view<array_view<const user_value_type>> GridValues,
+    array<array<value_type,2>> &RemoteDonorValues) {
 
     MPI_Comm Comm;
     GetGridComm(*Grid_, Comm);
 
     MPI_Datatype MPIDataType = core::GetMPIDataType<value_type>();
 
-    int iRequest = 0;
-
-    for (int iRecv = 0; iRecv < NumRecvs_; ++iRecv) {
-      const exchange::collect_recv &Recv = Recvs_[iRecv];
-      for (int iCount = 0; iCount < Count_; ++iCount) {
-        MPI_Irecv(RemoteDonorValues[iRecv][iCount].data(), Recv.NumPoints, MPIDataType, Recv.Rank,
-          iCount, Comm, &Requests_[iRequest]);
-        ++iRequest;
-      }
+    for (int iRecv = 0; iRecv < Recvs_.Count(); ++iRecv) {
+      const exchange::collect_recv &Recv = Recvs_(iRecv);
+      MPI_Request &Request = Requests_.Append();
+      MPI_Irecv(RemoteDonorValues(iRecv).Data(), Count_*Recv.NumPoints, MPIDataType, Recv.Rank, 0,
+        Comm, &Request);
     }
 
-    for (int iSend = 0; iSend < NumSends_; ++iSend) {
-      const exchange::collect_send &Send = Sends_[iSend];
+    for (int iSend = 0; iSend < Sends_.Count(); ++iSend) {
+      const exchange::collect_send &Send = Sends_(iSend);
       for (long long iSendPoint = 0; iSendPoint < Send.NumPoints; ++iSendPoint) {
-        int Point[MAX_DIMS] = {
-          Send.Points[0][iSendPoint],
-          Send.Points[1][iSendPoint],
-          Send.Points[2][iSendPoint]
+        elem<int,MAX_DIMS> Point = {
+          Send.Points(0,iSendPoint),
+          Send.Points(1,iSendPoint),
+          Send.Points(2,iSendPoint)
         };
-        long long iGridPoint = RangeTupleToIndex(GridValuesRange_, GridValuesLayout_, Point);
+        long long iGridPoint = GridValuesIndexer_.ToIndex(Point);
         for (int iCount = 0; iCount < Count_; ++iCount) {
-          SendBuffers_[iSend][iCount][iSendPoint] = value_type(GridValues[iCount][iGridPoint]);
+          SendBuffers_(iSend)(iCount,iSendPoint) = value_type(GridValues(iCount)(iGridPoint));
         }
       }
     }
 
-    for (int iSend = 0; iSend < NumSends_; ++iSend) {
-      const exchange::collect_send &Send = Sends_[iSend];
-      for (int iCount = 0; iCount < Count_; ++iCount) {
-        MPI_Isend(SendBuffers_[iSend][iCount].data(), Send.NumPoints, MPIDataType, Send.Rank, iCount,
-          Comm, &Requests_[iRequest]);
-        ++iRequest;
-      }
+    for (int iSend = 0; iSend < Sends_.Count(); ++iSend) {
+      const exchange::collect_send &Send = Sends_(iSend);
+      MPI_Request &Request = Requests_.Append();
+      MPI_Isend(SendBuffers_(iSend).Data(), Count_*Send.NumPoints, MPIDataType, Send.Rank, 0, Comm,
+        &Request);
     }
 
-    MPI_Waitall(Requests_.size(), Requests_.data(), MPI_STATUSES_IGNORE);
+    MPI_Waitall(Requests_.Count(), Requests_.Data(), MPI_STATUSES_IGNORE);
+
+    Requests_.Clear();
 
   }
 
-  void AssembleDonorPointValues(const user_value_type * const *GridValues, const remote_donor_values
-    &RemoteDonorValues, long long iDonor, int *DonorSize, value_type *DonorPointValues) {
+  void AssembleDonorPointValues(array_view<array_view<const user_value_type>> GridValues, const
+    array<array<value_type,2>> &RemoteDonorValues, long long iDonor, elem<int,MAX_DIMS> &DonorSize,
+    array_view<value_type,2> DonorPointValues) {
 
     const connectivity_d &Donors = *Donors_;
 
-    int DonorBegin[MAX_DIMS], DonorEnd[MAX_DIMS];
+    elem<int,MAX_DIMS> DonorBegin, DonorEnd;
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      DonorBegin[iDim] = Donors.Extents_[0][iDim][iDonor];
-      DonorEnd[iDim] = Donors.Extents_[1][iDim][iDonor];
+      DonorBegin[iDim] = Donors.Extents_(0,iDim,iDonor);
+      DonorEnd[iDim] = Donors.Extents_(1,iDim,iDonor);
     }
 
     range DonorRange(NumDims_, DonorBegin, DonorEnd);
@@ -1403,23 +1365,21 @@ protected:
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
       DonorSize[iDim] = DonorRange.Size(iDim);
     }
-    int NumPointsInCell = DonorRange.Count();
 
     bool AwayFromEdge = RangeIncludes(GlobalRange_, DonorRange);
 
     // Fill in the local data
     if (AwayFromEdge) {
+      using donor_indexer = indexer<int, int, MAX_DIMS, array_layout::GRID>;
+      donor_indexer DonorIndexer({DonorBegin, DonorEnd});
       range LocalDonorRange = IntersectRanges(LocalRange_, DonorRange);
       for (int k = LocalDonorRange.Begin(2); k < LocalDonorRange.End(2); ++k) {
         for (int j = LocalDonorRange.Begin(1); j < LocalDonorRange.End(1); ++j) {
           for (int i = LocalDonorRange.Begin(0); i < LocalDonorRange.End(0); ++i) {
-            int Point[MAX_DIMS] = {i, j, k};
-            int iPointInCell = RangeTupleToIndex<int>(DonorRange, array_layout::COLUMN_MAJOR,
-              Point);
-            long long iGridPoint = RangeTupleToIndex(GridValuesRange_, GridValuesLayout_, Point);
+            int iPointInCell = DonorIndexer.ToIndex(i,j,k);
+            long long iGridPoint = GridValuesIndexer_.ToIndex(i,j,k);
             for (int iCount = 0; iCount < Count_; ++iCount) {
-              DonorPointValues[iPointInCell+iCount*NumPointsInCell] = value_type(GridValues[iCount]
-                [iGridPoint]);
+              DonorPointValues(iCount,iPointInCell) = value_type(GridValues(iCount)(iGridPoint));
             }
           }
         }
@@ -1429,13 +1389,12 @@ protected:
       for (int k = DonorBegin[2]; k < DonorEnd[2]; ++k) {
         for (int j = DonorBegin[1]; j < DonorEnd[1]; ++j) {
           for (int i = DonorBegin[0]; i < DonorEnd[0]; ++i) {
-            int Point[MAX_DIMS] = {i, j, k};
+            elem<int,MAX_DIMS> Point = {i,j,k};
             CartPeriodicAdjust(Cart_, Point, Point);
             if (RangeContains(LocalRange_, Point)) {
-              long long iGridPoint = RangeTupleToIndex(GridValuesRange_, GridValuesLayout_, Point);
+              long long iGridPoint = GridValuesIndexer_.ToIndex(Point);
               for (int iCount = 0; iCount < Count_; ++iCount) {
-                DonorPointValues[iPointInCell+iCount*NumPointsInCell] = value_type(GridValues[iCount]
-                  [iGridPoint]);
+                DonorPointValues(iCount,iPointInCell) = value_type(GridValues(iCount)(iGridPoint));
               }
             }
             ++iPointInCell;
@@ -1445,13 +1404,12 @@ protected:
     }
 
     // Fill in the remote data
-    for (int iRemotePoint = 0; iRemotePoint < NumRemoteDonorPoints_[iDonor]; ++iRemotePoint) {
-      int iPointInCell = RemoteDonorPoints_[iDonor][iRemotePoint];
-      int iRecv = RemoteDonorPointCollectRecvs_[iDonor][iRemotePoint];
-      long long iBuffer = RemoteDonorPointCollectRecvBufferIndices_[iDonor][iRemotePoint];
+    for (int iRemotePoint = 0; iRemotePoint < NumRemoteDonorPoints_(iDonor); ++iRemotePoint) {
+      int iPointInCell = RemoteDonorPoints_(iDonor)[iRemotePoint];
+      int iRecv = RemoteDonorPointCollectRecvs_(iDonor)[iRemotePoint];
+      long long iBuffer = RemoteDonorPointCollectRecvBufferIndices_(iDonor)[iRemotePoint];
       for (int iCount = 0; iCount < Count_; ++iCount) {
-        DonorPointValues[iPointInCell+iCount*NumPointsInCell] = RemoteDonorValues[iRecv][iCount]
-          [iBuffer];
+        DonorPointValues(iCount,iPointInCell) = RemoteDonorValues(iRecv)(iCount,iBuffer);
       }
     }
 
@@ -1459,34 +1417,29 @@ protected:
 
 private:
 
-  int NumDims_;
   cart Cart_;
   range GlobalRange_;
   range LocalRange_;
-  int NumSends_;
-  const exchange::collect_send *Sends_;
-  int NumRecvs_;
-  const exchange::collect_recv *Recvs_;
-  std::vector<std::vector<std::vector<value_type>>> SendBuffers_;
-  std::vector<MPI_Request> Requests_;
-  const int *NumRemoteDonorPoints_;
-  const long long * const *RemoteDonorPoints_;
-  const int * const *RemoteDonorPointCollectRecvs_;
-  const long long * const *RemoteDonorPointCollectRecvBufferIndices_;
-  
+  array_view<const exchange::collect_send> Sends_;
+  array_view<const exchange::collect_recv> Recvs_;
+  array<array<value_type,2>> SendBuffers_;
+  array<MPI_Request> Requests_;
+  array_view<const int> NumRemoteDonorPoints_;
+  array_view<const long long * const> RemoteDonorPoints_;
+  array_view<const int * const> RemoteDonorPointCollectRecvs_;
+  array_view<const long long * const> RemoteDonorPointCollectRecvBufferIndices_;
+
 };
 
-template <typename T> class collect_none : public collect_base<T> {
+template <typename T, array_layout Layout> class collect_none : public collect_base<T, Layout> {
 
 protected:
 
-  using parent_type = collect_base<T>;
+  using parent_type = collect_base<T, Layout>;
 
-  using parent_type::Donors_;
-  using parent_type::Grid_;
+  using typename parent_type::donor_indexer;
   using parent_type::Count_;
-  using parent_type::GridValuesRange_;
-  using parent_type::GridValuesLayout_;
+  using parent_type::NumDonors_;
   using parent_type::MaxPointsInCell_;
 
 public:
@@ -1496,47 +1449,39 @@ public:
 
   collect_none() = default;
 
-  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange, array_layout
-    GridValuesLayout) {
+  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) {
 
-    parent_type::Initialize(Exchange, Count, GridValuesRange, GridValuesLayout);
+    parent_type::Initialize(Exchange, Count, GridValuesRange);
 
     parent_type::AllocateRemoteDonorValues(RemoteDonorValues_);
 
-    DonorPointValues_.resize(Count_*MaxPointsInCell_);
+    DonorPointValues_.Resize({{Count_,MaxPointsInCell_}});
 
   }
 
-  void Collect(const user_value_type * const *GridValues, user_value_type **DonorValues) {
-
-    const connectivity_d &Donors = *Donors_;
-
-    int NumDims;
-    long long NumDonors;
-    GetConnectivityDonorSideDimension(Donors, NumDims);
-    GetConnectivityDonorSideCount(Donors, NumDonors);
-
-    if (OVK_DEBUG) parent_type::CheckValuesPointers(GridValues, DonorValues);
+  void Collect(array_view<array_view<const user_value_type>> GridValues, array_view<array_view<
+    user_value_type>> DonorValues) {
 
     parent_type::RetrieveRemoteDonorValues(GridValues, RemoteDonorValues_);
 
-    for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
+    for (long long iDonor = 0; iDonor < NumDonors_; ++iDonor) {
 
-      int DonorSize[MAX_DIMS];
+      elem<int,MAX_DIMS> DonorSize;
       parent_type::AssembleDonorPointValues(GridValues, RemoteDonorValues_, iDonor, DonorSize,
-        DonorPointValues_.data());
-      int NumPointsInCell = DonorSize[0]*DonorSize[1]*DonorSize[2];
+        DonorPointValues_);
+
+      donor_indexer Indexer(DonorSize);
 
       for (int iCount = 0; iCount < Count_; ++iCount) {
-        DonorValues[iCount][iDonor] = user_value_type(true);
+        DonorValues(iCount)(iDonor) = user_value_type(true);
       }
       for (int k = 0; k < DonorSize[2]; ++k) {
         for (int j = 0; j < DonorSize[1]; ++j) {
           for (int i = 0; i < DonorSize[0]; ++i) {
-            int iPoint = i + DonorSize[0]*(j + DonorSize[1]*k);
+            int iPointInCell = Indexer.ToIndex(i,j,k);
             for (int iCount = 0; iCount < Count_; ++iCount) {
-              DonorValues[iCount][iDonor] = DonorValues[iCount][iDonor] &&
-                !user_value_type(DonorPointValues_[iCount*NumPointsInCell+iPoint]);
+              DonorValues(iCount)(iDonor) = DonorValues(iCount)(iDonor) &&
+                !user_value_type(DonorPointValues_(iCount,iPointInCell));
             }
           }
         }
@@ -1548,22 +1493,20 @@ public:
 
 private:
 
-  typename parent_type::remote_donor_values RemoteDonorValues_;
-  std::vector<value_type> DonorPointValues_;
+  array<array<value_type,2>> RemoteDonorValues_;
+  array<value_type,2> DonorPointValues_;
 
 };
 
-template <typename T> class collect_any : public collect_base<T> {
+template <typename T, array_layout Layout> class collect_any : public collect_base<T, Layout> {
 
 protected:
 
-  using parent_type = collect_base<T>;
+  using parent_type = collect_base<T, Layout>;
 
-  using parent_type::Donors_;
-  using parent_type::Grid_;
+  using typename parent_type::donor_indexer;
   using parent_type::Count_;
-  using parent_type::GridValuesRange_;
-  using parent_type::GridValuesLayout_;
+  using parent_type::NumDonors_;
   using parent_type::MaxPointsInCell_;
 
 public:
@@ -1573,47 +1516,39 @@ public:
 
   collect_any() = default;
 
-  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange, array_layout
-    GridValuesLayout) {
+  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) {
 
-    parent_type::Initialize(Exchange, Count, GridValuesRange, GridValuesLayout);
+    parent_type::Initialize(Exchange, Count, GridValuesRange);
 
     parent_type::AllocateRemoteDonorValues(RemoteDonorValues_);
 
-    DonorPointValues_.resize(Count_*MaxPointsInCell_);
+    DonorPointValues_.Resize({{Count_,MaxPointsInCell_}});
 
   }
 
-  void Collect(const user_value_type * const *GridValues, user_value_type **DonorValues) {
-
-    const connectivity_d &Donors = *Donors_;
-
-    int NumDims;
-    long long NumDonors;
-    GetConnectivityDonorSideDimension(Donors, NumDims);
-    GetConnectivityDonorSideCount(Donors, NumDonors);
-
-    if (OVK_DEBUG) parent_type::CheckValuesPointers(GridValues, DonorValues);
+  void Collect(array_view<array_view<const user_value_type>> GridValues, array_view<array_view<
+    user_value_type>> DonorValues) {
 
     parent_type::RetrieveRemoteDonorValues(GridValues, RemoteDonorValues_);
 
-    for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
+    for (long long iDonor = 0; iDonor < NumDonors_; ++iDonor) {
 
-      int DonorSize[MAX_DIMS];
+      elem<int,MAX_DIMS> DonorSize;
       parent_type::AssembleDonorPointValues(GridValues, RemoteDonorValues_, iDonor, DonorSize,
-        DonorPointValues_.data());
-      int NumPointsInCell = DonorSize[0]*DonorSize[1]*DonorSize[2];
+        DonorPointValues_);
+
+      donor_indexer Indexer(DonorSize);
 
       for (int iCount = 0; iCount < Count_; ++iCount) {
-        DonorValues[iCount][iDonor] = user_value_type(false);
+        DonorValues(iCount)(iDonor) = user_value_type(false);
       }
       for (int k = 0; k < DonorSize[2]; ++k) {
         for (int j = 0; j < DonorSize[1]; ++j) {
           for (int i = 0; i < DonorSize[0]; ++i) {
-            int iPoint = i + DonorSize[0]*(j + DonorSize[1]*k);
+            int iPointInCell = Indexer.ToIndex(i,j,k);
             for (int iCount = 0; iCount < Count_; ++iCount) {
-              DonorValues[iCount][iDonor] = DonorValues[iCount][iDonor] ||
-                user_value_type(DonorPointValues_[iCount*NumPointsInCell+iPoint]);
+              DonorValues(iCount)(iDonor) = DonorValues(iCount)(iDonor) ||
+                user_value_type(DonorPointValues_(iCount,iPointInCell));
             }
           }
         }
@@ -1625,22 +1560,20 @@ public:
 
 private:
 
-  typename parent_type::remote_donor_values RemoteDonorValues_;
-  std::vector<value_type> DonorPointValues_;
+  array<array<value_type,2>> RemoteDonorValues_;
+  array<value_type,2> DonorPointValues_;
 
 };
 
-template <typename T> class collect_not_all : public collect_base<T> {
+template <typename T, array_layout Layout> class collect_not_all : public collect_base<T, Layout> {
 
 protected:
 
-  using parent_type = collect_base<T>;
+  using parent_type = collect_base<T, Layout>;
 
-  using parent_type::Donors_;
-  using parent_type::Grid_;
+  using typename parent_type::donor_indexer;
   using parent_type::Count_;
-  using parent_type::GridValuesRange_;
-  using parent_type::GridValuesLayout_;
+  using parent_type::NumDonors_;
   using parent_type::MaxPointsInCell_;
 
 public:
@@ -1650,47 +1583,39 @@ public:
 
   collect_not_all() = default;
 
-  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange, array_layout
-    GridValuesLayout) {
+  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) {
 
-    parent_type::Initialize(Exchange, Count, GridValuesRange, GridValuesLayout);
+    parent_type::Initialize(Exchange, Count, GridValuesRange);
 
     parent_type::AllocateRemoteDonorValues(RemoteDonorValues_);
 
-    DonorPointValues_.resize(Count_*MaxPointsInCell_);
+    DonorPointValues_.Resize({{Count_,MaxPointsInCell_}});
 
   }
 
-  void Collect(const user_value_type * const *GridValues, user_value_type **DonorValues) {
-
-    const connectivity_d &Donors = *Donors_;
-
-    int NumDims;
-    long long NumDonors;
-    GetConnectivityDonorSideDimension(Donors, NumDims);
-    GetConnectivityDonorSideCount(Donors, NumDonors);
-
-    if (OVK_DEBUG) parent_type::CheckValuesPointers(GridValues, DonorValues);
+  void Collect(array_view<array_view<const user_value_type>> GridValues, array_view<array_view<
+    user_value_type>> DonorValues) {
 
     parent_type::RetrieveRemoteDonorValues(GridValues, RemoteDonorValues_);
 
-    for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
+    for (long long iDonor = 0; iDonor < NumDonors_; ++iDonor) {
 
-      int DonorSize[MAX_DIMS];
+      elem<int,MAX_DIMS> DonorSize;
       parent_type::AssembleDonorPointValues(GridValues, RemoteDonorValues_, iDonor, DonorSize,
-        DonorPointValues_.data());
-      int NumPointsInCell = DonorSize[0]*DonorSize[1]*DonorSize[2];
+        DonorPointValues_);
+
+      donor_indexer Indexer(DonorSize);
 
       for (int iCount = 0; iCount < Count_; ++iCount) {
-        DonorValues[iCount][iDonor] = user_value_type(false);
+        DonorValues(iCount)(iDonor) = user_value_type(false);
       }
       for (int k = 0; k < DonorSize[2]; ++k) {
         for (int j = 0; j < DonorSize[1]; ++j) {
           for (int i = 0; i < DonorSize[0]; ++i) {
-            int iPoint = i + DonorSize[0]*(j + DonorSize[1]*k);
+            int iPointInCell = Indexer.ToIndex(i,j,k);
             for (int iCount = 0; iCount < Count_; ++iCount) {
-              DonorValues[iCount][iDonor] = DonorValues[iCount][iDonor] ||
-                !user_value_type(DonorPointValues_[iCount*NumPointsInCell+iPoint]);
+              DonorValues(iCount)(iDonor) = DonorValues(iCount)(iDonor) ||
+                !user_value_type(DonorPointValues_(iCount,iPointInCell));
             }
           }
         }
@@ -1702,22 +1627,20 @@ public:
 
 private:
 
-  typename parent_type::remote_donor_values RemoteDonorValues_;
-  std::vector<value_type> DonorPointValues_;
+  array<array<value_type,2>> RemoteDonorValues_;
+  array<value_type,2> DonorPointValues_;
 
 };
 
-template <typename T> class collect_all : public collect_base<T> {
+template <typename T, array_layout Layout> class collect_all : public collect_base<T, Layout> {
 
 protected:
 
-  using parent_type = collect_base<T>;
+  using parent_type = collect_base<T, Layout>;
 
-  using parent_type::Donors_;
-  using parent_type::Grid_;
+  using typename parent_type::donor_indexer;
   using parent_type::Count_;
-  using parent_type::GridValuesRange_;
-  using parent_type::GridValuesLayout_;
+  using parent_type::NumDonors_;
   using parent_type::MaxPointsInCell_;
 
 public:
@@ -1727,47 +1650,39 @@ public:
 
   collect_all() = default;
 
-  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange, array_layout
-    GridValuesLayout) {
+  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) {
 
-    parent_type::Initialize(Exchange, Count, GridValuesRange, GridValuesLayout);
+    parent_type::Initialize(Exchange, Count, GridValuesRange);
 
     parent_type::AllocateRemoteDonorValues(RemoteDonorValues_);
 
-    DonorPointValues_.resize(Count_*MaxPointsInCell_);
+    DonorPointValues_.Resize({{Count_,MaxPointsInCell_}});
 
   }
 
-  void Collect(const user_value_type * const *GridValues, user_value_type **DonorValues) {
-
-    const connectivity_d &Donors = *Donors_;
-
-    int NumDims;
-    long long NumDonors;
-    GetConnectivityDonorSideDimension(Donors, NumDims);
-    GetConnectivityDonorSideCount(Donors, NumDonors);
-
-    if (OVK_DEBUG) parent_type::CheckValuesPointers(GridValues, DonorValues);
+  void Collect(array_view<array_view<const user_value_type>> GridValues, array_view<array_view<
+    user_value_type>> DonorValues) {
 
     parent_type::RetrieveRemoteDonorValues(GridValues, RemoteDonorValues_);
 
-    for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
+    for (long long iDonor = 0; iDonor < NumDonors_; ++iDonor) {
 
-      int DonorSize[MAX_DIMS];
+      elem<int,MAX_DIMS> DonorSize;
       parent_type::AssembleDonorPointValues(GridValues, RemoteDonorValues_, iDonor, DonorSize,
-        DonorPointValues_.data());
-      int NumPointsInCell = DonorSize[0]*DonorSize[1]*DonorSize[2];
+        DonorPointValues_);
+
+      donor_indexer Indexer(DonorSize);
 
       for (int iCount = 0; iCount < Count_; ++iCount) {
-        DonorValues[iCount][iDonor] = user_value_type(true);
+        DonorValues(iCount)(iDonor) = user_value_type(true);
       }
       for (int k = 0; k < DonorSize[2]; ++k) {
         for (int j = 0; j < DonorSize[1]; ++j) {
           for (int i = 0; i < DonorSize[0]; ++i) {
-            int iPoint = i + DonorSize[0]*(j + DonorSize[1]*k);
+            int iPointInCell = Indexer.ToIndex(i,j,k);
             for (int iCount = 0; iCount < Count_; ++iCount) {
-              DonorValues[iCount][iDonor] = DonorValues[iCount][iDonor] &&
-                user_value_type(DonorPointValues_[iCount*NumPointsInCell+iPoint]);
+              DonorValues(iCount)(iDonor) = DonorValues(iCount)(iDonor) &&
+                user_value_type(DonorPointValues_(iCount,iPointInCell));
             }
           }
         }
@@ -1779,22 +1694,22 @@ public:
 
 private:
 
-  typename parent_type::remote_donor_values RemoteDonorValues_;
-  std::vector<value_type> DonorPointValues_;
+  array<array<value_type,2>> RemoteDonorValues_;
+  array<value_type,2> DonorPointValues_;
 
 };
 
-template <typename T> class collect_interp : public collect_base<T> {
+template <typename T, array_layout Layout> class collect_interp : public collect_base<T, Layout> {
 
 protected:
 
-  using parent_type = collect_base<T>;
+  using parent_type = collect_base<T, Layout>;
 
+  using typename parent_type::donor_indexer;
   using parent_type::Donors_;
-  using parent_type::Grid_;
+  using parent_type::NumDims_;
   using parent_type::Count_;
-  using parent_type::GridValuesRange_;
-  using parent_type::GridValuesLayout_;
+  using parent_type::NumDonors_;
   using parent_type::MaxPointsInCell_;
 
 public:
@@ -1804,54 +1719,46 @@ public:
 
   collect_interp() = default;
 
-  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange, array_layout
-    GridValuesLayout) {
+  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) {
 
-    parent_type::Initialize(Exchange, Count, GridValuesRange, GridValuesLayout);
+    parent_type::Initialize(Exchange, Count, GridValuesRange);
 
     InterpCoefs_ = Donors_->InterpCoefs_;
 
     parent_type::AllocateRemoteDonorValues(RemoteDonorValues_);
 
-    DonorPointValues_.resize(Count_*MaxPointsInCell_);
+    DonorPointValues_.Resize({{Count_,MaxPointsInCell_}});
 
   }
 
-  void Collect(const user_value_type * const *GridValues, user_value_type **DonorValues) {
-
-    const connectivity_d &Donors = *Donors_;
-
-    int NumDims;
-    long long NumDonors;
-    GetConnectivityDonorSideDimension(Donors, NumDims);
-    GetConnectivityDonorSideCount(Donors, NumDonors);
-
-    if (OVK_DEBUG) parent_type::CheckValuesPointers(GridValues, DonorValues);
+  void Collect(array_view<array_view<const user_value_type>> GridValues, array_view<array_view<
+    user_value_type>> DonorValues) {
 
     parent_type::RetrieveRemoteDonorValues(GridValues, RemoteDonorValues_);
 
-    for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
+    for (long long iDonor = 0; iDonor < NumDonors_; ++iDonor) {
 
-      int DonorSize[MAX_DIMS];
+      elem<int,MAX_DIMS> DonorSize;
       parent_type::AssembleDonorPointValues(GridValues, RemoteDonorValues_, iDonor, DonorSize,
-        DonorPointValues_.data());
-      int NumPointsInCell = DonorSize[0]*DonorSize[1]*DonorSize[2];
+        DonorPointValues_);
+
+      donor_indexer Indexer(DonorSize);
 
       for (int iCount = 0; iCount < Count_; ++iCount) {
-        DonorValues[iCount][iDonor] = user_value_type(0);
+        DonorValues(iCount)(iDonor) = user_value_type(0);
       }
       for (int k = 0; k < DonorSize[2]; ++k) {
         for (int j = 0; j < DonorSize[1]; ++j) {
           for (int i = 0; i < DonorSize[0]; ++i) {
-            int Point[MAX_DIMS] = {i, j, k};
-            int iPoint = i + DonorSize[0]*(j + DonorSize[1]*k);
+            elem<int,MAX_DIMS> Point = {i,j,k};
+            int iPointInCell = Indexer.ToIndex(Point);
             double Coef = 1.;
-            for (int iDim = 0; iDim < NumDims; ++iDim) {
-              Coef *= InterpCoefs_[iDim][Point[iDim]][iDonor];
+            for (int iDim = 0; iDim < NumDims_; ++iDim) {
+              Coef *= InterpCoefs_(iDim,Point[iDim],iDonor);
             }
             for (int iCount = 0; iCount < Count_; ++iCount) {
-              DonorValues[iCount][iDonor] += user_value_type(Coef*DonorPointValues_[iCount*
-                NumPointsInCell+iPoint]);
+              DonorValues(iCount)(iDonor) += user_value_type(Coef*DonorPointValues_(iCount,
+                iPointInCell));
             }
           }
         }
@@ -1863,11 +1770,90 @@ public:
 
 private:
 
-  const double * const * const *InterpCoefs_;
-  typename parent_type::remote_donor_values RemoteDonorValues_;
-  std::vector<value_type> DonorPointValues_;
+  array_view<const double,3> InterpCoefs_;
+  array<array<value_type,2>> RemoteDonorValues_;
+  array<value_type,2> DonorPointValues_;
 
 };
+
+template <array_layout Layout> void CollectLayout(const exchange &Exchange, data_type ValueType,
+  int Count, collect_op CollectOp, const range &GridValuesRange, const void * const *GridValues,
+  void **DonorValues) {
+
+  collect CollectWrapper;
+
+  switch (CollectOp) {
+  case collect_op::NONE:
+    switch (ValueType) {
+    case data_type::BOOL: CollectWrapper = collect_none<bool, Layout>(); break;
+    case data_type::BYTE: CollectWrapper = collect_none<unsigned char, Layout>(); break;
+    case data_type::INT: CollectWrapper = collect_none<int, Layout>(); break;
+    case data_type::LONG: CollectWrapper = collect_none<long, Layout>(); break;
+    case data_type::LONG_LONG: CollectWrapper = collect_none<long long, Layout>(); break;
+    case data_type::UNSIGNED_INT: CollectWrapper = collect_none<unsigned int, Layout>(); break;
+    case data_type::UNSIGNED_LONG: CollectWrapper = collect_none<unsigned long, Layout>(); break;
+    case data_type::UNSIGNED_LONG_LONG: CollectWrapper = collect_none<unsigned long long, Layout>(); break;
+    case data_type::FLOAT: CollectWrapper = collect_none<float, Layout>(); break;
+    case data_type::DOUBLE: CollectWrapper = collect_none<double, Layout>(); break;
+    }
+    break;
+  case collect_op::ANY:
+    switch (ValueType) {
+    case data_type::BOOL: CollectWrapper = collect_any<bool, Layout>(); break;
+    case data_type::BYTE: CollectWrapper = collect_any<unsigned char, Layout>(); break;
+    case data_type::INT: CollectWrapper = collect_any<int, Layout>(); break;
+    case data_type::LONG: CollectWrapper = collect_any<long, Layout>(); break;
+    case data_type::LONG_LONG: CollectWrapper = collect_any<long long, Layout>(); break;
+    case data_type::UNSIGNED_INT: CollectWrapper = collect_any<unsigned int, Layout>(); break;
+    case data_type::UNSIGNED_LONG: CollectWrapper = collect_any<unsigned long, Layout>(); break;
+    case data_type::UNSIGNED_LONG_LONG: CollectWrapper = collect_any<unsigned long long, Layout>(); break;
+    case data_type::FLOAT: CollectWrapper = collect_any<float, Layout>(); break;
+    case data_type::DOUBLE: CollectWrapper = collect_any<double, Layout>(); break;
+    }
+    break;
+  case collect_op::NOT_ALL:
+    switch (ValueType) {
+    case data_type::BOOL: CollectWrapper = collect_not_all<bool, Layout>(); break;
+    case data_type::BYTE: CollectWrapper = collect_not_all<unsigned char, Layout>(); break;
+    case data_type::INT: CollectWrapper = collect_not_all<int, Layout>(); break;
+    case data_type::LONG: CollectWrapper = collect_not_all<long, Layout>(); break;
+    case data_type::LONG_LONG: CollectWrapper = collect_not_all<long long, Layout>(); break;
+    case data_type::UNSIGNED_INT: CollectWrapper = collect_not_all<unsigned int, Layout>(); break;
+    case data_type::UNSIGNED_LONG: CollectWrapper = collect_not_all<unsigned long, Layout>(); break;
+    case data_type::UNSIGNED_LONG_LONG: CollectWrapper = collect_not_all<unsigned long long, Layout>(); break;
+    case data_type::FLOAT: CollectWrapper = collect_not_all<float, Layout>(); break;
+    case data_type::DOUBLE: CollectWrapper = collect_not_all<double, Layout>(); break;
+    }
+    break;
+  case collect_op::ALL:
+    switch (ValueType) {
+    case data_type::BOOL: CollectWrapper = collect_all<bool, Layout>(); break;
+    case data_type::BYTE: CollectWrapper = collect_all<unsigned char, Layout>(); break;
+    case data_type::INT: CollectWrapper = collect_all<int, Layout>(); break;
+    case data_type::LONG: CollectWrapper = collect_all<long, Layout>(); break;
+    case data_type::LONG_LONG: CollectWrapper = collect_all<long long, Layout>(); break;
+    case data_type::UNSIGNED_INT: CollectWrapper = collect_all<unsigned int, Layout>(); break;
+    case data_type::UNSIGNED_LONG: CollectWrapper = collect_all<unsigned long, Layout>(); break;
+    case data_type::UNSIGNED_LONG_LONG: CollectWrapper = collect_all<unsigned long long, Layout>(); break;
+    case data_type::FLOAT: CollectWrapper = collect_all<float, Layout>(); break;
+    case data_type::DOUBLE: CollectWrapper = collect_all<double, Layout>(); break;
+    }
+    break;
+  case collect_op::INTERPOLATE:
+    switch (ValueType) {
+    case data_type::FLOAT: CollectWrapper = collect_interp<float, Layout>(); break;
+    case data_type::DOUBLE: CollectWrapper = collect_interp<double, Layout>(); break;
+    default:
+      OVK_DEBUG_ASSERT(false, "Invalid data type for interpolation collect operation.");
+      break;
+    }
+    break;
+  }
+
+  CollectWrapper.Initialize(Exchange, Count, GridValuesRange);
+  CollectWrapper.Collect(GridValues, DonorValues);
+
+}
 
 }
 
@@ -1877,78 +1863,16 @@ void Collect(const exchange &Exchange, data_type ValueType, int Count, collect_o
   const range &GridValuesRange, array_layout GridValuesLayout, const void * const *GridValues,
   void **DonorValues) {
 
-  collect CollectWrapper;
-
-  switch (CollectOp) {
-  case collect_op::NONE:
-    switch (ValueType) {
-    case data_type::BOOL: CollectWrapper = collect_none<bool>(); break;
-    case data_type::BYTE: CollectWrapper = collect_none<unsigned char>(); break;
-    case data_type::INT: CollectWrapper = collect_none<int>(); break;
-    case data_type::LONG: CollectWrapper = collect_none<long>(); break;
-    case data_type::LONG_LONG: CollectWrapper = collect_none<long long>(); break;
-    case data_type::UNSIGNED_INT: CollectWrapper = collect_none<unsigned int>(); break;
-    case data_type::UNSIGNED_LONG: CollectWrapper = collect_none<unsigned long>(); break;
-    case data_type::UNSIGNED_LONG_LONG: CollectWrapper = collect_none<unsigned long long>(); break;
-    case data_type::FLOAT: CollectWrapper = collect_none<float>(); break;
-    case data_type::DOUBLE: CollectWrapper = collect_none<double>(); break;
-    }
+  switch (GridValuesLayout) {
+  case array_layout::ROW_MAJOR:
+    CollectLayout<array_layout::ROW_MAJOR>(Exchange, ValueType, Count, CollectOp, GridValuesRange,
+      GridValues, DonorValues);
     break;
-  case collect_op::ANY:
-    switch (ValueType) {
-    case data_type::BOOL: CollectWrapper = collect_any<bool>(); break;
-    case data_type::BYTE: CollectWrapper = collect_any<unsigned char>(); break;
-    case data_type::INT: CollectWrapper = collect_any<int>(); break;
-    case data_type::LONG: CollectWrapper = collect_any<long>(); break;
-    case data_type::LONG_LONG: CollectWrapper = collect_any<long long>(); break;
-    case data_type::UNSIGNED_INT: CollectWrapper = collect_any<unsigned int>(); break;
-    case data_type::UNSIGNED_LONG: CollectWrapper = collect_any<unsigned long>(); break;
-    case data_type::UNSIGNED_LONG_LONG: CollectWrapper = collect_any<unsigned long long>(); break;
-    case data_type::FLOAT: CollectWrapper = collect_any<float>(); break;
-    case data_type::DOUBLE: CollectWrapper = collect_any<double>(); break;
-    }
-    break;
-  case collect_op::NOT_ALL:
-    switch (ValueType) {
-    case data_type::BOOL: CollectWrapper = collect_not_all<bool>(); break;
-    case data_type::BYTE: CollectWrapper = collect_not_all<unsigned char>(); break;
-    case data_type::INT: CollectWrapper = collect_not_all<int>(); break;
-    case data_type::LONG: CollectWrapper = collect_not_all<long>(); break;
-    case data_type::LONG_LONG: CollectWrapper = collect_not_all<long long>(); break;
-    case data_type::UNSIGNED_INT: CollectWrapper = collect_not_all<unsigned int>(); break;
-    case data_type::UNSIGNED_LONG: CollectWrapper = collect_not_all<unsigned long>(); break;
-    case data_type::UNSIGNED_LONG_LONG: CollectWrapper = collect_not_all<unsigned long long>(); break;
-    case data_type::FLOAT: CollectWrapper = collect_not_all<float>(); break;
-    case data_type::DOUBLE: CollectWrapper = collect_not_all<double>(); break;
-    }
-    break;
-  case collect_op::ALL:
-    switch (ValueType) {
-    case data_type::BOOL: CollectWrapper = collect_all<bool>(); break;
-    case data_type::BYTE: CollectWrapper = collect_all<unsigned char>(); break;
-    case data_type::INT: CollectWrapper = collect_all<int>(); break;
-    case data_type::LONG: CollectWrapper = collect_all<long>(); break;
-    case data_type::LONG_LONG: CollectWrapper = collect_all<long long>(); break;
-    case data_type::UNSIGNED_INT: CollectWrapper = collect_all<unsigned int>(); break;
-    case data_type::UNSIGNED_LONG: CollectWrapper = collect_all<unsigned long>(); break;
-    case data_type::UNSIGNED_LONG_LONG: CollectWrapper = collect_all<unsigned long long>(); break;
-    case data_type::FLOAT: CollectWrapper = collect_all<float>(); break;
-    case data_type::DOUBLE: CollectWrapper = collect_all<double>(); break;
-    }
-    break;
-  case collect_op::INTERPOLATE:
-    switch (ValueType) {
-    case data_type::FLOAT: CollectWrapper = collect_interp<float>(); break;
-    case data_type::DOUBLE: CollectWrapper = collect_interp<double>(); break;
-    default:
-      OVK_DEBUG_ASSERT(false, "Invalid data type for interpolation collect operation.");
-      break;
-    }
+  case array_layout::COLUMN_MAJOR:
+    CollectLayout<array_layout::COLUMN_MAJOR>(Exchange, ValueType, Count, CollectOp,
+      GridValuesRange, GridValues, DonorValues);
     break;
   }
-
-  CollectWrapper.Initialize(Exchange, Count, GridValuesRange, GridValuesLayout);
-  CollectWrapper.Collect(GridValues, DonorValues);
 
 }
 
@@ -1998,17 +1922,26 @@ private:
     {}
     virtual void Initialize(const exchange &Exchange, int Count, int Tag) override {
       Send_.Initialize(Exchange, Count, Tag);
-      DonorValues_.resize(Count);
+      const connectivity_d *Donors;
+      GetConnectivityDonorSide(*Exchange.Connectivity_, Donors);
+      GetConnectivityDonorSideCount(*Donors, NumDonors_);
+      DonorValues_.Resize({Count});
     }
     virtual void Send(const void * const *DonorValuesVoid, request &Request) override {
-      OVK_DEBUG_ASSERT(DonorValuesVoid || DonorValues_.size() == 0, "Invalid donor values pointer.");
-      for (int iCount = 0; iCount < int(DonorValues_.size()); ++iCount) {
-        DonorValues_[iCount] = static_cast<const user_value_type *>(DonorValuesVoid[iCount]);
+      OVK_DEBUG_ASSERT(DonorValuesVoid || DonorValues_.Count() == 0, "Invalid donor values "
+        "pointer.");
+      for (int iCount = 0; iCount < DonorValues_.Count(); ++iCount) {
+        OVK_DEBUG_ASSERT(DonorValuesVoid[iCount] || NumDonors_ == 0, "Invalid donor values "
+          "pointer.");
+        DonorValues_(iCount) = {static_cast<const user_value_type *>(DonorValuesVoid[iCount]),
+          {NumDonors_}};
       }
-      Send_.Send(DonorValues_.data(), Request);
+      Send_.Send(DonorValues_, Request);
     }
+  private:
     T Send_;
-    std::vector<const user_value_type *> DonorValues_;
+    long long NumDonors_;
+    array<array_view<const user_value_type>> DonorValues_;
   };
 
   std::unique_ptr<concept> Send_;
@@ -2019,27 +1952,25 @@ template <typename T> class send_request {
 public:
   using user_value_type = T;
   using value_type = no_bool<T>;
-  send_request(const exchange &Exchange, int Count, int NumSends,
-    std::vector<std::vector<value_type>> Buffers, std::vector<MPI_Request> MPIRequests):
+  send_request(const exchange &Exchange, int Count, int NumSends, array<array<value_type,2>>
+    Buffers, array<MPI_Request> MPIRequests):
     Exchange_(&Exchange),
     Count_(Count),
     NumSends_(NumSends),
     Buffers_(std::move(Buffers)),
     MPIRequests_(std::move(MPIRequests))
   {
-    const connectivity &Connectivity = *Exchange.Connectivity_;
-    GetConnectivityDonorSide(Connectivity, Donors_);
+    GetConnectivityDonorSide(*Exchange.Connectivity_, Donors_);
   }
   void Wait();
-  int NumMPIRequests() const { return MPIRequests_.size(); }
-  MPI_Request *MPIRequests() { return MPIRequests_.data(); }
+  array_view<MPI_Request> MPIRequests() { return MPIRequests_; }
 private:
   const exchange *Exchange_;
   const connectivity_d *Donors_;
   int Count_;
   int NumSends_;
-  std::vector<std::vector<value_type>> Buffers_;
-  std::vector<MPI_Request> MPIRequests_;
+  array<array<value_type,2>> Buffers_;
+  array<MPI_Request> MPIRequests_;
 };
 
 template <typename T> class send_impl {
@@ -2064,11 +1995,11 @@ public:
 
     GetConnectivityDonorSide(Connectivity, Donors_);
 
-    NumSends_ = Exchange.Sends_.size();
+    NumSends_ = Exchange.Sends_.Count();
 
   }
 
-  void Send(const user_value_type * const *DonorValues, request &Request) {
+  void Send(array_view<array_view<const user_value_type>> DonorValues, request &Request) {
 
     const exchange &Exchange = *Exchange_;
     const connectivity_d &Donors = *Donors_;
@@ -2076,44 +2007,35 @@ public:
     long long NumDonors;
     GetConnectivityDonorSideCount(Donors, NumDonors);
 
-    if (OVK_DEBUG) {
-      if (NumDonors > 0) {
-        for (int iCount = 0; iCount < Count_; ++iCount) {
-          OVK_DEBUG_ASSERT(DonorValues[iCount], "Invalid donor values pointer.");
-        }
-      }
-    }
-
     MPI_Datatype MPIDataType = core::GetMPIDataType<value_type>();
 
-    std::vector<long long> NextBufferEntry(NumSends_, 0);
+    array<long long> NextBufferEntry({NumSends_}, 0);
 
-    std::vector<std::vector<value_type>> Buffers(NumSends_);
+    array<array<value_type,2>> Buffers({NumSends_});
 
     for (int iSend = 0; iSend < NumSends_; ++iSend) {
-      const exchange::send &Send = Exchange.Sends_[iSend];
-      Buffers[iSend].resize(Count_*Send.Count);
+      const exchange::send &Send = Exchange.Sends_(iSend);
+      Buffers(iSend).Resize({{Count_,Send.Count}});
     }
 
     for (long long iDonorOrder = 0; iDonorOrder < NumDonors; ++iDonorOrder) {
-      long long iDonor = Exchange.DonorsSorted_[iDonorOrder];
-      int iSend = Exchange.DonorSendIndices_[iDonor];
+      long long iDonor = Exchange.DonorsSorted_(iDonorOrder);
+      int iSend = Exchange.DonorSendIndices_(iDonor);
       if (iSend >= 0) {
-        const exchange::send &Send = Exchange.Sends_[iSend];
-        long long iBuffer = NextBufferEntry[iSend];
+        long long iBuffer = NextBufferEntry(iSend);
         for (int iCount = 0; iCount < Count_; ++iCount) {
-          Buffers[iSend][iCount*Send.Count+iBuffer] = value_type(DonorValues[iCount][iDonor]);
+          Buffers(iSend)(iCount,iBuffer) = value_type(DonorValues(iCount)(iDonor));
         }
-        ++NextBufferEntry[iSend];
+        ++NextBufferEntry(iSend);
       }
     }
 
-    std::vector<MPI_Request> MPIRequests(NumSends_);
+    array<MPI_Request> MPIRequests({NumSends_});
 
     for (int iSend = 0; iSend < NumSends_; ++iSend) {
-      const exchange::send &Send = Exchange.Sends_[iSend];
-      MPI_Isend(Buffers[iSend].data(), Count_*Send.Count, MPIDataType, Send.Rank, Tag_,
-        Exchange.Comm_, &MPIRequests[iSend]);
+      const exchange::send &Send = Exchange.Sends_(iSend);
+      MPI_Isend(Buffers(iSend).Data(), Count_*Send.Count, MPIDataType, Send.Rank, Tag_,
+        Exchange.Comm_, &MPIRequests(iSend));
     }
 
     Request = request_type(Exchange, Count_, NumSends_, std::move(Buffers), std::move(MPIRequests));
@@ -2132,10 +2054,10 @@ private:
 
 template <typename T> void send_request<T>::Wait() {
 
-  MPI_Waitall(NumSends_, MPIRequests_.data(), MPI_STATUSES_IGNORE);
+  MPI_Waitall(NumSends_, MPIRequests_.Data(), MPI_STATUSES_IGNORE);
 
-  Buffers_.clear();
-  MPIRequests_.clear();
+  Buffers_.Clear();
+  MPIRequests_.Clear();
 
 }
 
@@ -2212,18 +2134,26 @@ private:
     {}
     virtual void Initialize(const exchange &Exchange, int Count, int Tag) override {
       Recv_.Initialize(Exchange, Count, Tag);
-      ReceiverValues_.resize(Count);
+      const connectivity_r *Receivers;
+      GetConnectivityReceiverSide(*Exchange.Connectivity_, Receivers);
+      GetConnectivityReceiverSideCount(*Receivers, NumReceivers_);
+      ReceiverValues_.Resize({Count});
     }
     virtual void Recv(void **ReceiverValuesVoid, request &Request) override {
-      OVK_DEBUG_ASSERT(ReceiverValuesVoid || ReceiverValues_.size() == 0, "Invalid receiver values "
+      OVK_DEBUG_ASSERT(ReceiverValuesVoid || ReceiverValues_.Count() == 0, "Invalid receiver values "
         "pointer.");
-      for (int iCount = 0; iCount < int(ReceiverValues_.size()); ++iCount) {
-        ReceiverValues_[iCount] = static_cast<user_value_type *>(ReceiverValuesVoid[iCount]);
+      for (int iCount = 0; iCount < ReceiverValues_.Count(); ++iCount) {
+        OVK_DEBUG_ASSERT(ReceiverValuesVoid[iCount] || NumReceivers_ == 0, "Invalid receiver data "
+          "pointer.");
+        ReceiverValues_(iCount) = {static_cast<user_value_type *>(ReceiverValuesVoid[iCount]),
+          {NumReceivers_}};
       }
-      Recv_.Recv(ReceiverValues_.data(), Request);
+      Recv_.Recv(ReceiverValues_, Request);
     }
+  private:
     T Recv_;
-    std::vector<user_value_type *> ReceiverValues_;
+    long long NumReceivers_;
+    array<array_view<user_value_type>> ReceiverValues_;
   };
 
   std::unique_ptr<concept> Recv_;
@@ -2234,9 +2164,8 @@ template <typename T> class recv_request {
 public:
   using user_value_type = T;
   using value_type = no_bool<T>;
-  recv_request(const exchange &Exchange, int Count, int NumRecvs, 
-    std::vector<std::vector<value_type>> Buffers, std::vector<MPI_Request> MPIRequests,
-    std::vector<user_value_type *> ReceiverValues):
+  recv_request(const exchange &Exchange, int Count, int NumRecvs, array<array<value_type,2>>
+    Buffers, array<MPI_Request> MPIRequests, array<array_view<user_value_type>> ReceiverValues):
     Exchange_(&Exchange),
     Count_(Count),
     NumRecvs_(NumRecvs),
@@ -2244,20 +2173,18 @@ public:
     MPIRequests_(std::move(MPIRequests)),
     ReceiverValues_(std::move(ReceiverValues))
   {
-    const connectivity &Connectivity = *Exchange.Connectivity_;
-    GetConnectivityReceiverSide(Connectivity, Receivers_);
+    GetConnectivityReceiverSide(*Exchange.Connectivity_, Receivers_);
   }
   void Wait();
-  int NumMPIRequests() const { return MPIRequests_.size(); }
-  MPI_Request *MPIRequests() { return MPIRequests_.data(); }
+  array_view<MPI_Request> MPIRequests() { return MPIRequests_; }
 private:
   const exchange *Exchange_;
   const connectivity_r *Receivers_;
   int Count_;
   int NumRecvs_;
-  std::vector<std::vector<value_type>> Buffers_;
-  std::vector<MPI_Request> MPIRequests_;
-  std::vector<user_value_type *> ReceiverValues_;
+  array<array<value_type,2>> Buffers_;
+  array<MPI_Request> MPIRequests_;
+  array<array_view<user_value_type>> ReceiverValues_;
 };
 
 template <typename T> class recv_impl {
@@ -2282,44 +2209,32 @@ public:
 
     GetConnectivityReceiverSide(Connectivity, Receivers_);
 
-    NumRecvs_ = Exchange.Recvs_.size();
+    NumRecvs_ = Exchange.Recvs_.Count();
 
   }
 
-  void Recv(user_value_type **ReceiverValues, request &Request) {
+  void Recv(array_view<array_view<user_value_type>> ReceiverValues, request &Request) {
 
     const exchange &Exchange = *Exchange_;
-    const connectivity_r &Receivers = *Receivers_;
-
-    long long NumReceivers;
-    GetConnectivityReceiverSideCount(Receivers, NumReceivers);
-
-    if (OVK_DEBUG) {
-      if (NumReceivers > 0) {
-        for (int iCount = 0; iCount < Count_; ++iCount) {
-          OVK_DEBUG_ASSERT(ReceiverValues[iCount], "Invalid receiver data pointer.");
-        }
-      }
-    }
 
     MPI_Datatype MPIDataType = core::GetMPIDataType<value_type>();
 
-    std::vector<std::vector<value_type>> Buffers(NumRecvs_);
+    array<array<value_type,2>> Buffers({NumRecvs_});
 
     for (int iRecv = 0; iRecv < NumRecvs_; ++iRecv) {
-      const exchange::recv &Recv = Exchange.Recvs_[iRecv];
-      Buffers[iRecv].resize(Count_*Recv.Count);
+      const exchange::recv &Recv = Exchange.Recvs_(iRecv);
+      Buffers(iRecv).Resize({{Count_,Recv.Count}});
     }
 
-    std::vector<MPI_Request> MPIRequests(NumRecvs_);
+    array<MPI_Request> MPIRequests({NumRecvs_});
 
     for (int iRecv = 0; iRecv < NumRecvs_; ++iRecv) {
-      const exchange::recv &Recv = Exchange.Recvs_[iRecv];
-      MPI_Irecv(Buffers[iRecv].data(), Count_*Recv.Count, MPIDataType, Recv.Rank, Tag_,
-        Exchange.Comm_, &MPIRequests[iRecv]);
+      const exchange::recv &Recv = Exchange.Recvs_(iRecv);
+      MPI_Irecv(Buffers(iRecv).Data(), Count_*Recv.Count, MPIDataType, Recv.Rank, Tag_,
+        Exchange.Comm_, &MPIRequests(iRecv));
     }
 
-    std::vector<user_value_type *> ReceiverValuesSaved(ReceiverValues, ReceiverValues+Count_);
+    array<array_view<user_value_type>> ReceiverValuesSaved({ReceiverValues});
 
     Request = request_type(Exchange, Count_, NumRecvs_, std::move(Buffers), std::move(MPIRequests),
       std::move(ReceiverValuesSaved));
@@ -2345,27 +2260,25 @@ template <typename T> void recv_request<T>::Wait() {
   long long NumReceivers;
   GetConnectivityReceiverSideCount(Receivers, NumReceivers);
 
-  std::vector<long long> NextBufferEntry(NumRecvs_, 0);
+  array<long long> NextBufferEntry({NumRecvs_}, 0);
 
-  MPI_Waitall(NumRecvs_, MPIRequests_.data(), MPI_STATUSES_IGNORE);
+  MPI_Waitall(NumRecvs_, MPIRequests_.Data(), MPI_STATUSES_IGNORE);
 
   for (long long iReceiverOrder = 0; iReceiverOrder < NumReceivers; ++iReceiverOrder) {
-    long long iReceiver = Exchange.ReceiversSorted_[iReceiverOrder];
-    int iRecv = Exchange.ReceiverRecvIndices_[iReceiver];
+    long long iReceiver = Exchange.ReceiversSorted_(iReceiverOrder);
+    int iRecv = Exchange.ReceiverRecvIndices_(iReceiver);
     if (iRecv >= 0) {
-      const exchange::recv &Recv = Exchange.Recvs_[iRecv];
-      long long iBuffer = NextBufferEntry[iRecv];
+      long long iBuffer = NextBufferEntry(iRecv);
       for (int iCount = 0; iCount < Count_; ++iCount) {
-        ReceiverValues_[iCount][iReceiver] = user_value_type(Buffers_[iRecv][iCount*Recv.Count+
-          iBuffer]);
+        ReceiverValues_(iCount)(iReceiver) = user_value_type(Buffers_(iRecv)(iCount,iBuffer));
       }
-      ++NextBufferEntry[iRecv];
+      ++NextBufferEntry(iRecv);
     }
   }
 
-  Buffers_.clear();
-  MPIRequests_.clear();
-  ReceiverValues_.clear();
+  Buffers_.Clear();
+  MPIRequests_.Clear();
+  ReceiverValues_.Clear();
 
 }
 
@@ -2417,9 +2330,8 @@ public:
     return *this;
   }
 
-  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange, array_layout
-    GridValuesLayout) {
-    Disperse_->Initialize(Exchange, Count, GridValuesRange, GridValuesLayout);
+  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) {
+    Disperse_->Initialize(Exchange, Count, GridValuesRange);
   }
 
   void Disperse(const void * const *ReceiverValues, void **GridValues) {
@@ -2431,8 +2343,7 @@ private:
   class concept {
   public:
     virtual ~concept() {}
-    virtual void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange,
-      array_layout GridValuesLayout) = 0;
+    virtual void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) = 0;
     virtual void Disperse(const void * const *ReceiverValues, void **GridValues) = 0;
   };
 
@@ -2442,34 +2353,47 @@ private:
     explicit model(T Disperse):
       Disperse_(std::move(Disperse))
     {}
-    virtual void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange,
-      array_layout GridValuesLayout) override {
-      Disperse_.Initialize(Exchange, Count, GridValuesRange, GridValuesLayout);
-      ReceiverValues_.resize(Count);
-      GridValues_.resize(Count);
+    virtual void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange)
+      override {
+      Disperse_.Initialize(Exchange, Count, GridValuesRange);
+      const connectivity_r *Receivers;
+      GetConnectivityReceiverSide(*Exchange.Connectivity_, Receivers);
+      GetConnectivityReceiverSideCount(*Receivers, NumReceivers_);
+      GridValuesRange_ = GridValuesRange;
+      ReceiverValues_.Resize({Count});
+      GridValues_.Resize({Count});
     }
     virtual void Disperse(const void * const *ReceiverValuesVoid, void **GridValuesVoid) override {
-      OVK_DEBUG_ASSERT(ReceiverValuesVoid || ReceiverValues_.size() == 0, "Invalid receiver values "
+      OVK_DEBUG_ASSERT(ReceiverValuesVoid || ReceiverValues_.Count() == 0, "Invalid receiver values "
         "pointer.");
-      OVK_DEBUG_ASSERT(GridValuesVoid || GridValues_.size() == 0, "Invalid grid values pointer.");
-      for (int iCount = 0; iCount < int(ReceiverValues_.size()); ++iCount) {
-        ReceiverValues_[iCount] = static_cast<const user_value_type *>(ReceiverValuesVoid[iCount]);
+      OVK_DEBUG_ASSERT(GridValuesVoid || GridValues_.Count() == 0, "Invalid grid values pointer.");
+      for (int iCount = 0; iCount < ReceiverValues_.Count(); ++iCount) {
+        OVK_DEBUG_ASSERT(ReceiverValuesVoid[iCount] || NumReceivers_ == 0, "Invalid receiver "
+          "values pointer.");
+        ReceiverValues_(iCount) = {static_cast<const user_value_type *>(ReceiverValuesVoid[iCount]),
+          {NumReceivers_}};
       }
-      for (int iCount = 0; iCount < int(GridValues_.size()); ++iCount) {
-        GridValues_[iCount] = static_cast<user_value_type *>(GridValuesVoid[iCount]);
+      for (int iCount = 0; iCount < GridValues_.Count(); ++iCount) {
+        OVK_DEBUG_ASSERT(GridValuesVoid[iCount] || NumReceivers_ == 0, "Invalid grid values "
+          "pointer.");
+        GridValues_(iCount) = {static_cast<user_value_type *>(GridValuesVoid[iCount]),
+          {GridValuesRange_.Count()}};
       }
-      Disperse_.Disperse(ReceiverValues_.data(), GridValues_.data());
+      Disperse_.Disperse(ReceiverValues_, GridValues_);
     }
+  private:
     T Disperse_;
-    std::vector<const user_value_type *> ReceiverValues_;
-    std::vector<user_value_type *> GridValues_;
+    long long NumReceivers_;
+    range GridValuesRange_;
+    array<array_view<const user_value_type>> ReceiverValues_;
+    array<array_view<user_value_type>> GridValues_;
   };
 
   std::unique_ptr<concept> Disperse_;
 
 };
 
-template <typename T> class disperse_base {
+template <typename T, array_layout Layout> class disperse_base {
 
 public:
 
@@ -2480,17 +2404,18 @@ public:
   disperse_base(const disperse_base &) = delete;
   disperse_base(disperse_base &&) = default;
 
-  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange, array_layout
-    GridValuesLayout) {
+  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) {
 
     Count_ = Count;
     GridValuesRange_ = GridValuesRange;
-    GridValuesLayout_ = GridValuesLayout;
+    GridValuesIndexer_ = range_indexer({GridValuesRange.Begin(), GridValuesRange.End()});
 
     const connectivity &Connectivity = *Exchange.Connectivity_;
 
     GetConnectivityReceiverSide(Connectivity, Receivers_);
     const connectivity_r &Receivers = *Receivers_;
+
+    GetConnectivityReceiverSideCount(Receivers, NumReceivers_);
 
     GetConnectivityReceiverSideGrid(Receivers, Grid_);
     const grid &Grid = *Grid_;
@@ -2501,47 +2426,38 @@ public:
       OVK_DEBUG_ASSERT(RangeIncludes(GridValuesRange, LocalRange), "Invalid grid values range.");
     }
 
+    Points_ = Receivers.Points_;
+
   }
 
 protected:
+
+  using range_indexer = indexer<long long, int, MAX_DIMS, Layout>;
 
   const connectivity_r *Receivers_;
   const grid *Grid_;
   int Count_;
+  long long NumReceivers_;
   range GridValuesRange_;
-  array_layout GridValuesLayout_;
-
-  void CheckValuesPointers(const user_value_type * const *ReceiverValues, const user_value_type *
-    const *GridValues) {
-
-    const connectivity_r &Receivers = *Receivers_;
-    long long NumReceivers;
-    GetConnectivityReceiverSideCount(Receivers, NumReceivers);
-
-    if (NumReceivers > 0) {
-      for (int iCount = 0; iCount < Count_; ++iCount) {
-        OVK_DEBUG_ASSERT(ReceiverValues[iCount], "Invalid receiver values pointer.");
-      }
-      for (int iCount = 0; iCount < Count_; ++iCount) {
-        OVK_DEBUG_ASSERT(GridValues[iCount], "Invalid grid values pointer.");
-      }
-    }
-
-  }
+  range_indexer GridValuesIndexer_;
+  array_view<const int,2> Points_;
 
 };
 
-template <typename T> class disperse_overwrite : public disperse_base<T> {
+template <typename T, array_layout Layout> class disperse_overwrite : public disperse_base<T,
+  Layout> {
 
 protected:
 
-  using parent_type = disperse_base<T>;
+  using parent_type = disperse_base<T, Layout>;
 
   using parent_type::Receivers_;
   using parent_type::Grid_;
   using parent_type::Count_;
+  using parent_type::NumReceivers_;
   using parent_type::GridValuesRange_;
-  using parent_type::GridValuesLayout_;
+  using parent_type::GridValuesIndexer_;
+  using parent_type::Points_;
 
 public:
 
@@ -2550,31 +2466,24 @@ public:
 
   disperse_overwrite() = default;
 
-  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange, array_layout
-    GridValuesLayout) {
+  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) {
 
-    parent_type::Initialize(Exchange, Count, GridValuesRange, GridValuesLayout);
+    parent_type::Initialize(Exchange, Count, GridValuesRange);
 
   }
 
-  void Disperse(const user_value_type * const *ReceiverValues, user_value_type **GridValues) {
+  void Disperse(array_view<array_view<const user_value_type>> ReceiverValues, array_view<
+    array_view<user_value_type>> GridValues) {
 
-    const connectivity_r &Receivers = *Receivers_;
-
-    long long NumReceivers;
-    GetConnectivityReceiverSideCount(Receivers, NumReceivers);
-
-    if (OVK_DEBUG) parent_type::CheckValuesPointers(ReceiverValues, GridValues);
-
-    for (long long iReceiver = 0; iReceiver < NumReceivers; ++iReceiver) {
-      int Point[MAX_DIMS] = {
-        Receivers.Points_[0][iReceiver],
-        Receivers.Points_[1][iReceiver],
-        Receivers.Points_[2][iReceiver]
+    for (long long iReceiver = 0; iReceiver < NumReceivers_; ++iReceiver) {
+      elem<int,MAX_DIMS> Point = {
+        Points_(0,iReceiver),
+        Points_(1,iReceiver),
+        Points_(2,iReceiver)
       };
-      long long iPoint = RangeTupleToIndex(GridValuesRange_, GridValuesLayout_, Point);
+      long long iPoint = GridValuesIndexer_.ToIndex(Point);
       for (int iCount = 0; iCount < Count_; ++iCount) {
-        GridValues[iCount][iPoint] = ReceiverValues[iCount][iReceiver];
+        GridValues(iCount)(iPoint) = ReceiverValues(iCount)(iReceiver);
       }
     }
 
@@ -2582,17 +2491,19 @@ public:
 
 };
 
-template <typename T> class disperse_append : public disperse_base<T> {
+template <typename T, array_layout Layout> class disperse_append : public disperse_base<T, Layout> {
 
 protected:
 
-  using parent_type = disperse_base<T>;
+  using parent_type = disperse_base<T, Layout>;
 
   using parent_type::Receivers_;
   using parent_type::Grid_;
   using parent_type::Count_;
+  using parent_type::NumReceivers_;
   using parent_type::GridValuesRange_;
-  using parent_type::GridValuesLayout_;
+  using parent_type::GridValuesIndexer_;
+  using parent_type::Points_;
 
 public:
 
@@ -2601,37 +2512,74 @@ public:
 
   disperse_append() = default;
 
-  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange, array_layout
-    GridValuesLayout) {
+  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) {
 
-    parent_type::Initialize(Exchange, Count, GridValuesRange, GridValuesLayout);
+    parent_type::Initialize(Exchange, Count, GridValuesRange);
 
   }
 
-  void Disperse(const user_value_type * const *ReceiverValues, user_value_type **GridValues) {
+  void Disperse(array_view<array_view<const user_value_type>> ReceiverValues, array_view<
+    array_view<user_value_type>> GridValues) {
 
-    const connectivity_r &Receivers = *Receivers_;
-
-    long long NumReceivers;
-    GetConnectivityReceiverSideCount(Receivers, NumReceivers);
-
-    if (OVK_DEBUG) parent_type::CheckValuesPointers(ReceiverValues, GridValues);
-
-    for (long long iReceiver = 0; iReceiver < NumReceivers; ++iReceiver) {
-      int Point[MAX_DIMS] = {
-        Receivers.Points_[0][iReceiver],
-        Receivers.Points_[1][iReceiver],
-        Receivers.Points_[2][iReceiver]
+    for (long long iReceiver = 0; iReceiver < NumReceivers_; ++iReceiver) {
+      elem<int,MAX_DIMS> Point = {
+        Points_(0,iReceiver),
+        Points_(1,iReceiver),
+        Points_(2,iReceiver)
       };
-      long long iPoint = RangeTupleToIndex(GridValuesRange_, GridValuesLayout_, Point);
+      long long iPoint = GridValuesIndexer_.ToIndex(Point);
       for (int iCount = 0; iCount < Count_; ++iCount) {
-        GridValues[iCount][iPoint] += ReceiverValues[iCount][iReceiver];
+        GridValues(iCount)(iPoint) += ReceiverValues(iCount)(iReceiver);
       }
     }
 
   }
 
 };
+
+template <array_layout Layout> void DisperseLayout(const exchange &Exchange, data_type ValueType,
+  int Count, disperse_op DisperseOp, const void * const *ReceiverValues, const range
+  &GridValuesRange, void **GridValues) {
+
+  disperse DisperseWrapper;
+
+  switch (DisperseOp) {
+  case disperse_op::OVERWRITE:
+    switch (ValueType) {
+    case data_type::BOOL: DisperseWrapper = disperse_overwrite<bool, Layout>(); break;
+    case data_type::BYTE: DisperseWrapper = disperse_overwrite<unsigned char, Layout>(); break;
+    case data_type::INT: DisperseWrapper = disperse_overwrite<int, Layout>(); break;
+    case data_type::LONG: DisperseWrapper = disperse_overwrite<long, Layout>(); break;
+    case data_type::LONG_LONG: DisperseWrapper = disperse_overwrite<long long, Layout>(); break;
+    case data_type::UNSIGNED_INT: DisperseWrapper = disperse_overwrite<unsigned int, Layout>(); break;
+    case data_type::UNSIGNED_LONG: DisperseWrapper = disperse_overwrite<unsigned long, Layout>(); break;
+    case data_type::UNSIGNED_LONG_LONG: DisperseWrapper = disperse_overwrite<unsigned long long, Layout>(); break;
+    case data_type::FLOAT: DisperseWrapper = disperse_overwrite<float, Layout>(); break;
+    case data_type::DOUBLE: DisperseWrapper = disperse_overwrite<double, Layout>(); break;
+    }
+    break;
+  case disperse_op::APPEND:
+    switch (ValueType) {
+    case data_type::BYTE: DisperseWrapper = disperse_append<unsigned char, Layout>(); break;
+    case data_type::INT: DisperseWrapper = disperse_append<int, Layout>(); break;
+    case data_type::LONG: DisperseWrapper = disperse_append<long, Layout>(); break;
+    case data_type::LONG_LONG: DisperseWrapper = disperse_append<long long, Layout>(); break;
+    case data_type::UNSIGNED_INT: DisperseWrapper = disperse_append<unsigned int, Layout>(); break;
+    case data_type::UNSIGNED_LONG: DisperseWrapper = disperse_append<unsigned long, Layout>(); break;
+    case data_type::UNSIGNED_LONG_LONG: DisperseWrapper = disperse_append<unsigned long long, Layout>(); break;
+    case data_type::FLOAT: DisperseWrapper = disperse_append<float, Layout>(); break;
+    case data_type::DOUBLE: DisperseWrapper = disperse_append<double, Layout>(); break;
+    default:
+      OVK_DEBUG_ASSERT(false, "Invalid data type for append disperse operation.");
+      break;
+    }
+    break;
+  }
+
+  DisperseWrapper.Initialize(Exchange, Count, GridValuesRange);
+  DisperseWrapper.Disperse(ReceiverValues, GridValues);
+
+}
 
 }
 
@@ -2641,43 +2589,14 @@ void Disperse(const exchange &Exchange, data_type ValueType, int Count, disperse
   const void * const *ReceiverValues, const range &GridValuesRange, array_layout GridValuesLayout,
   void **GridValues) {
 
-  disperse DisperseWrapper;
-
-  switch (DisperseOp) {
-  case disperse_op::OVERWRITE:
-    switch (ValueType) {
-    case data_type::BOOL: DisperseWrapper = disperse_overwrite<bool>(); break;
-    case data_type::BYTE: DisperseWrapper = disperse_overwrite<unsigned char>(); break;
-    case data_type::INT: DisperseWrapper = disperse_overwrite<int>(); break;
-    case data_type::LONG: DisperseWrapper = disperse_overwrite<long>(); break;
-    case data_type::LONG_LONG: DisperseWrapper = disperse_overwrite<long long>(); break;
-    case data_type::UNSIGNED_INT: DisperseWrapper = disperse_overwrite<unsigned int>(); break;
-    case data_type::UNSIGNED_LONG: DisperseWrapper = disperse_overwrite<unsigned long>(); break;
-    case data_type::UNSIGNED_LONG_LONG: DisperseWrapper = disperse_overwrite<unsigned long long>(); break;
-    case data_type::FLOAT: DisperseWrapper = disperse_overwrite<float>(); break;
-    case data_type::DOUBLE: DisperseWrapper = disperse_overwrite<double>(); break;
-    }
-    break;
-  case disperse_op::APPEND:
-    switch (ValueType) {
-    case data_type::BYTE: DisperseWrapper = disperse_append<unsigned char>(); break;
-    case data_type::INT: DisperseWrapper = disperse_append<int>(); break;
-    case data_type::LONG: DisperseWrapper = disperse_append<long>(); break;
-    case data_type::LONG_LONG: DisperseWrapper = disperse_append<long long>(); break;
-    case data_type::UNSIGNED_INT: DisperseWrapper = disperse_append<unsigned int>(); break;
-    case data_type::UNSIGNED_LONG: DisperseWrapper = disperse_append<unsigned long>(); break;
-    case data_type::UNSIGNED_LONG_LONG: DisperseWrapper = disperse_append<unsigned long long>(); break;
-    case data_type::FLOAT: DisperseWrapper = disperse_append<float>(); break;
-    case data_type::DOUBLE: DisperseWrapper = disperse_append<double>(); break;
-    default:
-      OVK_DEBUG_ASSERT(false, "Invalid data type for append disperse operation.");
-      break;
-    }
-    break;
+  switch (GridValuesLayout) {
+  case array_layout::ROW_MAJOR:
+    return DisperseLayout<array_layout::ROW_MAJOR>(Exchange, ValueType, Count, DisperseOp,
+      ReceiverValues, GridValuesRange, GridValues);
+  case array_layout::COLUMN_MAJOR:
+    return DisperseLayout<array_layout::COLUMN_MAJOR>(Exchange, ValueType, Count, DisperseOp,
+      ReceiverValues, GridValuesRange, GridValues);
   }
-
-  DisperseWrapper.Initialize(Exchange, Count, GridValuesRange, GridValuesLayout);
-  DisperseWrapper.Disperse(ReceiverValues, GridValues);
 
 }
 

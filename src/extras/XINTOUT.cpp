@@ -9,11 +9,13 @@
 
 #include "ovk/extras/Constants.hpp"
 #include "ovk/extras/Global.hpp"
+#include "ovk/core/Array.hpp"
 #include "ovk/core/Cart.hpp"
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Connectivity.hpp"
 #include "ovk/core/Constants.hpp"
 #include "ovk/core/Domain.hpp"
+#include "ovk/core/Elem.hpp"
 #include "ovk/core/ErrorHandler.hpp"
 #include "ovk/core/Logger.hpp"
 #include "ovk/core/Misc.hpp"
@@ -25,10 +27,7 @@
 
 #include <mpi.h>
 
-// #include <limits.h>
-// #include <stdio.h>
 #include <algorithm>
-#include <array>
 #include <limits>
 #include <string>
 #include <utility>
@@ -41,36 +40,27 @@ namespace {
 struct donor_data {
   long long Count;
   int MaxSize;
-  int *Extents[2][MAX_DIMS];
-  std::vector<int> ExtentsData;
-  double *Coords[MAX_DIMS];
-  std::vector<double> CoordsData;
-  double **InterpCoefs[MAX_DIMS];
-  std::vector<double *> InterpCoefsPtrs;
-  std::vector<double> InterpCoefsData;
-  std::vector<int> DestinationGridIDs;
-  int *DestinationPoints[MAX_DIMS];
-  std::vector<int> DestinationPointsData;
+  array<int,3> Extents;
+  array<double,2> Coords;
+  array<double,3> InterpCoefs;
+  array<int> DestinationGridIDs;
+  array<int,2> DestinationPoints;
 };
 
 struct receiver_data {
   long long Count;
-  int *Points[MAX_DIMS];
-  std::vector<int> PointsData;
-  std::vector<int> SourceGridIDs;
-  int *SourceCells[MAX_DIMS];
-  std::vector<int> SourceCellsData;
+  array<int,2> Points;
+  array<int> SourceGridIDs;
+  array<int,2> SourceCells;
 };
 
 struct connection_data {
   long long Count;
-  std::vector<long long> ConnectionIDs;
-  std::vector<int> DonorGridIDs;
-  int *DonorCells[MAX_DIMS];
-  std::vector<int> DonorCellsData;
-  std::vector<int> ReceiverGridIDs;
-  int *ReceiverPoints[MAX_DIMS];
-  std::vector<int> ReceiverPointsData;
+  array<long long> ConnectionIDs;
+  array<int> DonorGridIDs;
+  array<int,2> DonorCells;
+  array<int> ReceiverGridIDs;
+  array<int,2> ReceiverPoints;
 };
 
 struct xintout_donor_chunk {
@@ -84,7 +74,7 @@ struct xintout_receiver_chunk {
   long long Begin;
   long long End;
   receiver_data Data;
-  std::vector<long long> ConnectionIDs;
+  array<long long> ConnectionIDs;
 };
 
 struct xintout_donors {
@@ -108,7 +98,7 @@ struct xintout_grid {
   std::string Name;
   int NumDims;
   core::comm Comm;
-  std::array<int,MAX_DIMS> GlobalSize;
+  elem<int,MAX_DIMS> GlobalSize;
   xintout_donors Donors;
   xintout_receivers Receivers;
 };
@@ -139,11 +129,11 @@ struct xintout {
 
 void CreateXINTOUT(xintout &XINTOUT, int NumDims, core::comm Comm, int NumGrids, int NumLocalGrids,
   const std::vector<int> &LocalGridIDs, const std::vector<std::string> &LocalGridNames,
-  const std::vector<core::comm> &LocalGridComms, const std::vector<std::array<int,MAX_DIMS>>
+  const std::vector<core::comm> &LocalGridComms, const std::vector<elem<int,MAX_DIMS>>
   &LocalGridGlobalSizes, core::logger &Logger, core::error_handler &ErrorHandler);
 
 void CreateXINTOUTGrid(xintout_grid &XINTOUTGrid, int ID, const std::string &Name, int NumDims,
-  core::comm Comm, const std::array<int,MAX_DIMS> &GlobalSize, core::logger &Logger,
+  core::comm Comm, const elem<int,MAX_DIMS> &GlobalSize, core::logger &Logger,
   core::error_handler &ErrorHandler);
 
 error ReadXINTOUT(xintout &XINTOUT, const std::string &HOPath, const std::string &XPath,
@@ -260,7 +250,7 @@ error ImportXINTOUT(domain &Domain, const std::string &HOPath, const std::string
     std::vector<int> LocalGridIDs(NumLocalGrids);
     std::vector<std::string> LocalGridNames(NumLocalGrids);
     std::vector<core::comm> LocalGridComms(NumLocalGrids);
-    std::vector<std::array<int,MAX_DIMS>> LocalGridGlobalSizes(NumLocalGrids);
+    std::vector<elem<int,MAX_DIMS>> LocalGridGlobalSizes(NumLocalGrids);
     int iLocalGrid = 0;
     for (int iGrid = 0; iGrid < NumGrids; ++iGrid) {
       int GridID = iGrid+1;
@@ -269,9 +259,9 @@ error ImportXINTOUT(domain &Domain, const std::string &HOPath, const std::string
         GetGrid(Domain, GridID, GridPtr);
         const grid &Grid = *GridPtr;
         std::string Name;
-        std::array<int,MAX_DIMS> GlobalSize;
+        elem<int,MAX_DIMS> GlobalSize;
         GetGridName(Grid, Name);
-        GetGridSize(Grid, GlobalSize.data());
+        GetGridSize(Grid, GlobalSize.Data());
         core::comm GridComm = core::GetGridComm(Grid);
         LocalGrids[iLocalGrid] = GridPtr;
         LocalGridIDs[iLocalGrid] = GridID;
@@ -338,7 +328,7 @@ namespace {
 
 void CreateXINTOUT(xintout &XINTOUT, int NumDims, core::comm Comm, int NumGrids, int NumLocalGrids,
   const std::vector<int> &LocalGridIDs, const std::vector<std::string> &LocalGridNames,
-  const std::vector<core::comm> &LocalGridComms, const std::vector<std::array<int,MAX_DIMS>>
+  const std::vector<core::comm> &LocalGridComms, const std::vector<elem<int,MAX_DIMS>>
   &LocalGridGlobalSizes, core::logger &Logger, core::error_handler &ErrorHandler) {
 
   XINTOUT.Comm = std::move(Comm);
@@ -369,7 +359,7 @@ void CreateXINTOUT(xintout &XINTOUT, int NumDims, core::comm Comm, int NumGrids,
 }
 
 void CreateXINTOUTGrid(xintout_grid &XINTOUTGrid, int ID, const std::string &Name, int NumDims,
-  core::comm Comm, const std::array<int,MAX_DIMS> &GlobalSize, core::logger &Logger,
+  core::comm Comm, const elem<int,MAX_DIMS> &GlobalSize, core::logger &Logger,
   core::error_handler &ErrorHandler) {
 
   XINTOUTGrid.Comm = std::move(Comm);
@@ -534,7 +524,7 @@ error ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath, endian &
     HOGridOffset += RecordWrapperSize;
     long long NumDonors;
     long long NumReceivers;
-    int GridSize[MAX_DIMS];
+    elem<int,MAX_DIMS> GridSize;
     if (Format == xintout_format::STANDARD) {
       int Data[7];
       File_read_at_endian(HOFile, HOGridOffset, Data, 7, MPI_INT, Endian, &Status, Profiler);
@@ -706,8 +696,8 @@ error ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath,
     MPI_Status Status;
     int MPIError;
     int ReadSize;
-    int GridSize[MAX_DIMS];
-    long long NumInterpCoefs;
+    elem<int,MAX_DIMS> GridSize;
+    long long NumInterpCoefs = 0;
 
     core::StartProfile(Profiler, MPIIOOpenTime);
     // MPI_File_open missing const qualifier for path string on some platforms
@@ -1090,11 +1080,7 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
       core::EndProfile(Profiler, MPIIOCloseTime);
     });
 
-    int *Sizes[MAX_DIMS];
-    std::vector<int> SizesData(MAX_DIMS*NumLocalDonors);
-    Sizes[0] = SizesData.data();
-    Sizes[1] = SizesData.data() + NumLocalDonors;
-    Sizes[2] = SizesData.data() + 2*NumLocalDonors;
+    array<int,2> Sizes({{MAX_DIMS,NumLocalDonors}});
 
 //     MPI_Datatype XDonorSizeType;
 //     MPI_Type_vector(MAX_DIMS, NumLocalDonors, NumDonors, MPI_INT, &XDonorSizeType);
@@ -1102,7 +1088,7 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
 //     MPI_File_set_view(XFile, XSizesOffset+LocalBegin*sizeof(int), MPI_INT, XDonorSizeType, "native",
 //       MPIInfo);
 //     int DataSize = MAX_DIMS*NumLocalDonors;
-//     File_read_all_endian(XFile, SizesData.data(), DataSize, MPI_INT, Endian, &Status);
+//     File_read_all_endian(XFile, Sizes.Data(), DataSize, MPI_INT, Endian, &Status);
 //     MPI_Type_free(&XDonorSizeType);
 //     MPI_Get_count(&Status, MPI_INT, &ReadSize);
 //     if (ReadSize < DataSize) Error = error::FILE_READ;
@@ -1121,7 +1107,7 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
       core::StartProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
       MPI_File_set_view(XFile, ReadOffset, MPI_INT, MPI_INT, "native", MPIInfo);
       core::EndProfile(Profiler, MPIIOOtherTime);
-      File_read_all_endian(XFile, Sizes[iDim], int(NumLocalDonors), MPI_INT, Endian,
+      File_read_all_endian(XFile, Sizes.Data(iDim,0), int(NumLocalDonors), MPI_INT, Endian,
         &Status, Profiler, ChunkComm);
       MPI_Get_count(&Status, MPI_INT, &ReadSize);
       if (ReadSize < NumLocalDonors) Error = error::FILE_READ;
@@ -1137,7 +1123,7 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
     int MaxSize = 0;
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
       for (long long iDonor = 0; iDonor < NumLocalDonors; ++iDonor) {
-        MaxSize = std::max(MaxSize, Sizes[iDim][iDonor]);
+        MaxSize = std::max(MaxSize, Sizes(iDim,iDonor));
       }
     }
 
@@ -1150,7 +1136,7 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
 //     MPI_File_set_view(HOFile, HOCellsOffset+LocalBegin*sizeof(int), MPI_INT, HODonorCellType,
 //       "native", MPIInfo);
 //     DataSize = MAX_DIMS*NumLocalDonors;
-//     File_read_all_endian(HOFile, Data.Extents[0][0], DataSize, MPI_INT, Endian, &Status);
+//     File_read_all_endian(HOFile, Data.Extents.Data(), DataSize, MPI_INT, Endian, &Status);
 //     MPI_Type_free(&HODonorCellType);
 //     MPI_Get_count(&Status, MPI_INT, &ReadSize);
 //     if (ReadSize < DataSize) Error = error::FILE_READ;
@@ -1169,8 +1155,8 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
       core::StartProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
       MPI_File_set_view(HOFile, ReadOffset, MPI_INT, MPI_INT, "native", MPIInfo);
       core::EndProfile(Profiler, MPIIOOtherTime);
-      File_read_all_endian(HOFile, Data.Extents[0][iDim], int(NumLocalDonors), MPI_INT, Endian,
-        &Status, Profiler, ChunkComm);
+      File_read_all_endian(HOFile, Data.Extents.Data(0,iDim,0), int(NumLocalDonors), MPI_INT,
+        Endian, &Status, Profiler, ChunkComm);
       MPI_Get_count(&Status, MPI_INT, &ReadSize);
       if (ReadSize < NumLocalDonors) Error = error::FILE_READ;
       OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
@@ -1185,8 +1171,8 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
       for (long long iDonor = 0; iDonor < NumLocalDonors; ++iDonor) {
         // Convert to zero-based indexing
-        --Data.Extents[0][iDim][iDonor];
-        Data.Extents[1][iDim][iDonor] = Data.Extents[0][iDim][iDonor] + Sizes[iDim][iDonor];
+        --Data.Extents(0,iDim,iDonor);
+        Data.Extents(1,iDim,iDonor) = Data.Extents(0,iDim,iDonor) + Sizes(iDim,iDonor);
       }
     }
 
@@ -1196,7 +1182,7 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
 //     MPI_File_set_view(HOFile, HOCoordsOffset+LocalBegin*sizeof(double), MPI_DOUBLE,
 //       HODonorCoordsType, "native", MPIInfo);
 //     DataSize = MAX_DIMS*NumLocalDonors;
-//     File_read_all_endian(HOFile, Data.CoordsData.data(), DataSize, MPI_DOUBLE, Endian, &Status);
+//     File_read_all_endian(HOFile, Data.Coords.Data(), DataSize, MPI_DOUBLE, Endian, &Status);
 //     MPI_Type_free(&HODonorCoordsType);
 //     MPI_Get_count(&Status, MPI_DOUBLE, &ReadSize);
 //     if (ReadSize < DataSize) Error = error::FILE_READ;
@@ -1215,8 +1201,8 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
       core::StartProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
       MPI_File_set_view(HOFile, ReadOffset, MPI_DOUBLE, MPI_DOUBLE, "native", MPIInfo);
       core::EndProfile(Profiler, MPIIOOtherTime);
-      File_read_all_endian(HOFile, Data.Coords[iDim], int(NumLocalDonors), MPI_DOUBLE, Endian,
-        &Status, Profiler, ChunkComm);
+      File_read_all_endian(HOFile, Data.Coords.Data(iDim,0), int(NumLocalDonors), MPI_DOUBLE,
+        Endian, &Status, Profiler, ChunkComm);
       MPI_Get_count(&Status, MPI_DOUBLE, &ReadSize);
       if (ReadSize < NumLocalDonors) Error = error::FILE_READ;
       OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
@@ -1228,10 +1214,10 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
       DatasetOffset += NumDonors*sizeof(double);
     }
 
-    long long NumLocalInterpCoefs[MAX_DIMS] = {0, 0, 0};
+    elem<long long,MAX_DIMS> NumLocalInterpCoefs = {0,0,0};
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
       for (long long iDonor = 0; iDonor < NumLocalDonors; ++iDonor) {
-        int Size = Data.Extents[1][iDim][iDonor] - Data.Extents[0][iDim][iDonor];
+        int Size = Data.Extents(1,iDim,iDonor) - Data.Extents(0,iDim,iDonor);
         NumLocalInterpCoefs[iDim] += Size;
       }
     }
@@ -1249,8 +1235,8 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
     }
 
-    long long NumInterpCoefs[MAX_DIMS];
-    long long NumInterpCoefsBeforeChunk[MAX_DIMS];
+    elem<long long,MAX_DIMS> NumInterpCoefs;
+    elem<long long,MAX_DIMS> NumInterpCoefsBeforeChunk;
     MPI_Allreduce(&NumLocalInterpCoefs, &NumInterpCoefs, MAX_DIMS, MPI_LONG_LONG, MPI_SUM,
       ChunkComm);
     MPI_Scan(&NumLocalInterpCoefs, &NumInterpCoefsBeforeChunk, MAX_DIMS, MPI_LONG_LONG, MPI_SUM,
@@ -1282,15 +1268,15 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
       DatasetOffset += NumInterpCoefs[iDim]*sizeof(double);
     }
 
-    long long iNextCoef[MAX_DIMS];
+    elem<long long,MAX_DIMS> iNextCoef;
     iNextCoef[0] = 0;
     iNextCoef[1] = iNextCoef[0] + NumLocalInterpCoefs[0];
     iNextCoef[2] = iNextCoef[1] + NumLocalInterpCoefs[1];
     for (long long iDonor = 0; iDonor < NumLocalDonors; ++iDonor) {
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        int Size = Data.Extents[1][iDim][iDonor] - Data.Extents[0][iDim][iDonor];
+        int Size = Data.Extents(1,iDim,iDonor) - Data.Extents(0,iDim,iDonor);
         for (int iPoint = 0; iPoint < Size; ++iPoint) {
-          Data.InterpCoefs[iDim][iPoint][iDonor] = InterpCoefs[iNextCoef[iDim]];
+          Data.InterpCoefs(iDim,iPoint,iDonor) = InterpCoefs[iNextCoef[iDim]];
           ++iNextCoef[iDim];
         }
       }
@@ -1374,7 +1360,7 @@ error ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath,
     CreateReceiverData(Chunk.Data, NumLocalReceivers);
     receiver_data &Data = Chunk.Data;
 
-    Chunk.ConnectionIDs.resize(NumLocalReceivers);
+    Chunk.ConnectionIDs.Resize({NumLocalReceivers});
 
     MPI_File HOFile;
     MPI_Status Status;
@@ -1408,7 +1394,7 @@ error ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath,
 //     MPI_File_set_view(HOFile, HOPointsOffset+LocalBegin*sizeof(int), MPI_INT, HOReceiverPointType,
 //       "native", MPIInfo);
 //     DataSize = MAX_DIMS*NumLocalReceivers;
-//     File_read_all_endian(HOFile, Data.PointsData.data(), DataSize, MPI_INT, Endian, &Status);
+//     File_read_all_endian(HOFile, Data.Points.Data(), DataSize, MPI_INT, Endian, &Status);
 //     MPI_Type_free(&HOReceiverPointType);
 //     MPI_Get_count(&Status, MPI_INT, &ReadSize);
 //     if (ReadSize < DataSize) Error = error::FILE_READ;
@@ -1427,8 +1413,8 @@ error ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath,
       core::StartProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
       MPI_File_set_view(HOFile, ReadOffset, MPI_INT, MPI_INT, "native", MPIInfo);
       core::EndProfile(Profiler, MPIIOOtherTime);
-      File_read_all_endian(HOFile, Data.Points[iDim], int(NumLocalReceivers), MPI_INT, Endian,
-        &Status, Profiler, ChunkComm);
+      File_read_all_endian(HOFile, Data.Points.Data(iDim,0), int(NumLocalReceivers), MPI_INT,
+        Endian, &Status, Profiler, ChunkComm);
       MPI_Get_count(&Status, MPI_INT, &ReadSize);
       if (ReadSize < NumLocalReceivers) Error = error::FILE_READ;
       OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
@@ -1443,7 +1429,7 @@ error ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath,
     // Convert to zero-based indexing
     for (long long iReceiver = 0; iReceiver < NumLocalReceivers; ++iReceiver) {
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        --Data.Points[iDim][iReceiver];
+        --Data.Points(iDim,iReceiver);
       }
     }
 
@@ -1479,13 +1465,13 @@ error ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath,
       auto ConnectionIDs = reinterpret_cast<int *>(ConnectionIDsBytes.data());
       for (long long iReceiver = 0; iReceiver < NumLocalReceivers; ++iReceiver) {
         // Convert to zero-based indexing
-        Chunk.ConnectionIDs[iReceiver] = ConnectionIDs[iReceiver]-1;
+        Chunk.ConnectionIDs(iReceiver) = ConnectionIDs[iReceiver]-1;
       }
     } else {
       auto ConnectionIDs = reinterpret_cast<long long *>(ConnectionIDsBytes.data());
       for (long long iReceiver = 0; iReceiver < NumLocalReceivers; ++iReceiver) {
         // Convert to zero-based indexing
-        Chunk.ConnectionIDs[iReceiver] = ConnectionIDs[iReceiver]-1;
+        Chunk.ConnectionIDs(iReceiver) = ConnectionIDs[iReceiver]-1;
       }
     }
 
@@ -1598,7 +1584,7 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
       xintout_receiver_chunk &ReceiverChunk = XINTOUTReceivers.Chunk;
       long long NumLocalReceivers = ReceiverChunk.End - ReceiverChunk.Begin;
       for (long long iReceiver = 0; iReceiver < NumLocalReceivers; ++iReceiver) {
-        long long ConnectionID = ReceiverChunk.ConnectionIDs[iReceiver];
+        long long ConnectionID = ReceiverChunk.ConnectionIDs(iReceiver);
         int ConnectionBinIndex = int(ConnectionID/BinSize);
         auto Iter = ReceiverSends.find(ConnectionBinIndex);
         if (Iter == ReceiverSends.end() || Iter->first > ConnectionBinIndex) {
@@ -1636,10 +1622,10 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
         int ConnectionBinIndex = int(ConnectionID/BinSize);
         send_recv &Send = DonorSends[ConnectionBinIndex];
         long long iNext = Send.Count;
-        Send.Data.ConnectionIDs[iNext] = ConnectionID;
-        Send.Data.DonorGridIDs[iNext] = XINTOUTGrid.ID;
+        Send.Data.ConnectionIDs(iNext) = ConnectionID;
+        Send.Data.DonorGridIDs(iNext) = XINTOUTGrid.ID;
         for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-          Send.Data.DonorCells[iDim][iNext] = DonorChunk.Data.Extents[0][iDim][iDonor];
+          Send.Data.DonorCells(iDim,iNext) = DonorChunk.Data.Extents(0,iDim,iDonor);
         }
         ++Send.Count;
       }
@@ -1648,14 +1634,14 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
       xintout_receiver_chunk &ReceiverChunk = XINTOUTReceivers.Chunk;
       long long NumLocalReceivers = ReceiverChunk.End - ReceiverChunk.Begin;
       for (long long iReceiver = 0; iReceiver < NumLocalReceivers; ++iReceiver) {
-        long long ConnectionID = ReceiverChunk.ConnectionIDs[iReceiver];
+        long long ConnectionID = ReceiverChunk.ConnectionIDs(iReceiver);
         int ConnectionBinIndex = int(ConnectionID/BinSize);
         send_recv &Send = ReceiverSends[ConnectionBinIndex];
         long long iNext = Send.Count;
-        Send.Data.ConnectionIDs[iNext] = ConnectionID;
-        Send.Data.ReceiverGridIDs[iNext] = XINTOUTGrid.ID;
+        Send.Data.ConnectionIDs(iNext) = ConnectionID;
+        Send.Data.ReceiverGridIDs(iNext) = XINTOUTGrid.ID;
         for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-          Send.Data.ReceiverPoints[iDim][iNext] = ReceiverChunk.Data.Points[iDim][iReceiver];
+          Send.Data.ReceiverPoints(iDim,iNext) = ReceiverChunk.Data.Points(iDim,iReceiver);
         }
         ++Send.Count;
       }
@@ -1680,10 +1666,10 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
   core::EndProfile(Profiler, MapToBinsTime);
   core::StartProfileSync(Profiler, HandshakeTime, Comm);
 
-  std::vector<int> DonorRecvFromRanks, ReceiverRecvFromRanks;
+  array<int> DonorRecvFromRanks, ReceiverRecvFromRanks;
 
-  core::DynamicHandshake(Comm, NumDonorSends, DonorSendToRanks, DonorRecvFromRanks);
-  core::DynamicHandshake(Comm, NumReceiverSends, ReceiverSendToRanks, ReceiverRecvFromRanks);
+  core::DynamicHandshake(Comm, DonorSendToRanks, DonorRecvFromRanks);
+  core::DynamicHandshake(Comm, ReceiverSendToRanks, ReceiverRecvFromRanks);
 
   DonorSendToRanks.clear();
   ReceiverSendToRanks.clear();
@@ -1701,8 +1687,8 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
     ReceiverRecvs.emplace(Rank, send_recv());
   }
 
-  DonorRecvFromRanks.clear();
-  ReceiverRecvFromRanks.clear();
+  DonorRecvFromRanks.Clear();
+  ReceiverRecvFromRanks.Clear();
 
   int NumDonorRecvs = DonorRecvs.size();
   int NumReceiverRecvs = ReceiverRecvs.size();
@@ -1756,34 +1742,34 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
     int Rank = Pair.first;
     send_recv &Recv = Pair.second;
     CreateConnectionData(Recv.Data, Recv.Count);
-    Irecv(Recv.Data.ConnectionIDs.data(), Recv.Count, MPI_LONG_LONG, Rank, 0, Comm);
-    Irecv(Recv.Data.DonorGridIDs.data(), Recv.Count, MPI_INT, Rank, 0, Comm);
-    Irecv(Recv.Data.DonorCellsData.data(), MAX_DIMS*Recv.Count, MPI_INT, Rank, 0, Comm);
+    Irecv(Recv.Data.ConnectionIDs.Data(), Recv.Count, MPI_LONG_LONG, Rank, 0, Comm);
+    Irecv(Recv.Data.DonorGridIDs.Data(), Recv.Count, MPI_INT, Rank, 0, Comm);
+    Irecv(Recv.Data.DonorCells.Data(), MAX_DIMS*Recv.Count, MPI_INT, Rank, 0, Comm);
   }
 
   for (auto &Pair : ReceiverRecvs) {
     int Rank = Pair.first;
     send_recv &Recv = Pair.second;
     CreateConnectionData(Recv.Data, Recv.Count);
-    Irecv(Recv.Data.ConnectionIDs.data(), Recv.Count, MPI_LONG_LONG, Rank, 1, Comm);
-    Irecv(Recv.Data.ReceiverGridIDs.data(), Recv.Count, MPI_INT, Rank, 1, Comm);
-    Irecv(Recv.Data.ReceiverPointsData.data(), MAX_DIMS*Recv.Count, MPI_INT, Rank, 1, Comm);
+    Irecv(Recv.Data.ConnectionIDs.Data(), Recv.Count, MPI_LONG_LONG, Rank, 1, Comm);
+    Irecv(Recv.Data.ReceiverGridIDs.Data(), Recv.Count, MPI_INT, Rank, 1, Comm);
+    Irecv(Recv.Data.ReceiverPoints.Data(), MAX_DIMS*Recv.Count, MPI_INT, Rank, 1, Comm);
   }
 
   for (auto &Pair : DonorSends) {
     int Rank = Pair.first;
     send_recv &Send = Pair.second;
-    Isend(Send.Data.ConnectionIDs.data(), Send.Count, MPI_LONG_LONG, Rank, 0, Comm);
-    Isend(Send.Data.DonorGridIDs.data(), Send.Count, MPI_INT, Rank, 0, Comm);
-    Isend(Send.Data.DonorCellsData.data(), MAX_DIMS*Send.Count, MPI_INT, Rank, 0, Comm);
+    Isend(Send.Data.ConnectionIDs.Data(), Send.Count, MPI_LONG_LONG, Rank, 0, Comm);
+    Isend(Send.Data.DonorGridIDs.Data(), Send.Count, MPI_INT, Rank, 0, Comm);
+    Isend(Send.Data.DonorCells.Data(), MAX_DIMS*Send.Count, MPI_INT, Rank, 0, Comm);
   }
 
   for (auto &Pair : ReceiverSends) {
     int Rank = Pair.first;
     send_recv &Send = Pair.second;
-    Isend(Send.Data.ConnectionIDs.data(), Send.Count, MPI_LONG_LONG, Rank, 1, Comm);
-    Isend(Send.Data.ReceiverGridIDs.data(), Send.Count, MPI_INT, Rank, 1, Comm);
-    Isend(Send.Data.ReceiverPointsData.data(), MAX_DIMS*Send.Count, MPI_INT, Rank, 1, Comm);
+    Isend(Send.Data.ConnectionIDs.Data(), Send.Count, MPI_LONG_LONG, Rank, 1, Comm);
+    Isend(Send.Data.ReceiverGridIDs.Data(), Send.Count, MPI_INT, Rank, 1, Comm);
+    Isend(Send.Data.ReceiverPoints.Data(), MAX_DIMS*Send.Count, MPI_INT, Rank, 1, Comm);
   }
 
   MPI_Waitall(Requests.size(), Requests.data(), MPI_STATUSES_IGNORE);
@@ -1796,15 +1782,15 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
   for (auto &Pair : DonorSends) {
     int Rank = Pair.first;
     send_recv &Send = Pair.second;
-    Irecv(Send.Data.ReceiverGridIDs.data(), Send.Count, MPI_INT, Rank, 0, Comm);
-    Irecv(Send.Data.ReceiverPointsData.data(), MAX_DIMS*Send.Count, MPI_INT, Rank, 0, Comm);
+    Irecv(Send.Data.ReceiverGridIDs.Data(), Send.Count, MPI_INT, Rank, 0, Comm);
+    Irecv(Send.Data.ReceiverPoints.Data(), MAX_DIMS*Send.Count, MPI_INT, Rank, 0, Comm);
   }
 
   for (auto &Pair : ReceiverSends) {
     int Rank = Pair.first;
     send_recv &Send = Pair.second;
-    Irecv(Send.Data.DonorGridIDs.data(), Send.Count, MPI_INT, Rank, 1, Comm);
-    Irecv(Send.Data.DonorCellsData.data(), MAX_DIMS*Send.Count, MPI_INT, Rank, 1, Comm);
+    Irecv(Send.Data.DonorGridIDs.Data(), Send.Count, MPI_INT, Rank, 1, Comm);
+    Irecv(Send.Data.DonorCells.Data(), MAX_DIMS*Send.Count, MPI_INT, Rank, 1, Comm);
   }
 
   core::EndProfile(Profiler, RecvFromBinsTime);
@@ -1813,10 +1799,10 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
   for (auto &Pair : DonorRecvs) {
     send_recv &Recv = Pair.second;
     for (long long iDonor = 0; iDonor < Recv.Count; ++iDonor) {
-      long long iConnection = Recv.Data.ConnectionIDs[iDonor] - Bin.Begin;
-      BinData.DonorGridIDs[iConnection] = Recv.Data.DonorGridIDs[iDonor];
+      long long iConnection = Recv.Data.ConnectionIDs(iDonor) - Bin.Begin;
+      BinData.DonorGridIDs(iConnection) = Recv.Data.DonorGridIDs(iDonor);
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        BinData.DonorCells[iDim][iConnection] = Recv.Data.DonorCells[iDim][iDonor];
+        BinData.DonorCells(iDim,iConnection) = Recv.Data.DonorCells(iDim,iDonor);
       }
     }
   }
@@ -1824,10 +1810,10 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
   for (auto &Pair : ReceiverRecvs) {
     send_recv &Recv = Pair.second;
     for (long long iReceiver = 0; iReceiver < Recv.Count; ++iReceiver) {
-      long long iConnection = Recv.Data.ConnectionIDs[iReceiver] - Bin.Begin;
-      BinData.ReceiverGridIDs[iConnection] = Recv.Data.ReceiverGridIDs[iReceiver];
+      long long iConnection = Recv.Data.ConnectionIDs(iReceiver) - Bin.Begin;
+      BinData.ReceiverGridIDs(iConnection) = Recv.Data.ReceiverGridIDs(iReceiver);
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        BinData.ReceiverPoints[iDim][iConnection] = Recv.Data.ReceiverPoints[iDim][iReceiver];
+        BinData.ReceiverPoints(iDim,iConnection) = Recv.Data.ReceiverPoints(iDim,iReceiver);
       }
     }
   }
@@ -1839,28 +1825,28 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
     int Rank = Pair.first;
     send_recv &Recv = Pair.second;
     for (long long iDonor = 0; iDonor < Recv.Count; ++iDonor) {
-      long long iConnection = Recv.Data.ConnectionIDs[iDonor] - Bin.Begin;
-      Recv.Data.ReceiverGridIDs[iDonor] = BinData.ReceiverGridIDs[iConnection];
+      long long iConnection = Recv.Data.ConnectionIDs(iDonor) - Bin.Begin;
+      Recv.Data.ReceiverGridIDs(iDonor) = BinData.ReceiverGridIDs(iConnection);
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        Recv.Data.ReceiverPoints[iDim][iDonor] = BinData.ReceiverPoints[iDim][iConnection];
+        Recv.Data.ReceiverPoints(iDim,iDonor) = BinData.ReceiverPoints(iDim,iConnection);
       }
     }
-    Isend(Recv.Data.ReceiverGridIDs.data(), Recv.Count, MPI_INT, Rank, 0, Comm);
-    Isend(Recv.Data.ReceiverPointsData.data(), MAX_DIMS*Recv.Count, MPI_INT, Rank, 0, Comm);
+    Isend(Recv.Data.ReceiverGridIDs.Data(), Recv.Count, MPI_INT, Rank, 0, Comm);
+    Isend(Recv.Data.ReceiverPoints.Data(), MAX_DIMS*Recv.Count, MPI_INT, Rank, 0, Comm);
   }
 
   for (auto &Pair : ReceiverRecvs) {
     int Rank = Pair.first;
     send_recv &Recv = Pair.second;
     for (long long iReceiver = 0; iReceiver < Recv.Count; ++iReceiver) {
-      long long iConnection = Recv.Data.ConnectionIDs[iReceiver] - Bin.Begin;
-      Recv.Data.DonorGridIDs[iReceiver] = BinData.DonorGridIDs[iConnection];
+      long long iConnection = Recv.Data.ConnectionIDs(iReceiver) - Bin.Begin;
+      Recv.Data.DonorGridIDs(iReceiver) = BinData.DonorGridIDs(iConnection);
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        Recv.Data.DonorCells[iDim][iReceiver] = BinData.DonorCells[iDim][iConnection];
+        Recv.Data.DonorCells(iDim,iReceiver) = BinData.DonorCells(iDim,iConnection);
       }
     }
-    Isend(Recv.Data.DonorGridIDs.data(), Recv.Count, MPI_INT, Rank, 1, Comm);
-    Isend(Recv.Data.DonorCellsData.data(), MAX_DIMS*Recv.Count, MPI_INT, Rank, 1, Comm);
+    Isend(Recv.Data.DonorGridIDs.Data(), Recv.Count, MPI_INT, Rank, 1, Comm);
+    Isend(Recv.Data.DonorCells.Data(), MAX_DIMS*Recv.Count, MPI_INT, Rank, 1, Comm);
   }
 
   MPI_Waitall(Requests.size(), Requests.data(), MPI_STATUSES_IGNORE);
@@ -1894,10 +1880,9 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
         int ConnectionBinIndex = int(ConnectionID/BinSize);
         send_recv &Send = DonorSends[ConnectionBinIndex];
         long long iNext = Send.Count;
-        DonorChunk.Data.DestinationGridIDs[iDonor] = Send.Data.ReceiverGridIDs[iNext];
+        DonorChunk.Data.DestinationGridIDs(iDonor) = Send.Data.ReceiverGridIDs(iNext);
         for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-          DonorChunk.Data.DestinationPoints[iDim][iDonor] =
-            Send.Data.ReceiverPoints[iDim][iNext];
+          DonorChunk.Data.DestinationPoints(iDim,iDonor) = Send.Data.ReceiverPoints(iDim,iNext);
         }
         ++Send.Count;
       }
@@ -1906,13 +1891,13 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
       xintout_receiver_chunk &ReceiverChunk = XINTOUTReceivers.Chunk;
       long long NumLocalReceivers = ReceiverChunk.End - ReceiverChunk.Begin;
       for (long long iReceiver = 0; iReceiver < NumLocalReceivers; ++iReceiver) {
-        long long ConnectionID = ReceiverChunk.ConnectionIDs[iReceiver];
+        long long ConnectionID = ReceiverChunk.ConnectionIDs(iReceiver);
         int ConnectionBinIndex = int(ConnectionID/BinSize);
         send_recv &Send = ReceiverSends[ConnectionBinIndex];
         long long iNext = Send.Count;
-        ReceiverChunk.Data.SourceGridIDs[iReceiver] = Send.Data.DonorGridIDs[iNext];
+        ReceiverChunk.Data.SourceGridIDs(iReceiver) = Send.Data.DonorGridIDs(iNext);
         for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-          ReceiverChunk.Data.SourceCells[iDim][iReceiver] = Send.Data.DonorCells[iDim][iNext];
+          ReceiverChunk.Data.SourceCells(iDim,iReceiver) = Send.Data.DonorCells(iDim,iNext);
         }
         ++Send.Count;
       }
@@ -1980,8 +1965,7 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
 
   long long NumChunkDonors = 0;
   long long NumChunkDonorPoints = 0;
-  int *ChunkDonorPoints[MAX_DIMS];
-  std::vector<int> ChunkDonorPointsData;
+  array<int,2> ChunkDonorPoints;
   std::vector<int> ChunkDonorPointBinIndices;
   if (XINTOUTDonors.HasChunk) {
     const xintout_donor_chunk &DonorChunk = XINTOUTDonors.Chunk;
@@ -1989,21 +1973,18 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
     for (long long iDonor = 0; iDonor < NumChunkDonors; ++iDonor) {
       int NumPointsInCell = 1;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        NumPointsInCell *= DonorChunk.Data.Extents[1][iDim][iDonor] -
-          DonorChunk.Data.Extents[0][iDim][iDonor];
+        NumPointsInCell *= DonorChunk.Data.Extents(1,iDim,iDonor) -
+          DonorChunk.Data.Extents(0,iDim,iDonor);
       }
       NumChunkDonorPoints += NumPointsInCell;
     }
-    ChunkDonorPointsData.resize(MAX_DIMS*NumChunkDonorPoints);
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      ChunkDonorPoints[iDim] = ChunkDonorPointsData.data() + iDim*NumChunkDonorPoints;
-    }
+    ChunkDonorPoints.Resize({{MAX_DIMS,NumChunkDonorPoints}});
     long long iDonorPoint = 0;
     for (long long iDonor = 0; iDonor < NumChunkDonors; ++iDonor) {
-      int DonorBegin[MAX_DIMS], DonorEnd[MAX_DIMS];
+      elem<int,MAX_DIMS> DonorBegin, DonorEnd;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        DonorBegin[iDim] = DonorChunk.Data.Extents[0][iDim][iDonor];
-        DonorEnd[iDim] = DonorChunk.Data.Extents[1][iDim][iDonor];
+        DonorBegin[iDim] = DonorChunk.Data.Extents(0,iDim,iDonor);
+        DonorEnd[iDim] = DonorChunk.Data.Extents(1,iDim,iDonor);
       }
       range DonorRange(NumDims, DonorBegin, DonorEnd);
       bool AwayFromEdge = RangeIncludes(GlobalRange, DonorRange);
@@ -2011,9 +1992,9 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
         for (int k = DonorBegin[2]; k < DonorEnd[2]; ++k) {
           for (int j = DonorBegin[1]; j < DonorEnd[1]; ++j) {
             for (int i = DonorBegin[0]; i < DonorEnd[0]; ++i) {
-              int Point[MAX_DIMS] = {i, j, k};
+              elem<int,MAX_DIMS> Point = {i,j,k};
               for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-                ChunkDonorPoints[iDim][iDonorPoint] = Point[iDim];
+                ChunkDonorPoints(iDim,iDonorPoint) = Point[iDim];
               }
               ++iDonorPoint;
             }
@@ -2023,10 +2004,10 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
         for (int k = DonorBegin[2]; k < DonorEnd[2]; ++k) {
           for (int j = DonorBegin[1]; j < DonorEnd[1]; ++j) {
             for (int i = DonorBegin[0]; i < DonorEnd[0]; ++i) {
-              int Point[MAX_DIMS] = {i, j, k};
+              elem<int,MAX_DIMS> Point = {i,j,k};
               CartPeriodicAdjust(Cart, Point, Point);
               for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-                ChunkDonorPoints[iDim][iDonorPoint] = Point[iDim];
+                ChunkDonorPoints(iDim,iDonorPoint) = Point[iDim];
               }
               ++iDonorPoint;
             }
@@ -2035,8 +2016,7 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
       }
     }
     ChunkDonorPointBinIndices.resize(NumChunkDonorPoints);
-    core::MapToPartitionBins(Hash, NumChunkDonorPoints, ChunkDonorPoints,
-      ChunkDonorPointBinIndices.data());
+    core::MapToPartitionBins(Hash, ChunkDonorPoints, ChunkDonorPointBinIndices);
     for (long long iDonorPoint = 0; iDonorPoint < NumChunkDonorPoints; ++iDonorPoint) {
       int BinIndex = ChunkDonorPointBinIndices[iDonorPoint];
       auto Iter = Bins.lower_bound(BinIndex);
@@ -2052,8 +2032,7 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
     const xintout_receiver_chunk &ReceiverChunk = XINTOUTReceivers.Chunk;
     NumChunkReceivers = ReceiverChunk.End - ReceiverChunk.Begin;
     ChunkReceiverBinIndices.resize(NumChunkReceivers);
-    core::MapToPartitionBins(Hash, NumChunkReceivers, ReceiverChunk.Data.Points,
-      ChunkReceiverBinIndices.data());
+    core::MapToPartitionBins(Hash, ReceiverChunk.Data.Points, ChunkReceiverBinIndices);
     for (long long iReceiver = 0; iReceiver < NumChunkReceivers; ++iReceiver) {
       int BinIndex = ChunkReceiverBinIndices[iReceiver];
       auto Iter = Bins.lower_bound(BinIndex);
@@ -2079,8 +2058,8 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
     NumChunkDonorRanks.resize(NumChunkDonors);
     ChunkDonorRanks.resize(NumChunkDonors);
     ChunkDonorRanksData.resize(NumChunkDonorPoints);
-    core::FindPartitions(Hash, Bins, NumChunkDonorPoints, ChunkDonorPoints,
-      ChunkDonorPointBinIndices.data(), ChunkDonorRanksData.data());
+    core::FindPartitions(Hash, Bins, ChunkDonorPoints, ChunkDonorPointBinIndices,
+      ChunkDonorRanksData);
     int MaxSize = DonorChunk.Data.MaxSize;
     int MaxPointsInCell = 1;
     for (int iDim = 0; iDim < NumDims; ++iDim) {
@@ -2093,8 +2072,8 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
       ChunkDonorRanks[iDonor] = ChunkDonorRanksData.data() + iDonorPoint;
       int NumPointsInCell = 1;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        NumPointsInCell *= DonorChunk.Data.Extents[1][iDim][iDonor] -
-          DonorChunk.Data.Extents[0][iDim][iDonor];
+        NumPointsInCell *= DonorChunk.Data.Extents(1,iDim,iDonor) -
+          DonorChunk.Data.Extents(0,iDim,iDonor);
       }
       for (int iPointInCell = 0; iPointInCell < NumPointsInCell; ++iPointInCell) {
         int Rank = ChunkDonorRanks[iDonor][iPointInCell];
@@ -2112,7 +2091,7 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
       }
       iDonorPoint += NumPointsInCell;
     }
-    ChunkDonorPointsData.clear();
+    ChunkDonorPoints.Clear();
     ChunkDonorPointBinIndices.clear();
   }
 
@@ -2120,8 +2099,8 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
   if (XINTOUTReceivers.HasChunk) {
     const xintout_receiver_chunk &ReceiverChunk = XINTOUTReceivers.Chunk;
     ChunkReceiverRanks.resize(NumChunkReceivers);
-    core::FindPartitions(Hash, Bins, NumChunkReceivers, ReceiverChunk.Data.Points,
-      ChunkReceiverBinIndices.data(), ChunkReceiverRanks.data());
+    core::FindPartitions(Hash, Bins, ReceiverChunk.Data.Points, ChunkReceiverBinIndices,
+      ChunkReceiverRanks);
     ChunkReceiverBinIndices.clear();
   }
 
@@ -2199,29 +2178,28 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
         long long iNext = Send.Count;
         int MaxSize = Send.MaxSize;
         for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-          Send.Data.Extents[0][iDim][iNext] = DonorChunk.Data.Extents[0][iDim][iDonor];
-          Send.Data.Extents[1][iDim][iNext] = DonorChunk.Data.Extents[1][iDim][iDonor];
+          Send.Data.Extents(0,iDim,iNext) = DonorChunk.Data.Extents(0,iDim,iDonor);
+          Send.Data.Extents(1,iDim,iNext) = DonorChunk.Data.Extents(1,iDim,iDonor);
         }
         for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-          Send.Data.Coords[iDim][iNext] = DonorChunk.Data.Coords[iDim][iDonor];
+          Send.Data.Coords(iDim,iNext) = DonorChunk.Data.Coords(iDim,iDonor);
         }
         for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-          int Size = DonorChunk.Data.Extents[1][iDim][iDonor] -
-            DonorChunk.Data.Extents[0][iDim][iDonor];
+          int Size = DonorChunk.Data.Extents(1,iDim,iDonor) -
+            DonorChunk.Data.Extents(0,iDim,iDonor);
           for (int iPoint = 0; iPoint < Size; ++iPoint) {
-            Send.Data.InterpCoefs[iDim][iPoint][iNext] =
-              DonorChunk.Data.InterpCoefs[iDim][iPoint][iDonor];
+            Send.Data.InterpCoefs(iDim,iPoint,iNext) =
+              DonorChunk.Data.InterpCoefs(iDim,iPoint,iDonor);
           }
           // Initialize the rest with zeros since we're technically touching all of the data
           // when sending it
           for (int iPoint = Size; iPoint < MaxSize; ++iPoint) {
-            Send.Data.InterpCoefs[iDim][iPoint][iNext] = 0.;
+            Send.Data.InterpCoefs(iDim,iPoint,iNext) = 0.;
           }
         }
-        Send.Data.DestinationGridIDs[iNext] = DonorChunk.Data.DestinationGridIDs[iDonor];
+        Send.Data.DestinationGridIDs(iNext) = DonorChunk.Data.DestinationGridIDs(iDonor);
         for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-          Send.Data.DestinationPoints[iDim][iNext] =
-            DonorChunk.Data.DestinationPoints[iDim][iDonor];
+          Send.Data.DestinationPoints(iDim,iNext) = DonorChunk.Data.DestinationPoints(iDim,iDonor);
         }
         ++Send.Count;
       }
@@ -2238,11 +2216,11 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
       receiver_send_recv &Send = ReceiverSends[Rank];
       long long iNext = Send.Count;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        Send.Data.Points[iDim][iNext] = ReceiverChunk.Data.Points[iDim][iReceiver];
+        Send.Data.Points(iDim,iNext) = ReceiverChunk.Data.Points(iDim,iReceiver);
       }
-      Send.Data.SourceGridIDs[iNext] = ReceiverChunk.Data.SourceGridIDs[iReceiver];
+      Send.Data.SourceGridIDs(iNext) = ReceiverChunk.Data.SourceGridIDs(iReceiver);
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        Send.Data.SourceCells[iDim][iNext] = ReceiverChunk.Data.SourceCells[iDim][iReceiver];
+        Send.Data.SourceCells(iDim,iNext) = ReceiverChunk.Data.SourceCells(iDim,iReceiver);
       }
       ++Send.Count;
     }
@@ -2267,10 +2245,10 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
   core::EndProfile(Profiler, FindRanksTime);
   core::StartProfileSync(Profiler, HandshakeTime, Comm);
 
-  std::vector<int> DonorRecvFromRanks, ReceiverRecvFromRanks;
+  array<int> DonorRecvFromRanks, ReceiverRecvFromRanks;
 
-  core::DynamicHandshake(Comm, NumDonorSends, DonorSendToRanks, DonorRecvFromRanks);
-  core::DynamicHandshake(Comm, NumReceiverSends, ReceiverSendToRanks, ReceiverRecvFromRanks);
+  core::DynamicHandshake(Comm, DonorSendToRanks, DonorRecvFromRanks);
+  core::DynamicHandshake(Comm, ReceiverSendToRanks, ReceiverRecvFromRanks);
 
   DonorSendToRanks.clear();
   ReceiverSendToRanks.clear();
@@ -2288,8 +2266,8 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
     ReceiverRecvs.emplace(Rank, receiver_send_recv());
   }
 
-  DonorRecvFromRanks.clear();
-  ReceiverRecvFromRanks.clear();
+  DonorRecvFromRanks.Clear();
+  ReceiverRecvFromRanks.Clear();
 
   int NumDonorRecvs = DonorRecvs.size();
   int NumReceiverRecvs = ReceiverRecvs.size();
@@ -2347,41 +2325,41 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
     int Rank = Pair.first;
     donor_send_recv &Recv = Pair.second;
     CreateDonorData(Recv.Data, Recv.Count, Recv.MaxSize);
-    Irecv(Recv.Data.ExtentsData.data(), 2*MAX_DIMS*Recv.Count, MPI_INT, Rank, 0, Comm);
-    Irecv(Recv.Data.CoordsData.data(), MAX_DIMS*Recv.Count, MPI_DOUBLE, Rank, 0, Comm);
-    Irecv(Recv.Data.InterpCoefsData.data(), MAX_DIMS*Recv.MaxSize*Recv.Count, MPI_DOUBLE, Rank, 0,
+    Irecv(Recv.Data.Extents.Data(), 2*MAX_DIMS*Recv.Count, MPI_INT, Rank, 0, Comm);
+    Irecv(Recv.Data.Coords.Data(), MAX_DIMS*Recv.Count, MPI_DOUBLE, Rank, 0, Comm);
+    Irecv(Recv.Data.InterpCoefs.Data(), MAX_DIMS*Recv.MaxSize*Recv.Count, MPI_DOUBLE, Rank, 0,
       Comm);
-    Irecv(Recv.Data.DestinationGridIDs.data(), Recv.Count, MPI_INT, Rank, 0, Comm);
-    Irecv(Recv.Data.DestinationPointsData.data(), MAX_DIMS*Recv.Count, MPI_INT, Rank, 0, Comm);
+    Irecv(Recv.Data.DestinationGridIDs.Data(), Recv.Count, MPI_INT, Rank, 0, Comm);
+    Irecv(Recv.Data.DestinationPoints.Data(), MAX_DIMS*Recv.Count, MPI_INT, Rank, 0, Comm);
   }
 
   for (auto &Pair : ReceiverRecvs) {
     int Rank = Pair.first;
     receiver_send_recv &Recv = Pair.second;
     CreateReceiverData(Recv.Data, Recv.Count);
-    Irecv(Recv.Data.PointsData.data(), MAX_DIMS*Recv.Count, MPI_INT, Rank, 1, Comm);
-    Irecv(Recv.Data.SourceGridIDs.data(), Recv.Count, MPI_INT, Rank, 1, Comm);
-    Irecv(Recv.Data.SourceCellsData.data(), MAX_DIMS*Recv.Count, MPI_INT, Rank, 1, Comm);
+    Irecv(Recv.Data.Points.Data(), MAX_DIMS*Recv.Count, MPI_INT, Rank, 1, Comm);
+    Irecv(Recv.Data.SourceGridIDs.Data(), Recv.Count, MPI_INT, Rank, 1, Comm);
+    Irecv(Recv.Data.SourceCells.Data(), MAX_DIMS*Recv.Count, MPI_INT, Rank, 1, Comm);
     
   }
 
   for (auto &Pair : DonorSends) {
     int Rank = Pair.first;
     donor_send_recv &Send = Pair.second;
-    Isend(Send.Data.ExtentsData.data(), 2*MAX_DIMS*Send.Count, MPI_INT, Rank, 0, Comm);
-    Isend(Send.Data.CoordsData.data(), MAX_DIMS*Send.Count, MPI_DOUBLE, Rank, 0, Comm);
-    Isend(Send.Data.InterpCoefsData.data(), MAX_DIMS*Send.MaxSize*Send.Count, MPI_DOUBLE, Rank, 0,
+    Isend(Send.Data.Extents.Data(), 2*MAX_DIMS*Send.Count, MPI_INT, Rank, 0, Comm);
+    Isend(Send.Data.Coords.Data(), MAX_DIMS*Send.Count, MPI_DOUBLE, Rank, 0, Comm);
+    Isend(Send.Data.InterpCoefs.Data(), MAX_DIMS*Send.MaxSize*Send.Count, MPI_DOUBLE, Rank, 0,
       Comm);
-    Isend(Send.Data.DestinationGridIDs.data(), Send.Count, MPI_INT, Rank, 0, Comm);
-    Isend(Send.Data.DestinationPointsData.data(), MAX_DIMS*Send.Count, MPI_INT, Rank, 0, Comm);
+    Isend(Send.Data.DestinationGridIDs.Data(), Send.Count, MPI_INT, Rank, 0, Comm);
+    Isend(Send.Data.DestinationPoints.Data(), MAX_DIMS*Send.Count, MPI_INT, Rank, 0, Comm);
   }
 
   for (auto &Pair : ReceiverSends) {
     int Rank = Pair.first;
     receiver_send_recv &Send = Pair.second;
-    Isend(Send.Data.PointsData.data(), MAX_DIMS*Send.Count, MPI_INT, Rank, 1, Comm);
-    Isend(Send.Data.SourceGridIDs.data(), Send.Count, MPI_INT, Rank, 1, Comm);
-    Isend(Send.Data.SourceCellsData.data(), MAX_DIMS*Send.Count, MPI_INT, Rank, 1, Comm);
+    Isend(Send.Data.Points.Data(), MAX_DIMS*Send.Count, MPI_INT, Rank, 1, Comm);
+    Isend(Send.Data.SourceGridIDs.Data(), Send.Count, MPI_INT, Rank, 1, Comm);
+    Isend(Send.Data.SourceCells.Data(), MAX_DIMS*Send.Count, MPI_INT, Rank, 1, Comm);
   }
 
   MPI_Waitall(Requests.size(), Requests.data(), MPI_STATUSES_IGNORE);
@@ -2415,22 +2393,21 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
     donor_send_recv &Recv = Pair.second;
     for (long long iDonor = 0; iDonor < Recv.Count; ++iDonor) {
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        DonorData.Extents[0][iDim][iNext] = Recv.Data.Extents[0][iDim][iDonor];
-        DonorData.Extents[1][iDim][iNext] = Recv.Data.Extents[1][iDim][iDonor];
+        DonorData.Extents(0,iDim,iNext) = Recv.Data.Extents(0,iDim,iDonor);
+        DonorData.Extents(1,iDim,iNext) = Recv.Data.Extents(1,iDim,iDonor);
       }
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        DonorData.Coords[iDim][iNext] = Recv.Data.Coords[iDim][iDonor];
+        DonorData.Coords(iDim,iNext) = Recv.Data.Coords(iDim,iDonor);
       }
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        int Size = Recv.Data.Extents[1][iDim][iDonor] - Recv.Data.Extents[0][iDim][iDonor];
+        int Size = Recv.Data.Extents(1,iDim,iDonor) - Recv.Data.Extents(0,iDim,iDonor);
         for (int iPoint = 0; iPoint < Size; ++iPoint) {
-          DonorData.InterpCoefs[iDim][iPoint][iNext] =
-            Recv.Data.InterpCoefs[iDim][iPoint][iDonor];
+          DonorData.InterpCoefs(iDim,iPoint,iNext) = Recv.Data.InterpCoefs(iDim,iPoint,iDonor);
         }
       }
-      DonorData.DestinationGridIDs[iNext] = Recv.Data.DestinationGridIDs[iDonor];
+      DonorData.DestinationGridIDs(iNext) = Recv.Data.DestinationGridIDs(iDonor);
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        DonorData.DestinationPoints[iDim][iNext] = Recv.Data.DestinationPoints[iDim][iDonor];
+        DonorData.DestinationPoints(iDim,iNext) = Recv.Data.DestinationPoints(iDim,iDonor);
       }
       ++iNext;
     }
@@ -2443,11 +2420,11 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
     receiver_send_recv &Recv = Pair.second;
     for (long long iReceiver = 0; iReceiver < Recv.Count; ++iReceiver) {
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        ReceiverData.Points[iDim][iNext] = Recv.Data.Points[iDim][iReceiver];
+        ReceiverData.Points(iDim,iNext) = Recv.Data.Points(iDim,iReceiver);
       }
-      ReceiverData.SourceGridIDs[iNext] = Recv.Data.SourceGridIDs[iReceiver];
+      ReceiverData.SourceGridIDs(iNext) = Recv.Data.SourceGridIDs(iReceiver);
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        ReceiverData.SourceCells[iDim][iNext] = Recv.Data.SourceCells[iDim][iReceiver];
+        ReceiverData.SourceCells(iDim,iNext) = Recv.Data.SourceCells(iDim,iReceiver);
       }
       ++iNext;
     }
@@ -2482,7 +2459,7 @@ void ImportConnectivityData(int NumGrids, int NumLocalGrids, const std::vector<i
   for (int iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
     int jGrid = LocalGridIDs[iLocalGrid]-1;
     for (long long iReceiver = 0; iReceiver < LocalReceiverData[iLocalGrid].Count; ++iReceiver) {
-      int iGrid = LocalReceiverData[iLocalGrid].SourceGridIDs[iReceiver]-1;
+      int iGrid = LocalReceiverData[iLocalGrid].SourceGridIDs(iReceiver)-1;
       ++NumConnections[iGrid][jGrid];
     }
   }
@@ -2624,10 +2601,12 @@ void ImportDonors(const donor_data &GridDonors, const core::comm &Comm, int NumD
     long long Count;
     int MaxSize;
     int *Extents[2][MAX_DIMS];
+//     static_array<int *,2*MAX_DIMS,2> Extents;
     double *Coords[MAX_DIMS];
-    double **InterpCoefs[MAX_DIMS];
-    std::vector<double *> InterpCoefsPtrs;
+//     static_array<double *,MAX_DIMS> Coords;
+    array<double *,2> InterpCoefs;
     int *DestinationPoints[MAX_DIMS];
+//     static_array<int *,MAX_DIMS> DestinationPoints;
     donor_edit():
       Count(0),
       MaxSize(0)
@@ -2646,7 +2625,7 @@ void ImportDonors(const donor_data &GridDonors, const core::comm &Comm, int NumD
     donor_edit &DonorEdit = DonorEdits[DestinationGridID];
     ++DonorEdit.Count;
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      int Size = GridDonors.Extents[1][iDim][iDonor] - GridDonors.Extents[0][iDim][iDonor];
+      int Size = GridDonors.Extents(1,iDim,iDonor) - GridDonors.Extents(0,iDim,iDonor);
       DonorEdit.MaxSize = std::max(DonorEdit.MaxSize, Size);
     }
   }
@@ -2654,10 +2633,10 @@ void ImportDonors(const donor_data &GridDonors, const core::comm &Comm, int NumD
   for (auto &Pair : DonorEdits) {
     donor_edit &DonorEdit = Pair.second;
     MPI_Allreduce(MPI_IN_PLACE, &DonorEdit.MaxSize, 1, MPI_INT, MPI_MAX, Comm);
-    DonorEdit.InterpCoefsPtrs.resize(MAX_DIMS*DonorEdit.MaxSize);
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      DonorEdit.InterpCoefs[iDim] = DonorEdit.InterpCoefsPtrs.data() + iDim*DonorEdit.MaxSize;
-    }
+//     DonorEdit.Extents.Resize({{2,MAX_DIMS}});
+//     DonorEdit.Coords.Resize({MAX_DIMS});
+    DonorEdit.InterpCoefs.Resize({{MAX_DIMS,DonorEdit.MaxSize}});
+//     DonorEdit.DestinationPoints.Resize({MAX_DIMS});
   }
 
   for (int iDestinationGrid = 0; iDestinationGrid < NumDestinationGrids; ++iDestinationGrid) {
@@ -2674,7 +2653,7 @@ void ImportDonors(const donor_data &GridDonors, const core::comm &Comm, int NumD
     }
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
       for (int iPoint = 0; iPoint < MaxSize; ++iPoint) {
-        EditDonorInterpCoefs(Donors, iDim, iPoint, DonorEdit.InterpCoefs[iDim][iPoint]);
+        EditDonorInterpCoefs(Donors, iDim, iPoint, DonorEdit.InterpCoefs(iDim,iPoint));
       }
     }
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
@@ -2685,25 +2664,24 @@ void ImportDonors(const donor_data &GridDonors, const core::comm &Comm, int NumD
   }
 
   for (long long iDonor = 0; iDonor < GridDonors.Count; ++iDonor) {
-    int DestinationGridID = GridDonors.DestinationGridIDs[iDonor];
+    int DestinationGridID = GridDonors.DestinationGridIDs(iDonor);
     donor_edit &DonorEdit = DonorEdits[DestinationGridID];
     long long &iNext = DonorEdit.Count;
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      DonorEdit.Extents[0][iDim][iNext] = GridDonors.Extents[0][iDim][iDonor];
-      DonorEdit.Extents[1][iDim][iNext] = GridDonors.Extents[1][iDim][iDonor];
+      DonorEdit.Extents[0][iDim][iNext] = GridDonors.Extents(0,iDim,iDonor);
+      DonorEdit.Extents[1][iDim][iNext] = GridDonors.Extents(1,iDim,iDonor);
     }
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      DonorEdit.Coords[iDim][iNext] = GridDonors.Coords[iDim][iDonor];
+      DonorEdit.Coords[iDim][iNext] = GridDonors.Coords(iDim,iDonor);
     }
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      int Size = GridDonors.Extents[1][iDim][iDonor]-GridDonors.Extents[0][iDim][iDonor];
+      int Size = GridDonors.Extents(1,iDim,iDonor)-GridDonors.Extents(0,iDim,iDonor);
       for (int iPoint = 0; iPoint < Size; ++iPoint) {
-        DonorEdit.InterpCoefs[iDim][iPoint][iNext] =
-          GridDonors.InterpCoefs[iDim][iPoint][iDonor];
+        DonorEdit.InterpCoefs(iDim,iPoint)[iNext] = GridDonors.InterpCoefs(iDim,iPoint,iDonor);
       }
     }
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      DonorEdit.DestinationPoints[iDim][iNext] = GridDonors.DestinationPoints[iDim][iDonor];
+      DonorEdit.DestinationPoints[iDim][iNext] = GridDonors.DestinationPoints(iDim,iDonor);
     }
     ++iNext;
   }
@@ -2721,7 +2699,7 @@ void ImportDonors(const donor_data &GridDonors, const core::comm &Comm, int NumD
     }
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
       for (int iPoint = 0; iPoint < MaxSize; ++iPoint) {
-        ReleaseDonorInterpCoefs(Donors, iDim, iPoint, DonorEdit.InterpCoefs[iDim][iPoint]);
+        ReleaseDonorInterpCoefs(Donors, iDim, iPoint, DonorEdit.InterpCoefs(iDim,iPoint));
       }
     }
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
@@ -2746,7 +2724,9 @@ void ImportReceivers(const receiver_data &GridReceivers, const core::comm &Comm,
   struct receiver_edit {
     long long Count;
     int *Points[MAX_DIMS];
+//     static_array<int *,MAX_DIMS> Points;
     int *SourceCells[MAX_DIMS];
+//     static_array<int *,MAX_DIMS> SourceCells;
     receiver_edit():
       Count(0)
     {}
@@ -2760,10 +2740,16 @@ void ImportReceivers(const receiver_data &GridReceivers, const core::comm &Comm,
   }
 
   for (long long iReceiver = 0; iReceiver < GridReceivers.Count; ++iReceiver) {
-    int SourceGridID = GridReceivers.SourceGridIDs[iReceiver];
+    int SourceGridID = GridReceivers.SourceGridIDs(iReceiver);
     receiver_edit &ReceiverEdit = ReceiverEdits[SourceGridID];
     ++ReceiverEdit.Count;
   }
+
+//   for (auto &Pair : ReceiverEdits) {
+//     receiver_edit &ReceiverEdit = Pair.second;
+//     ReceiverEdit.Points.Resize({MAX_DIMS});
+//     ReceiverEdit.SourceCells.Resize({MAX_DIMS});
+//   }
 
   for (int iSourceGrid = 0; iSourceGrid < NumSourceGrids; ++iSourceGrid) {
     int SourceGridID = SourceGridIDs[iSourceGrid];
@@ -2781,14 +2767,14 @@ void ImportReceivers(const receiver_data &GridReceivers, const core::comm &Comm,
   }
 
   for (long long iReceiver = 0; iReceiver < GridReceivers.Count; ++iReceiver) {
-    int SourceGridID = GridReceivers.SourceGridIDs[iReceiver];
+    int SourceGridID = GridReceivers.SourceGridIDs(iReceiver);
     receiver_edit &ReceiverEdit = ReceiverEdits[SourceGridID];
     int iNext = ReceiverEdit.Count;
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      ReceiverEdit.Points[iDim][iNext] = GridReceivers.Points[iDim][iReceiver];
+      ReceiverEdit.Points[iDim][iNext] = GridReceivers.Points(iDim,iReceiver);
     }
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      ReceiverEdit.SourceCells[iDim][iNext] = GridReceivers.SourceCells[iDim][iReceiver];
+      ReceiverEdit.SourceCells[iDim][iNext] = GridReceivers.SourceCells(iDim,iReceiver);
     }
     ++ReceiverEdit.Count;
   }
@@ -2812,34 +2798,11 @@ void CreateDonorData(donor_data &Data, long long Count, int MaxSize) {
   Data.Count = Count;
   Data.MaxSize = MaxSize;
 
-  Data.ExtentsData.resize(2*MAX_DIMS*Count);
-  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Data.Extents[0][iDim] = Data.ExtentsData.data() + iDim*Count;
-    Data.Extents[1][iDim] = Data.ExtentsData.data() + (MAX_DIMS+iDim)*Count;
-  }
-
-  Data.CoordsData.resize(MAX_DIMS*Count);
-  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Data.Coords[iDim] = Data.CoordsData.data() + iDim*Count;
-  }
-
-  Data.InterpCoefsPtrs.resize(MAX_DIMS*MaxSize);
-  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Data.InterpCoefs[iDim] = Data.InterpCoefsPtrs.data() + iDim*MaxSize;
-  }
-  Data.InterpCoefsData.resize(MAX_DIMS*MaxSize*Count);
-  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    for (int iPoint = 0; iPoint < MaxSize; ++iPoint) {
-      Data.InterpCoefs[iDim][iPoint] = Data.InterpCoefsData.data() + (iDim*MaxSize + iPoint)*Count;
-    }
-  }
-
-  Data.DestinationGridIDs.resize(Count);
-
-  Data.DestinationPointsData.resize(MAX_DIMS*Count);
-  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Data.DestinationPoints[iDim] = Data.DestinationPointsData.data() + iDim*Count;
-  }
+  Data.Extents.Resize({{2,MAX_DIMS,Count}});
+  Data.Coords.Resize({{MAX_DIMS,Count}});
+  Data.InterpCoefs.Resize({{MAX_DIMS,MaxSize,Count}});
+  Data.DestinationGridIDs.Resize({Count});
+  Data.DestinationPoints.Resize({{MAX_DIMS,Count}});
 
 }
 
@@ -2847,17 +2810,9 @@ void CreateReceiverData(receiver_data &Data, long long Count) {
 
   Data.Count = Count;
 
-  Data.PointsData.resize(MAX_DIMS*Count);
-  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Data.Points[iDim] = Data.PointsData.data() + iDim*Count;
-  }
-
-  Data.SourceGridIDs.resize(Count);
-
-  Data.SourceCellsData.resize(MAX_DIMS*Count);
-  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Data.SourceCells[iDim] = Data.SourceCellsData.data() + iDim*Count;
-  }
+  Data.Points.Resize({{MAX_DIMS,Count}});
+  Data.SourceGridIDs.Resize({Count});
+  Data.SourceCells.Resize({{MAX_DIMS,Count}});
 
 }
 
@@ -2865,21 +2820,11 @@ void CreateConnectionData(connection_data &Data, long long Count) {
 
   Data.Count = Count;
 
-  Data.ConnectionIDs.resize(Count);
-
-  Data.DonorGridIDs.resize(Count);
-
-  Data.DonorCellsData.resize(MAX_DIMS*Count);
-  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Data.DonorCells[iDim] = Data.DonorCellsData.data() + iDim*Count;
-  }
-
-  Data.ReceiverGridIDs.resize(Count);
-
-  Data.ReceiverPointsData.resize(MAX_DIMS*Count);
-  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Data.ReceiverPoints[iDim] = Data.ReceiverPointsData.data() + iDim*Count;
-  }
+  Data.ConnectionIDs.Resize({Count});
+  Data.DonorGridIDs.Resize({Count});
+  Data.DonorCells.Resize({{MAX_DIMS,Count}});
+  Data.ReceiverGridIDs.Resize({Count});
+  Data.ReceiverPoints.Resize({{MAX_DIMS,Count}});
 
 }
 
@@ -2964,9 +2909,9 @@ int File_read_at_endian(MPI_File File, MPI_Offset Offset, void *Buffer, int Coun
 
 endian MachineEndian() {
 
-  unsigned char EndianTest[2] = {1, 0};
+  elem<unsigned char,2> EndianTest = {1,0};
 
-  if(*reinterpret_cast<short *>(EndianTest) == 1) {
+  if(*reinterpret_cast<short *>(EndianTest.Data()) == 1) {
     return endian::LITTLE;
   } else {
     return endian::BIG;

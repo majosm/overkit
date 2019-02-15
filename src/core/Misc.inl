@@ -4,9 +4,10 @@
 namespace ovk {
 namespace core {
 
-template <typename T> void SortPermutation(long long N, const T *Array, long long *Permutation) {
+template <typename ArrayType, OVK_FUNCDEF_REQUIRES(IsArray<ArrayType>() && ArrayRank<ArrayType>()
+  == 1)> void SortPermutation(const ArrayType &Array, array_view<long long> Permutation) {
 
-  for (long long i = 0; i < N; ++i) {
+  for (long long i = 0; i < Permutation.Count(); ++i) {
     Permutation[i] = i;
   }
 
@@ -14,7 +15,7 @@ template <typename T> void SortPermutation(long long N, const T *Array, long lon
     return Array[Left] < Array[Right];
   };
 
-  std::sort(Permutation, Permutation+N, Compare);
+  std::sort(Permutation.LinearBegin(), Permutation.LinearEnd(), Compare);
 
 }
 

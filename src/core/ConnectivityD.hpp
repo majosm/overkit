@@ -4,6 +4,7 @@
 #ifndef OVK_CORE_CONNECTIVITY_D_HPP_INCLUDED
 #define OVK_CORE_CONNECTIVITY_D_HPP_INCLUDED
 
+#include <ovk/core/Array.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Constants.hpp>
 #include <ovk/core/ErrorHandler.hpp>
@@ -12,8 +13,6 @@
 #include <ovk/core/Logger.hpp>
 
 #include <mpi.h>
-
-#include <vector>
 
 namespace ovk {
 
@@ -37,20 +36,15 @@ struct connectivity_d {
   int MaxSize_;
   const grid *Grid_;
   edits Edits_;
-  int *Extents_[2][MAX_DIMS];
-  std::vector<int> ExtentsFlat_;
+  array<int,3> Extents_;
   int ExtentsEditRefCount_;
-  double *Coords_[MAX_DIMS];
-  std::vector<double> CoordsFlat_;
+  array<double,2> Coords_;
   int CoordsEditRefCount_;
-  double **InterpCoefs_[MAX_DIMS];
-  std::vector<double *> InterpCoefPtrsFlat_;
-  std::vector<double> InterpCoefsFlat_;
+  array<double,3> InterpCoefs_;
   int InterpCoefsEditRefCount_;
-  int *Destinations_[MAX_DIMS];
-  std::vector<int> DestinationsFlat_;
+  array<int,2> Destinations_;
   int DestinationsEditRefCount_;
-  std::vector<int> DestinationRanks_;
+  array<int> DestinationRanks_;
   int DestinationRanksEditRefCount_;
 
 };

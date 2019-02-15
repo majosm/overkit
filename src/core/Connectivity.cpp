@@ -3,6 +3,7 @@
 
 #include "ovk/core/Connectivity.hpp"
 
+#include "ovk/core/Array.hpp"
 #include "ovk/core/Cart.hpp"
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/ConnectivityD.hpp"
@@ -20,7 +21,6 @@
 
 #include <memory>
 #include <string>
-#include <vector>
 
 namespace ovk {
 
@@ -147,10 +147,10 @@ void CreateConnectivityInfo(connectivity_info &Info, const connectivity *Connect
   int NameLength;
   if (IsRoot) NameLength = Connectivity->Name_.length();
   MPI_Bcast(&NameLength, 1, MPI_INT, RootRank, Comm);
-  std::vector<char> NameChars(NameLength);
-  if (IsRoot) NameChars.assign(Connectivity->Name_.begin(), Connectivity->Name_.end());
-  MPI_Bcast(NameChars.data(), NameLength, MPI_CHAR, RootRank, Comm);
-  Info.Name_.assign(NameChars.begin(), NameChars.end());
+  array<char> NameChars({NameLength});
+  if (IsRoot) NameChars.Fill(Connectivity->Name_.begin());
+  MPI_Bcast(NameChars.Data(), NameLength, MPI_CHAR, RootRank, Comm);
+  Info.Name_.assign(NameChars.LinearBegin(), NameChars.LinearEnd());
 
   if (IsRoot) Info.NumDims_ = Connectivity->NumDims_;
   MPI_Bcast(&Info.NumDims_, 1, MPI_INT, RootRank, Comm);

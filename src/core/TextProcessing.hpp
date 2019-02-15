@@ -4,13 +4,13 @@
 #ifndef OVK_CORE_TEXT_PROCESSING_HPP_INCLUDED
 #define OVK_CORE_TEXT_PROCESSING_HPP_INCLUDED
 
+#include <ovk/core/Array.hpp>
 #include <ovk/core/DebugBase.h>
 #include <ovk/core/Global.hpp>
 
 #include <cstdlib>
 #include <cstring>
 #include <string>
-#include <vector>
 
 namespace ovk {
 namespace core {

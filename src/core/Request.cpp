@@ -3,71 +3,77 @@
 
 #include "ovk/core/Request.hpp"
 
+#include "ovk/core/Array.hpp"
+#include "ovk/core/ArrayView.hpp"
 #include "ovk/core/Global.hpp"
 
 #include <mpi.h>
 
 #include <memory>
 #include <utility>
-#include <vector>
 
 namespace ovk {
 
-void WaitAll(int NumRequests, request *Requests) {
+void WaitAll(array_view<request> Requests) {
 
-  std::vector<request *> RequestPtrs(NumRequests);
+  int NumRequests = Requests.Count();
+
+  array<request *> RequestPtrs({NumRequests});
 
   for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
-    RequestPtrs[iRequest] = &Requests[iRequest];
+    RequestPtrs[iRequest] = Requests.Data(iRequest);
   }
 
-  request::core_WaitAll(NumRequests, RequestPtrs.data());
+  request::core_WaitAll(RequestPtrs);
 
 }
 
-void WaitAny(int NumRequests, request *Requests, int &Index) {
+void WaitAny(array_view<request> Requests, int &Index) {
 
-  std::vector<request *> RequestPtrs(NumRequests);
+  int NumRequests = Requests.Count();
+
+  array<request *> RequestPtrs({NumRequests});
 
   for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
-    RequestPtrs[iRequest] = &Requests[iRequest];
+    RequestPtrs[iRequest] = Requests.Data(iRequest);
   }
 
-  request::core_WaitAny(NumRequests, RequestPtrs.data(), Index);
+  request::core_WaitAny(RequestPtrs, Index);
 
 }
 
-void request::core_WaitAll(int NumRequests, request **Requests) {
+void request::core_WaitAll(array_view<request *> Requests) {
 
-  std::vector<int> NumRemainingMPIRequests(NumRequests);
+  int NumRequests = Requests.Count();
+
+  array<int> NumRemainingMPIRequests({NumRequests});
   int TotalMPIRequests = 0;
 
   for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
-    if (Requests[iRequest]) {
-      request &Request = *Requests[iRequest];
+    if (Requests(iRequest)) {
+      request &Request = *Requests(iRequest);
       if (Request) {
-        int NumMPIRequests = Request.NumMPIRequests();
-        NumRemainingMPIRequests[iRequest] = NumMPIRequests;
+        int NumMPIRequests = Request.MPIRequests().Count();
+        NumRemainingMPIRequests(iRequest) = NumMPIRequests;
         TotalMPIRequests += NumMPIRequests;
       }
     }
   }
 
-  std::vector<MPI_Request> AllMPIRequests;
-  std::vector<int> MPIRequestToRequest;
+  array<MPI_Request> AllMPIRequests;
+  array<int> MPIRequestToRequest;
 
-  AllMPIRequests.reserve(TotalMPIRequests);
-  MPIRequestToRequest.reserve(TotalMPIRequests);
+  AllMPIRequests.Reserve(TotalMPIRequests);
+  MPIRequestToRequest.Reserve(TotalMPIRequests);
 
   for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
-    if (Requests[iRequest]) {
-      request &Request = *Requests[iRequest];
+    if (Requests(iRequest)) {
+      request &Request = *Requests(iRequest);
       if (Request) {
-        int NumMPIRequests = Request.NumMPIRequests();
-        MPI_Request *MPIRequests = Request.MPIRequests();
-        for (int iMPIRequest = 0; iMPIRequest < NumMPIRequests; ++iMPIRequest) {
-          AllMPIRequests.push_back(MPIRequests[iMPIRequest]);
-          MPIRequestToRequest.push_back(iRequest);
+        array_view<MPI_Request> MPIRequests = Request.MPIRequests();
+        for (int iMPIRequest = 0; iMPIRequest < MPIRequests.Count(); ++iMPIRequest) {
+          AllMPIRequests.Append(MPIRequests(iMPIRequest));
+          MPIRequestToRequest.Append(iRequest);
         }
       }
     }
@@ -75,19 +81,15 @@ void request::core_WaitAll(int NumRequests, request **Requests) {
 
   while (true) {
     int iMPIRequest;
-    MPI_Waitany(TotalMPIRequests, AllMPIRequests.data(), &iMPIRequest, MPI_STATUSES_IGNORE);
+    MPI_Waitany(TotalMPIRequests, AllMPIRequests.Data(), &iMPIRequest, MPI_STATUSES_IGNORE);
     if (iMPIRequest == MPI_UNDEFINED) {
       break;
     }
-    int iRequest = MPIRequestToRequest[iMPIRequest];
-    --NumRemainingMPIRequests[iRequest];
-    if (NumRemainingMPIRequests[iRequest] == 0) {
-      request &Request = *Requests[iRequest];
-      int NumMPIRequests = Request.NumMPIRequests();
-      MPI_Request *MPIRequests = Request.MPIRequests();
-      for (int iMPIRequest = 0; iMPIRequest < NumMPIRequests; ++iMPIRequest) {
-        MPIRequests[iMPIRequest] = MPI_REQUEST_NULL;
-      }
+    int iRequest = MPIRequestToRequest(iMPIRequest);
+    --NumRemainingMPIRequests(iRequest);
+    if (NumRemainingMPIRequests(iRequest) == 0) {
+      request &Request = *Requests(iRequest);
+      Request.MPIRequests().Fill(MPI_REQUEST_NULL);
       Request.Wait();
       Request = request();
     }
@@ -95,37 +97,38 @@ void request::core_WaitAll(int NumRequests, request **Requests) {
 
 }
 
-void request::core_WaitAny(int NumRequests, request **Requests, int &Index) {
+void request::core_WaitAny(array_view<request *> Requests, int &Index) {
 
-  std::vector<int> NumRemainingMPIRequests(NumRequests);
+  int NumRequests = Requests.Count();
+
+  array<int> NumRemainingMPIRequests({NumRequests});
   int TotalMPIRequests = 0;
 
   for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
-    if (Requests[iRequest]) {
-      request &Request = *Requests[iRequest];
+    if (Requests(iRequest)) {
+      request &Request = *Requests(iRequest);
       if (Request) {
-        int NumMPIRequests = Request.NumMPIRequests();
-        NumRemainingMPIRequests[iRequest] = NumMPIRequests;
+        int NumMPIRequests = Request.MPIRequests().Count();
+        NumRemainingMPIRequests(iRequest) = NumMPIRequests;
         TotalMPIRequests += NumMPIRequests;
       }
     }
   }
 
-  std::vector<MPI_Request> AllMPIRequests;
-  std::vector<int> MPIRequestToRequest;
+  array<MPI_Request> AllMPIRequests;
+  array<int> MPIRequestToRequest;
 
-  AllMPIRequests.reserve(TotalMPIRequests);
-  MPIRequestToRequest.reserve(TotalMPIRequests);
+  AllMPIRequests.Reserve(TotalMPIRequests);
+  MPIRequestToRequest.Reserve(TotalMPIRequests);
 
   for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
-    if (Requests[iRequest]) {
-      request &Request = *Requests[iRequest];
+    if (Requests(iRequest)) {
+      request &Request = *Requests(iRequest);
       if (Request) {
-        int NumMPIRequests = Request.NumMPIRequests();
-        MPI_Request *MPIRequests = Request.MPIRequests();
-        for (int iMPIRequest = 0; iMPIRequest < NumMPIRequests; ++iMPIRequest) {
-          AllMPIRequests.push_back(MPIRequests[iMPIRequest]);
-          MPIRequestToRequest.push_back(iRequest);
+        array_view<MPI_Request> MPIRequests = Request.MPIRequests();
+        for (int iMPIRequest = 0; iMPIRequest < MPIRequests.Count(); ++iMPIRequest) {
+          AllMPIRequests.Append(MPIRequests(iMPIRequest));
+          MPIRequestToRequest.Append(iRequest);
         }
       }
     }
@@ -133,20 +136,16 @@ void request::core_WaitAny(int NumRequests, request **Requests, int &Index) {
 
   while (true) {
     int iMPIRequest;
-    MPI_Waitany(TotalMPIRequests, AllMPIRequests.data(), &iMPIRequest, MPI_STATUSES_IGNORE);
+    MPI_Waitany(TotalMPIRequests, AllMPIRequests.Data(), &iMPIRequest, MPI_STATUSES_IGNORE);
     if (iMPIRequest == MPI_UNDEFINED) {
       Index = -1;
       break;
     }
-    int iRequest = MPIRequestToRequest[iMPIRequest];
-    --NumRemainingMPIRequests[iRequest];
-    if (NumRemainingMPIRequests[iRequest] == 0) {
-      request &Request = *Requests[iRequest];
-      int NumMPIRequests = Request.NumMPIRequests();
-      MPI_Request *MPIRequests = Request.MPIRequests();
-      for (int iMPIRequest = 0; iMPIRequest < NumMPIRequests; ++iMPIRequest) {
-        MPIRequests[iMPIRequest] = MPI_REQUEST_NULL;
-      }
+    int iRequest = MPIRequestToRequest(iMPIRequest);
+    --NumRemainingMPIRequests(iRequest);
+    if (NumRemainingMPIRequests(iRequest) == 0) {
+      request &Request = *Requests(iRequest);
+      Request.MPIRequests().Fill(MPI_REQUEST_NULL);
       Request.Wait();
       Request = request();
       Index = iRequest;

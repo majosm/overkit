@@ -3,17 +3,19 @@
 
 #include "ovk/core/Misc.hpp"
 
+#include "ovk/core/Array.hpp"
+#include "ovk/core/ArrayView.hpp"
 #include "ovk/core/Global.hpp"
 
 #include <mpi.h>
 
 #include <set>
-#include <vector>
 
 namespace ovk {
 namespace core {
 
-void BroadcastAnySource(void *Data, int Count, MPI_Datatype DataType, bool IsSource, MPI_Comm Comm) {
+void BroadcastAnySource(void *Data, int Count, MPI_Datatype DataType, bool IsSource, MPI_Comm Comm)
+  {
 
   int Rank;
   MPI_Comm_rank(Comm, &Rank);
@@ -118,16 +120,17 @@ void DestroySignal(signal &Signal) {
 
 }
 
-void DynamicHandshake(MPI_Comm Comm, int NumDestRanks, const std::vector<int> &DestRanks,
-  std::vector<int> &SourceRanks) {
-
-  int iDestRank;
+void DynamicHandshake(MPI_Comm Comm, array_view<const int> DestRanks, array<int> &SourceRanks) {
 
   char SendBuffer[1], RecvBuffer[1];
 
-  std::vector<MPI_Request> SendRequests(NumDestRanks);
-  for (iDestRank = 0; iDestRank < NumDestRanks; ++iDestRank) {
-    MPI_Issend(SendBuffer, 1, MPI_CHAR, DestRanks[iDestRank], 0, Comm, SendRequests.data()+iDestRank);
+  int NumDestRanks = DestRanks.Count();
+
+  array<MPI_Request> SendRequests;
+  SendRequests.Reserve(NumDestRanks);
+  for (int iDestRank = 0; iDestRank < NumDestRanks; ++iDestRank) {
+    MPI_Request &Request = SendRequests.Append();
+    MPI_Issend(SendBuffer, 1, MPI_CHAR, DestRanks(iDestRank), 0, Comm, &Request);
   }
 
   signal AllSendsDoneSignal;
@@ -150,7 +153,7 @@ void DynamicHandshake(MPI_Comm Comm, int NumDestRanks, const std::vector<int> &D
     if (SendsDone) {
       CheckSignal(AllSendsDoneSignal, Done);
     } else {
-      MPI_Testall(NumDestRanks, SendRequests.data(), &SendsDone, MPI_STATUSES_IGNORE);
+      MPI_Testall(NumDestRanks, SendRequests.Data(), &SendsDone, MPI_STATUSES_IGNORE);
       if (SendsDone) {
         StartSignal(AllSendsDoneSignal);
       }
@@ -161,7 +164,7 @@ void DynamicHandshake(MPI_Comm Comm, int NumDestRanks, const std::vector<int> &D
 
   DestroySignal(AllSendsDoneSignal);
 
-  SourceRanks.assign(SourceRanksSet.begin(), SourceRanksSet.end());
+  SourceRanks.Assign({int(SourceRanksSet.size())}, SourceRanksSet.begin());
 
 }
 

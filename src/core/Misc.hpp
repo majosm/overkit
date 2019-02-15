@@ -4,12 +4,15 @@
 #ifndef OVK_CORE_MISC_HPP_INCLUDED
 #define OVK_CORE_MISC_HPP_INCLUDED
 
+#include <ovk/core/Array.hpp>
+#include <ovk/core/ArrayTraits.hpp>
+#include <ovk/core/ArrayView.hpp>
 #include <ovk/core/Global.hpp>
+#include <ovk/core/Requires.hpp>
 
 #include <mpi.h>
 
 #include <algorithm>
-#include <vector>
 
 namespace ovk {
 namespace core {
@@ -39,11 +42,11 @@ void CheckSignal(signal &Signal, bool &Done);
 void DestroySignal(signal &Signal);
 
 // Given known list of ranks sending to, get list of ranks receiving from
-void DynamicHandshake(MPI_Comm Comm, int NumDestRanks, const std::vector<int> &DestRanks,
-  std::vector<int> &SourceRanks);
+void DynamicHandshake(MPI_Comm Comm, array_view<const int> DestRanks, array<int> &SourceRanks);
 
 // Generate permutation corresponding to ascending-order sort
-template <typename T> void SortPermutation(long long N, const T *Array, long long *Permutation);
+template <typename ArrayType, OVK_FUNCDECL_REQUIRES(IsArray<ArrayType>() && ArrayRank<ArrayType>()
+  == 1)> void SortPermutation(const ArrayType &Array, array_view<long long> Permutation);
 
 }}
 

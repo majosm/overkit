@@ -3,6 +3,7 @@
 
 #include "ovk/core/ConnectivityR.hpp"
 
+#include "ovk/core/Array.hpp"
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Constants.hpp"
 #include "ovk/core/Debug.hpp"
@@ -12,8 +13,6 @@
 #include "ovk/core/Logger.hpp"
 
 #include <mpi.h>
-
-#include <vector>
 
 namespace ovk {
 
@@ -49,16 +48,13 @@ void CreateConnectivityReceiverSide(connectivity_r &Receivers, const grid &Grid,
 
   DefaultEdits(Receivers.Edits_);
 
-  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Receivers.Points_[iDim] = nullptr;
-  }
+  Receivers.Points_.Resize({{MAX_DIMS,0}});
   Receivers.PointsEditRefCount_ = 0;
 
-  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Receivers.Sources_[iDim] = nullptr;
-  }
+  Receivers.Sources_.Resize({{MAX_DIMS,0}});
   Receivers.SourcesEditRefCount_ = 0;
 
+  Receivers.SourceRanks_.Resize({0});
   Receivers.SourceRanksEditRefCount_ = 0;
 
   MPI_Barrier(Receivers.Comm_);
@@ -69,9 +65,9 @@ void DestroyConnectivityReceiverSide(connectivity_r &Receivers) {
 
   MPI_Barrier(Receivers.Comm_);
 
-  Receivers.PointsFlat_.clear();
-  Receivers.SourcesFlat_.clear();
-  Receivers.SourceRanks_.clear();
+  Receivers.Points_.Clear();
+  Receivers.Sources_.Clear();
+  Receivers.SourceRanks_.Clear();
 
   MPI_Barrier(Receivers.Comm_);
 
@@ -140,41 +136,11 @@ void ResizeReceivers(connectivity_r &Receivers, long long NumReceivers) {
   OVK_DEBUG_ASSERT(!EditingSourceRanks(Receivers), "Cannot resize receivers while editing source "
     "ranks.");
 
-  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Receivers.Points_[iDim] = nullptr;
-  }
-  Receivers.PointsFlat_.clear();
-  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Receivers.Sources_[iDim] = nullptr;
-  }
-  Receivers.SourcesFlat_.clear();
-  Receivers.SourceRanks_.clear();
-
   Receivers.Count_ = NumReceivers;
 
-  if (NumReceivers > 0) {
-
-    Receivers.PointsFlat_.resize(MAX_DIMS*NumReceivers);
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      Receivers.Points_[iDim] = Receivers.PointsFlat_.data() + NumReceivers*iDim;
-    }
-    Receivers.SourcesFlat_.resize(MAX_DIMS*NumReceivers);
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      Receivers.Sources_[iDim] = Receivers.SourcesFlat_.data() + NumReceivers*iDim;
-    }
-    Receivers.SourceRanks_.resize(NumReceivers);
-
-    for (long long iReceiver = 0; iReceiver < NumReceivers; ++iReceiver) {
-      for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        Receivers.Points_[iDim][iReceiver] = 0;
-      }
-      for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        Receivers.Sources_[iDim][iReceiver] = 0;
-      }
-      Receivers.SourceRanks_[iReceiver] = -1;
-    }
-
-  }
+  Receivers.Points_.Resize({{MAX_DIMS,NumReceivers}}, 0);
+  Receivers.Sources_.Resize({{MAX_DIMS,NumReceivers}}, 0);
+  Receivers.SourceRanks_.Resize({NumReceivers}, -1);
 
   Receivers.Edits_.Count_ = true;
   Receivers.Edits_.Points_ = true;
@@ -188,7 +154,7 @@ void GetReceiverPoints(const connectivity_r &Receivers, int Dimension, const int
 
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
 
-  Points = Receivers.Points_[Dimension];
+  Points = Receivers.Points_.Data(Dimension,0);
 
 }
 
@@ -203,14 +169,14 @@ void EditReceiverPoints(connectivity_r &Receivers, int Dimension, int *&Points) 
     MPI_Barrier(Receivers.Comm_);
   }
 
-  Points = Receivers.Points_[Dimension];
+  Points = Receivers.Points_.Data(Dimension,0);
 
 }
 
 void ReleaseReceiverPoints(connectivity_r &Receivers, int Dimension, int *&Points) {
 
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
-  OVK_DEBUG_ASSERT(Points == Receivers.Points_[Dimension], "Invalid points pointer.");
+  OVK_DEBUG_ASSERT(Points == Receivers.Points_.Data(Dimension,0), "Invalid points pointer.");
   OVK_DEBUG_ASSERT(EditingPoints(Receivers), "Unable to release points; not currently being "
     "edited.");
 
@@ -230,7 +196,7 @@ void GetReceiverSources(const connectivity_r &Receivers, int Dimension, const in
 
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
 
-  Sources = Receivers.Sources_[Dimension];
+  Sources = Receivers.Sources_.Data(Dimension,0);
 
 }
 
@@ -245,14 +211,14 @@ void EditReceiverSources(connectivity_r &Receivers, int Dimension, int *&Sources
     MPI_Barrier(Receivers.Comm_);
   }
 
-  Sources = Receivers.Sources_[Dimension];
+  Sources = Receivers.Sources_.Data(Dimension,0);
 
 }
 
 void ReleaseReceiverSources(connectivity_r &Receivers, int Dimension, int *&Sources) {
 
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
-  OVK_DEBUG_ASSERT(Sources == Receivers.Sources_[Dimension], "Invalid sources pointer.");
+  OVK_DEBUG_ASSERT(Sources == Receivers.Sources_.Data(Dimension,0), "Invalid sources pointer.");
   OVK_DEBUG_ASSERT(EditingSources(Receivers), "Unable to release sources; not currently being "
     "edited.");
 
@@ -270,7 +236,7 @@ void ReleaseReceiverSources(connectivity_r &Receivers, int Dimension, int *&Sour
 
 void GetReceiverSourceRanks(const connectivity_r &Receivers, const int *&SourceRanks) {
 
-  SourceRanks = Receivers.SourceRanks_.data();
+  SourceRanks = Receivers.SourceRanks_.Data();
 
 }
 
@@ -283,13 +249,13 @@ void EditReceiverSourceRanks(connectivity_r &Receivers, int *&SourceRanks) {
     MPI_Barrier(Receivers.Comm_);
   }
 
-  SourceRanks = Receivers.SourceRanks_.data();
+  SourceRanks = Receivers.SourceRanks_.Data();
 
 }
 
 void ReleaseReceiverSourceRanks(connectivity_r &Receivers, int *&SourceRanks) {
 
-  OVK_DEBUG_ASSERT(SourceRanks == Receivers.SourceRanks_.data(), "Invalid source ranks pointer.");
+  OVK_DEBUG_ASSERT(SourceRanks == Receivers.SourceRanks_.Data(), "Invalid source ranks pointer.");
   OVK_DEBUG_ASSERT(EditingSourceRanks(Receivers), "Unable to release source ranks; not currently "
     "being edited.");
 

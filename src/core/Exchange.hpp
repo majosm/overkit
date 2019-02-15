@@ -4,6 +4,7 @@
 #ifndef OVK_CORE_EXCHANGE_HPP_INCLUDED
 #define OVK_CORE_EXCHANGE_HPP_INCLUDED
 
+#include <ovk/core/Array.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Constants.hpp>
 #include <ovk/core/Connectivity.hpp>
@@ -17,7 +18,6 @@
 #include <mpi.h>
 
 #include <string>
-#include <vector>
 
 namespace ovk {
 
@@ -26,15 +26,12 @@ struct exchange {
   struct collect_send {
     int Rank;
     long long NumPoints;
-    int *Points[MAX_DIMS];
-    std::vector<int> PointsData;
+    array<int,2> Points;
   };
 
   struct collect_recv {
     int Rank;
     long long NumPoints;
-    int *Points[MAX_DIMS];
-    std::vector<int> PointsData;
   };
 
   struct send {
@@ -53,30 +50,27 @@ struct exchange {
   int NumDims_;
   core::comm Comm_;
 
-  std::vector<long long> DonorsSorted_;
-  std::vector<long long> ReceiversSorted_;
-  std::vector<int> DonorDestRanks_;
-  std::vector<int> ReceiverSourceRanks_;
+  array<long long> DonorsSorted_;
+  array<long long> ReceiversSorted_;
+  array<int> DonorDestRanks_;
+  array<int> ReceiverSourceRanks_;
   core::partition_hash SourceHash_;
   core::partition_hash DestinationHash_;
 
-  std::vector<collect_send> CollectSends_;
-  std::vector<collect_recv> CollectRecvs_;
-  std::vector<int> NumRemoteDonorPoints_;
-  long long **RemoteDonorPoints_;
-  std::vector<long long *> RemoteDonorPointsPtrs_;
-  std::vector<long long> RemoteDonorPointsData_;
-  int **RemoteDonorPointCollectRecvs_;
-  std::vector<int *> RemoteDonorPointCollectRecvsPtrs_;
-  std::vector<int> RemoteDonorPointCollectRecvsData_;
-  long long **RemoteDonorPointCollectRecvBufferIndices_;
-  std::vector<long long *> RemoteDonorPointCollectRecvBufferIndicesPtrs_;
-  std::vector<long long> RemoteDonorPointCollectRecvBufferIndicesData_;
+  array<collect_send> CollectSends_;
+  array<collect_recv> CollectRecvs_;
+  array<int> NumRemoteDonorPoints_;
+  array<long long *> RemoteDonorPoints_;
+  array<long long> RemoteDonorPointsData_;
+  array<int *> RemoteDonorPointCollectRecvs_;
+  array<int> RemoteDonorPointCollectRecvsData_;
+  array<long long *> RemoteDonorPointCollectRecvBufferIndices_;
+  array<long long> RemoteDonorPointCollectRecvBufferIndicesData_;
 
-  std::vector<send> Sends_;
-  std::vector<recv> Recvs_;
-  std::vector<int> DonorSendIndices_;
-  std::vector<int> ReceiverRecvIndices_;
+  array<send> Sends_;
+  array<recv> Recvs_;
+  array<int> DonorSendIndices_;
+  array<int> ReceiverRecvIndices_;
 
 };
 

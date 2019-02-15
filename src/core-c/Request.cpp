@@ -4,6 +4,7 @@
 #include "ovk/core-c/Request.h"
 
 #include "ovk/core-c/Global.h"
+#include "ovk/core/Array.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Request.hpp"
@@ -29,12 +30,15 @@ void ovkWaitAll(int NumRequests, ovk_request **Requests) {
   OVK_DEBUG_ASSERT(Requests || NumRequests == 0, "Invalid requests pointer.");
   // Note: Not checking Requests[i] here on purpose -- allowed to be null
 
-  auto **RequestsCPPPtr = reinterpret_cast<ovk::request **>(Requests);
-  ovk::request::core_WaitAll(NumRequests, RequestsCPPPtr);
+  ovk::array<ovk::request *> RequestCPPPtrs({NumRequests});
+  for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
+    RequestCPPPtrs(iRequest) = reinterpret_cast<ovk::request *>(Requests[iRequest]);
+  }
+  ovk::request::core_WaitAll(RequestCPPPtrs);
 
   for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
-    delete RequestsCPPPtr[iRequest];
-    RequestsCPPPtr[iRequest] = nullptr;
+    delete RequestCPPPtrs(iRequest);
+    Requests[iRequest] = nullptr;
   }
 
 }
@@ -46,12 +50,15 @@ void ovkWaitAny(int NumRequests, ovk_request **Requests, int *Index) {
   // Note: Not checking Requests[i] here on purpose -- allowed to be null
   OVK_DEBUG_ASSERT(Index, "Invalid index pointer.");
 
-  auto **RequestsCPPPtr = reinterpret_cast<ovk::request **>(Requests);
-  ovk::request::core_WaitAny(NumRequests, RequestsCPPPtr, *Index);
+  ovk::array<ovk::request *> RequestCPPPtrs({NumRequests});
+  for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
+    RequestCPPPtrs(iRequest) = reinterpret_cast<ovk::request *>(Requests[iRequest]);
+  }
+  ovk::request::core_WaitAny(RequestCPPPtrs, *Index);
 
   if (*Index >= 0) {
-    delete RequestsCPPPtr[*Index];
-    RequestsCPPPtr[*Index] = nullptr;
+    delete RequestCPPPtrs(*Index);
+    Requests[*Index] = nullptr;
   }
 
 }

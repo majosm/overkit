@@ -3,6 +3,7 @@
 
 #include "ovk/core/ConnectivityD.hpp"
 
+#include "ovk/core/Array.hpp"
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Constants.hpp"
 #include "ovk/core/Debug.hpp"
@@ -13,8 +14,6 @@
 #include "ovk/core/Range.hpp"
 
 #include <mpi.h>
-
-#include <vector>
 
 namespace ovk {
 
@@ -53,28 +52,19 @@ void CreateConnectivityDonorSide(connectivity_d &Donors, const grid &Grid, int D
 
   DefaultEdits(Donors.Edits_);
 
-  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Donors.Extents_[0][iDim] = nullptr;
-    Donors.Extents_[1][iDim] = nullptr;
-  }
+  Donors.Extents_.Resize({{2,MAX_DIMS,0}});
   Donors.ExtentsEditRefCount_ = 0;
 
-  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Donors.Coords_[iDim] = nullptr;
-  }
+  Donors.Coords_.Resize({{MAX_DIMS,0}});
   Donors.CoordsEditRefCount_ = 0;
 
-  Donors.InterpCoefPtrsFlat_.resize(MAX_DIMS, nullptr);
-  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Donors.InterpCoefs_[iDim] = Donors.InterpCoefPtrsFlat_.data() + iDim;
-  }
+  Donors.InterpCoefs_.Resize({{MAX_DIMS,0,0}});
   Donors.InterpCoefsEditRefCount_ = 0;
 
-  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Donors.Destinations_[iDim] = nullptr;
-  }
+  Donors.Destinations_.Resize({{MAX_DIMS,0}});
   Donors.DestinationsEditRefCount_ = 0;
 
+  Donors.DestinationRanks_.Resize({0});
   Donors.DestinationRanksEditRefCount_ = 0;
 
   MPI_Barrier(Donors.Comm_);
@@ -85,12 +75,11 @@ void DestroyConnectivityDonorSide(connectivity_d &Donors) {
 
   MPI_Barrier(Donors.Comm_);
 
-  Donors.ExtentsFlat_.clear();
-  Donors.CoordsFlat_.clear();
-  Donors.InterpCoefPtrsFlat_.clear();
-  Donors.InterpCoefsFlat_.clear();
-  Donors.DestinationsFlat_.clear();
-  Donors.DestinationRanks_.clear();
+  Donors.Extents_.Clear();
+  Donors.Coords_.Clear();
+  Donors.InterpCoefs_.Clear();
+  Donors.Destinations_.Clear();
+  Donors.DestinationRanks_.Clear();
 
   MPI_Barrier(Donors.Comm_);
 
@@ -183,82 +172,24 @@ void ResizeDonors(connectivity_d &Donors, long long NumDonors, int MaxSize) {
 
   int NumDims = Donors.NumDims_;
 
-  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Donors.Extents_[0][iDim] = nullptr;
-    Donors.Extents_[1][iDim] = nullptr;
-  }
-  Donors.ExtentsFlat_.clear();
-  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Donors.Coords_[iDim] = nullptr;
-  }
-  Donors.CoordsFlat_.clear();
-  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Donors.InterpCoefs_[iDim] = nullptr;
-  }
-  Donors.InterpCoefPtrsFlat_.clear();
-  Donors.InterpCoefsFlat_.clear();
-  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Donors.Destinations_[iDim] = nullptr;
-  }
-  Donors.DestinationsFlat_.clear();
-  Donors.DestinationRanks_.clear();
-
   Donors.Count_ = NumDonors;
   Donors.MaxSize_ = MaxSize;
 
-  Donors.InterpCoefPtrsFlat_.resize(MaxSize*MAX_DIMS, nullptr);
-  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Donors.InterpCoefs_[iDim] = Donors.InterpCoefPtrsFlat_.data() + MaxSize*iDim;
+  Donors.Extents_.Resize({{2,MAX_DIMS,NumDonors}});
+  for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
+    for (int iDim = 0; iDim < NumDims; ++iDim) {
+      Donors.Extents_(0,iDim,iDonor) = 0;
+      Donors.Extents_(1,iDim,iDonor) = 0;
+    }
+    for (int iDim = NumDims; iDim < MAX_DIMS; ++iDim) {
+      Donors.Extents_(0,iDim,iDonor) = 0;
+      Donors.Extents_(1,iDim,iDonor) = 1;
+    }
   }
-
-  if (NumDonors > 0) {
-
-    Donors.ExtentsFlat_.resize(2*MAX_DIMS*NumDonors);
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      Donors.Extents_[0][iDim] = Donors.ExtentsFlat_.data() + iDim*NumDonors;
-      Donors.Extents_[1][iDim] = Donors.ExtentsFlat_.data() + (MAX_DIMS+iDim)*NumDonors;
-    }
-    Donors.CoordsFlat_.resize(MAX_DIMS*NumDonors);
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      Donors.Coords_[iDim] = Donors.CoordsFlat_.data() + iDim*NumDonors;
-    }
-    Donors.InterpCoefsFlat_.resize(MAX_DIMS*MaxSize*NumDonors);
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      for (int iPoint = 0; iPoint < MaxSize; ++iPoint) {
-        Donors.InterpCoefs_[iDim][iPoint] = Donors.InterpCoefsFlat_.data() + (iDim*MaxSize + iPoint)
-          * NumDonors;
-      }
-    }
-    Donors.DestinationsFlat_.resize(MAX_DIMS*NumDonors);
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      Donors.Destinations_[iDim] = Donors.DestinationsFlat_.data() + iDim*NumDonors;
-    }
-    Donors.DestinationRanks_.resize(NumDonors);
-
-    for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      for (int iDim = 0; iDim < NumDims; ++iDim) {
-        Donors.Extents_[0][iDim][iDonor] = 0;
-        Donors.Extents_[1][iDim][iDonor] = 0;
-      }
-      for (int iDim = NumDims; iDim < MAX_DIMS; ++iDim) {
-        Donors.Extents_[0][iDim][iDonor] = 0;
-        Donors.Extents_[1][iDim][iDonor] = 1;
-      }
-      for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        Donors.Coords_[iDim][iDonor] = 0.;
-      }
-      for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        for (int iPoint = 0; iPoint < MaxSize; ++iPoint) {
-          Donors.InterpCoefs_[iDim][iPoint][iDonor] = 0.;
-        }
-      }
-      for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        Donors.Destinations_[iDim][iDonor] = 0;
-      }
-      Donors.DestinationRanks_[iDonor] = -1;
-    }
-
-  }
+  Donors.Coords_.Resize({{MAX_DIMS,NumDonors}}, 0.);
+  Donors.InterpCoefs_.Resize({{MAX_DIMS,MaxSize,NumDonors}}, 0.);
+  Donors.Destinations_.Resize({{MAX_DIMS,NumDonors}}, 0);
+  Donors.DestinationRanks_.Resize({NumDonors}, -1);
 
   Donors.Edits_.Count_ = true;
   Donors.Edits_.Extents_ = true;
@@ -275,8 +206,8 @@ void GetDonorExtents(const connectivity_d &Donors, int Dimension, const int *&Be
 
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
 
-  Begins = Donors.Extents_[0][Dimension];
-  Ends = Donors.Extents_[1][Dimension];
+  Begins = Donors.Extents_.Data(0,Dimension,0);
+  Ends = Donors.Extents_.Data(1,Dimension,0);
 
 }
 
@@ -291,16 +222,16 @@ void EditDonorExtents(connectivity_d &Donors, int Dimension, int *&Begins, int *
     MPI_Barrier(Donors.Comm_);
   }
 
-  Begins = Donors.Extents_[0][Dimension];
-  Ends = Donors.Extents_[1][Dimension];
+  Begins = Donors.Extents_.Data(0,Dimension,0);
+  Ends = Donors.Extents_.Data(1,Dimension,0);
 
 }
 
 void ReleaseDonorExtents(connectivity_d &Donors, int Dimension, int *&Begins, int *&Ends) {
 
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
-  OVK_DEBUG_ASSERT(Begins == Donors.Extents_[0][Dimension], "Invalid begins pointer.");
-  OVK_DEBUG_ASSERT(Ends == Donors.Extents_[1][Dimension], "Invalid ends pointer.");
+  OVK_DEBUG_ASSERT(Begins == Donors.Extents_.Data(0,Dimension,0), "Invalid begins pointer.");
+  OVK_DEBUG_ASSERT(Ends == Donors.Extents_.Data(1,Dimension,0), "Invalid ends pointer.");
   OVK_DEBUG_ASSERT(EditingExtents(Donors), "Unable to release extents; not currently being edited.");
 
   --Donors.ExtentsEditRefCount_;
@@ -320,7 +251,7 @@ void GetDonorCoords(const connectivity_d &Donors, int Dimension, const double *&
 
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
 
-  Coords = Donors.Coords_[Dimension];
+  Coords = Donors.Coords_.Data(Dimension,0);
 
 }
 
@@ -335,14 +266,14 @@ void EditDonorCoords(connectivity_d &Donors, int Dimension, double *&Coords) {
     MPI_Barrier(Donors.Comm_);
   }
 
-  Coords = Donors.Coords_[Dimension];
+  Coords = Donors.Coords_.Data(Dimension,0);
 
 }
 
 void ReleaseDonorCoords(connectivity_d &Donors, int Dimension, double *&Coords) {
 
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
-  OVK_DEBUG_ASSERT(Coords == Donors.Coords_[Dimension], "Invalid coords pointer.");
+  OVK_DEBUG_ASSERT(Coords == Donors.Coords_.Data(Dimension,0), "Invalid coords pointer.");
   OVK_DEBUG_ASSERT(EditingCoords(Donors), "Unable to release coords; not currently being edited.");
 
   --Donors.CoordsEditRefCount_;
@@ -363,7 +294,7 @@ void GetDonorInterpCoefs(const connectivity_d &Donors, int Dimension, int Point,
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Point >= 0 && Point < Donors.MaxSize_, "Invalid point.");
 
-  InterpCoefs = Donors.InterpCoefs_[Dimension][Point];
+  InterpCoefs = Donors.InterpCoefs_.Data(Dimension,Point,0);
 
 }
 
@@ -379,7 +310,7 @@ void EditDonorInterpCoefs(connectivity_d &Donors, int Dimension, int Point, doub
     MPI_Barrier(Donors.Comm_);
   }
 
-  InterpCoefs = Donors.InterpCoefs_[Dimension][Point];
+  InterpCoefs = Donors.InterpCoefs_.Data(Dimension,Point,0);
 
 }
 
@@ -388,8 +319,8 @@ void ReleaseDonorInterpCoefs(connectivity_d &Donors, int Dimension, int Point, d
 
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Point >= 0 && Point < Donors.MaxSize_, "Invalid point.");
-  OVK_DEBUG_ASSERT(InterpCoefs == Donors.InterpCoefs_[Dimension][Point], "Invalid interp coefs "
-    "pointer.");
+  OVK_DEBUG_ASSERT(InterpCoefs == Donors.InterpCoefs_.Data(Dimension,Point,0), "Invalid interp "
+    "coefs pointer.");
   OVK_DEBUG_ASSERT(EditingInterpCoefs(Donors), "Unable to release interp coefs; not currently "
     "being edited.");
 
@@ -409,7 +340,7 @@ void GetDonorDestinations(const connectivity_d &Donors, int Dimension, const int
 
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
 
-  Destinations = Donors.Destinations_[Dimension];
+  Destinations = Donors.Destinations_.Data(Dimension,0);
 
 }
 
@@ -424,14 +355,15 @@ void EditDonorDestinations(connectivity_d &Donors, int Dimension, int *&Destinat
     MPI_Barrier(Donors.Comm_);
   }
 
-  Destinations = Donors.Destinations_[Dimension];
+  Destinations = Donors.Destinations_.Data(Dimension,0);
 
 }
 
 void ReleaseDonorDestinations(connectivity_d &Donors, int Dimension, int *&Destinations) {
 
   OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < MAX_DIMS, "Invalid dimension.");
-  OVK_DEBUG_ASSERT(Destinations == Donors.Destinations_[Dimension], "Invalid destinations pointer.");
+  OVK_DEBUG_ASSERT(Destinations == Donors.Destinations_.Data(Dimension,0), "Invalid destinations "
+    "pointer.");
   OVK_DEBUG_ASSERT(EditingDestinations(Donors), "Unable to release destinations; not currently "
     "being edited.");
 
@@ -450,7 +382,7 @@ void ReleaseDonorDestinations(connectivity_d &Donors, int Dimension, int *&Desti
 
 void GetDonorDestinationRanks(const connectivity_d &Donors, const int *&DestinationRanks) {
 
-  DestinationRanks = Donors.DestinationRanks_.data();
+  DestinationRanks = Donors.DestinationRanks_.Data();
 
 }
 
@@ -463,13 +395,13 @@ void EditDonorDestinationRanks(connectivity_d &Donors, int *&DestinationRanks) {
     MPI_Barrier(Donors.Comm_);
   }
 
-  DestinationRanks = Donors.DestinationRanks_.data();
+  DestinationRanks = Donors.DestinationRanks_.Data();
 
 }
 
 void ReleaseDonorDestinationRanks(connectivity_d &Donors, int *&DestinationRanks) {
 
-  OVK_DEBUG_ASSERT(DestinationRanks == Donors.DestinationRanks_.data(), "Invalid destination ranks "
+  OVK_DEBUG_ASSERT(DestinationRanks == Donors.DestinationRanks_.Data(), "Invalid destination ranks "
     "pointer.");
   OVK_DEBUG_ASSERT(EditingDestinationRanks(Donors), "Unable to release destination ranks; not "
     "currently being edited.");

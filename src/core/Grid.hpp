@@ -4,6 +4,7 @@
 #ifndef OVK_CORE_GRID_HPP_INCLUDED
 #define OVK_CORE_GRID_HPP_INCLUDED
 
+#include <ovk/core/Array.hpp>
 #include <ovk/core/Cart.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Constants.hpp>
@@ -16,7 +17,6 @@
 #include <mpi.h>
 
 #include <string>
-#include <vector>
 
 namespace ovk {
 
@@ -54,7 +54,7 @@ struct grid {
   geometry_type GeometryType_;
   range GlobalRange_;
   range LocalRange_;
-  std::vector<core::grid_neighbor> Neighbors_;
+  array<core::grid_neighbor> Neighbors_;
   core::partition_hash PartitionHash_;
 };
 
@@ -95,7 +95,7 @@ void GetGridLocalCount(const grid &Grid, long long &NumLocal);
 
 namespace core {
 const comm &GetGridComm(const grid &Grid);
-const std::vector<grid_neighbor> &GetGridNeighbors(const grid &Grid);
+const array<grid_neighbor> &GetGridNeighbors(const grid &Grid);
 const partition_hash &GetGridPartitionHash(const grid &Grid);
 }
 

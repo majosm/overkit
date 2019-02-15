@@ -31,17 +31,13 @@ static inline int ovkRangeSizeDim(const ovk_range *Range, int iDim);
 static inline long long ovkRangeCount(const ovk_range *Range);
 static inline bool ovkRangeIsEmpty(const ovk_range *Range);
 static inline bool ovkRangesAreEqual(const ovk_range *LeftRange, const ovk_range *RightRange);
-static inline long long ovkRangeTupleToIndex(const ovk_range *Range, ovk_array_layout Layout,
-  const int *Tuple);
-static inline void ovkRangeIndexToTuple(const ovk_range *Range, ovk_array_layout Layout,
-  long long Index, int N, int *Tuple);
-static inline bool ovkRangeContains(const ovk_range *Range, const int *Tuple);
+static inline bool ovkRangeContains(const ovk_range *Range, const int *Point);
 static inline bool ovkRangeIncludes(const ovk_range *Range, const ovk_range *OtherRange);
+static inline void ovkExtendRange(ovk_range *Range, const int *Point);
 static inline bool ovkRangesOverlap(const ovk_range *LeftRange, const ovk_range *RightRange);
 static inline ovk_range ovkUnionRanges(const ovk_range *LeftRange, const ovk_range *RightRange);
 static inline ovk_range ovkIntersectRanges(const ovk_range *LeftRange, const ovk_range *RightRange);
-static inline void ovkClampToRange(int *Tuple, const ovk_range *Range);
-static inline void ovkExtendRange(ovk_range *Range, const int *Tuple);
+static inline void ovkClampToRange(int *Point, const ovk_range *Range);
 
 #ifdef __cplusplus
 }

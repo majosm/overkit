@@ -3,6 +3,7 @@
 
 #include "ovk/core/Profiler.hpp"
 
+#include "ovk/core/Array.hpp"
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Global.hpp"
@@ -14,7 +15,6 @@
 #include <iterator>
 #include <string>
 #include <utility>
-#include <vector>
 
 namespace ovk {
 namespace core {
@@ -29,7 +29,7 @@ void CreateProfiler(profiler &Profiler, const comm &Comm) {
 
 void DestroyProfiler(profiler &Profiler) {
 
-  Profiler.Timers_.clear();
+  Profiler.Timers_.Clear();
   Profiler.Comm_.Reset();
 
 }
@@ -48,25 +48,25 @@ void DisableProfiler(profiler &Profiler) {
 
 namespace {
 
-inline std::vector<profiler::timer_entry>::iterator FindTimer(profiler &Profiler, const std::string
+inline array<profiler::timer_entry>::iterator FindTimer(profiler &Profiler, const std::string
   &TimerName) {
 
   auto NameMatches = [&TimerName](const profiler::timer_entry &TimerEntry) -> bool {
     return TimerEntry.first == TimerName;
   };
 
-  return std::find_if(Profiler.Timers_.begin(), Profiler.Timers_.end(), NameMatches);
+  return std::find_if(Profiler.Timers_.LinearBegin(), Profiler.Timers_.LinearEnd(), NameMatches);
 
 }
 
-inline std::vector<profiler::timer_entry>::const_iterator FindTimer(const profiler &Profiler, const
+inline array<profiler::timer_entry>::const_iterator FindTimer(const profiler &Profiler, const
   std::string &TimerName) {
 
   auto NameMatches = [&TimerName](const profiler::timer_entry &TimerEntry) -> bool {
     return TimerEntry.first == TimerName;
   };
 
-  return std::find_if(Profiler.Timers_.begin(), Profiler.Timers_.end(), NameMatches);
+  return std::find_if(Profiler.Timers_.LinearBegin(), Profiler.Timers_.LinearEnd(), NameMatches);
 
 }
 
@@ -74,7 +74,7 @@ inline std::vector<profiler::timer_entry>::const_iterator FindTimer(const profil
 
 bool TimerExists(const profiler &Profiler, const std::string &TimerName) {
 
-  return FindTimer(Profiler, TimerName) != Profiler.Timers_.end();
+  return FindTimer(Profiler, TimerName) != Profiler.Timers_.LinearEnd();
 
 }
 
@@ -82,18 +82,18 @@ int AddProfilerTimer(profiler &Profiler, const std::string &TimerName) {
 
   auto Iter = FindTimer(Profiler, TimerName);
 
-  if (Iter == Profiler.Timers_.end()) {
+  if (Iter == Profiler.Timers_.LinearEnd()) {
 
     profiler_internal::timer Timer;
     ResetTimer(Timer);
 
-    Profiler.Timers_.emplace_back(TimerName, Timer);
+    Profiler.Timers_.Append(TimerName, Timer);
 
-    return Profiler.Timers_.size()-1;
+    return Profiler.Timers_.Count()-1;
 
   } else {
 
-    return std::distance(Profiler.Timers_.begin(), Iter);
+    return std::distance(Profiler.Timers_.LinearBegin(), Iter);
 
   }
 
@@ -103,9 +103,22 @@ void RemoveProfilerTimer(profiler &Profiler, const std::string &TimerName) {
 
   auto Iter = FindTimer(Profiler, TimerName);
 
-  OVK_DEBUG_ASSERT(Iter != Profiler.Timers_.end(), "Timer does not exist.");
+  OVK_DEBUG_ASSERT(Iter != Profiler.Timers_.LinearEnd(), "Timer does not exist.");
 
-  Profiler.Timers_.erase(Iter);
+  int Index = std::distance(Profiler.Timers_.LinearBegin(), Iter);
+
+  int NumTimers = Profiler.Timers_.Count();
+
+  array<profiler::timer_entry> NewTimers({NumTimers-1});
+
+  for (int iTimer = 0; iTimer < Index; ++iTimer) {
+    NewTimers(iTimer) = std::move(Profiler.Timers_(iTimer));
+  }
+  for (int iTimer = Index+1; iTimer < NumTimers; ++iTimer) {
+    NewTimers(iTimer-1) = std::move(Profiler.Timers_(iTimer));
+  }
+
+  Profiler.Timers_ = std::move(NewTimers);
 
 }
 
@@ -113,9 +126,9 @@ int GetProfilerTimerID(const profiler &Profiler, const std::string &TimerName) {
 
   auto Iter = FindTimer(Profiler, TimerName);
 
-  OVK_DEBUG_ASSERT(Iter != Profiler.Timers_.end(), "Timer does not exist.");
+  OVK_DEBUG_ASSERT(Iter != Profiler.Timers_.LinearEnd(), "Timer does not exist.");
 
-  return std::distance(Profiler.Timers_.begin(), Iter);
+  return std::distance(Profiler.Timers_.LinearBegin(), Iter);
 
 }
 
@@ -125,31 +138,30 @@ std::string WriteProfileTimes(const profiler &Profiler) {
 
   if (Profiler.Enabled_) {
 
-    std::vector<double> Times(Profiler.Timers_.size());
-    for (int iTimer = 0; iTimer < int(Profiler.Timers_.size()); ++iTimer) {
-      const profiler::timer &Timer = Profiler.Timers_[iTimer].second;
-      Times[iTimer] = GetAccumulatedTime(Timer);
+    int NumTimers = Profiler.Timers_.Count();
+
+    array<double> Times({NumTimers});
+    for (int iTimer = 0; iTimer < int(NumTimers); ++iTimer) {
+      const profiler::timer &Timer = Profiler.Timers_(iTimer).second;
+      Times(iTimer) = GetAccumulatedTime(Timer);
     }
 
-    std::vector<double> MinTimes(Profiler.Timers_.size());
-    std::vector<double> MaxTimes(Profiler.Timers_.size());
-    std::vector<double> AvgTimes(Profiler.Timers_.size());
+    array<double> MinTimes({NumTimers});
+    array<double> MaxTimes({NumTimers});
+    array<double> AvgTimes({NumTimers});
 
-    MPI_Allreduce(Times.data(), MinTimes.data(), Profiler.Timers_.size(), MPI_DOUBLE, MPI_MIN,
-      Profiler.Comm_);
-    MPI_Allreduce(Times.data(), MaxTimes.data(), Profiler.Timers_.size(), MPI_DOUBLE, MPI_MAX,
-      Profiler.Comm_);
-    MPI_Allreduce(Times.data(), AvgTimes.data(), Profiler.Timers_.size(), MPI_DOUBLE, MPI_SUM,
-      Profiler.Comm_);
+    MPI_Allreduce(Times.Data(), MinTimes.Data(), NumTimers, MPI_DOUBLE, MPI_MIN, Profiler.Comm_);
+    MPI_Allreduce(Times.Data(), MaxTimes.Data(), NumTimers, MPI_DOUBLE, MPI_MAX, Profiler.Comm_);
+    MPI_Allreduce(Times.Data(), AvgTimes.Data(), NumTimers, MPI_DOUBLE, MPI_SUM, Profiler.Comm_);
 
-    for (int iTimer = 0; iTimer < int(Profiler.Timers_.size()); ++iTimer) {
-      AvgTimes[iTimer] /= double(Profiler.Comm_.Size());
+    for (int iTimer = 0; iTimer < NumTimers; ++iTimer) {
+      AvgTimes(iTimer) /= double(Profiler.Comm_.Size());
     }
 
-    for (int iTimer = 0; iTimer < int(Profiler.Timers_.size()); ++iTimer) {
-      const std::string &TimerName = Profiler.Timers_[iTimer].first;
-      ProfileTimesString += StringPrint("%s: %f %f %f\n", TimerName, MinTimes[iTimer],
-        MaxTimes[iTimer], AvgTimes[iTimer]);
+    for (int iTimer = 0; iTimer < NumTimers; ++iTimer) {
+      const std::string &TimerName = Profiler.Timers_(iTimer).first;
+      ProfileTimesString += StringPrint("%s: %f %f %f\n", TimerName, MinTimes(iTimer),
+        MaxTimes(iTimer), AvgTimes(iTimer));
     }
 
   }

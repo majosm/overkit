@@ -4,13 +4,13 @@
 #ifndef OVK_CORE_REQUEST_HPP_INCLUDED
 #define OVK_CORE_REQUEST_HPP_INCLUDED
 
+#include <ovk/core/ArrayView.hpp>
 #include <ovk/core/Global.hpp>
 
 #include <mpi.h>
 
 #include <memory>
 #include <utility>
-#include <vector>
 
 namespace ovk {
 
@@ -40,8 +40,8 @@ public:
     Request_->Wait();
   }
 
-  static void core_WaitAll(int NumRequests, request **Requests);
-  static void core_WaitAny(int NumRequests, request **Requests, int &Index);
+  static void core_WaitAll(array_view<request *> Requests);
+  static void core_WaitAny(array_view<request *> Requests, int &Index);
 
 private:
 
@@ -49,8 +49,7 @@ private:
   public:
     virtual ~concept() {}
     virtual void Wait() = 0;
-    virtual int NumMPIRequests() const = 0;
-    virtual MPI_Request *MPIRequests() = 0;
+    virtual array_view<MPI_Request> MPIRequests() = 0;
   };
 
   template <typename T> class model : public concept {
@@ -61,10 +60,7 @@ private:
     virtual void Wait() override {
       Request_.Wait();
     }
-    virtual int NumMPIRequests() const override {
-      return Request_.NumMPIRequests();
-    }
-    virtual MPI_Request *MPIRequests() override {
+    virtual array_view<MPI_Request> MPIRequests() override {
       return Request_.MPIRequests();
     }
   private:
@@ -73,15 +69,14 @@ private:
 
   std::unique_ptr<concept> Request_;
 
-  int NumMPIRequests() const {
-    return Request_->NumMPIRequests();
-  }
-
-  MPI_Request *MPIRequests() {
+  array_view<MPI_Request> MPIRequests() {
     return Request_->MPIRequests();
   }
 
 };
+
+void WaitAll(array_view<request> Requests);
+void WaitAny(array_view<request> Requests, int &Index);
 
 }
 

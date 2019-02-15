@@ -9,14 +9,18 @@ inline void DefaultCart(cart &Cart, int NumDims) {
 
 }
 
-template <typename IntArrayType, typename BoolArrayType> inline void SetCart(cart &Cart,
-  int NumDims, const IntArrayType &Size, const BoolArrayType &Periodic) {
+template <typename SizeArrayType, typename PeriodicArrayType, OVK_FUNCDEF_REQUIRES(
+  cart_internal::is_compatible_int_tuple_type<SizeArrayType>() &&
+  cart_internal::is_compatible_bool_tuple_type<PeriodicArrayType>())>
+  inline void SetCart(cart &Cart, int NumDims, const SizeArrayType &Size, const PeriodicArrayType
+  &Periodic) {
 
   ovkSetCart(&Cart, NumDims, &Size[0], &Periodic[0]);
 
 }
 
-template <typename IntegerType> inline void CartCount(const cart &Cart, IntegerType &Count) {
+template <typename IntegerType, OVK_FUNCDEF_REQUIRES(std::is_integral<IntegerType>::value)> inline
+  void CartCount(const cart &Cart, IntegerType &Count) {
 
   long long CountLongLong;
   ovkCartCount(&Cart, &CountLongLong);
@@ -25,15 +29,22 @@ template <typename IntegerType> inline void CartCount(const cart &Cart, IntegerT
 
 }
 
-template <typename IntArrayType1, typename IntArrayType2> inline void CartFindPeriod(const cart
-  &Cart, const IntArrayType1 &Point, IntArrayType2 &Period) {
+template <typename PointArrayType, typename PeriodArrayType, OVK_FUNCDEF_REQUIRES(
+  cart_internal::is_compatible_int_tuple_type<PointArrayType>() &&
+  cart_internal::is_compatible_int_tuple_type<typename std::decay<PeriodArrayType>::type>() &&
+  !std::is_const<typename std::decay<PeriodArrayType>::type>::value)> inline void CartFindPeriod(
+  const cart &Cart, const PointArrayType &Point, PeriodArrayType &&Period) {
 
   ovkCartFindPeriod(&Cart, &Point[0], &Period[0]);
 
 }
 
-template <typename IntArrayType1, typename IntArrayType2> inline void CartPeriodicAdjust(const cart
-  &Cart, const IntArrayType1 &Tuple, IntArrayType2 &AdjustedTuple) {
+template <typename TupleArrayType, typename AdjustedTupleArrayType, OVK_FUNCDEF_REQUIRES(
+  cart_internal::is_compatible_int_tuple_type<TupleArrayType>() &&
+  cart_internal::is_compatible_int_tuple_type<typename std::decay<AdjustedTupleArrayType>::type>()
+  && !std::is_const<typename std::decay<AdjustedTupleArrayType>::type>::value)> inline void
+  CartPeriodicAdjust(const cart &Cart, const TupleArrayType &Tuple, AdjustedTupleArrayType
+  &&AdjustedTuple) {
 
   ovkCartPeriodicAdjust(&Cart, &Tuple[0], &AdjustedTuple[0]);
 

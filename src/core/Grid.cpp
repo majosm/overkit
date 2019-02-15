@@ -3,10 +3,12 @@
 
 #include "ovk/core/Grid.hpp"
 
+#include "ovk/core/Array.hpp"
 #include "ovk/core/Cart.hpp"
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Constants.hpp"
 #include "ovk/core/Debug.hpp"
+#include "ovk/core/Elem.hpp"
 #include "ovk/core/ErrorHandler.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Logger.hpp"
@@ -17,12 +19,10 @@
 
 #include <mpi.h>
 
-#include <array>
 #include <map>
 #include <set>
 #include <string>
 #include <utility>
-#include <vector>
 
 namespace ovk {
 
@@ -75,7 +75,7 @@ void CreateGrid(grid &Grid, int ID, const grid_params &Params, core::logger &Log
 
   Grid.GeometryType_ = Params.GeometryType_;
 
-  Grid.GlobalRange_ = range(NumDims, std::array<int,MAX_DIMS>({}), Params.Size_);
+  Grid.GlobalRange_ = range(NumDims, MakeUniformElem<int,MAX_DIMS>(0), Params.Size_);
   Grid.LocalRange_ = Params.LocalRange_;
 
   core::CreatePartitionHash(Grid.PartitionHash_, Grid.NumDims_, Grid.Comm_, Grid.GlobalRange_,
@@ -227,14 +227,14 @@ void CreateNeighbors(grid &Grid) {
 
   range GlobalRange = Grid.GlobalRange_;
   range LocalRange = Grid.LocalRange_;
-  int Periodic[MAX_DIMS] = {
+  elem<bool,MAX_DIMS> Periodic = {
     Grid.Cart_.Periodic[0],
     Grid.Cart_.Periodic[1],
     Grid.Cart_.Periodic[2]
   };
 
-  bool HasNeighborsBefore[MAX_DIMS];
-  bool HasNeighborsAfter[MAX_DIMS];
+  elem<bool,MAX_DIMS> HasNeighborsBefore;
+  elem<bool,MAX_DIMS> HasNeighborsAfter;
   for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
     bool HasPartitionBefore = LocalRange.Begin(iDim) > GlobalRange.Begin(iDim);
     bool HasPartitionAfter = LocalRange.End(iDim) < GlobalRange.End(iDim);
@@ -247,57 +247,53 @@ void CreateNeighbors(grid &Grid) {
     }
   }
 
-  int NumNeighborFaces = 0;
-  range NeighborFaces[2*MAX_DIMS];
+  array<range> NeighborFaces;
+  NeighborFaces.Reserve(2*MAX_DIMS);
+//   static_array<range,2*MAX_DIMS> NeighborFaces;
   for (int iDim = 0; iDim < NumDims; ++iDim) {
     if (HasNeighborsBefore[iDim]) {
-      std::array<int,MAX_DIMS> FaceBegin = LocalRange.Begin();
-      std::array<int,MAX_DIMS> FaceEnd = LocalRange.End();
+      elem<int,MAX_DIMS> FaceBegin = LocalRange.Begin();
+      elem<int,MAX_DIMS> FaceEnd = LocalRange.End();
       FaceBegin[iDim] -= 1;
       FaceEnd[iDim] = FaceBegin[iDim]+1;
       for (int jDim = iDim+1; jDim < NumDims; ++jDim) {
         FaceBegin[jDim] -= int(HasNeighborsBefore[jDim]);
         FaceEnd[jDim] += int(HasNeighborsAfter[jDim]);
       }
-      NeighborFaces[NumNeighborFaces] = range(NumDims, FaceBegin, FaceEnd);
-      ++NumNeighborFaces;
+      NeighborFaces.Append(NumDims, FaceBegin, FaceEnd);
     }
     if (HasNeighborsAfter[iDim]) {
-      std::array<int,MAX_DIMS> FaceBegin = LocalRange.Begin();
-      std::array<int,MAX_DIMS> FaceEnd = LocalRange.End();
+      elem<int,MAX_DIMS> FaceBegin = LocalRange.Begin();
+      elem<int,MAX_DIMS> FaceEnd = LocalRange.End();
       FaceEnd[iDim] += 1;
       FaceBegin[iDim] = FaceEnd[iDim]-1;
       for (int jDim = iDim+1; jDim < NumDims; ++jDim) {
         FaceBegin[jDim] -= int(HasNeighborsBefore[jDim]);
         FaceEnd[jDim] += int(HasNeighborsAfter[jDim]);
       }
-      NeighborFaces[NumNeighborFaces] = range(NumDims, FaceBegin, FaceEnd);
-      ++NumNeighborFaces;
+      NeighborFaces.Append(NumDims, FaceBegin, FaceEnd);
     }
   }
 
+  int NumNeighborFaces = NeighborFaces.Count();
+
   long long NumNeighborPoints = 0;
   for (int iFace = 0; iFace < NumNeighborFaces; ++iFace) {
-    NumNeighborPoints += NeighborFaces[iFace].Count();
+    NumNeighborPoints += NeighborFaces(iFace).Count();
   }
 
-  std::vector<int> NeighborPointsFlat(MAX_DIMS*NumNeighborPoints);
-  int *NeighborPoints[MAX_DIMS] = {
-    NeighborPointsFlat.data(),
-    NeighborPointsFlat.data() + NumNeighborPoints,
-    NeighborPointsFlat.data() + 2*NumNeighborPoints
-  };
+  array<int,2> NeighborPoints({{MAX_DIMS,NumNeighborPoints}});
 
   long long iNextPoint = 0;
   for (int iFace = 0; iFace < NumNeighborFaces; ++iFace) {
-    range &Face = NeighborFaces[iFace];
+    range &Face = NeighborFaces(iFace);
     for (int k = Face.Begin(2); k < Face.End(2); ++k) {
       for (int j = Face.Begin(1); j < Face.End(1); ++j) {
         for (int i = Face.Begin(0); i < Face.End(0); ++i) {
-          int Point[MAX_DIMS] = {i, j, k};
+          int Point[MAX_DIMS] = {i,j,k};
           CartPeriodicAdjust(Grid.Cart_, Point, Point);
           for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-            NeighborPoints[iDim][iNextPoint] = Point[iDim];
+            NeighborPoints(iDim,iNextPoint) = Point[iDim];
           }
           ++iNextPoint;
         }
@@ -305,39 +301,38 @@ void CreateNeighbors(grid &Grid) {
     }
   }
 
-  std::vector<int> NeighborPointBinIndices(NumNeighborPoints);
+  array<int> NeighborPointBinIndices({NumNeighborPoints});
 
-  core::MapToPartitionBins(Grid.PartitionHash_, NumNeighborPoints, NeighborPoints,
-    NeighborPointBinIndices.data());
+  core::MapToPartitionBins(Grid.PartitionHash_, NeighborPoints, NeighborPointBinIndices);
 
   std::map<int, core::partition_bin> Bins;
 
   for (long long iPoint = 0; iPoint < NumNeighborPoints; ++iPoint) {
-    Bins.emplace(NeighborPointBinIndices[iPoint], core::partition_bin());
+    Bins.emplace(NeighborPointBinIndices(iPoint), core::partition_bin());
   }
 
   core::RetrievePartitionBins(Grid.PartitionHash_, Bins);
 
-  std::vector<int> NeighborPointRanks(NumNeighborPoints);
+  array<int> NeighborPointRanks({NumNeighborPoints});
 
-  core::FindPartitions(Grid.PartitionHash_, Bins, NumNeighborPoints, NeighborPoints,
-    NeighborPointBinIndices.data(), NeighborPointRanks.data());
+  core::FindPartitions(Grid.PartitionHash_, Bins, NeighborPoints, NeighborPointBinIndices,
+    NeighborPointRanks);
 
   Bins.clear();
 
   std::set<int> NeighborRanks;
 
   for (long long iPoint = 0; iPoint < NumNeighborPoints; ++iPoint) {
-    NeighborRanks.insert(NeighborPointRanks[iPoint]);
+    NeighborRanks.insert(NeighborPointRanks(iPoint));
   }
 
-  NeighborPointsFlat.clear();
-  NeighborPointBinIndices.clear();
-  NeighborPointRanks.clear();
+  NeighborPoints.Clear();
+  NeighborPointBinIndices.Clear();
+  NeighborPointRanks.Clear();
 
   int NumNeighbors = NeighborRanks.size();
 
-  Grid.Neighbors_.resize(NumNeighbors);
+  Grid.Neighbors_.Resize({NumNeighbors});
 
   auto RankIter = NeighborRanks.begin();
   for (auto &Neighbor : Grid.Neighbors_) {
@@ -345,38 +340,39 @@ void CreateNeighbors(grid &Grid) {
     ++RankIter;
   }
 
-  std::vector<int> NeighborRangesFlat(2*MAX_DIMS*NumNeighbors);
-
-  int LocalRangeFlat[2*MAX_DIMS];
+  array<int,2> LocalRangeValues({{2,MAX_DIMS}});
+//   static_array<int,2*MAX_DIMS,2> LocalRangeValues({{2,MAX_DIMS}});
   for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    LocalRangeFlat[iDim] = LocalRange.Begin(iDim);
-    LocalRangeFlat[MAX_DIMS+iDim] = LocalRange.End(iDim);
+    LocalRangeValues(0,iDim) = LocalRange.Begin(iDim);
+    LocalRangeValues(1,iDim) = LocalRange.End(iDim);
   }
 
-  int *NeighborRangeFlat;
+  array<int,3> NeighborRangeValues({{NumNeighbors,2,MAX_DIMS}});
 
-  std::vector<MPI_Request> Requests(2*NumNeighbors);
-  NeighborRangeFlat = NeighborRangesFlat.data();
-  MPI_Request *Request = Requests.data();
-  for (auto &Neighbor : Grid.Neighbors_) {
-    MPI_Irecv(NeighborRangeFlat, 2*MAX_DIMS, MPI_INT, Neighbor.Rank, 0, Grid.Comm_, Request);
-    MPI_Isend(LocalRangeFlat, 2*MAX_DIMS, MPI_INT, Neighbor.Rank, 0, Grid.Comm_, Request+1);
-    NeighborRangeFlat += 2*MAX_DIMS;
-    Request += 2;
+  array<MPI_Request> Requests;
+  Requests.Reserve(2*NumNeighbors);
+  for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
+    core::grid_neighbor &Neighbor = Grid.Neighbors_(iNeighbor);
+    MPI_Request &RecvRequest = Requests.Append();
+    MPI_Irecv(NeighborRangeValues.Data(iNeighbor,0,0), 2*MAX_DIMS, MPI_INT, Neighbor.Rank, 0,
+      Grid.Comm_, &RecvRequest);
+    MPI_Request &SendRequest = Requests.Append();
+    MPI_Isend(LocalRangeValues.Data(), 2*MAX_DIMS, MPI_INT, Neighbor.Rank, 0, Grid.Comm_,
+      &SendRequest);
   }
-  MPI_Waitall(2*NumNeighbors, Requests.data(), MPI_STATUSES_IGNORE);
+  MPI_Waitall(Requests.Count(), Requests.Data(), MPI_STATUSES_IGNORE);
 
-  NeighborRangeFlat = NeighborRangesFlat.data();
-  for (auto &Neighbor : Grid.Neighbors_) {
-    Neighbor.LocalRange = range(NumDims, NeighborRangeFlat, NeighborRangeFlat+MAX_DIMS);
-    NeighborRangeFlat += 2*MAX_DIMS;
+  for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
+    core::grid_neighbor &Neighbor = Grid.Neighbors_(iNeighbor);
+    Neighbor.LocalRange = range(NumDims, NeighborRangeValues.Data(iNeighbor,0,0),
+      NeighborRangeValues.Data(iNeighbor,1,0));
   }
 
 }
 
 void DestroyNeighbors(grid &Grid) {
 
-  Grid.Neighbors_.clear();
+  Grid.Neighbors_.Clear();
 
 }
 
@@ -411,10 +407,10 @@ void PrintGridDecomposition(const grid &Grid) {
     "point");
 
   std::string NeighborRanksString;
-  for (int iNeighbor = 0; iNeighbor < int(Grid.Neighbors_.size()); ++iNeighbor) {
+  for (int iNeighbor = 0; iNeighbor < int(Grid.Neighbors_.Count()); ++iNeighbor) {
     // List separated by commas, so don't add thousands separators
-    NeighborRanksString += std::to_string(Grid.Neighbors_[iNeighbor].Rank);
-    if (iNeighbor != int(Grid.Neighbors_.size())-1) NeighborRanksString += ", ";
+    NeighborRanksString += std::to_string(Grid.Neighbors_(iNeighbor).Rank);
+    if (iNeighbor != int(Grid.Neighbors_.Count())-1) NeighborRanksString += ", ";
   }
 
   LogStatus(*Grid.Logger_, Grid.Comm_.Rank() == 0, 0, "Grid %s decomposition info:", Grid.Name_);
@@ -426,7 +422,7 @@ void PrintGridDecomposition(const grid &Grid) {
       std::string RankString = core::FormatNumber(Grid.Comm_.Rank());
       LogStatus(*Grid.Logger_, true, 1, "Rank %s (global rank @rank@) contains %s (%s).",
         RankString, LocalRangeString, TotalLocalPointsString);
-      if (Grid.Neighbors_.size() > 0) {
+      if (Grid.Neighbors_.Count() > 0) {
         LogStatus(*Grid.Logger_, true, 1, "Rank %s has neighbors: %s", RankString,
           NeighborRanksString);
       }
@@ -446,7 +442,7 @@ const comm &GetGridComm(const grid &Grid) {
 
 }
 
-const std::vector<grid_neighbor> &GetGridNeighbors(const grid &Grid) {
+const array<grid_neighbor> &GetGridNeighbors(const grid &Grid) {
 
   return Grid.Neighbors_;
 
@@ -650,14 +646,14 @@ void CreateGridInfo(grid_info &Info, const grid *Grid, const comm &Comm) {
   int NameLength;
   if (IsRoot) NameLength = Grid->Name_.length();
   MPI_Bcast(&NameLength, 1, MPI_INT, RootRank, Comm);
-  std::vector<char> NameChars(NameLength);
-  if (IsRoot) NameChars.assign(Grid->Name_.begin(), Grid->Name_.end());
-  MPI_Bcast(NameChars.data(), NameLength, MPI_CHAR, RootRank, Comm);
-  Info.Name_.assign(NameChars.begin(), NameChars.end());
+  array<char> NameChars({NameLength});
+  if (IsRoot) NameChars.Fill(Grid->Name_.begin());
+  MPI_Bcast(NameChars.Data(), NameLength, MPI_CHAR, RootRank, Comm);
+  Info.Name_.assign(NameChars.LinearBegin(), NameChars.LinearEnd());
 
   Info.RootRank_ = RootRank;
 
-  int PeriodicInt[MAX_DIMS];
+  elem<int,MAX_DIMS> PeriodicInt;
   if (IsRoot) {
     Info.Cart_ = Grid->Cart_;
     PeriodicInt[0] = int(Info.Cart_.Periodic[0]);
@@ -666,7 +662,7 @@ void CreateGridInfo(grid_info &Info, const grid *Grid, const comm &Comm) {
   }
   MPI_Bcast(&Info.Cart_.NumDims, 1, MPI_INT, RootRank, Comm);
   MPI_Bcast(Info.Cart_.Size, MAX_DIMS, MPI_INT, RootRank, Comm);
-  MPI_Bcast(PeriodicInt, MAX_DIMS, MPI_INT, RootRank, Comm);
+  MPI_Bcast(PeriodicInt.Data(), MAX_DIMS, MPI_INT, RootRank, Comm);
   for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
     Info.Cart_.Periodic[iDim] = bool(PeriodicInt[iDim]);
   }
@@ -692,7 +688,7 @@ void CreateGridInfo(grid_info &Info, const grid *Grid, const comm &Comm) {
     GlobalSize[2] = Grid->GlobalRange_.Size(2);
   }
   MPI_Bcast(GlobalSize, MAX_DIMS, MPI_INT, RootRank, Comm);
-  Info.GlobalRange_ = range(Info.NumDims_, std::array<int,MAX_DIMS>({}), GlobalSize);
+  Info.GlobalRange_ = range(Info.NumDims_, MakeUniformElem<int,MAX_DIMS>(0), GlobalSize);
 
   Info.IsLocal_ = IsLocal;
 

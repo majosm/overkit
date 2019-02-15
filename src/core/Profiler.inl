@@ -6,7 +6,7 @@ namespace core {
 
 namespace profiler_internal {
 
-inline void ResetTimer(timer &Timer) {
+OVK_FORCE_INLINE void ResetTimer(timer &Timer) {
 
   Timer.Active_ = false;
   Timer.LastStartTime_ = 0.;
@@ -15,7 +15,7 @@ inline void ResetTimer(timer &Timer) {
 
 }
 
-inline void StartTimer(timer &Timer) {
+OVK_FORCE_INLINE void StartTimer(timer &Timer) {
 
   if (!Timer.Active_) {
     Timer.LastStartTime_ = MPI_Wtime();
@@ -24,7 +24,7 @@ inline void StartTimer(timer &Timer) {
 
 }
 
-inline void StopTimer(timer &Timer) {
+OVK_FORCE_INLINE void StopTimer(timer &Timer) {
 
   if (Timer.Active_) {
     Timer.LastEndTime_ = MPI_Wtime();
@@ -34,7 +34,7 @@ inline void StopTimer(timer &Timer) {
 
 }
 
-inline double GetElapsedTime(const timer &Timer) {
+OVK_FORCE_INLINE double GetElapsedTime(const timer &Timer) {
 
   if (Timer.Active_) {
     return MPI_Wtime() - Timer.LastStartTime_;
@@ -44,7 +44,7 @@ inline double GetElapsedTime(const timer &Timer) {
 
 }
 
-inline double GetAccumulatedTime(const timer &Timer) {
+OVK_FORCE_INLINE double GetAccumulatedTime(const timer &Timer) {
 
   if (Timer.Active_) {
     return Timer.AccumulatedTime_ + (MPI_Wtime() - Timer.LastStartTime_);
@@ -56,30 +56,30 @@ inline double GetAccumulatedTime(const timer &Timer) {
 
 }
 
-inline void StartProfile(profiler &Profiler, int TimerID) {
+OVK_FORCE_INLINE void StartProfile(profiler &Profiler, int TimerID) {
 
   if (Profiler.Enabled_) {
-    OVK_DEBUG_ASSERT(TimerID >= 0 && TimerID < int(Profiler.Timers_.size()), "Invalid timer ID.");
-    StartTimer(Profiler.Timers_[TimerID].second);
+    OVK_DEBUG_ASSERT(TimerID >= 0 && TimerID < int(Profiler.Timers_.Count()), "Invalid timer ID.");
+    StartTimer(Profiler.Timers_(TimerID).second);
   }
 
 }
 
-inline void StartProfileSync(profiler &Profiler, int TimerID, const comm &Comm) {
+OVK_FORCE_INLINE void StartProfileSync(profiler &Profiler, int TimerID, const comm &Comm) {
 
   if (Profiler.Enabled_) {
-    OVK_DEBUG_ASSERT(TimerID >= 0 && TimerID < int(Profiler.Timers_.size()), "Invalid timer ID.");
+    OVK_DEBUG_ASSERT(TimerID >= 0 && TimerID < int(Profiler.Timers_.Count()), "Invalid timer ID.");
     MPI_Barrier(Comm);
-    StartTimer(Profiler.Timers_[TimerID].second);
+    StartTimer(Profiler.Timers_(TimerID).second);
   }
 
 }
 
-inline void EndProfile(profiler &Profiler, int TimerID) {
+OVK_FORCE_INLINE void EndProfile(profiler &Profiler, int TimerID) {
 
   if (Profiler.Enabled_) {
-    OVK_DEBUG_ASSERT(TimerID >= 0 && TimerID < int(Profiler.Timers_.size()), "Invalid timer ID.");
-    StopTimer(Profiler.Timers_[TimerID].second);
+    OVK_DEBUG_ASSERT(TimerID >= 0 && TimerID < int(Profiler.Timers_.Count()), "Invalid timer ID.");
+    StopTimer(Profiler.Timers_(TimerID).second);
   }
 
 }

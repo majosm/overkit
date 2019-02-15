@@ -78,21 +78,21 @@ namespace text_processing_internal {
 
 template <typename T> void StringPrintAppend(std::string &String, const std::string &Format,
   const T &Arg) {
-  std::vector<char> Buffer(1);
-  int WriteSize = snprintf(Buffer.data(), 1, Format.c_str(), Arg);
-  Buffer.resize(WriteSize+1);
-  std::sprintf(Buffer.data(), Format.c_str(), Arg);
-  String.append(Buffer.begin(), Buffer.begin()+WriteSize);
+  array<char> Buffer({1});
+  int WriteSize = snprintf(Buffer.Data(), 1, Format.c_str(), Arg);
+  Buffer.Resize({WriteSize+1});
+  std::sprintf(Buffer.Data(), Format.c_str(), Arg);
+  String.append(Buffer.LinearBegin(), Buffer.LinearBegin()+WriteSize);
 }
 
 // Specialization for std::string to avoid explicit use of .c_str() everywhere
 inline void StringPrintAppend(std::string &String, const std::string &Format, const std::string
   &Arg) {
-  std::vector<char> Buffer(1);
-  int WriteSize = snprintf(Buffer.data(), 1, Format.c_str(), Arg.c_str());
-  Buffer.resize(WriteSize+1);
-  std::sprintf(Buffer.data(), Format.c_str(), Arg.c_str());
-  String.append(Buffer.begin(), Buffer.begin()+WriteSize);
+  array<char> Buffer({1});
+  int WriteSize = snprintf(Buffer.Data(), 1, Format.c_str(), Arg.c_str());
+  Buffer.Resize({WriteSize+1});
+  std::sprintf(Buffer.Data(), Format.c_str(), Arg.c_str());
+  String.append(Buffer.LinearBegin(), Buffer.LinearBegin()+WriteSize);
 }
 
 template <typename T1, typename T2, typename... Ts> void StringPrintAppend(std::string &String,
