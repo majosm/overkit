@@ -6,11 +6,10 @@
 #include "MPITest.hpp"
 
 #include <ovk/core/Comm.hpp>
+#include <ovk/core/Elem.hpp>
 #include <ovk/core/Range.hpp>
 
 #include <mpi.h>
-
-#include <array>
 
 using testing::ElementsAre;
 
@@ -44,11 +43,10 @@ TEST_F(RangeTests, ConstructAssigned2D) {
 
   if (TestComm().Rank() != 0) return;
 
-  ovk::range Range(2, std::array<int,2>({1,2}), std::array<int,2>({3,4}));
+  ovk::range Range(2, ovk::elem<int,2>{1,2}, ovk::elem<int,2>{3,4});
 
   EXPECT_EQ(Range.Dimension(), 2);
   EXPECT_THAT(Range.Begin(), ElementsAre(1,2,0));
-  EXPECT_THAT(Range.Begin<2>(), ElementsAre(1,2));
   EXPECT_EQ(Range.Begin(0), 1);
   EXPECT_EQ(Range.Begin(1), 2);
   EXPECT_EQ(Range.Begin(2), 0);
@@ -57,7 +55,6 @@ TEST_F(RangeTests, ConstructAssigned2D) {
   EXPECT_EQ(BeginData[1], 2);
   EXPECT_EQ(BeginData[2], 0);
   EXPECT_THAT(Range.End(), ElementsAre(3,4,1));
-  EXPECT_THAT(Range.End<2>(), ElementsAre(3,4));
   EXPECT_EQ(Range.End(0), 3);
   EXPECT_EQ(Range.End(1), 4);
   EXPECT_EQ(Range.End(2), 1);
@@ -72,7 +69,7 @@ TEST_F(RangeTests, ConstructAssigned3D) {
 
   if (TestComm().Rank() != 0) return;
 
-  ovk::range Range(3, std::array<int,3>({1,2,3}), std::array<int,3>({4,5,6}));
+  ovk::range Range(3, ovk::elem<int,3>{1,2,3}, ovk::elem<int,3>{4,5,6});
 
   EXPECT_EQ(Range.Dimension(), 3);
   EXPECT_THAT(Range.Begin(), ElementsAre(1,2,3));
@@ -98,7 +95,7 @@ TEST_F(RangeTests, CopyConstruct2D) {
 
   if (TestComm().Rank() != 0) return;
 
-  ovk::range Range1(2, std::array<int,2>({1,2}), std::array<int,2>({3,4}));
+  ovk::range Range1(2, ovk::elem<int,2>{1,2}, ovk::elem<int,2>{3,4});
   ovk::range Range2(Range1);
 
   EXPECT_EQ(Range2.Dimension(), 2);
@@ -111,7 +108,7 @@ TEST_F(RangeTests, CopyConstruct3D) {
 
   if (TestComm().Rank() != 0) return;
 
-  ovk::range Range1(3, std::array<int,3>({1,2,3}), std::array<int,3>({4,5,6}));
+  ovk::range Range1(3, ovk::elem<int,3>{1,2,3}, ovk::elem<int,3>{4,5,6});
   ovk::range Range2(Range1);
 
   EXPECT_EQ(Range2.Dimension(), 3);
@@ -124,7 +121,7 @@ TEST_F(RangeTests, CopyAssign2D) {
 
   if (TestComm().Rank() != 0) return;
 
-  ovk::range Range1(2, std::array<int,2>({1,2}), std::array<int,2>({3,4}));
+  ovk::range Range1(2, ovk::elem<int,2>{1,2}, ovk::elem<int,2>{3,4});
   ovk::range Range2;
 
   Range2 = Range1;
@@ -139,7 +136,7 @@ TEST_F(RangeTests, CopyAssign3D) {
 
   if (TestComm().Rank() != 0) return;
 
-  ovk::range Range1(3, std::array<int,3>({1,2,3}), std::array<int,3>({4,5,6}));
+  ovk::range Range1(3, ovk::elem<int,3>{1,2,3}, ovk::elem<int,3>{4,5,6});
   ovk::range Range2;
 
   Range2 = Range1;
@@ -156,7 +153,7 @@ TEST_F(RangeTests, Equality) {
 
   ovk::range Range1, Range2;
 
-  Range1 = ovk::range(2, std::array<int,2>({1,2}), std::array<int,2>({3,4}));
+  Range1 = ovk::range(2, ovk::elem<int,2>{1,2}, ovk::elem<int,2>{3,4});
 
   // Self
   EXPECT_TRUE(Range1 == Range1);
@@ -166,15 +163,15 @@ TEST_F(RangeTests, Equality) {
   EXPECT_TRUE(Range1 == Range2);
 
   // Different dimension
-  Range2 = ovk::range(3, std::array<int,3>({1,2,0}), std::array<int,3>({3,4,1}));
+  Range2 = ovk::range(3, ovk::elem<int,3>{1,2,0}, ovk::elem<int,3>{3,4,1});
   EXPECT_TRUE(Range1 != Range2);
 
   // Different Begin
-  Range2 = ovk::range(2, std::array<int,2>({1,3}), std::array<int,2>({3,4}));
+  Range2 = ovk::range(2, ovk::elem<int,2>{1,3}, ovk::elem<int,2>{3,4});
   EXPECT_TRUE(Range1 != Range2);
 
   // Different End
-  Range2 = ovk::range(2, std::array<int,2>({1,2}), std::array<int,2>({2,4}));
+  Range2 = ovk::range(2, ovk::elem<int,2>{1,2}, ovk::elem<int,2>{2,4});
   EXPECT_TRUE(Range1 != Range2);
 
 }
@@ -188,15 +185,13 @@ TEST_F(RangeTests, Size2D) {
   // Empty
   Range = ovk::range(2);
   EXPECT_THAT(Range.Size(), ElementsAre(0,0,1));
-  EXPECT_THAT(Range.Size<2>(), ElementsAre(0,0));
   EXPECT_EQ(Range.Size(0), 0);
   EXPECT_EQ(Range.Size(1), 0);
   EXPECT_EQ(Range.Size(2), 1);
 
   // Non-empty
-  Range = ovk::range(2, std::array<int,2>({1,2}), std::array<int,2>({4,3}));
+  Range = ovk::range(2, ovk::elem<int,2>{1,2}, ovk::elem<int,2>{4,3});
   EXPECT_THAT(Range.Size(), ElementsAre(3,1,1));
-  EXPECT_THAT(Range.Size<2>(), ElementsAre(3,1));
   EXPECT_EQ(Range.Size(0), 3);
   EXPECT_EQ(Range.Size(1), 1);
   EXPECT_EQ(Range.Size(2), 1);
@@ -217,7 +212,7 @@ TEST_F(RangeTests, Size3D) {
   EXPECT_EQ(Range.Size(2), 0);
 
   // Non-empty
-  Range = ovk::range(3, std::array<int,3>({1,2,3}), std::array<int,3>({6,5,4}));
+  Range = ovk::range(3, ovk::elem<int,3>{1,2,3}, ovk::elem<int,3>{6,5,4});
   EXPECT_THAT(Range.Size(), ElementsAre(5,3,1));
   EXPECT_EQ(Range.Size(0), 5);
   EXPECT_EQ(Range.Size(1), 3);
@@ -236,7 +231,7 @@ TEST_F(RangeTests, Count2D) {
   EXPECT_EQ(Range.Count(), 0);
 
   // Non-empty
-  Range = ovk::range(2, std::array<int,2>({1,2}), std::array<int,2>({4,3}));
+  Range = ovk::range(2, ovk::elem<int,2>{1,2}, ovk::elem<int,2>{4,3});
   EXPECT_EQ(Range.Count(), 3);
 
 }
@@ -252,7 +247,7 @@ TEST_F(RangeTests, Count3D) {
   EXPECT_EQ(Range.Count(), 0);
 
   // Non-empty
-  Range = ovk::range(3, std::array<int,3>({1,2,3}), std::array<int,3>({6,5,4}));
+  Range = ovk::range(3, ovk::elem<int,3>{1,2,3}, ovk::elem<int,3>{6,5,4});
   EXPECT_EQ(Range.Count(), 15);
 
 }
@@ -268,7 +263,7 @@ TEST_F(RangeTests, IsEmpty2D) {
   EXPECT_TRUE(Range.Empty());
 
   // Non-empty
-  Range = ovk::range(2, std::array<int,2>({1,2}), std::array<int,2>({4,3}));
+  Range = ovk::range(2, ovk::elem<int,2>{1,2}, ovk::elem<int,2>{4,3});
   EXPECT_FALSE(Range.Empty());
 
 }
@@ -284,7 +279,7 @@ TEST_F(RangeTests, IsEmpty3D) {
   EXPECT_TRUE(Range.Empty());
 
   // Non-empty
-  Range = ovk::range(3, std::array<int,3>({1,2,3}), std::array<int,3>({6,5,4}));
+  Range = ovk::range(3, ovk::elem<int,3>{1,2,3}, ovk::elem<int,3>{6,5,4});
   EXPECT_FALSE(Range.Empty());
 
 }
@@ -293,8 +288,8 @@ TEST_F(RangeTests, TupleToIndex2DRowMajor) {
 
   if (TestComm().Rank() != 0) return;
 
-  ovk::range Range(2, std::array<int,2>({2,2}), std::array<int,2>({4,5}));
-  std::array<int,2> Tuple;
+  ovk::range Range(2, ovk::elem<int,2>({2,2}), ovk::elem<int,2>({4,5}));
+  ovk::elem<int,2> Tuple;
   long long Index;
 
   // Lower i, lower j corner
@@ -323,8 +318,8 @@ TEST_F(RangeTests, TupleToIndex2DColumnMajor) {
 
   if (TestComm().Rank() != 0) return;
 
-  ovk::range Range(2, std::array<int,2>({2,2}), std::array<int,2>({4,5}));
-  std::array<int,2> Tuple;
+  ovk::range Range(2, ovk::elem<int,2>({2,2}), ovk::elem<int,2>({4,5}));
+  ovk::elem<int,2> Tuple;
   long long Index;
 
   // Lower i, lower j corner
@@ -353,8 +348,8 @@ TEST_F(RangeTests, TupleToIndex3DRowMajor) {
 
   if (TestComm().Rank() != 0) return;
 
-  ovk::range Range(3, std::array<int,3>({2,2,2}), std::array<int,3>({4,5,6}));
-  std::array<int,3> Tuple;
+  ovk::range Range(3, ovk::elem<int,3>({2,2,2}), ovk::elem<int,3>({4,5,6}));
+  ovk::elem<int,3> Tuple;
   long long Index;
 
   // Lower i, lower j, lower k corner
@@ -403,8 +398,8 @@ TEST_F(RangeTests, TupleToIndex3DColumnMajor) {
 
   if (TestComm().Rank() != 0) return;
 
-  ovk::range Range(3, std::array<int,3>({2,2,2}), std::array<int,3>({4,5,6}));
-  std::array<int,3> Tuple;
+  ovk::range Range(3, ovk::elem<int,3>({2,2,2}), ovk::elem<int,3>({4,5,6}));
+  ovk::elem<int,3> Tuple;
   long long Index;
 
   // Lower i, lower j, lower k corner
@@ -453,9 +448,9 @@ TEST_F(RangeTests, IndexToTuple2DRowMajor) {
 
   if (TestComm().Rank() != 0) return;
 
-  ovk::range Range(2, std::array<int,2>({2,2}), std::array<int,2>({4,5}));
-  std::array<int,OVK_MAX_DIMS> Tuple;
-  std::array<int,2> Tuple2D;
+  ovk::range Range(2, ovk::elem<int,2>({2,2}), ovk::elem<int,2>({4,5}));
+  ovk::elem<int,OVK_MAX_DIMS> Tuple;
+  ovk::elem<int,2> Tuple2D;
 
   // Lower i, lower j corner
   Tuple = ovk::RangeIndexToTuple(Range, ovk::array_layout::ROW_MAJOR, 0);
@@ -487,9 +482,9 @@ TEST_F(RangeTests, IndexToTuple2DColumnMajor) {
 
   if (TestComm().Rank() != 0) return;
 
-  ovk::range Range(2, std::array<int,2>({2,2}), std::array<int,2>({4,5}));
-  std::array<int,OVK_MAX_DIMS> Tuple;
-  std::array<int,2> Tuple2D;
+  ovk::range Range(2, ovk::elem<int,2>({2,2}), ovk::elem<int,2>({4,5}));
+  ovk::elem<int,OVK_MAX_DIMS> Tuple;
+  ovk::elem<int,2> Tuple2D;
 
   // Lower i, lower j corner
   Tuple = ovk::RangeIndexToTuple(Range, ovk::array_layout::COLUMN_MAJOR, 0);
@@ -521,8 +516,8 @@ TEST_F(RangeTests, IndexToTuple3DRowMajor) {
 
   if (TestComm().Rank() != 0) return;
 
-  ovk::range Range(3, std::array<int,3>({2,2,2}), std::array<int,3>({4,5,6}));
-  std::array<int,OVK_MAX_DIMS> Tuple;
+  ovk::range Range(3, ovk::elem<int,3>({2,2,2}), ovk::elem<int,3>({4,5,6}));
+  ovk::elem<int,OVK_MAX_DIMS> Tuple;
 
   // Lower i, lower j, lower k corner
   Tuple = ovk::RangeIndexToTuple(Range, ovk::array_layout::ROW_MAJOR, 0);
@@ -562,8 +557,8 @@ TEST_F(RangeTests, IndexToTuple3DColumnMajor) {
 
   if (TestComm().Rank() != 0) return;
 
-  ovk::range Range(3, std::array<int,3>({2,2,2}), std::array<int,3>({4,5,6}));
-  std::array<int,OVK_MAX_DIMS> Tuple;
+  ovk::range Range(3, ovk::elem<int,3>({2,2,2}), ovk::elem<int,3>({4,5,6}));
+  ovk::elem<int,OVK_MAX_DIMS> Tuple;
 
   // Lower i, lower j, lower k corner
   Tuple = ovk::RangeIndexToTuple(Range, ovk::array_layout::COLUMN_MAJOR, 0);
@@ -604,15 +599,15 @@ TEST_F(RangeTests, Contains2D) {
   if (TestComm().Rank() != 0) return;
 
   ovk::range Range;
-  std::array<int, 2> Point;
+  ovk::elem<int, 2> Point;
 
   // Inside
-  Range = ovk::range(2, std::array<int,2>({1,2}), std::array<int,2>({4,5}));
+  Range = ovk::range(2, ovk::elem<int,2>{1,2}, ovk::elem<int,2>{4,5});
   Point = {2,3};
   EXPECT_TRUE(ovk::RangeContains(Range, Point));
 
   // Outside
-  Range = ovk::range(2, std::array<int,2>({1,2}), std::array<int,2>({4,5}));
+  Range = ovk::range(2, ovk::elem<int,2>{1,2}, ovk::elem<int,2>{4,5});
   Point = {0,0};
   EXPECT_FALSE(ovk::RangeContains(Range, Point));
 
@@ -628,15 +623,15 @@ TEST_F(RangeTests, Contains3D) {
   if (TestComm().Rank() != 0) return;
 
   ovk::range Range;
-  std::array<int, 3> Point;
+  ovk::elem<int, 3> Point;
 
   // Inside
-  Range = ovk::range(3, std::array<int,3>({1,2,3}), std::array<int,3>({4,5,6}));
+  Range = ovk::range(3, ovk::elem<int,3>{1,2,3}, ovk::elem<int,3>{4,5,6});
   Point = {2,3,4};
   EXPECT_TRUE(ovk::RangeContains(Range, Point));
 
   // Outside
-  Range = ovk::range(3, std::array<int,3>({1,2,3}), std::array<int,3>({4,5,6}));
+  Range = ovk::range(3, ovk::elem<int,3>{1,2,3}, ovk::elem<int,3>{4,5,6});
   Point = {0,0,0};
   EXPECT_FALSE(ovk::RangeContains(Range, Point));
 

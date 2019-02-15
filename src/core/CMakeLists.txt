@@ -47,9 +47,12 @@ set(PUBLIC_HEADERS
   Context.hpp
   DataType.hpp
   Domain.hpp
+  Elem.hpp
+  Elem.inl
   Exchange.hpp
   Global.hpp
   Grid.hpp
+  Interval.hpp
   Misc.hpp
   Misc.inl
   Range.hpp

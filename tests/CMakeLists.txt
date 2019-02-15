@@ -41,7 +41,9 @@ set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_SAVED})
 
 set(TEST_SOURCES
   ArrayTraitsTests.cpp
+  ElemTests.cpp
   ExampleTests.cpp
+  IntervalTests.cpp
   RangeTests.cpp
 )
 
