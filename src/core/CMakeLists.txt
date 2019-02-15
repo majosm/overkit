@@ -34,6 +34,7 @@ set(SOURCES
 )
 
 set(PUBLIC_HEADERS
+  Array.hpp
   ArrayTraits.hpp
   ArrayView.hpp
   AssemblyOptions.hpp
