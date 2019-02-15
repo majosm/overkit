@@ -35,6 +35,7 @@ set(SOURCES
 
 set(PUBLIC_HEADERS
   ArrayTraits.hpp
+  ArrayView.hpp
   AssemblyOptions.hpp
   Box.hpp
   Box.inl

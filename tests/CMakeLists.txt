@@ -41,6 +41,7 @@ set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_SAVED})
 
 set(TEST_SOURCES
   ArrayTraitsTests.cpp
+  ArrayViewTests.cpp
   ElemTests.cpp
   ExampleTests.cpp
   IndexerTests.cpp
