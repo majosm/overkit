@@ -35,10 +35,11 @@ endif()
 
 foreach(EXAMPLE ${C_TARGETS})
 
-  set(BASE_C_FLAGS_DEBUG -O0 ${WARNING_C_FLAGS})
+  set(BASE_C_FLAGS_DEBUG ${WARNING_C_FLAGS})
   set(BASE_C_FLAGS_RELEASE ${OPT_C_FLAGS})
   target_compile_options(${EXAMPLE} PRIVATE
     $<$<CONFIG:Debug>:${BASE_C_FLAGS_DEBUG}>
+    $<$<CONFIG:SlowDebug>:${BASE_C_FLAGS_DEBUG}>
     $<$<CONFIG:Release>:${BASE_C_FLAGS_RELEASE}>
     $<$<CONFIG:RelWithDebInfo>:${BASE_C_FLAGS_RELEASE}>
     $<$<CONFIG:MinSizeRel>:${BASE_C_FLAGS_RELEASE}>
@@ -59,10 +60,11 @@ endforeach()
 
 foreach(EXAMPLE ${CXX_TARGETS})
 
-  set(BASE_CXX_FLAGS_DEBUG -O0 ${WARNING_CXX_FLAGS})
+  set(BASE_CXX_FLAGS_DEBUG ${WARNING_CXX_FLAGS})
   set(BASE_CXX_FLAGS_RELEASE ${OPT_CXX_FLAGS})
   target_compile_options(${EXAMPLE} PRIVATE
     $<$<CONFIG:Debug>:${BASE_CXX_FLAGS_DEBUG}>
+    $<$<CONFIG:SlowDebug>:${BASE_CXX_FLAGS_DEBUG}>
     $<$<CONFIG:Release>:${BASE_CXX_FLAGS_RELEASE}>
     $<$<CONFIG:RelWithDebInfo>:${BASE_CXX_FLAGS_RELEASE}>
     $<$<CONFIG:MinSizeRel>:${BASE_CXX_FLAGS_RELEASE}>

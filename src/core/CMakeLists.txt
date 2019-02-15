@@ -116,10 +116,11 @@ add_dependencies(overkit-core core-headers)
 # Compiling/linking
 #-------------------
 
-set(BASE_CXX_FLAGS_DEBUG -O0 ${WARNING_CXX_FLAGS})
+set(BASE_CXX_FLAGS_DEBUG ${WARNING_CXX_FLAGS})
 set(BASE_CXX_FLAGS_RELEASE ${OPT_CXX_FLAGS})
 target_compile_options(overkit-core PRIVATE
   $<$<CONFIG:Debug>:${BASE_CXX_FLAGS_DEBUG}>
+  $<$<CONFIG:SlowDebug>:${BASE_CXX_FLAGS_DEBUG}>
   $<$<CONFIG:Release>:${BASE_CXX_FLAGS_RELEASE}>
   $<$<CONFIG:RelWithDebInfo>:${BASE_CXX_FLAGS_RELEASE}>
   $<$<CONFIG:MinSizeRel>:${BASE_CXX_FLAGS_RELEASE}>
@@ -183,8 +184,8 @@ add_custom_command(OUTPUT ${BUILT_CONFIG_HEADER}
     -DCONFIG_IN="${CONFIG_HEADER}"
     -DCONFIG_OUT="${BUILT_CONFIG_HEADER}"
     -DCONFIG_OPTIONS=@ONLY
-    -DOVK_RELEASE=$<CONFIG:Release>
-    -DOVK_DEBUG=$<CONFIG:Debug>
+    -DOVK_RELEASE=$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>,$<CONFIG:MinSizeRel>>
+    -DOVK_DEBUG=$<OR:$<CONFIG:Debug>,$<CONFIG:SlowDebug>>
     -DOVK_EXAMPLES=${EXAMPLES}
     -DOVK_TESTS=${TESTS}
     -DOVK_COVERAGE=${COVERAGE}

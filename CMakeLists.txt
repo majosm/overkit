@@ -41,6 +41,38 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/config/modules)
 # Build types and options
 #=========================
 
+# Define SlowDebug build type that doesn't use any optimizations
+set(CMAKE_CXX_FLAGS_SLOWDEBUG ${CMAKE_CXX_FLAGS_DEBUG} CACHE STRING
+  "Flags used by the C++ compiler during slow debug builds." FORCE)
+set(CMAKE_C_FLAGS_SLOWDEBUG ${CMAKE_C_FLAGS_DEBUG} CACHE STRING
+  "Flags used by the C compiler during slow debug builds." FORCE)
+set(CMAKE_EXE_LINKER_FLAGS_SLOWDEBUG ${CMAKE_EXE_LINKER_FLAGS_DEBUG} CACHE STRING
+  "Flags used for linking binaries during slow debug builds." FORCE)
+set(CMAKE_SHARED_LINKER_FLAGS_SLOWDEBUG ${CMAKE_SHARED_LINKER_FLAGS_DEBUG} CACHE STRING
+  "Flags used by the shared libraries linker during slow debug builds." FORCE)
+mark_as_advanced(
+  CMAKE_CXX_FLAGS_SLOWDEBUG
+  CMAKE_C_FLAGS_SLOWDEBUG
+  CMAKE_EXE_LINKER_FLAGS_SLOWDEBUG
+  CMAKE_SHARED_LINKER_FLAGS_SLOWDEBUG
+)
+
+# Use basic optimization flags in debug mode (-Og if available, -O1 otherwise)
+if(NOT DETECTED_DEBUG_OPTIM_FLAG)
+  set(DEBUG_OPTIM_FLAG "" CACHE INTERNAL "")
+  check_cxx_compiler_flag(-Og OG_FLAG_SUPPORTED)
+  if(OG_FLAG_SUPPORTED)
+    set(DEBUG_OPTIM_FLAG -Og CACHE INTERNAL "")
+  else()
+    set(DEBUG_OPTIM_FLAG -O1 CACHE INTERNAL "")
+  endif()
+  set(DETECTED_DEBUG_OPTIM_FLAGS TRUE CACHE INTERNAL "")
+endif()
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${DEBUG_OPTIM_FLAG}" CACHE STRING
+  "Flags used by the C++ compiler during debug builds." FORCE)
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${DEBUG_OPTIM_FLAG}" CACHE STRING
+  "Flags used by the C compiler during debug builds." FORCE)
+
 # Build types
 if(NOT CMAKE_CONFIGURATION_TYPES)
   # Single-configuration generator
@@ -51,7 +83,8 @@ if(NOT CMAKE_CONFIGURATION_TYPES)
     set(BUILD_TYPE_VALUE Release)
   endif()
   set(CMAKE_BUILD_TYPE ${BUILD_TYPE_VALUE} CACHE STRING
-    "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
+    "Choose the type of build, options are: None Debug SlowDebug Release RelWithDebInfo MinSizeRel."
+    FORCE)
 endif()
 
 # Options
@@ -335,7 +368,7 @@ include_directories(${CMAKE_BINARY_DIR}/include)
 # Extra build configuration checks that can't be done at configure time
 add_custom_target(config-check
   COMMAND "${CMAKE_COMMAND}"
-    -DDEBUG=$<CONFIG:Debug>
+    -DDEBUG=$<OR:$<CONFIG:Debug>,$<CONFIG:SlowDebug>>
     -DCOVERAGE=${COVERAGE}
     -P "${CMAKE_SOURCE_DIR}/config/scripts/check-config.cmake"
 )
