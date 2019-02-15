@@ -40,6 +40,7 @@ set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_SAVED})
 #--------------
 
 set(TEST_SOURCES
+  ArrayTraitsTests.cpp
   ExampleTests.cpp
   RangeTests.cpp
 )
