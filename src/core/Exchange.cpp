@@ -1866,12 +1866,10 @@ void Collect(const exchange &Exchange, data_type ValueType, int Count, collect_o
   switch (GridValuesLayout) {
   case array_layout::ROW_MAJOR:
     CollectLayout<array_layout::ROW_MAJOR>(Exchange, ValueType, Count, CollectOp, GridValuesRange,
-      GridValues, DonorValues);
-    break;
+      GridValues, DonorValues); break;
   case array_layout::COLUMN_MAJOR:
     CollectLayout<array_layout::COLUMN_MAJOR>(Exchange, ValueType, Count, CollectOp,
-      GridValuesRange, GridValues, DonorValues);
-    break;
+      GridValuesRange, GridValues, DonorValues); break;
   }
 
 }
@@ -2591,11 +2589,11 @@ void Disperse(const exchange &Exchange, data_type ValueType, int Count, disperse
 
   switch (GridValuesLayout) {
   case array_layout::ROW_MAJOR:
-    return DisperseLayout<array_layout::ROW_MAJOR>(Exchange, ValueType, Count, DisperseOp,
-      ReceiverValues, GridValuesRange, GridValues);
+    DisperseLayout<array_layout::ROW_MAJOR>(Exchange, ValueType, Count, DisperseOp,
+      ReceiverValues, GridValuesRange, GridValues); break;
   case array_layout::COLUMN_MAJOR:
-    return DisperseLayout<array_layout::COLUMN_MAJOR>(Exchange, ValueType, Count, DisperseOp,
-      ReceiverValues, GridValuesRange, GridValues);
+    DisperseLayout<array_layout::COLUMN_MAJOR>(Exchange, ValueType, Count, DisperseOp,
+      ReceiverValues, GridValuesRange, GridValues); break;
   }
 
 }
