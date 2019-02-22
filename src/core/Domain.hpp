@@ -14,6 +14,7 @@
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Grid.hpp>
 #include <ovk/core/Logger.hpp>
+#include <ovk/core/Profiler.hpp>
 
 #include <mpi.h>
 
@@ -40,6 +41,7 @@ struct domain {
 
   mutable core::logger *Logger_;
   mutable core::error_handler *ErrorHandler_;
+  mutable core::profiler Profiler_;
   std::string Name_;
   int NumDims_;
   core::comm Comm_;
@@ -79,6 +81,7 @@ namespace core {
 const comm &GetDomainComm(const domain &Domain);
 logger &GetDomainLogger(const domain &Domain);
 error_handler &GetDomainErrorHandler(const domain &Domain);
+profiler &GetDomainProfiler(const domain &Domain);
 }
 
 void CreateGridLocal(domain &Domain, int GridID, const grid_params &Params);

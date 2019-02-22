@@ -13,6 +13,7 @@
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Logger.hpp>
 #include <ovk/core/PartitionHash.hpp>
+#include <ovk/core/Profiler.hpp>
 #include <ovk/core/Request.hpp>
 
 #include <mpi.h>
@@ -47,6 +48,7 @@ struct exchange {
   const connectivity *Connectivity_;
   mutable core::logger *Logger_;
   mutable core::error_handler *ErrorHandler_;
+  mutable core::profiler *Profiler_;
   int NumDims_;
   core::comm Comm_;
 
@@ -86,7 +88,7 @@ struct exchange_info {
 namespace core {
 
 void CreateExchange(exchange &Exchange, const connectivity &Connectivity, logger &Logger,
-  error_handler &ErrorHandler);
+  error_handler &ErrorHandler, profiler &Profiler);
 void DestroyExchange(exchange &Exchange);
 
 void CreateExchangeInfo(exchange_info &Info, const exchange *Exchange, const comm &Comm);

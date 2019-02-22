@@ -210,29 +210,27 @@ error ImportXINTOUT(domain &Domain, const std::string &HOPath, const std::string
 
   const core::comm &Comm = core::GetDomainComm(Domain);
 
-  core::profiler Profiler;
-  core::CreateProfiler(Profiler, Comm);
-  if (OVK_TIMERS) core::EnableProfiler(Profiler);
-  core::AddProfilerTimer(Profiler, "XINTOUT::Create");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Read");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Read::MPI-IO::Open");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Read::MPI-IO::Close");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Read::MPI-IO::Read");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Read::MPI-IO::Other");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Match");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Match::MapToBins");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Match::Handshake");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Match::SendToBins");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Match::FillConnectionData");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Match::RecvFromBins");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Match::Unpack");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Distribute");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Distribute::MapToBins");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Distribute::RetrieveBins");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Distribute::FindRanks");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Distribute::Handshake");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Distribute::SendData");
+  core::profiler &Profiler = core::GetDomainProfiler(Domain);
   core::AddProfilerTimer(Profiler, "XINTOUT::Import");
+  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Read");
+  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Read::MPI-IO::Open");
+  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Read::MPI-IO::Close");
+  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Read::MPI-IO::Read");
+  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Read::MPI-IO::Other");
+  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Match");
+  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Match::MapToBins");
+  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Match::Handshake");
+  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Match::SendToBins");
+  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Match::FillConnectionData");
+  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Match::RecvFromBins");
+  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Match::Unpack");
+  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Distribute");
+  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Distribute::MapToBins");
+  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Distribute::RetrieveBins");
+  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Distribute::FindRanks");
+  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Distribute::Handshake");
+  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Distribute::SendData");
+  core::AddProfilerTimer(Profiler, "XINTOUT::Import::SetConnectivities");
 
   MPI_Barrier(Comm);
 
@@ -272,17 +270,17 @@ error ImportXINTOUT(domain &Domain, const std::string &HOPath, const std::string
       }
     }
 
-    int CreateTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Create");
-    int ReadTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Read");
-    int MatchTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Match");
-    int DistributeTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Distribute");
     int ImportTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import");
+    int ReadTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read");
+    int MatchTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Match");
+    int DistributeTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Distribute");
+    int SetConnectivitiesTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::SetConnectivities");
 
-    core::StartProfileSync(Profiler, CreateTime, Comm);
+    core::StartProfileSync(Profiler, ImportTime, Comm);
+
     xintout XINTOUT;
     CreateXINTOUT(XINTOUT, NumDims, Comm, NumGrids, NumLocalGrids, LocalGridIDs,
       LocalGridNames, LocalGridComms, LocalGridGlobalSizes, Logger, ErrorHandler);
-    core::EndProfile(Profiler, CreateTime);
 
     core::StartProfileSync(Profiler, ReadTime, Comm);
     error Error = ReadXINTOUT(XINTOUT, HOPath, XPath, ReadGranularityAdjust, MPIInfo, Profiler);
@@ -299,16 +297,13 @@ error ImportXINTOUT(domain &Domain, const std::string &HOPath, const std::string
     DistributeConnectivityData(XINTOUT, LocalGrids, LocalDonors, LocalReceivers, Profiler);
     core::EndProfile(Profiler, DistributeTime);
 
-    core::StartProfileSync(Profiler, ImportTime, Comm);
+    core::StartProfileSync(Profiler, SetConnectivitiesTime, Comm);
     ImportConnectivityData(NumGrids, NumLocalGrids, LocalGridIDs, LocalDonors, LocalReceivers,
       Domain);
+    core::EndProfile(Profiler, SetConnectivitiesTime);
+
     core::EndProfile(Profiler, ImportTime);
 
-  }
-
-  std::string ProfileTimesString = core::WriteProfileTimes(Profiler);
-  if (Comm.Rank() == 0) {
-    printf("%s", ProfileTimesString.c_str());
   }
 
   return error::NONE;
@@ -456,8 +451,8 @@ error ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath, endian &
   core::logger &Logger = *XINTOUT.Logger;
   core::error_handler &ErrorHandler = *XINTOUT.ErrorHandler;
 
-  int MPIIOOpenTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Open");
-  int MPIIOCloseTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Close");
+  int MPIIOOpenTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Open");
+  int MPIIOCloseTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Close");
 
   error Error = error::NONE;
 
@@ -636,7 +631,7 @@ error ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath, endian &
 
 bool DetectFormat(MPI_File HOFile, endian &Endian, xintout_format &Format, core::profiler &Profiler) {
 
-  int MPIIOReadTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Read");
+  int MPIIOReadTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Read");
 
   unsigned char InitialBytes[sizeof(int)];
   MPI_Status Status;
@@ -685,8 +680,8 @@ error ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath,
   core::logger &Logger = *XINTOUTGrid.Logger;
   core::error_handler &ErrorHandler = *XINTOUTGrid.ErrorHandler;
 
-  int MPIIOOpenTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Open");
-  int MPIIOCloseTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Close");
+  int MPIIOOpenTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Open");
+  int MPIIOCloseTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Close");
 
   error Error = error::NONE;
 
@@ -1044,9 +1039,9 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
     MPI_Offset DatasetOffset, ReadOffset;
     int ReadSize;
 
-    int MPIIOOpenTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Open");
-    int MPIIOCloseTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Close");
-    int MPIIOOtherTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Other");
+    int MPIIOOpenTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Open");
+    int MPIIOCloseTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Close");
+    int MPIIOOtherTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Other");
 
     core::StartProfileSync(Profiler, MPIIOOpenTime, ChunkComm);
     // MPI_File_open missing const qualifier for path string on some platforms
@@ -1368,9 +1363,9 @@ error ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath,
     MPI_Offset DatasetOffset, ReadOffset;
     int ReadSize;
 
-    int MPIIOOpenTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Open");
-    int MPIIOCloseTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Close");
-    int MPIIOOtherTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Other");
+    int MPIIOOpenTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Open");
+    int MPIIOCloseTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Close");
+    int MPIIOOtherTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Other");
 
     core::StartProfileSync(Profiler, MPIIOOpenTime, ChunkComm);
     // MPI_File_open missing const qualifier for path string on some platforms
@@ -1495,12 +1490,12 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
 
   core::LogStatus(Logger, Comm.Rank() == 0, 0, "Matching donors and receivers...");
 
-  int MapToBinsTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Match::MapToBins");
-  int HandshakeTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Match::Handshake");
-  int SendToBinsTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Match::SendToBins");
-  int FillConnectionDataTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Match::FillConnectionData");
-  int RecvFromBinsTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Match::RecvFromBins");
-  int UnpackTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Match::Unpack");
+  int MapToBinsTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Match::MapToBins");
+  int HandshakeTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Match::Handshake");
+  int SendToBinsTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Match::SendToBins");
+  int FillConnectionDataTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Match::FillConnectionData");
+  int RecvFromBinsTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Match::RecvFromBins");
+  int UnpackTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Match::Unpack");
 
   int NumGrids = XINTOUT.NumGrids;
   int NumLocalGrids = XINTOUT.NumLocalGrids;
@@ -1943,11 +1938,11 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
   int NumDims = XINTOUTGrid.NumDims;
   const core::comm &Comm = XINTOUTGrid.Comm;
 
-  int MapToBinsTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Distribute::MapToBins");
-  int RetrieveBinsTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Distribute::RetrieveBins");
-  int FindRanksTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Distribute::FindRanks");
-  int HandshakeTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Distribute::Handshake");
-  int SendDataTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Distribute::SendData");
+  int MapToBinsTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Distribute::MapToBins");
+  int RetrieveBinsTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Distribute::RetrieveBins");
+  int FindRanksTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Distribute::FindRanks");
+  int HandshakeTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Distribute::Handshake");
+  int SendDataTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Distribute::SendData");
 
   const xintout_donors &XINTOUTDonors = XINTOUTGrid.Donors;
   const xintout_receivers &XINTOUTReceivers = XINTOUTGrid.Receivers;
@@ -2870,7 +2865,7 @@ void Chunkify(long long Count, int MaxChunks, long long TargetChunkSize, int Adj
 int File_read_all_endian(MPI_File File, void *Buffer, int Count, MPI_Datatype DataType,
   endian Endian, MPI_Status *Status, core::profiler &Profiler, const core::comm &Comm) {
 
-  int MPIIOReadTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Read");
+  int MPIIOReadTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Read");
   core::StartProfileSync(Profiler, MPIIOReadTime, Comm);
   int MPIError = MPI_File_read_all(File, Buffer, Count, DataType, Status);
   core::EndProfile(Profiler, MPIIOReadTime);
@@ -2890,7 +2885,7 @@ int File_read_all_endian(MPI_File File, void *Buffer, int Count, MPI_Datatype Da
 int File_read_at_endian(MPI_File File, MPI_Offset Offset, void *Buffer, int Count,
   MPI_Datatype DataType, endian Endian, MPI_Status *Status, core::profiler &Profiler) {
 
-  int MPIIOReadTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Read::MPI-IO::Read");
+  int MPIIOReadTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Read");
   core::StartProfile(Profiler, MPIIOReadTime);
   int MPIError = MPI_File_read_at(File, Offset, Buffer, Count, DataType, Status);
   core::EndProfile(Profiler, MPIIOReadTime);

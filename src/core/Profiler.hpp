@@ -51,11 +51,11 @@ void DestroyProfiler(profiler &Profiler);
 void EnableProfiler(profiler &Profiler);
 void DisableProfiler(profiler &Profiler);
 
-bool TimerExists(const profiler &Profiler, const std::string &TimerName);
-int AddProfilerTimer(profiler &Profiler, const std::string &TimerName);
-void RemoveProfilerTimer(profiler &Profiler, const std::string &TimerName);
-
-int GetProfilerTimerID(const profiler &Profiler, const std::string &TimerName);
+// Use const char * instead of std::string so calls have minimal overhead when profiler is disabled
+bool TimerExists(const profiler &Profiler, const char *TimerName);
+int AddProfilerTimer(profiler &Profiler, const char *TimerName);
+void RemoveProfilerTimer(profiler &Profiler, const char *TimerName);
+int GetProfilerTimerID(const profiler &Profiler, const char *TimerName);
 
 OVK_FORCE_INLINE void StartProfile(profiler &Profiler, int TimerID);
 OVK_FORCE_INLINE void StartProfileSync(profiler &Profiler, int TimerID, const comm &Comm);

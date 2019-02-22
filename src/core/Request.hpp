@@ -53,6 +53,10 @@ private:
     virtual ~concept() {}
     virtual void Wait() = 0;
     virtual array_view<MPI_Request> MPIRequests() = 0;
+    virtual void StartProfileMemAlloc() const = 0;
+    virtual void EndProfileMemAlloc() const = 0;
+    virtual void StartProfileMPI() const = 0;
+    virtual void EndProfileMPI() const = 0;
   };
 
   template <typename T> class model : public concept {
@@ -66,6 +70,18 @@ private:
     virtual array_view<MPI_Request> MPIRequests() override {
       return Request_.MPIRequests();
     }
+    virtual void StartProfileMemAlloc() const override {
+      Request_.StartProfileMemAlloc();
+    }
+    virtual void EndProfileMemAlloc() const override {
+      Request_.EndProfileMemAlloc();
+    }
+    virtual void StartProfileMPI() const override {
+      Request_.StartProfileMPI();
+    }
+    virtual void EndProfileMPI() const override {
+      Request_.EndProfileMPI();
+    }
   private:
     T Request_;
   };
@@ -74,6 +90,22 @@ private:
 
   array_view<MPI_Request> MPIRequests() {
     return Request_->MPIRequests();
+  }
+
+  void StartProfileMemAlloc() {
+    Request_->StartProfileMemAlloc();
+  }
+
+  void EndProfileMemAlloc() {
+    Request_->EndProfileMemAlloc();
+  }
+
+  void StartProfileMPI() {
+    Request_->StartProfileMPI();
+  }
+
+  void EndProfileMPI() {
+    Request_->EndProfileMPI();
   }
 
 };

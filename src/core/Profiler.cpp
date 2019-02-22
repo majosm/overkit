@@ -72,63 +72,95 @@ inline array<profiler::timer_entry>::const_iterator FindTimer(const profiler &Pr
 
 }
 
-bool TimerExists(const profiler &Profiler, const std::string &TimerName) {
+bool TimerExists(const profiler &Profiler, const char *TimerName) {
 
-  return FindTimer(Profiler, TimerName) != Profiler.Timers_.LinearEnd();
+  if (Profiler.Enabled_) {
+    return FindTimer(Profiler, std::string(TimerName)) != Profiler.Timers_.LinearEnd();
+  } else {
+    return false;
+  }
 
 }
 
-int AddProfilerTimer(profiler &Profiler, const std::string &TimerName) {
+int AddProfilerTimer(profiler &Profiler, const char *TimerName) {
 
-  auto Iter = FindTimer(Profiler, TimerName);
+  if (Profiler.Enabled_) {
 
-  if (Iter == Profiler.Timers_.LinearEnd()) {
+    std::string TimerNameString(TimerName);
 
-    profiler_internal::timer Timer;
-    ResetTimer(Timer);
+    auto Iter = FindTimer(Profiler, TimerNameString);
 
-    Profiler.Timers_.Append(TimerName, Timer);
+    if (Iter == Profiler.Timers_.LinearEnd()) {
 
-    return Profiler.Timers_.Count()-1;
+      profiler_internal::timer Timer;
+      ResetTimer(Timer);
+
+      Profiler.Timers_.Append(TimerNameString, Timer);
+
+      return Profiler.Timers_.Count()-1;
+
+    } else {
+
+      return std::distance(Profiler.Timers_.LinearBegin(), Iter);
+
+    }
 
   } else {
 
+    return -1;
+
+  }
+
+}
+
+void RemoveProfilerTimer(profiler &Profiler, const char *TimerName) {
+
+  if (Profiler.Enabled_) {
+
+    auto Iter = FindTimer(Profiler, std::string(TimerName));
+
+    if (Iter != Profiler.Timers_.LinearEnd()) {
+
+      int Index = std::distance(Profiler.Timers_.LinearBegin(), Iter);
+
+      int NumTimers = Profiler.Timers_.Count();
+
+      array<profiler::timer_entry> NewTimers({NumTimers-1});
+
+      for (int iTimer = 0; iTimer < Index; ++iTimer) {
+        NewTimers(iTimer) = std::move(Profiler.Timers_(iTimer));
+      }
+      for (int iTimer = Index+1; iTimer < NumTimers; ++iTimer) {
+        NewTimers(iTimer-1) = std::move(Profiler.Timers_(iTimer));
+      }
+
+      Profiler.Timers_ = std::move(NewTimers);
+
+    }
+
+  }
+
+}
+
+int GetProfilerTimerID(const profiler &Profiler, const char *TimerName) {
+
+  if (Profiler.Enabled_) {
+
+    std::string TimerNameString(TimerName);
+
+    auto Iter = FindTimer(Profiler, TimerNameString);
+
+    OVK_DEBUG_ASSERT(Iter != Profiler.Timers_.end(), "Timer '%s' does not exist.", TimerNameString);
+    OVK_DEBUG_ASSERT(Iter != Profiler.Timers_.LinearEnd(), "Timer '%s' does not exist.",
+      TimerNameString);
+
     return std::distance(Profiler.Timers_.LinearBegin(), Iter);
 
+  } else {
+
+    return -1;
+
   }
-
-}
-
-void RemoveProfilerTimer(profiler &Profiler, const std::string &TimerName) {
-
-  auto Iter = FindTimer(Profiler, TimerName);
-
-  OVK_DEBUG_ASSERT(Iter != Profiler.Timers_.LinearEnd(), "Timer does not exist.");
-
-  int Index = std::distance(Profiler.Timers_.LinearBegin(), Iter);
-
-  int NumTimers = Profiler.Timers_.Count();
-
-  array<profiler::timer_entry> NewTimers({NumTimers-1});
-
-  for (int iTimer = 0; iTimer < Index; ++iTimer) {
-    NewTimers(iTimer) = std::move(Profiler.Timers_(iTimer));
-  }
-  for (int iTimer = Index+1; iTimer < NumTimers; ++iTimer) {
-    NewTimers(iTimer-1) = std::move(Profiler.Timers_(iTimer));
-  }
-
-  Profiler.Timers_ = std::move(NewTimers);
-
-}
-
-int GetProfilerTimerID(const profiler &Profiler, const std::string &TimerName) {
-
-  auto Iter = FindTimer(Profiler, TimerName);
-
-  OVK_DEBUG_ASSERT(Iter != Profiler.Timers_.LinearEnd(), "Timer does not exist.");
-
-  return std::distance(Profiler.Timers_.LinearBegin(), Iter);
 
 }
 

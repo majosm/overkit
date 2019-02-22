@@ -16,6 +16,7 @@
 #include "ovk/core/Grid.hpp"
 #include "ovk/core/Logger.hpp"
 #include "ovk/core/Misc.hpp"
+#include "ovk/core/Profiler.hpp"
 #include "ovk/core/TextProcessing.hpp"
 
 #include <mpi.h>
@@ -84,6 +85,9 @@ void CreateDomain(domain &Domain, const domain_params &Params, logger &Logger, e
   Domain.Logger_ = &Logger;
   Domain.ErrorHandler_ = &ErrorHandler;
 
+  core::CreateProfiler(Domain.Profiler_, Domain.Comm_);
+  if (OVK_TIMERS) core::EnableProfiler(Domain.Profiler_);
+
   if (Params.Name_.length() > 0) {
     Domain.Name_ = Params.Name_;
   } else {
@@ -131,6 +135,12 @@ void DestroyDomain(domain &Domain) {
     DestroyGrid(Grid);
   }
   Domain.LocalGrids_.clear();
+
+  std::string ProfileTimesString = core::WriteProfileTimes(Domain.Profiler_);
+  if (Domain.Comm_.Rank() == 0) {
+    printf("%s", ProfileTimesString.c_str());
+  }
+  core::DestroyProfiler(Domain.Profiler_);
 
   MPI_Barrier(Domain.Comm_);
 
@@ -278,6 +288,12 @@ logger &GetDomainLogger(const domain &Domain) {
 error_handler &GetDomainErrorHandler(const domain &Domain) {
 
   return *Domain.ErrorHandler_;
+
+}
+
+profiler &GetDomainProfiler(const domain &Domain) {
+
+  return Domain.Profiler_;
 
 }
 
@@ -871,7 +887,8 @@ void CreateExchangeGlobal(domain &Domain, int DonorGridID, int ReceiverGridID) {
   if (IsLocal) {
     const connectivity &Connectivity = Domain.LocalConnectivities_[DonorGridID][ReceiverGridID];
     exchange Exchange;
-    core::CreateExchange(Exchange, Connectivity, *Domain.Logger_, *Domain.ErrorHandler_);
+    core::CreateExchange(Exchange, Connectivity, *Domain.Logger_, *Domain.ErrorHandler_,
+      Domain.Profiler_);
     core::CreateExchangeInfo(ExchangeInfo, &Exchange, Domain.Comm_);
     Domain.LocalExchanges_[DonorGridID].emplace(ReceiverGridID, std::move(Exchange));
   } else {
@@ -1130,10 +1147,16 @@ void Collect(const domain &Domain, int DonorGridID, int ReceiverGridID, data_typ
       "have local data on rank @rank@.", Name);
   }
 
+  int CollectTime = core::GetProfilerTimerID(Domain.Profiler_, "Collect");
+  const core::comm &Comm = core::GetGridComm(Domain.LocalGrids_.at(DonorGridID));
+  core::StartProfileSync(Domain.Profiler_, CollectTime, Comm);
+
   const exchange &Exchange = Domain.LocalExchanges_.at(DonorGridID).at(ReceiverGridID);
 
   core::Collect(Exchange, ValueType, Count, CollectOp, GridValuesRange, GridValuesLayout,
     GridValues, DonorValues);
+
+  core::EndProfile(Domain.Profiler_, CollectTime);
 
 }
 
@@ -1159,7 +1182,12 @@ void Send(const domain &Domain, int DonorGridID, int ReceiverGridID, data_type V
 
   const exchange &Exchange = Domain.LocalExchanges_.at(DonorGridID).at(ReceiverGridID);
 
+  int SendRecvTime = core::GetProfilerTimerID(Domain.Profiler_, "SendRecv");
+  core::StartProfile(Domain.Profiler_, SendRecvTime);
+
   core::Send(Exchange, ValueType, Count, DonorValues, Tag, Request);
+
+  core::EndProfile(Domain.Profiler_, SendRecvTime);
 
 }
 
@@ -1183,18 +1211,28 @@ void Receive(const domain &Domain, int DonorGridID, int ReceiverGridID, data_typ
       "have local data on rank @rank@.", Name);
   }
 
+  int SendRecvTime = core::GetProfilerTimerID(Domain.Profiler_, "SendRecv");
+  core::StartProfile(Domain.Profiler_, SendRecvTime);
+
   const exchange &Exchange = Domain.LocalExchanges_.at(DonorGridID).at(ReceiverGridID);
 
   core::Receive(Exchange, ValueType, Count, ReceiverValues, Tag, Request);
+
+  core::EndProfile(Domain.Profiler_, SendRecvTime);
 
 }
 
 void Wait(const domain &Domain, request &Request) {
 
+  int SendRecvTime = core::GetProfilerTimerID(Domain.Profiler_, "SendRecv");
+  core::StartProfile(Domain.Profiler_, SendRecvTime);
+
   if (Request) {
     Request.Wait();
     Request = request();
   }
+
+  core::EndProfile(Domain.Profiler_, SendRecvTime);
 
 }
 
@@ -1202,7 +1240,12 @@ void WaitAll(const domain &Domain, array_view<request> Requests) {
 
   OVK_DEBUG_ASSERT(Requests || Requests.Count() == 0, "Invalid requests array.");
 
+  int SendRecvTime = core::GetProfilerTimerID(Domain.Profiler_, "SendRecv");
+  core::StartProfile(Domain.Profiler_, SendRecvTime);
+
   RequestWaitAll(Requests);
+
+  core::EndProfile(Domain.Profiler_, SendRecvTime);
 
 }
 
@@ -1210,7 +1253,12 @@ void WaitAny(const domain &Domain, array_view<request> Requests, int &Index) {
 
   OVK_DEBUG_ASSERT(Requests || Requests.Count() == 0, "Invalid requests array.");
 
+  int SendRecvTime = core::GetProfilerTimerID(Domain.Profiler_, "SendRecv");
+  core::StartProfile(Domain.Profiler_, SendRecvTime);
+
   RequestWaitAny(Requests, Index);
+
+  core::EndProfile(Domain.Profiler_, SendRecvTime);
 
 }
 
@@ -1218,7 +1266,12 @@ void WaitAll(const domain &Domain, array_view<request *> Requests) {
 
   OVK_DEBUG_ASSERT(Requests || Requests.Count() == 0, "Invalid requests array.");
 
+  int SendRecvTime = core::GetProfilerTimerID(Domain.Profiler_, "SendRecv");
+  core::StartProfile(Domain.Profiler_, SendRecvTime);
+
   RequestWaitAll(Requests);
+
+  core::EndProfile(Domain.Profiler_, SendRecvTime);
 
 }
 
@@ -1226,7 +1279,12 @@ void WaitAny(const domain &Domain, array_view<request *> Requests, int &Index) {
 
   OVK_DEBUG_ASSERT(Requests || Requests.Count() == 0, "Invalid requests array.");
 
+  int SendRecvTime = core::GetProfilerTimerID(Domain.Profiler_, "SendRecv");
+  core::StartProfile(Domain.Profiler_, SendRecvTime);
+
   RequestWaitAny(Requests, Index);
+
+  core::EndProfile(Domain.Profiler_, SendRecvTime);
 
 }
 
@@ -1252,10 +1310,15 @@ void Disperse(const domain &Domain, int DonorGridID, int ReceiverGridID, data_ty
       "have local data on rank @rank@.", Name);
   }
 
+  int DisperseTime = core::GetProfilerTimerID(Domain.Profiler_, "Disperse");
+  core::StartProfile(Domain.Profiler_, DisperseTime);
+
   const exchange &Exchange = Domain.LocalExchanges_.at(DonorGridID).at(ReceiverGridID);
 
   core::Disperse(Exchange, ValueType, Count, DisperseOp, ReceiverValues, GridValuesRange,
     GridValuesLayout, GridValues);
+
+  core::EndProfile(Domain.Profiler_, DisperseTime);
 
 }
 

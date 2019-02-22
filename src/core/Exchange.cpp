@@ -16,6 +16,7 @@
 #include "ovk/core/Indexer.hpp"
 #include "ovk/core/Misc.hpp"
 #include "ovk/core/PartitionHash.hpp"
+#include "ovk/core/Profiler.hpp"
 #include "ovk/core/Range.hpp"
 #include "ovk/core/Request.hpp"
 #include "ovk/core/TextProcessing.hpp"
@@ -48,12 +49,25 @@ void UpdateReceiveInfo(exchange &Exchange);
 namespace core {
 
 void CreateExchange(exchange &Exchange, const connectivity &Connectivity, logger &Logger,
-  error_handler &ErrorHandler) {
+  error_handler &ErrorHandler, profiler &Profiler) {
 
   Exchange.Connectivity_ = &Connectivity;
 
   Exchange.Logger_ = &Logger;
   Exchange.ErrorHandler_ = &ErrorHandler;
+
+  Exchange.Profiler_ = &Profiler;
+  AddProfilerTimer(Profiler, "Collect");
+  AddProfilerTimer(Profiler, "Collect::MemAlloc");
+  AddProfilerTimer(Profiler, "Collect::MPI");
+  AddProfilerTimer(Profiler, "Collect::Pack");
+  AddProfilerTimer(Profiler, "Collect::Reduce");
+  AddProfilerTimer(Profiler, "SendRecv");
+  AddProfilerTimer(Profiler, "SendRecv::MemAlloc");
+  AddProfilerTimer(Profiler, "SendRecv::Pack");
+  AddProfilerTimer(Profiler, "SendRecv::MPI");
+  AddProfilerTimer(Profiler, "SendRecv::Unpack");
+  AddProfilerTimer(Profiler, "Disperse");
 
   GetConnectivityDimension(Connectivity, Exchange.NumDims_);
 
@@ -1244,6 +1258,9 @@ public:
     GetConnectivityDonorSideGrid(Donors, Grid_);
     const grid &Grid = *Grid_;
 
+    Profiler_ = Exchange.Profiler_;
+    int MemAllocTime = core::GetProfilerTimerID(*Profiler_, "Collect::MemAlloc");
+
     GetGridCart(Grid, Cart_);
     GetGridGlobalRange(Grid, GlobalRange_);
     GetGridLocalRange(Grid, LocalRange_);
@@ -1267,12 +1284,16 @@ public:
     int NumSends = Sends_.Count();
     int NumRecvs = Recvs_.Count();
 
+    core::StartProfile(*Profiler_, MemAllocTime);
+
     SendBuffers_.Resize({NumSends});
     for (int iSend = 0; iSend < NumSends; ++iSend) {
       SendBuffers_(iSend).Resize({{Count_,Exchange.CollectSends_(iSend).NumPoints}});
     }
 
     Requests_.Reserve(NumSends+NumRecvs);
+
+    core::EndProfile(*Profiler_, MemAllocTime);
 
     NumRemoteDonorPoints_ = Exchange.NumRemoteDonorPoints_;
     RemoteDonorPoints_ = Exchange.RemoteDonorPoints_;
@@ -1288,6 +1309,7 @@ protected:
 
   const connectivity_d *Donors_;
   const grid *Grid_;
+  core::profiler *Profiler_;
   int NumDims_;
   int Count_;
   long long NumDonors_;
@@ -1313,12 +1335,20 @@ protected:
 
     MPI_Datatype MPIDataType = core::GetMPIDataType<value_type>();
 
+    int MPITime = core::GetProfilerTimerID(*Profiler_, "Collect::MPI");
+    int PackTime = core::GetProfilerTimerID(*Profiler_, "Collect::Pack");
+
+    core::StartProfile(*Profiler_, MPITime);
+
     for (int iRecv = 0; iRecv < Recvs_.Count(); ++iRecv) {
       const exchange::collect_recv &Recv = Recvs_(iRecv);
       MPI_Request &Request = Requests_.Append();
       MPI_Irecv(RemoteDonorValues(iRecv).Data(), Count_*Recv.NumPoints, MPIDataType, Recv.Rank, 0,
         Comm, &Request);
     }
+
+    core::EndProfile(*Profiler_, MPITime);
+    core::StartProfile(*Profiler_, PackTime);
 
     for (int iSend = 0; iSend < Sends_.Count(); ++iSend) {
       const exchange::collect_send &Send = Sends_(iSend);
@@ -1335,6 +1365,9 @@ protected:
       }
     }
 
+    core::EndProfile(*Profiler_, PackTime);
+    core::StartProfile(*Profiler_, MPITime);
+
     for (int iSend = 0; iSend < Sends_.Count(); ++iSend) {
       const exchange::collect_send &Send = Sends_(iSend);
       MPI_Request &Request = Requests_.Append();
@@ -1343,6 +1376,8 @@ protected:
     }
 
     MPI_Waitall(Requests_.Count(), Requests_.Data(), MPI_STATUSES_IGNORE);
+
+    core::EndProfile(*Profiler_, MPITime);
 
     Requests_.Clear();
 
@@ -1438,6 +1473,7 @@ protected:
   using parent_type = collect_base<T, Layout>;
 
   using typename parent_type::donor_indexer;
+  using parent_type::Profiler_;
   using parent_type::Count_;
   using parent_type::NumDonors_;
   using parent_type::MaxPointsInCell_;
@@ -1453,9 +1489,15 @@ public:
 
     parent_type::Initialize(Exchange, Count, GridValuesRange);
 
+    int MemAllocTime = core::GetProfilerTimerID(*Profiler_, "Collect::MemAlloc");
+
+    core::StartProfile(*Profiler_, MemAllocTime);
+
     parent_type::AllocateRemoteDonorValues(RemoteDonorValues_);
 
     DonorPointValues_.Resize({{Count_,MaxPointsInCell_}});
+
+    core::EndProfile(*Profiler_, MemAllocTime);
 
   }
 
@@ -1463,6 +1505,10 @@ public:
     user_value_type>> DonorValues) {
 
     parent_type::RetrieveRemoteDonorValues(GridValues, RemoteDonorValues_);
+
+    int ReduceTime = core::GetProfilerTimerID(*Profiler_, "Collect::Reduce");
+
+    core::StartProfile(*Profiler_, ReduceTime);
 
     for (long long iDonor = 0; iDonor < NumDonors_; ++iDonor) {
 
@@ -1488,6 +1534,8 @@ public:
       }
 
     }
+
+    core::EndProfile(*Profiler_, ReduceTime);
 
   }
 
@@ -1505,6 +1553,7 @@ protected:
   using parent_type = collect_base<T, Layout>;
 
   using typename parent_type::donor_indexer;
+  using parent_type::Profiler_;
   using parent_type::Count_;
   using parent_type::NumDonors_;
   using parent_type::MaxPointsInCell_;
@@ -1520,9 +1569,14 @@ public:
 
     parent_type::Initialize(Exchange, Count, GridValuesRange);
 
+    int MemAllocTime = core::GetProfilerTimerID(*Profiler_, "Collect::MemAlloc");
+    core::StartProfile(*Profiler_, MemAllocTime);
+
     parent_type::AllocateRemoteDonorValues(RemoteDonorValues_);
 
     DonorPointValues_.Resize({{Count_,MaxPointsInCell_}});
+
+    core::EndProfile(*Profiler_, MemAllocTime);
 
   }
 
@@ -1530,6 +1584,9 @@ public:
     user_value_type>> DonorValues) {
 
     parent_type::RetrieveRemoteDonorValues(GridValues, RemoteDonorValues_);
+
+    int ReduceTime = core::GetProfilerTimerID(*Profiler_, "Collect::Reduce");
+    core::StartProfile(*Profiler_, ReduceTime);
 
     for (long long iDonor = 0; iDonor < NumDonors_; ++iDonor) {
 
@@ -1556,6 +1613,8 @@ public:
 
     }
 
+    core::EndProfile(*Profiler_, ReduceTime);
+
   }
 
 private:
@@ -1572,6 +1631,7 @@ protected:
   using parent_type = collect_base<T, Layout>;
 
   using typename parent_type::donor_indexer;
+  using parent_type::Profiler_;
   using parent_type::Count_;
   using parent_type::NumDonors_;
   using parent_type::MaxPointsInCell_;
@@ -1587,9 +1647,14 @@ public:
 
     parent_type::Initialize(Exchange, Count, GridValuesRange);
 
+    int MemAllocTime = core::GetProfilerTimerID(*Profiler_, "Collect::MemAlloc");
+    core::StartProfile(*Profiler_, MemAllocTime);
+
     parent_type::AllocateRemoteDonorValues(RemoteDonorValues_);
 
     DonorPointValues_.Resize({{Count_,MaxPointsInCell_}});
+
+    core::EndProfile(*Profiler_, MemAllocTime);
 
   }
 
@@ -1597,6 +1662,9 @@ public:
     user_value_type>> DonorValues) {
 
     parent_type::RetrieveRemoteDonorValues(GridValues, RemoteDonorValues_);
+
+    int ReduceTime = core::GetProfilerTimerID(*Profiler_, "Collect::Reduce");
+    core::StartProfile(*Profiler_, ReduceTime);
 
     for (long long iDonor = 0; iDonor < NumDonors_; ++iDonor) {
 
@@ -1623,6 +1691,8 @@ public:
 
     }
 
+    core::EndProfile(*Profiler_, ReduceTime);
+
   }
 
 private:
@@ -1639,6 +1709,7 @@ protected:
   using parent_type = collect_base<T, Layout>;
 
   using typename parent_type::donor_indexer;
+  using parent_type::Profiler_;
   using parent_type::Count_;
   using parent_type::NumDonors_;
   using parent_type::MaxPointsInCell_;
@@ -1654,9 +1725,14 @@ public:
 
     parent_type::Initialize(Exchange, Count, GridValuesRange);
 
+    int MemAllocTime = core::GetProfilerTimerID(*Profiler_, "Collect::MemAlloc");
+    core::StartProfile(*Profiler_, MemAllocTime);
+
     parent_type::AllocateRemoteDonorValues(RemoteDonorValues_);
 
     DonorPointValues_.Resize({{Count_,MaxPointsInCell_}});
+
+    core::EndProfile(*Profiler_, MemAllocTime);
 
   }
 
@@ -1664,6 +1740,9 @@ public:
     user_value_type>> DonorValues) {
 
     parent_type::RetrieveRemoteDonorValues(GridValues, RemoteDonorValues_);
+
+    int ReduceTime = core::GetProfilerTimerID(*Profiler_, "Collect::Reduce");
+    core::StartProfile(*Profiler_, ReduceTime);
 
     for (long long iDonor = 0; iDonor < NumDonors_; ++iDonor) {
 
@@ -1689,6 +1768,8 @@ public:
       }
 
     }
+
+    core::EndProfile(*Profiler_, ReduceTime);
 
   }
 
@@ -1707,6 +1788,7 @@ protected:
 
   using typename parent_type::donor_indexer;
   using parent_type::Donors_;
+  using parent_type::Profiler_;
   using parent_type::NumDims_;
   using parent_type::Count_;
   using parent_type::NumDonors_;
@@ -1725,9 +1807,14 @@ public:
 
     InterpCoefs_ = Donors_->InterpCoefs_;
 
+    int MemAllocTime = core::GetProfilerTimerID(*Profiler_, "Collect::MemAlloc");
+    core::StartProfile(*Profiler_, MemAllocTime);
+
     parent_type::AllocateRemoteDonorValues(RemoteDonorValues_);
 
     DonorPointValues_.Resize({{Count_,MaxPointsInCell_}});
+
+    core::EndProfile(*Profiler_, MemAllocTime);
 
   }
 
@@ -1735,6 +1822,9 @@ public:
     user_value_type>> DonorValues) {
 
     parent_type::RetrieveRemoteDonorValues(GridValues, RemoteDonorValues_);
+
+    int ReduceTime = core::GetProfilerTimerID(*Profiler_, "Collect::Reduce");
+    core::StartProfile(*Profiler_, ReduceTime);
 
     for (long long iDonor = 0; iDonor < NumDonors_; ++iDonor) {
 
@@ -1765,6 +1855,8 @@ public:
       }
 
     }
+
+    core::EndProfile(*Profiler_, ReduceTime);
 
   }
 
@@ -1953,18 +2045,28 @@ public:
   send_request(const exchange &Exchange, int Count, int NumSends, array<array<value_type,2>>
     Buffers, array<MPI_Request> MPIRequests):
     Exchange_(&Exchange),
+    Profiler_(Exchange.Profiler_),
     Count_(Count),
     NumSends_(NumSends),
     Buffers_(std::move(Buffers)),
     MPIRequests_(std::move(MPIRequests))
   {
     GetConnectivityDonorSide(*Exchange.Connectivity_, Donors_);
+    MemAllocTime_ = core::GetProfilerTimerID(*Profiler_, "SendRecv::MemAlloc");
+    MPITime_ = core::GetProfilerTimerID(*Profiler_, "SendRecv::MPI");
   }
   void Wait();
   array_view<MPI_Request> MPIRequests() { return MPIRequests_; }
+  void StartProfileMemAlloc() const { core::StartProfile(*Profiler_, MemAllocTime_); }
+  void EndProfileMemAlloc() const { core::EndProfile(*Profiler_, MemAllocTime_); }
+  void StartProfileMPI() const { core::StartProfile(*Profiler_, MPITime_); }
+  void EndProfileMPI() const { core::EndProfile(*Profiler_, MPITime_); }
 private:
   const exchange *Exchange_;
   const connectivity_d *Donors_;
+  mutable core::profiler *Profiler_;
+  int MemAllocTime_;
+  int MPITime_;
   int Count_;
   int NumSends_;
   array<array<value_type,2>> Buffers_;
@@ -1993,7 +2095,16 @@ public:
 
     GetConnectivityDonorSide(Connectivity, Donors_);
 
+    Profiler_ = Exchange.Profiler_;
+
     NumSends_ = Exchange.Sends_.Count();
+
+    int MemAllocTime = core::GetProfilerTimerID(*Profiler_, "SendRecv::MemAlloc");
+    core::StartProfile(*Profiler_, MemAllocTime);
+
+    NextBufferEntry_.Resize({NumSends_});
+
+    core::EndProfile(*Profiler_, MemAllocTime);
 
   }
 
@@ -2007,34 +2118,54 @@ public:
 
     MPI_Datatype MPIDataType = core::GetMPIDataType<value_type>();
 
-    array<long long> NextBufferEntry({NumSends_}, 0);
+    int MemAllocTime = core::GetProfilerTimerID(*Profiler_, "SendRecv::MemAlloc");
+    int PackTime = core::GetProfilerTimerID(*Profiler_, "SendRecv::Pack");
+    int MPITime = core::GetProfilerTimerID(*Profiler_, "SendRecv::MPI");
 
+    core::StartProfile(*Profiler_, MemAllocTime);
+
+    // Will be moved into request object
     array<array<value_type,2>> Buffers({NumSends_});
-
     for (int iSend = 0; iSend < NumSends_; ++iSend) {
       const exchange::send &Send = Exchange.Sends_(iSend);
       Buffers(iSend).Resize({{Count_,Send.Count}});
+    }
+
+    core::EndProfile(*Profiler_, MemAllocTime);
+    core::StartProfile(*Profiler_, PackTime);
+
+    for (auto &iBuffer : NextBufferEntry_) {
+      iBuffer = 0;
     }
 
     for (long long iDonorOrder = 0; iDonorOrder < NumDonors; ++iDonorOrder) {
       long long iDonor = Exchange.DonorsSorted_(iDonorOrder);
       int iSend = Exchange.DonorSendIndices_(iDonor);
       if (iSend >= 0) {
-        long long iBuffer = NextBufferEntry(iSend);
+        long long iBuffer = NextBufferEntry_(iSend);
         for (int iCount = 0; iCount < Count_; ++iCount) {
           Buffers(iSend)(iCount,iBuffer) = value_type(DonorValues(iCount)(iDonor));
         }
-        ++NextBufferEntry(iSend);
+        ++NextBufferEntry_(iSend);
       }
     }
 
+    core::EndProfile(*Profiler_, PackTime);
+    core::StartProfile(*Profiler_, MemAllocTime);
+
+    // Will be moved into request object
     array<MPI_Request> MPIRequests({NumSends_});
+
+    core::EndProfile(*Profiler_, MemAllocTime);
+    core::StartProfile(*Profiler_, MPITime);
 
     for (int iSend = 0; iSend < NumSends_; ++iSend) {
       const exchange::send &Send = Exchange.Sends_(iSend);
       MPI_Isend(Buffers(iSend).Data(), Count_*Send.Count, MPIDataType, Send.Rank, Tag_,
         Exchange.Comm_, &MPIRequests(iSend));
     }
+
+    core::EndProfile(*Profiler_, MPITime);
 
     Request = request_type(Exchange, Count_, NumSends_, std::move(Buffers), std::move(MPIRequests));
 
@@ -2044,15 +2175,21 @@ private:
 
   const exchange *Exchange_;
   const connectivity_d *Donors_;
+  core::profiler *Profiler_;
   int Count_;
   int Tag_;
   int NumSends_;
+  array<long long> NextBufferEntry_;
 
 };
 
 template <typename T> void send_request<T>::Wait() {
 
+  core::StartProfile(*Profiler_, MPITime_);
+
   MPI_Waitall(NumSends_, MPIRequests_.Data(), MPI_STATUSES_IGNORE);
+
+  core::EndProfile(*Profiler_, MPITime_);
 
   Buffers_.Clear();
   MPIRequests_.Clear();
@@ -2165,6 +2302,7 @@ public:
   recv_request(const exchange &Exchange, int Count, int NumRecvs, array<array<value_type,2>>
     Buffers, array<MPI_Request> MPIRequests, array<array_view<user_value_type>> ReceiverValues):
     Exchange_(&Exchange),
+    Profiler_(Exchange.Profiler_),
     Count_(Count),
     NumRecvs_(NumRecvs),
     Buffers_(std::move(Buffers)),
@@ -2172,12 +2310,23 @@ public:
     ReceiverValues_(std::move(ReceiverValues))
   {
     GetConnectivityReceiverSide(*Exchange.Connectivity_, Receivers_);
+    MemAllocTime_ = core::GetProfilerTimerID(*Profiler_, "SendRecv::MemAlloc");
+    MPITime_ = core::GetProfilerTimerID(*Profiler_, "SendRecv::MPI");
+    UnpackTime_ = core::GetProfilerTimerID(*Profiler_, "SendRecv::Unpack");
   }
   void Wait();
   array_view<MPI_Request> MPIRequests() { return MPIRequests_; }
+  void StartProfileMemAlloc() const { core::StartProfile(*Profiler_, MemAllocTime_); }
+  void EndProfileMemAlloc() const { core::EndProfile(*Profiler_, MemAllocTime_); }
+  void StartProfileMPI() const { core::StartProfile(*Profiler_, MPITime_); }
+  void EndProfileMPI() const { core::EndProfile(*Profiler_, MPITime_); }
 private:
   const exchange *Exchange_;
   const connectivity_r *Receivers_;
+  mutable core::profiler *Profiler_;
+  int MemAllocTime_;
+  int MPITime_;
+  int UnpackTime_;
   int Count_;
   int NumRecvs_;
   array<array<value_type,2>> Buffers_;
@@ -2207,6 +2356,8 @@ public:
 
     GetConnectivityReceiverSide(Connectivity, Receivers_);
 
+    Profiler_ = Exchange.Profiler_;
+
     NumRecvs_ = Exchange.Recvs_.Count();
 
   }
@@ -2217,14 +2368,23 @@ public:
 
     MPI_Datatype MPIDataType = core::GetMPIDataType<value_type>();
 
-    array<array<value_type,2>> Buffers({NumRecvs_});
+    int MemAllocTime = core::GetProfilerTimerID(*Profiler_, "SendRecv::MemAlloc");
+    int MPITime = core::GetProfilerTimerID(*Profiler_, "SendRecv::MPI");
 
+    core::StartProfile(*Profiler_, MemAllocTime);
+
+    // Will be moved into request object
+    array<array<value_type,2>> Buffers({NumRecvs_});
     for (int iRecv = 0; iRecv < NumRecvs_; ++iRecv) {
       const exchange::recv &Recv = Exchange.Recvs_(iRecv);
       Buffers(iRecv).Resize({{Count_,Recv.Count}});
     }
 
+    // Will be moved into request object
     array<MPI_Request> MPIRequests({NumRecvs_});
+
+    core::EndProfile(*Profiler_, MemAllocTime);
+    core::StartProfile(*Profiler_, MPITime);
 
     for (int iRecv = 0; iRecv < NumRecvs_; ++iRecv) {
       const exchange::recv &Recv = Exchange.Recvs_(iRecv);
@@ -2232,7 +2392,13 @@ public:
         Exchange.Comm_, &MPIRequests(iRecv));
     }
 
+    core::EndProfile(*Profiler_, MPITime);
+    core::StartProfile(*Profiler_, MemAllocTime);
+
+    // Will be moved into request object
     array<array_view<user_value_type>> ReceiverValuesSaved({ReceiverValues});
+
+    core::EndProfile(*Profiler_, MemAllocTime);
 
     Request = request_type(Exchange, Count_, NumRecvs_, std::move(Buffers), std::move(MPIRequests),
       std::move(ReceiverValuesSaved));
@@ -2243,6 +2409,7 @@ private:
 
   const exchange *Exchange_;
   const connectivity_r *Receivers_;
+  core::profiler *Profiler_;
   int Count_;
   int Tag_;
   int NumRecvs_;
@@ -2258,9 +2425,17 @@ template <typename T> void recv_request<T>::Wait() {
   long long NumReceivers;
   GetConnectivityReceiverSideCount(Receivers, NumReceivers);
 
+  core::StartProfile(*Profiler_, MemAllocTime_);
+
   array<long long> NextBufferEntry({NumRecvs_}, 0);
 
+  core::EndProfile(*Profiler_, MemAllocTime_);
+  core::StartProfile(*Profiler_, MPITime_);
+
   MPI_Waitall(NumRecvs_, MPIRequests_.Data(), MPI_STATUSES_IGNORE);
+
+  core::EndProfile(*Profiler_, MPITime_);
+  core::StartProfile(*Profiler_, UnpackTime_);
 
   for (long long iReceiverOrder = 0; iReceiverOrder < NumReceivers; ++iReceiverOrder) {
     long long iReceiver = Exchange.ReceiversSorted_(iReceiverOrder);
@@ -2273,6 +2448,8 @@ template <typename T> void recv_request<T>::Wait() {
       ++NextBufferEntry(iRecv);
     }
   }
+
+  core::EndProfile(*Profiler_, UnpackTime_);
 
   Buffers_.Clear();
   MPIRequests_.Clear();

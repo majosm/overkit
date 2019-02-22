@@ -43,9 +43,29 @@ void request::internal_WaitAll(array_view<request> Requests) {
 
   OVK_DEBUG_ASSERT(Requests || Requests.Count() == 0, "Invalid requests array.");
 
+  auto StartProfileMemAlloc = [&]() {
+    for (auto &Request : Requests) {
+      if (Request) {
+        Request.StartProfileMemAlloc();
+      }
+    }
+  };
+
+  auto EndProfileMemAlloc = [&]() {
+    for (auto &Request : Requests) {
+      if (Request) {
+        Request.EndProfileMemAlloc();
+      }
+    }
+  };
+
   int NumRequests = Requests.Count();
 
+  StartProfileMemAlloc();
+
   array<request *> RequestPtrs({NumRequests});
+
+  EndProfileMemAlloc();
 
   for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
     RequestPtrs[iRequest] = Requests.Data(iRequest);
@@ -59,9 +79,29 @@ void request::internal_WaitAny(array_view<request> Requests, int &Index) {
 
   OVK_DEBUG_ASSERT(Requests || Requests.Count() == 0, "Invalid requests array.");
 
+  auto StartProfileMemAlloc = [&]() {
+    for (auto &Request : Requests) {
+      if (Request) {
+        Request.StartProfileMemAlloc();
+      }
+    }
+  };
+
+  auto EndProfileMemAlloc = [&]() {
+    for (auto &Request : Requests) {
+      if (Request) {
+        Request.EndProfileMemAlloc();
+      }
+    }
+  };
+
   int NumRequests = Requests.Count();
 
+  StartProfileMemAlloc();
+
   array<request *> RequestPtrs({NumRequests});
+
+  EndProfileMemAlloc();
 
   for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
     RequestPtrs[iRequest] = Requests.Data(iRequest);
@@ -75,9 +115,46 @@ void request::internal_WaitAll(array_view<request *> Requests) {
 
   OVK_DEBUG_ASSERT(Requests || Requests.Count() == 0, "Invalid requests array.");
 
+  auto StartProfileMemAlloc = [&]() {
+    for (auto Request : Requests) {
+      if (Request && *Request) {
+        Request->StartProfileMemAlloc();
+      }
+    }
+  };
+
+  auto EndProfileMemAlloc = [&]() {
+    for (auto Request : Requests) {
+      if (Request && *Request) {
+        Request->EndProfileMemAlloc();
+      }
+    }
+  };
+
+  auto StartProfileMPI = [&]() {
+    for (auto Request : Requests) {
+      if (Request && *Request) {
+        Request->StartProfileMPI();
+      }
+    }
+  };
+
+  auto EndProfileMPI = [&]() {
+    for (auto Request : Requests) {
+      if (Request && *Request) {
+        Request->EndProfileMPI();
+      }
+    }
+  };
+
   int NumRequests = Requests.Count();
 
+  StartProfileMemAlloc();
+
   array<int> NumRemainingMPIRequests({NumRequests});
+
+  EndProfileMemAlloc();
+
   int TotalMPIRequests = 0;
 
   for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
@@ -91,11 +168,15 @@ void request::internal_WaitAll(array_view<request *> Requests) {
     }
   }
 
+  StartProfileMemAlloc();
+
   array<MPI_Request> AllMPIRequests;
   array<int> MPIRequestToRequest;
 
   AllMPIRequests.Reserve(TotalMPIRequests);
   MPIRequestToRequest.Reserve(TotalMPIRequests);
+
+  EndProfileMemAlloc();
 
   for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
     if (Requests(iRequest)) {
@@ -112,7 +193,9 @@ void request::internal_WaitAll(array_view<request *> Requests) {
 
   while (true) {
     int iMPIRequest;
+    StartProfileMPI();
     MPI_Waitany(TotalMPIRequests, AllMPIRequests.Data(), &iMPIRequest, MPI_STATUSES_IGNORE);
+    EndProfileMPI();
     if (iMPIRequest == MPI_UNDEFINED) {
       break;
     }
@@ -132,9 +215,46 @@ void request::internal_WaitAny(array_view<request *> Requests, int &Index) {
 
   OVK_DEBUG_ASSERT(Requests || Requests.Count() == 0, "Invalid requests array.");
 
+  auto StartProfileMemAlloc = [&]() {
+    for (auto Request : Requests) {
+      if (Request && *Request) {
+        Request->StartProfileMemAlloc();
+      }
+    }
+  };
+
+  auto EndProfileMemAlloc = [&]() {
+    for (auto Request : Requests) {
+      if (Request && *Request) {
+        Request->EndProfileMemAlloc();
+      }
+    }
+  };
+
+  auto StartProfileMPI = [&]() {
+    for (auto Request : Requests) {
+      if (Request && *Request) {
+        Request->StartProfileMPI();
+      }
+    }
+  };
+
+  auto EndProfileMPI = [&]() {
+    for (auto Request : Requests) {
+      if (Request && *Request) {
+        Request->EndProfileMPI();
+      }
+    }
+  };
+
   int NumRequests = Requests.Count();
 
+  StartProfileMemAlloc();
+
   array<int> NumRemainingMPIRequests({NumRequests});
+
+  EndProfileMemAlloc();
+
   int TotalMPIRequests = 0;
 
   for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
@@ -148,11 +268,15 @@ void request::internal_WaitAny(array_view<request *> Requests, int &Index) {
     }
   }
 
+  StartProfileMemAlloc();
+
   array<MPI_Request> AllMPIRequests;
   array<int> MPIRequestToRequest;
 
   AllMPIRequests.Reserve(TotalMPIRequests);
   MPIRequestToRequest.Reserve(TotalMPIRequests);
+
+  EndProfileMemAlloc();
 
   for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
     if (Requests(iRequest)) {
@@ -169,7 +293,9 @@ void request::internal_WaitAny(array_view<request *> Requests, int &Index) {
 
   while (true) {
     int iMPIRequest;
+    StartProfileMPI();
     MPI_Waitany(TotalMPIRequests, AllMPIRequests.Data(), &iMPIRequest, MPI_STATUSES_IGNORE);
+    EndProfileMPI();
     if (iMPIRequest == MPI_UNDEFINED) {
       Index = -1;
       break;
