@@ -50,6 +50,7 @@ set(PUBLIC_HEADERS
   Global.hpp
   Grid.hpp
   Misc.hpp
+  Misc.inl
   Range.hpp
   Range.inl
   Request.hpp
@@ -74,7 +75,6 @@ set(INTERNAL_HEADERS
   Logger.hpp
   Logger.inl
   MinMax.h
-  Misc.inl
   PartitionHash.hpp
   Profiler.hpp
   Profiler.inl
