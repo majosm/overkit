@@ -5,6 +5,7 @@
 
 #include "ovk/core/Array.hpp"
 #include "ovk/core/ArrayView.hpp"
+#include "ovk/core/Debug.hpp"
 #include "ovk/core/Global.hpp"
 
 #include <mpi.h>
@@ -14,7 +15,33 @@
 
 namespace ovk {
 
-void WaitAll(array_view<request> Requests) {
+void RequestWaitAll(array_view<request> Requests) {
+
+  request::internal_WaitAll(Requests);
+
+}
+
+void RequestWaitAny(array_view<request> Requests, int &Index) {
+
+  request::internal_WaitAny(Requests, Index);
+
+}
+
+void RequestWaitAll(array_view<request *> Requests) {
+
+  request::internal_WaitAll(Requests);
+
+}
+
+void RequestWaitAny(array_view<request *> Requests, int &Index) {
+
+  request::internal_WaitAny(Requests, Index);
+
+}
+
+void request::internal_WaitAll(array_view<request> Requests) {
+
+  OVK_DEBUG_ASSERT(Requests || Requests.Count() == 0, "Invalid requests array.");
 
   int NumRequests = Requests.Count();
 
@@ -24,11 +51,13 @@ void WaitAll(array_view<request> Requests) {
     RequestPtrs[iRequest] = Requests.Data(iRequest);
   }
 
-  request::core_WaitAll(RequestPtrs);
+  request::internal_WaitAll(RequestPtrs);
 
 }
 
-void WaitAny(array_view<request> Requests, int &Index) {
+void request::internal_WaitAny(array_view<request> Requests, int &Index) {
+
+  OVK_DEBUG_ASSERT(Requests || Requests.Count() == 0, "Invalid requests array.");
 
   int NumRequests = Requests.Count();
 
@@ -38,11 +67,13 @@ void WaitAny(array_view<request> Requests, int &Index) {
     RequestPtrs[iRequest] = Requests.Data(iRequest);
   }
 
-  request::core_WaitAny(RequestPtrs, Index);
+  request::internal_WaitAny(RequestPtrs, Index);
 
 }
 
-void request::core_WaitAll(array_view<request *> Requests) {
+void request::internal_WaitAll(array_view<request *> Requests) {
+
+  OVK_DEBUG_ASSERT(Requests || Requests.Count() == 0, "Invalid requests array.");
 
   int NumRequests = Requests.Count();
 
@@ -97,7 +128,9 @@ void request::core_WaitAll(array_view<request *> Requests) {
 
 }
 
-void request::core_WaitAny(array_view<request *> Requests, int &Index) {
+void request::internal_WaitAny(array_view<request *> Requests, int &Index) {
+
+  OVK_DEBUG_ASSERT(Requests || Requests.Count() == 0, "Invalid requests array.");
 
   int NumRequests = Requests.Count();
 

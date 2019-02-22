@@ -480,7 +480,7 @@ void ExchangeTest(int argc, char **argv) {
     }
   }
 
-  ovkWaitAll(NumSends+NumReceives, Requests);
+  ovkWaitAll(Domain, NumSends+NumReceives, Requests);
 
   free(Requests);
 
@@ -590,7 +590,7 @@ void ExchangeTest(int argc, char **argv) {
     ovkDisperse(Domain, Grids[n].id, m+1, OVK_DOUBLE, 1, OVK_DISPERSE_OVERWRITE, ReceiveBuffers[l],
       InputState[n]->values);
   }
-  ovkWaitAll(2*NumLocalGrids, SendRequests);
+  ovkWaitAll(Domain, 2*NumLocalGrids, SendRequests);
 
   l = 0;
   for (n = 0; n < NumLocalGrids; ++n) {
@@ -639,7 +639,7 @@ void ExchangeTest(int argc, char **argv) {
     ovkDisperse(Domain, Grids[n].id, m+1, OVK_DOUBLE, 1, OVK_DISPERSE_OVERWRITE, ReceiveBuffers[l],
       InputState[n]->values);
   }
-  ovkWaitAll(2*NumLocalGrids, SendRequests);
+  ovkWaitAll(Domain, 2*NumLocalGrids, SendRequests);
 
   l = 0;
   for (n = 0; n < NumLocalGrids; ++n) {

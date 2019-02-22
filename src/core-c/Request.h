@@ -13,10 +13,6 @@ extern "C" {
 struct ovk_request;
 typedef struct ovk_request ovk_request;
 
-void ovkWait(ovk_request **Request);
-void ovkWaitAll(int NumRequests, ovk_request **Requests);
-void ovkWaitAny(int NumRequests, ovk_request **Requests, int *Index);
-
 #ifdef __cplusplus
 }
 #endif

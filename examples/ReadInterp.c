@@ -261,7 +261,7 @@ int main(int argc, char **argv) {
       }
     }
 
-    ovkWaitAll(NumSends+NumReceives, Requests);
+    ovkWaitAll(Domain, NumSends+NumReceives, Requests);
 
     free(Requests);
 

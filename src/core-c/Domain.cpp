@@ -10,6 +10,7 @@
 #include "ovk/core-c/Global.h"
 #include "ovk/core-c/Grid.h"
 #include "ovk/core-c/Request.h"
+#include "ovk/core/Array.hpp"
 #include "ovk/core/AssemblyOptions.hpp"
 #include "ovk/core/Connectivity.hpp"
 #include "ovk/core/Constants.hpp"
@@ -478,6 +479,64 @@ void ovkReceive(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
     ReceiverValues, Tag, *RequestCPPPtr);
 
   *Request = reinterpret_cast<ovk_request *>(RequestCPPPtr);
+
+}
+
+void ovkWait(const ovk_domain *Domain, ovk_request **Request) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+  OVK_DEBUG_ASSERT(Request, "Invalid request pointer.");
+
+  if (*Request) {
+    auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+    auto *RequestCPPPtr = reinterpret_cast<ovk::request *>(*Request);
+    ovk::Wait(DomainCPP, *RequestCPPPtr);
+    delete RequestCPPPtr;
+    *Request = nullptr;
+  }
+
+}
+
+void ovkWaitAll(const ovk_domain *Domain, int NumRequests, ovk_request **Requests) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+  OVK_DEBUG_ASSERT(NumRequests >= 0, "Invalid request count.");
+  OVK_DEBUG_ASSERT(Requests || NumRequests == 0, "Invalid requests pointer.");
+  // Note: Not checking Requests[i] here on purpose -- allowed to be null
+
+  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+  ovk::array<ovk::request *> RequestCPPPtrs({NumRequests});
+  for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
+    RequestCPPPtrs(iRequest) = reinterpret_cast<ovk::request *>(Requests[iRequest]);
+  }
+  ovk::WaitAll(DomainCPP, RequestCPPPtrs);
+
+  for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
+    delete RequestCPPPtrs[iRequest];
+    Requests[iRequest] = nullptr;
+  }
+
+}
+
+void ovkWaitAny(const ovk_domain *Domain, int NumRequests, ovk_request **Requests, int *Index) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+  OVK_DEBUG_ASSERT(NumRequests >= 0, "Invalid request count.");
+  OVK_DEBUG_ASSERT(Requests || NumRequests == 0, "Invalid requests pointer.");
+  // Note: Not checking Requests[i] here on purpose -- allowed to be null
+  OVK_DEBUG_ASSERT(Index, "Invalid index pointer.");
+
+  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+  ovk::array<ovk::request *> RequestCPPPtrs({NumRequests});
+  for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
+    RequestCPPPtrs(iRequest) = reinterpret_cast<ovk::request *>(Requests[iRequest]);
+  }
+  ovk::WaitAny(DomainCPP, RequestCPPPtrs, *Index);
+
+  if (*Index >= 0) {
+    delete RequestCPPPtrs[*Index];
+    Requests[*Index] = nullptr;
+  }
 
 }
 

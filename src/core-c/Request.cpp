@@ -11,7 +11,7 @@
 
 extern "C" {
 
-void ovkWait(ovk_request **Request) {
+void ovkRequestWait(ovk_request **Request) {
 
   OVK_DEBUG_ASSERT(Request, "Invalid request pointer.");
 
@@ -19,12 +19,12 @@ void ovkWait(ovk_request **Request) {
     auto *RequestCPPPtr = reinterpret_cast<ovk::request *>(*Request);
     RequestCPPPtr->Wait();
     delete RequestCPPPtr;
-    RequestCPPPtr = nullptr;
+    *Request = nullptr;
   }
 
 }
 
-void ovkWaitAll(int NumRequests, ovk_request **Requests) {
+void ovkRequestWaitAll(int NumRequests, ovk_request **Requests) {
 
   OVK_DEBUG_ASSERT(NumRequests >= 0, "Invalid request count.");
   OVK_DEBUG_ASSERT(Requests || NumRequests == 0, "Invalid requests pointer.");
@@ -34,7 +34,7 @@ void ovkWaitAll(int NumRequests, ovk_request **Requests) {
   for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
     RequestCPPPtrs(iRequest) = reinterpret_cast<ovk::request *>(Requests[iRequest]);
   }
-  ovk::request::core_WaitAll(RequestCPPPtrs);
+  ovk::RequestWaitAll(RequestCPPPtrs);
 
   for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
     delete RequestCPPPtrs(iRequest);
@@ -43,7 +43,7 @@ void ovkWaitAll(int NumRequests, ovk_request **Requests) {
 
 }
 
-void ovkWaitAny(int NumRequests, ovk_request **Requests, int *Index) {
+void ovkRequestWaitAny(int NumRequests, ovk_request **Requests, int *Index) {
 
   OVK_DEBUG_ASSERT(NumRequests >= 0, "Invalid request count.");
   OVK_DEBUG_ASSERT(Requests || NumRequests == 0, "Invalid requests pointer.");
@@ -54,7 +54,7 @@ void ovkWaitAny(int NumRequests, ovk_request **Requests, int *Index) {
   for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
     RequestCPPPtrs(iRequest) = reinterpret_cast<ovk::request *>(Requests[iRequest]);
   }
-  ovk::request::core_WaitAny(RequestCPPPtrs, *Index);
+  ovk::RequestWaitAny(RequestCPPPtrs, *Index);
 
   if (*Index >= 0) {
     delete RequestCPPPtrs(*Index);

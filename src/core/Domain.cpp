@@ -3,6 +3,7 @@
 
 #include "ovk/core/Domain.hpp"
 
+#include "ovk/core/ArrayView.hpp"
 #include "ovk/core/AssemblyOptions.hpp"
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Connectivity.hpp"
@@ -1185,6 +1186,47 @@ void Receive(const domain &Domain, int DonorGridID, int ReceiverGridID, data_typ
   const exchange &Exchange = Domain.LocalExchanges_.at(DonorGridID).at(ReceiverGridID);
 
   core::Receive(Exchange, ValueType, Count, ReceiverValues, Tag, Request);
+
+}
+
+void Wait(const domain &Domain, request &Request) {
+
+  if (Request) {
+    Request.Wait();
+    Request = request();
+  }
+
+}
+
+void WaitAll(const domain &Domain, array_view<request> Requests) {
+
+  OVK_DEBUG_ASSERT(Requests || Requests.Count() == 0, "Invalid requests array.");
+
+  RequestWaitAll(Requests);
+
+}
+
+void WaitAny(const domain &Domain, array_view<request> Requests, int &Index) {
+
+  OVK_DEBUG_ASSERT(Requests || Requests.Count() == 0, "Invalid requests array.");
+
+  RequestWaitAny(Requests, Index);
+
+}
+
+void WaitAll(const domain &Domain, array_view<request *> Requests) {
+
+  OVK_DEBUG_ASSERT(Requests || Requests.Count() == 0, "Invalid requests array.");
+
+  RequestWaitAll(Requests);
+
+}
+
+void WaitAny(const domain &Domain, array_view<request *> Requests, int &Index) {
+
+  OVK_DEBUG_ASSERT(Requests || Requests.Count() == 0, "Invalid requests array.");
+
+  RequestWaitAny(Requests, Index);
 
 }
 

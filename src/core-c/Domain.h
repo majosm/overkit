@@ -87,6 +87,10 @@ void ovkSend(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, ovk_
 void ovkReceive(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
   ovk_data_type ValueType, int Count, void **ReceiverValues, int Tag, ovk_request **Request);
 
+void ovkWait(const ovk_domain *Domain, ovk_request **Request);
+void ovkWaitAll(const ovk_domain *Domain, int NumRequests, ovk_request **Requests);
+void ovkWaitAny(const ovk_domain *Domain, int NumRequests, ovk_request **Requests, int *Index);
+
 void ovkDisperse(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
   ovk_data_type ValueType, int Count, ovk_disperse_op DisperseOp, const void **ReceiverValues,
   const ovk_range *GridValuesRange, ovk_array_layout GridValuesLayout, void **GridValues);

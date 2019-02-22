@@ -40,8 +40,11 @@ public:
     Request_->Wait();
   }
 
-  static void core_WaitAll(array_view<request *> Requests);
-  static void core_WaitAny(array_view<request *> Requests, int &Index);
+  static void internal_WaitAll(array_view<request> Requests);
+  static void internal_WaitAny(array_view<request> Requests, int &Index);
+  // Needed for C API
+  static void internal_WaitAll(array_view<request *> Requests);
+  static void internal_WaitAny(array_view<request *> Requests, int &Index);
 
 private:
 
@@ -75,8 +78,11 @@ private:
 
 };
 
-void WaitAll(array_view<request> Requests);
-void WaitAny(array_view<request> Requests, int &Index);
+void RequestWaitAll(array_view<request> Requests);
+void RequestWaitAny(array_view<request> Requests, int &Index);
+// Needed for C API
+void RequestWaitAll(array_view<request *> Requests);
+void RequestWaitAny(array_view<request *> Requests, int &Index);
 
 }
 

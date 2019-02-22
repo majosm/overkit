@@ -4,6 +4,7 @@
 #ifndef OVK_CORE_DOMAIN_HPP_INCLUDED
 #define OVK_CORE_DOMAIN_HPP_INCLUDED
 
+#include <ovk/core/ArrayView.hpp>
 #include <ovk/core/AssemblyOptions.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Connectivity.hpp>
@@ -129,6 +130,14 @@ void Send(const domain &Domain, int DonorGridID, int ReceiverGridID, data_type V
 
 void Receive(const domain &Domain, int DonorGridID, int ReceiverGridID, data_type ValueType,
   int Count, void **ReceiverValues, int Tag, request &Request);
+
+void Wait(const domain &Domain, request &Request);
+void WaitAll(const domain &Domain, array_view<request> Requests);
+void WaitAny(const domain &Domain, array_view<request> Requests, int &Index);
+// Needed for C API
+void WaitAll(const domain &Domain, array_view<request *> Requests);
+void WaitAny(const domain &Domain, array_view<request *> Requests, int &Index);
+
 
 void Disperse(const domain &Domain, int DonorGridID, int ReceiverGridID, data_type ValueType,
   int Count, disperse_op DisperseOp, const void * const *ReceiverValues, const range
