@@ -307,11 +307,9 @@ void UpdateCollectSendInfo(exchange &Exchange) {
 
   const connectivity_d *Donors;
   long long NumDonors = 0;
-  int MaxSize = 0;
   if (RankHasConnectivityDonorSide(Connectivity)) {
     GetConnectivityDonorSide(Connectivity, Donors);
     GetConnectivityDonorSideCount(*Donors, NumDonors);
-    GetConnectivityDonorSideMaxSize(*Donors, MaxSize);
   }
 
   if (NumDonors > 0) {
