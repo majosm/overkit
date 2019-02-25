@@ -186,9 +186,21 @@ void ResizeDonors(connectivity_d &Donors, long long NumDonors, int MaxSize) {
       Donors.Extents_(1,iDim,iDonor) = 1;
     }
   }
+
   Donors.Coords_.Resize({{MAX_DIMS,NumDonors}}, 0.);
-  Donors.InterpCoefs_.Resize({{MAX_DIMS,MaxSize,NumDonors}}, 0.);
+
+  Donors.InterpCoefs_.Resize({{MAX_DIMS,MaxSize,NumDonors}});
+  for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
+    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+      Donors.InterpCoefs_(iDim,0,iDonor) = 1.;
+      for (int iPoint = 1; iPoint < MaxSize; ++iPoint) {
+        Donors.InterpCoefs_(iDim,iPoint,iDonor) = 0.;
+      }
+    }
+  }
+
   Donors.Destinations_.Resize({{MAX_DIMS,NumDonors}}, 0);
+
   Donors.DestinationRanks_.Resize({NumDonors}, -1);
 
   Donors.Edits_.Count_ = true;

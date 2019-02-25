@@ -1298,6 +1298,9 @@ public:
     RemoteDonorPointCollectRecvs_ = Exchange.RemoteDonorPointCollectRecvs_;
     RemoteDonorPointCollectRecvBufferIndices_ = Exchange.RemoteDonorPointCollectRecvBufferIndices_;
 
+    LocalDonorPointIndices_.Resize({MaxPointsInCell_});
+    LocalDonorPointGridValuesIndices_.Resize({MaxPointsInCell_});
+
   }
 
 protected:
@@ -1399,40 +1402,49 @@ protected:
       DonorSize[iDim] = DonorRange.Size(iDim);
     }
 
+    using donor_indexer = indexer<int, int, MAX_DIMS, array_layout::GRID>;
+    donor_indexer DonorIndexer({DonorBegin, DonorEnd});
+
     bool AwayFromEdge = RangeIncludes(GlobalRange_, DonorRange);
 
     // Fill in the local data
+    int NumLocalDonorPoints;
     if (AwayFromEdge) {
-      using donor_indexer = indexer<int, int, MAX_DIMS, array_layout::GRID>;
-      donor_indexer DonorIndexer({DonorBegin, DonorEnd});
       range LocalDonorRange = IntersectRanges(LocalRange_, DonorRange);
+      int iLocalDonorPoint = 0;
       for (int k = LocalDonorRange.Begin(2); k < LocalDonorRange.End(2); ++k) {
         for (int j = LocalDonorRange.Begin(1); j < LocalDonorRange.End(1); ++j) {
           for (int i = LocalDonorRange.Begin(0); i < LocalDonorRange.End(0); ++i) {
-            int iPointInCell = DonorIndexer.ToIndex(i,j,k);
-            long long iGridPoint = GridValuesIndexer_.ToIndex(i,j,k);
-            for (int iCount = 0; iCount < Count_; ++iCount) {
-              DonorPointValues(iCount,iPointInCell) = value_type(GridValues(iCount)(iGridPoint));
-            }
+            LocalDonorPointIndices_(iLocalDonorPoint) = DonorIndexer.ToIndex(i,j,k);
+            LocalDonorPointGridValuesIndices_(iLocalDonorPoint) = GridValuesIndexer_.ToIndex(i,j,k);
+            ++iLocalDonorPoint;
           }
         }
       }
+      NumLocalDonorPoints = iLocalDonorPoint;
     } else {
-      int iPointInCell = 0;
+      int iLocalDonorPoint = 0;
       for (int k = DonorBegin[2]; k < DonorEnd[2]; ++k) {
         for (int j = DonorBegin[1]; j < DonorEnd[1]; ++j) {
           for (int i = DonorBegin[0]; i < DonorEnd[0]; ++i) {
             elem<int,MAX_DIMS> Point = {i,j,k};
-            CartPeriodicAdjust(Cart_, Point, Point);
-            if (RangeContains(LocalRange_, Point)) {
-              long long iGridPoint = GridValuesIndexer_.ToIndex(Point);
-              for (int iCount = 0; iCount < Count_; ++iCount) {
-                DonorPointValues(iCount,iPointInCell) = value_type(GridValues(iCount)(iGridPoint));
-              }
+            elem<int,MAX_DIMS> AdjustedPoint;
+            CartPeriodicAdjust(Cart_, Point, AdjustedPoint);
+            if (RangeContains(LocalRange_, AdjustedPoint)) {
+              LocalDonorPointIndices_(iLocalDonorPoint) = DonorIndexer.ToIndex(Point);
+              LocalDonorPointGridValuesIndices_(iLocalDonorPoint) = GridValuesIndexer_.ToIndex(
+                AdjustedPoint);
+              ++iLocalDonorPoint;
             }
-            ++iPointInCell;
           }
         }
+      }
+      NumLocalDonorPoints = iLocalDonorPoint;
+    }
+    for (int iCount = 0; iCount < Count_; ++iCount) {
+      for (int iLocalDonorPoint = 0; iLocalDonorPoint < NumLocalDonorPoints; ++iLocalDonorPoint) {
+        DonorPointValues(iCount,LocalDonorPointIndices_(iLocalDonorPoint)) = value_type(
+          GridValues(iCount)(LocalDonorPointGridValuesIndices_(iLocalDonorPoint)));
       }
     }
 
@@ -1461,6 +1473,8 @@ private:
   array_view<const long long * const> RemoteDonorPoints_;
   array_view<const int * const> RemoteDonorPointCollectRecvs_;
   array_view<const long long * const> RemoteDonorPointCollectRecvBufferIndices_;
+  array<int> LocalDonorPointIndices_;
+  array<long long> LocalDonorPointGridValuesIndices_;
 
 };
 
@@ -1513,21 +1527,13 @@ public:
       elem<int,MAX_DIMS> DonorSize;
       parent_type::AssembleDonorPointValues(GridValues, RemoteDonorValues_, iDonor, DonorSize,
         DonorPointValues_);
-
-      donor_indexer Indexer(DonorSize);
+      int NumDonorPoints = DonorSize[0]*DonorSize[1]*DonorSize[2];
 
       for (int iCount = 0; iCount < Count_; ++iCount) {
         DonorValues(iCount)(iDonor) = user_value_type(true);
-      }
-      for (int k = 0; k < DonorSize[2]; ++k) {
-        for (int j = 0; j < DonorSize[1]; ++j) {
-          for (int i = 0; i < DonorSize[0]; ++i) {
-            int iPointInCell = Indexer.ToIndex(i,j,k);
-            for (int iCount = 0; iCount < Count_; ++iCount) {
-              DonorValues(iCount)(iDonor) = DonorValues(iCount)(iDonor) &&
-                !user_value_type(DonorPointValues_(iCount,iPointInCell));
-            }
-          }
+        for (int iPointInCell = 0; iPointInCell < NumDonorPoints; ++iPointInCell) {
+          DonorValues(iCount)(iDonor) = DonorValues(iCount)(iDonor) && !user_value_type(
+            DonorPointValues_(iCount,iPointInCell));
         }
       }
 
@@ -1591,21 +1597,13 @@ public:
       elem<int,MAX_DIMS> DonorSize;
       parent_type::AssembleDonorPointValues(GridValues, RemoteDonorValues_, iDonor, DonorSize,
         DonorPointValues_);
-
-      donor_indexer Indexer(DonorSize);
+      int NumDonorPoints = DonorSize[0]*DonorSize[1]*DonorSize[2];
 
       for (int iCount = 0; iCount < Count_; ++iCount) {
         DonorValues(iCount)(iDonor) = user_value_type(false);
-      }
-      for (int k = 0; k < DonorSize[2]; ++k) {
-        for (int j = 0; j < DonorSize[1]; ++j) {
-          for (int i = 0; i < DonorSize[0]; ++i) {
-            int iPointInCell = Indexer.ToIndex(i,j,k);
-            for (int iCount = 0; iCount < Count_; ++iCount) {
-              DonorValues(iCount)(iDonor) = DonorValues(iCount)(iDonor) ||
-                user_value_type(DonorPointValues_(iCount,iPointInCell));
-            }
-          }
+        for (int iPointInCell = 0; iPointInCell < NumDonorPoints; ++iPointInCell) {
+          DonorValues(iCount)(iDonor) = DonorValues(iCount)(iDonor) || user_value_type(
+            DonorPointValues_(iCount,iPointInCell));
         }
       }
 
@@ -1669,21 +1667,13 @@ public:
       elem<int,MAX_DIMS> DonorSize;
       parent_type::AssembleDonorPointValues(GridValues, RemoteDonorValues_, iDonor, DonorSize,
         DonorPointValues_);
-
-      donor_indexer Indexer(DonorSize);
+      int NumDonorPoints = DonorSize[0]*DonorSize[1]*DonorSize[2];
 
       for (int iCount = 0; iCount < Count_; ++iCount) {
         DonorValues(iCount)(iDonor) = user_value_type(false);
-      }
-      for (int k = 0; k < DonorSize[2]; ++k) {
-        for (int j = 0; j < DonorSize[1]; ++j) {
-          for (int i = 0; i < DonorSize[0]; ++i) {
-            int iPointInCell = Indexer.ToIndex(i,j,k);
-            for (int iCount = 0; iCount < Count_; ++iCount) {
-              DonorValues(iCount)(iDonor) = DonorValues(iCount)(iDonor) ||
-                !user_value_type(DonorPointValues_(iCount,iPointInCell));
-            }
-          }
+        for (int iPointInCell = 0; iPointInCell < NumDonorPoints; ++iPointInCell) {
+          DonorValues(iCount)(iDonor) = DonorValues(iCount)(iDonor) || !user_value_type(
+            DonorPointValues_(iCount,iPointInCell));
         }
       }
 
@@ -1747,21 +1737,13 @@ public:
       elem<int,MAX_DIMS> DonorSize;
       parent_type::AssembleDonorPointValues(GridValues, RemoteDonorValues_, iDonor, DonorSize,
         DonorPointValues_);
-
-      donor_indexer Indexer(DonorSize);
+      int NumDonorPoints = DonorSize[0]*DonorSize[1]*DonorSize[2];
 
       for (int iCount = 0; iCount < Count_; ++iCount) {
         DonorValues(iCount)(iDonor) = user_value_type(true);
-      }
-      for (int k = 0; k < DonorSize[2]; ++k) {
-        for (int j = 0; j < DonorSize[1]; ++j) {
-          for (int i = 0; i < DonorSize[0]; ++i) {
-            int iPointInCell = Indexer.ToIndex(i,j,k);
-            for (int iCount = 0; iCount < Count_; ++iCount) {
-              DonorValues(iCount)(iDonor) = DonorValues(iCount)(iDonor) &&
-                user_value_type(DonorPointValues_(iCount,iPointInCell));
-            }
-          }
+        for (int iPointInCell = 0; iPointInCell < NumDonorPoints; ++iPointInCell) {
+          DonorValues(iCount)(iDonor) = DonorValues(iCount)(iDonor) && user_value_type(
+            DonorPointValues_(iCount,iPointInCell));
         }
       }
 
@@ -1811,6 +1793,7 @@ public:
     parent_type::AllocateRemoteDonorValues(RemoteDonorValues_);
 
     DonorPointValues_.Resize({{Count_,MaxPointsInCell_}});
+    DonorPointCoefs_.Resize({MaxPointsInCell_});
 
     core::EndProfile(*Profiler_, MemAllocTime);
 
@@ -1829,26 +1812,27 @@ public:
       elem<int,MAX_DIMS> DonorSize;
       parent_type::AssembleDonorPointValues(GridValues, RemoteDonorValues_, iDonor, DonorSize,
         DonorPointValues_);
+      int NumDonorPoints = DonorSize[0]*DonorSize[1]*DonorSize[2];
 
       donor_indexer Indexer(DonorSize);
 
-      for (int iCount = 0; iCount < Count_; ++iCount) {
-        DonorValues(iCount)(iDonor) = user_value_type(0);
-      }
       for (int k = 0; k < DonorSize[2]; ++k) {
         for (int j = 0; j < DonorSize[1]; ++j) {
           for (int i = 0; i < DonorSize[0]; ++i) {
-            elem<int,MAX_DIMS> Point = {i,j,k};
-            int iPointInCell = Indexer.ToIndex(Point);
-            double Coef = 1.;
-            for (int iDim = 0; iDim < NumDims_; ++iDim) {
-              Coef *= InterpCoefs_(iDim,Point[iDim],iDonor);
-            }
-            for (int iCount = 0; iCount < Count_; ++iCount) {
-              DonorValues(iCount)(iDonor) += user_value_type(Coef*DonorPointValues_(iCount,
-                iPointInCell));
-            }
+            int iPointInCell = Indexer.ToIndex(i,j,k);
+            DonorPointCoefs_(iPointInCell) =
+              InterpCoefs_(0,i,iDonor) *
+              InterpCoefs_(1,j,iDonor) *
+              InterpCoefs_(2,k,iDonor);
           }
+        }
+      }
+
+      for (int iCount = 0; iCount < Count_; ++iCount) {
+        DonorValues(iCount)(iDonor) = user_value_type(0);
+        for (int iPointInCell = 0; iPointInCell < NumDonorPoints; ++iPointInCell) {
+          DonorValues(iCount)(iDonor) += user_value_type(DonorPointCoefs_(iPointInCell)*
+            DonorPointValues_(iCount,iPointInCell));
         }
       }
 
@@ -1863,6 +1847,7 @@ private:
   array_view<const double,3> InterpCoefs_;
   array<array<value_type,2>> RemoteDonorValues_;
   array<value_type,2> DonorPointValues_;
+  array<double> DonorPointCoefs_;
 
 };
 
