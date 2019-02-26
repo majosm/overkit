@@ -1227,12 +1227,19 @@ private:
 
 };
 
+// Use unsigned char in place of bool for MPI sends/recvs
+namespace no_bool_internal {
+template <typename T> struct helper { using type = T; };
+template <> struct helper<bool> { using type = unsigned char; };
+}
+template <typename T> using no_bool = typename no_bool_internal::helper<T>::type;
+
 template <typename T> class collect_base {
 
 public:
 
   using user_value_type = T;
-  using value_type = core::no_bool<T>;
+  using value_type = no_bool<T>;
 
   collect_base() = default;
   collect_base(const collect_base &) = delete;
@@ -2011,7 +2018,7 @@ private:
 template <typename T> class send_request {
 public:
   using user_value_type = T;
-  using value_type = core::no_bool<T>;
+  using value_type = no_bool<T>;
   send_request(const exchange &Exchange, int Count, int NumSends,
     std::vector<std::vector<value_type>> Buffers, std::vector<MPI_Request> MPIRequests):
     Exchange_(&Exchange),
@@ -2040,7 +2047,7 @@ template <typename T> class send_impl {
 public:
 
   using user_value_type = T;
-  using value_type = core::no_bool<T>;
+  using value_type = no_bool<T>;
   using request_type = send_request<T>;
 
   send_impl() = default;
@@ -2226,7 +2233,7 @@ private:
 template <typename T> class recv_request {
 public:
   using user_value_type = T;
-  using value_type = core::no_bool<T>;
+  using value_type = no_bool<T>;
   recv_request(const exchange &Exchange, int Count, int NumRecvs, 
     std::vector<std::vector<value_type>> Buffers, std::vector<MPI_Request> MPIRequests,
     std::vector<user_value_type *> ReceiverValues):
@@ -2258,7 +2265,7 @@ template <typename T> class recv_impl {
 public:
 
   using user_value_type = T;
-  using value_type = core::no_bool<T>;
+  using value_type = no_bool<T>;
   using request_type = recv_request<T>;
 
   recv_impl() = default;
@@ -2467,7 +2474,7 @@ template <typename T> class disperse_base {
 public:
 
   using user_value_type = T;
-  using value_type = core::no_bool<T>;
+  using value_type = no_bool<T>;
 
   disperse_base() = default;
   disperse_base(const disperse_base &) = delete;

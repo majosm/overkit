@@ -45,11 +45,6 @@ void DynamicHandshake(MPI_Comm Comm, int NumDestRanks, const std::vector<int> &D
 // Generate permutation corresponding to ascending-order sort
 template <typename T> void SortPermutation(long long N, const T *Array, long long *Permutation);
 
-// Sometimes want to avoid bool in templates (types containing std::vector<T>, MPI sends/recvs, etc.)
-template <typename T> struct no_bool_ { using type = T; };
-template <> struct no_bool_<bool> { using type = unsigned char; };
-template <typename T> using no_bool = typename no_bool_<T>::type;
-
 }}
 
 #include <ovk/core/Misc.inl>
