@@ -72,6 +72,7 @@ set(INTERNAL_HEADERS
   ErrorHandler.hpp
   GlobalBase.h
   IntegerSequence.hpp
+  IteratorTraits.hpp
   Logger.hpp
   Logger.inl
   MinMax.h
