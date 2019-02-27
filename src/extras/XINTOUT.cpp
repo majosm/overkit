@@ -317,7 +317,9 @@ error ImportXINTOUT(domain &Domain, const std::string &HOPath, const std::string
   }
 
   std::string ProfileTimesString = core::WriteProfileTimes(Profiler);
-  printf("%s", ProfileTimesString.c_str());
+  if (Comm.Rank() == 0) {
+    printf("%s", ProfileTimesString.c_str());
+  }
 
   return error::NONE;
 
