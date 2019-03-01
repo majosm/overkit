@@ -14,6 +14,8 @@
 
 #include <string>
 
+extern "C" {
+
 ovk_error ovkImportXINTOUT(ovk_domain *Domain, const char *HOPath, const char *XPath,
   int ReadGranularityAdjust, MPI_Info MPIInfo) {
 
@@ -47,5 +49,7 @@ ovk_error ovkExportXINTOUT(const ovk_domain *Domain, const char *HOPath, const c
     ovk::endian(Endian), WriteGranularityAdjust, MPIInfo);
 
   return ovk_error(Error);
+
+}
 
 }
