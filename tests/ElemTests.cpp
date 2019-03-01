@@ -302,6 +302,11 @@ TEST_F(ElemTests, Traits) {
   EXPECT_TRUE((ovk::core::StaticArrayHasBegin<elem, 0>()));
   EXPECT_TRUE((ovk::core::StaticArrayHasEnd<elem, 3>()));
 
+  elem Elem = {1,2,3};
+  EXPECT_THAT(ovk::core::ArrayBegin(Elem), ElementsAre(0));
+  EXPECT_THAT(ovk::core::ArrayEnd(Elem), ElementsAre(3));
+  EXPECT_EQ(ovk::core::ArrayData(Elem), Elem.Data());
+
 }
 
 TEST_F(ElemTests, Addition) {

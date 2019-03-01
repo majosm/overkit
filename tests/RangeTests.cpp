@@ -5,6 +5,7 @@
 #include "gtest/gtest.h"
 #include "MPITest.hpp"
 
+#include <ovk/core/ArrayTraits.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Elem.hpp>
 #include <ovk/core/Range.hpp>

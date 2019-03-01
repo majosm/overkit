@@ -4,7 +4,7 @@
 #ifndef OVK_CORE_ELEM_HPP_INCLUDED
 #define OVK_CORE_ELEM_HPP_INCLUDED
 
-#include <ovk/core/ArrayTraits.hpp>
+#include <ovk/core/ArrayTraitsBase.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/IntegerSequence.hpp>
 #include <ovk/core/IteratorTraits.hpp>

@@ -4,7 +4,6 @@
 #ifndef OVK_CORE_INTERVAL_HPP_INCLUDED
 #define OVK_CORE_INTERVAL_HPP_INCLUDED
 
-#include <ovk/core/ArrayTraits.hpp>
 #include <ovk/core/Elem.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Requires.hpp>

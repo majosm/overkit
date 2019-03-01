@@ -62,6 +62,7 @@ set(PUBLIC_HEADERS
 )
 
 set(INTERNAL_HEADERS
+  ArrayTraitsBase.hpp
   BoxBase.h
   BoxBase.inl
   CartBase.h
