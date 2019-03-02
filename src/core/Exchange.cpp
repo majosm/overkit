@@ -26,6 +26,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 namespace ovk {
@@ -1183,7 +1184,7 @@ private:
 
   template <typename T> class model : public concept {
   public:
-    using user_value_type = typename T::user_value_type;
+    using value_type = typename T::value_type;
     explicit model(T Collect):
       Collect_(std::move(Collect))
     {}
@@ -1202,13 +1203,13 @@ private:
       OVK_DEBUG_ASSERT(DonorValuesVoid || DonorValues_.Count() == 0, "Invalid donor values pointer.");
       for (int iCount = 0; iCount < GridValues_.Count(); ++iCount) {
         OVK_DEBUG_ASSERT(GridValuesVoid[iCount] || NumDonors_ == 0, "Invalid grid values pointer.");
-        GridValues_(iCount) = {static_cast<const user_value_type *>(GridValuesVoid[iCount]),
+        GridValues_(iCount) = {static_cast<const value_type *>(GridValuesVoid[iCount]),
           {GridValuesRange_.Count()}};
       }
       for (int iCount = 0; iCount < DonorValues_.Count(); ++iCount) {
         OVK_DEBUG_ASSERT(DonorValuesVoid[iCount] || NumDonors_ == 0, "Invalid donor values "
           "pointer.");
-        DonorValues_(iCount) = {static_cast<user_value_type *>(DonorValuesVoid[iCount]),
+        DonorValues_(iCount) = {static_cast<value_type *>(DonorValuesVoid[iCount]),
           {NumDonors_}};
       }
       Collect_.Collect(GridValues_, DonorValues_);
@@ -1217,27 +1218,21 @@ private:
     T Collect_;
     range GridValuesRange_;
     long long NumDonors_;
-    array<array_view<const user_value_type>> GridValues_;
-    array<array_view<user_value_type>> DonorValues_;
+    array<array_view<const value_type>> GridValues_;
+    array<array_view<value_type>> DonorValues_;
   };
 
   std::unique_ptr<concept> Collect_;
 
 };
 
-// Use unsigned char in place of bool for MPI sends/recvs
-namespace no_bool_internal {
-template <typename T> struct helper { using type = T; };
-template <> struct helper<bool> { using type = unsigned char; };
-}
-template <typename T> using no_bool = typename no_bool_internal::helper<T>::type;
-
 template <typename T, array_layout Layout> class collect_base {
+
+  using mpi_value_type = core::mpi_compatible_type<T>;
 
 public:
 
-  using user_value_type = T;
-  using value_type = no_bool<T>;
+  using value_type = T;
 
   collect_base() = default;
   collect_base(const collect_base &) = delete;
@@ -1289,6 +1284,13 @@ public:
       SendBuffers_(iSend).Resize({{Count_,Exchange.CollectSends_(iSend).NumPoints}});
     }
 
+    if (!std::is_same<value_type, mpi_value_type>::value) {
+      RecvBuffers_.Resize({NumRecvs});
+      for (int iRecv = 0; iRecv < NumRecvs; ++iRecv) {
+        RecvBuffers_(iRecv).Resize({{Count_,Exchange.CollectRecvs_(iRecv).NumPoints}});
+      }
+    }
+
     Requests_.Reserve(NumSends+NumRecvs);
 
     core::EndProfile(*Profiler_, MemAllocTime);
@@ -1328,24 +1330,33 @@ protected:
 
   }
 
-  void RetrieveRemoteDonorValues(array_view<array_view<const user_value_type>> GridValues,
-    array<array<value_type,2>> &RemoteDonorValues) {
+  void RetrieveRemoteDonorValues(array_view<array_view<const value_type>> GridValues, array<array<
+    value_type,2>> &RemoteDonorValues) {
 
     MPI_Comm Comm;
     GetGridComm(*Grid_, Comm);
 
-    MPI_Datatype MPIDataType = core::GetMPIDataType<value_type>();
+    MPI_Datatype MPIDataType = core::GetMPIDataType<mpi_value_type>();
 
     int MPITime = core::GetProfilerTimerID(*Profiler_, "Collect::MPI");
     int PackTime = core::GetProfilerTimerID(*Profiler_, "Collect::Pack");
 
     core::StartProfile(*Profiler_, MPITime);
 
-    for (int iRecv = 0; iRecv < Recvs_.Count(); ++iRecv) {
-      const exchange::collect_recv &Recv = Recvs_(iRecv);
-      MPI_Request &Request = Requests_.Append();
-      MPI_Irecv(RemoteDonorValues(iRecv).Data(), Count_*Recv.NumPoints, MPIDataType, Recv.Rank, 0,
-        Comm, &Request);
+    if (std::is_same<value_type, mpi_value_type>::value) {
+      for (int iRecv = 0; iRecv < Recvs_.Count(); ++iRecv) {
+        const exchange::collect_recv &Recv = Recvs_(iRecv);
+        MPI_Request &Request = Requests_.Append();
+        MPI_Irecv(RemoteDonorValues(iRecv).Data(), Count_*Recv.NumPoints, MPIDataType, Recv.Rank, 0,
+          Comm, &Request);
+      }
+    } else {
+      for (int iRecv = 0; iRecv < Recvs_.Count(); ++iRecv) {
+        const exchange::collect_recv &Recv = Recvs_(iRecv);
+        MPI_Request &Request = Requests_.Append();
+        MPI_Irecv(RecvBuffers_(iRecv).Data(), Count_*Recv.NumPoints, MPIDataType, Recv.Rank, 0,
+          Comm, &Request);
+      }
     }
 
     core::EndProfile(*Profiler_, MPITime);
@@ -1361,7 +1372,7 @@ protected:
         };
         long long iGridPoint = GridValuesIndexer_.ToIndex(Point);
         for (int iCount = 0; iCount < Count_; ++iCount) {
-          SendBuffers_(iSend)(iCount,iSendPoint) = value_type(GridValues(iCount)(iGridPoint));
+          SendBuffers_(iSend)(iCount,iSendPoint) = mpi_value_type(GridValues(iCount)(iGridPoint));
         }
       }
     }
@@ -1378,15 +1389,23 @@ protected:
 
     MPI_Waitall(Requests_.Count(), Requests_.Data(), MPI_STATUSES_IGNORE);
 
+    if (!std::is_same<value_type, mpi_value_type>::value) {
+      for (int iRecv = 0; iRecv < RecvBuffers_.Count(); ++iRecv) {
+        for (long long iBuffer = 0; iBuffer < RecvBuffers_(iRecv).Count(); ++iBuffer) {
+          RemoteDonorValues(iRecv)[iBuffer] = value_type(RecvBuffers_(iRecv)[iBuffer]);
+        }
+      }
+    }
+
     core::EndProfile(*Profiler_, MPITime);
 
     Requests_.Clear();
 
   }
 
-  void AssembleDonorPointValues(array_view<array_view<const user_value_type>> GridValues, const
-    array<array<value_type,2>> &RemoteDonorValues, long long iDonor, elem<int,MAX_DIMS> &DonorSize,
-    array_view<value_type,2> DonorPointValues) {
+  void AssembleDonorPointValues(array_view<array_view<const value_type>> GridValues, const
+    array<array<value_type,2>> &RemoteDonorValues, long long iDonor, elem<int,MAX_DIMS>
+    &DonorSize, array_view<value_type,2> DonorPointValues) {
 
     const connectivity_d &Donors = *Donors_;
 
@@ -1443,8 +1462,8 @@ protected:
     }
     for (int iCount = 0; iCount < Count_; ++iCount) {
       for (int iLocalDonorPoint = 0; iLocalDonorPoint < NumLocalDonorPoints; ++iLocalDonorPoint) {
-        DonorPointValues(iCount,LocalDonorPointIndices_(iLocalDonorPoint)) = value_type(
-          GridValues(iCount)(LocalDonorPointGridValuesIndices_(iLocalDonorPoint)));
+        DonorPointValues(iCount,LocalDonorPointIndices_(iLocalDonorPoint)) = GridValues(iCount)(
+          LocalDonorPointGridValuesIndices_(iLocalDonorPoint));
       }
     }
 
@@ -1467,7 +1486,8 @@ private:
   range LocalRange_;
   array_view<const exchange::collect_send> Sends_;
   array_view<const exchange::collect_recv> Recvs_;
-  array<array<value_type,2>> SendBuffers_;
+  array<array<mpi_value_type,2>> SendBuffers_;
+  array<array<mpi_value_type,2>> RecvBuffers_;
   array<MPI_Request> Requests_;
   array_view<const int> NumRemoteDonorPoints_;
   array_view<const long long * const> RemoteDonorPoints_;
@@ -1492,7 +1512,6 @@ protected:
 
 public:
 
-  using typename parent_type::user_value_type;
   using typename parent_type::value_type;
 
   collect_none() = default;
@@ -1513,8 +1532,8 @@ public:
 
   }
 
-  void Collect(array_view<array_view<const user_value_type>> GridValues, array_view<array_view<
-    user_value_type>> DonorValues) {
+  void Collect(array_view<array_view<const value_type>> GridValues, array_view<array_view<
+    value_type>> DonorValues) {
 
     parent_type::RetrieveRemoteDonorValues(GridValues, RemoteDonorValues_);
 
@@ -1530,10 +1549,10 @@ public:
       int NumDonorPoints = DonorSize[0]*DonorSize[1]*DonorSize[2];
 
       for (int iCount = 0; iCount < Count_; ++iCount) {
-        DonorValues(iCount)(iDonor) = user_value_type(true);
+        DonorValues(iCount)(iDonor) = value_type(true);
         for (int iPointInCell = 0; iPointInCell < NumDonorPoints; ++iPointInCell) {
-          DonorValues(iCount)(iDonor) = DonorValues(iCount)(iDonor) && !user_value_type(
-            DonorPointValues_(iCount,iPointInCell));
+          DonorValues(iCount)(iDonor) = DonorValues(iCount)(iDonor) && !DonorPointValues_(iCount,
+            iPointInCell);
         }
       }
 
@@ -1564,7 +1583,6 @@ protected:
 
 public:
 
-  using typename parent_type::user_value_type;
   using typename parent_type::value_type;
 
   collect_any() = default;
@@ -1584,8 +1602,8 @@ public:
 
   }
 
-  void Collect(array_view<array_view<const user_value_type>> GridValues, array_view<array_view<
-    user_value_type>> DonorValues) {
+  void Collect(array_view<array_view<const value_type>> GridValues, array_view<array_view<
+    value_type>> DonorValues) {
 
     parent_type::RetrieveRemoteDonorValues(GridValues, RemoteDonorValues_);
 
@@ -1600,10 +1618,10 @@ public:
       int NumDonorPoints = DonorSize[0]*DonorSize[1]*DonorSize[2];
 
       for (int iCount = 0; iCount < Count_; ++iCount) {
-        DonorValues(iCount)(iDonor) = user_value_type(false);
+        DonorValues(iCount)(iDonor) = value_type(false);
         for (int iPointInCell = 0; iPointInCell < NumDonorPoints; ++iPointInCell) {
-          DonorValues(iCount)(iDonor) = DonorValues(iCount)(iDonor) || user_value_type(
-            DonorPointValues_(iCount,iPointInCell));
+          DonorValues(iCount)(iDonor) = DonorValues(iCount)(iDonor) || DonorPointValues_(iCount,
+            iPointInCell);
         }
       }
 
@@ -1634,7 +1652,6 @@ protected:
 
 public:
 
-  using typename parent_type::user_value_type;
   using typename parent_type::value_type;
 
   collect_not_all() = default;
@@ -1654,8 +1671,8 @@ public:
 
   }
 
-  void Collect(array_view<array_view<const user_value_type>> GridValues, array_view<array_view<
-    user_value_type>> DonorValues) {
+  void Collect(array_view<array_view<const value_type>> GridValues, array_view<array_view<
+    value_type>> DonorValues) {
 
     parent_type::RetrieveRemoteDonorValues(GridValues, RemoteDonorValues_);
 
@@ -1670,10 +1687,10 @@ public:
       int NumDonorPoints = DonorSize[0]*DonorSize[1]*DonorSize[2];
 
       for (int iCount = 0; iCount < Count_; ++iCount) {
-        DonorValues(iCount)(iDonor) = user_value_type(false);
+        DonorValues(iCount)(iDonor) = value_type(false);
         for (int iPointInCell = 0; iPointInCell < NumDonorPoints; ++iPointInCell) {
-          DonorValues(iCount)(iDonor) = DonorValues(iCount)(iDonor) || !user_value_type(
-            DonorPointValues_(iCount,iPointInCell));
+          DonorValues(iCount)(iDonor) = DonorValues(iCount)(iDonor) || !DonorPointValues_(iCount,
+            iPointInCell);
         }
       }
 
@@ -1704,7 +1721,6 @@ protected:
 
 public:
 
-  using typename parent_type::user_value_type;
   using typename parent_type::value_type;
 
   collect_all() = default;
@@ -1724,8 +1740,8 @@ public:
 
   }
 
-  void Collect(array_view<array_view<const user_value_type>> GridValues, array_view<array_view<
-    user_value_type>> DonorValues) {
+  void Collect(array_view<array_view<const value_type>> GridValues, array_view<array_view<
+    value_type>> DonorValues) {
 
     parent_type::RetrieveRemoteDonorValues(GridValues, RemoteDonorValues_);
 
@@ -1740,10 +1756,10 @@ public:
       int NumDonorPoints = DonorSize[0]*DonorSize[1]*DonorSize[2];
 
       for (int iCount = 0; iCount < Count_; ++iCount) {
-        DonorValues(iCount)(iDonor) = user_value_type(true);
+        DonorValues(iCount)(iDonor) = value_type(true);
         for (int iPointInCell = 0; iPointInCell < NumDonorPoints; ++iPointInCell) {
-          DonorValues(iCount)(iDonor) = DonorValues(iCount)(iDonor) && user_value_type(
-            DonorPointValues_(iCount,iPointInCell));
+          DonorValues(iCount)(iDonor) = DonorValues(iCount)(iDonor) && DonorPointValues_(iCount,
+            iPointInCell);
         }
       }
 
@@ -1776,7 +1792,6 @@ protected:
 
 public:
 
-  using typename parent_type::user_value_type;
   using typename parent_type::value_type;
 
   collect_interp() = default;
@@ -1799,8 +1814,8 @@ public:
 
   }
 
-  void Collect(array_view<array_view<const user_value_type>> GridValues, array_view<array_view<
-    user_value_type>> DonorValues) {
+  void Collect(array_view<array_view<const value_type>> GridValues, array_view<array_view<
+    value_type>> DonorValues) {
 
     parent_type::RetrieveRemoteDonorValues(GridValues, RemoteDonorValues_);
 
@@ -1829,10 +1844,10 @@ public:
       }
 
       for (int iCount = 0; iCount < Count_; ++iCount) {
-        DonorValues(iCount)(iDonor) = user_value_type(0);
+        DonorValues(iCount)(iDonor) = value_type(0);
         for (int iPointInCell = 0; iPointInCell < NumDonorPoints; ++iPointInCell) {
-          DonorValues(iCount)(iDonor) += user_value_type(DonorPointCoefs_(iPointInCell)*
-            DonorPointValues_(iCount,iPointInCell));
+          DonorValues(iCount)(iDonor) += DonorPointCoefs_(iPointInCell)*DonorPointValues_(iCount,
+            iPointInCell);
         }
       }
 
@@ -1989,7 +2004,7 @@ private:
 
   template <typename T> class model : public concept {
   public:
-    using user_value_type = typename T::user_value_type;
+    using value_type = typename T::value_type;
     explicit model(T Send):
       Send_(std::move(Send))
     {}
@@ -2006,7 +2021,7 @@ private:
       for (int iCount = 0; iCount < DonorValues_.Count(); ++iCount) {
         OVK_DEBUG_ASSERT(DonorValuesVoid[iCount] || NumDonors_ == 0, "Invalid donor values "
           "pointer.");
-        DonorValues_(iCount) = {static_cast<const user_value_type *>(DonorValuesVoid[iCount]),
+        DonorValues_(iCount) = {static_cast<const value_type *>(DonorValuesVoid[iCount]),
           {NumDonors_}};
       }
       Send_.Send(DonorValues_, Request);
@@ -2014,7 +2029,7 @@ private:
   private:
     T Send_;
     long long NumDonors_;
-    array<array_view<const user_value_type>> DonorValues_;
+    array<array_view<const value_type>> DonorValues_;
   };
 
   std::unique_ptr<concept> Send_;
@@ -2023,9 +2038,9 @@ private:
 
 template <typename T> class send_request {
 public:
-  using user_value_type = T;
-  using value_type = no_bool<T>;
-  send_request(const exchange &Exchange, int Count, int NumSends, array<array<value_type,2>>
+  using value_type = T;
+  using mpi_value_type = core::mpi_compatible_type<value_type>;
+  send_request(const exchange &Exchange, int Count, int NumSends, array<array<mpi_value_type,2>>
     Buffers, array<MPI_Request> MPIRequests):
     Exchange_(&Exchange),
     Profiler_(Exchange.Profiler_),
@@ -2052,7 +2067,7 @@ private:
   int MPITime_;
   int Count_;
   int NumSends_;
-  array<array<value_type,2>> Buffers_;
+  array<array<mpi_value_type,2>> Buffers_;
   array<MPI_Request> MPIRequests_;
 };
 
@@ -2060,8 +2075,8 @@ template <typename T> class send_impl {
 
 public:
 
-  using user_value_type = T;
-  using value_type = no_bool<T>;
+  using value_type = T;
+  using mpi_value_type = core::mpi_compatible_type<value_type>;
   using request_type = send_request<T>;
 
   send_impl() = default;
@@ -2091,7 +2106,7 @@ public:
 
   }
 
-  void Send(array_view<array_view<const user_value_type>> DonorValues, request &Request) {
+  void Send(array_view<array_view<const value_type>> DonorValues, request &Request) {
 
     const exchange &Exchange = *Exchange_;
     const connectivity_d &Donors = *Donors_;
@@ -2099,7 +2114,7 @@ public:
     long long NumDonors;
     GetConnectivityDonorSideCount(Donors, NumDonors);
 
-    MPI_Datatype MPIDataType = core::GetMPIDataType<value_type>();
+    MPI_Datatype MPIDataType = core::GetMPIDataType<mpi_value_type>();
 
     int MemAllocTime = core::GetProfilerTimerID(*Profiler_, "SendRecv::MemAlloc");
     int PackTime = core::GetProfilerTimerID(*Profiler_, "SendRecv::Pack");
@@ -2108,7 +2123,7 @@ public:
     core::StartProfile(*Profiler_, MemAllocTime);
 
     // Will be moved into request object
-    array<array<value_type,2>> Buffers({NumSends_});
+    array<array<mpi_value_type,2>> Buffers({NumSends_});
     for (int iSend = 0; iSend < NumSends_; ++iSend) {
       const exchange::send &Send = Exchange.Sends_(iSend);
       Buffers(iSend).Resize({{Count_,Send.Count}});
@@ -2127,7 +2142,7 @@ public:
       if (iSend >= 0) {
         long long iBuffer = NextBufferEntry_(iSend);
         for (int iCount = 0; iCount < Count_; ++iCount) {
-          Buffers(iSend)(iCount,iBuffer) = value_type(DonorValues(iCount)(iDonor));
+          Buffers(iSend)(iCount,iBuffer) = mpi_value_type(DonorValues(iCount)(iDonor));
         }
         ++NextBufferEntry_(iSend);
       }
@@ -2246,7 +2261,7 @@ private:
 
   template <typename T> class model : public concept {
   public:
-    using user_value_type = typename T::user_value_type;
+    using value_type = typename T::value_type;
     explicit model(T Recv):
       Recv_(std::move(Recv))
     {}
@@ -2263,7 +2278,7 @@ private:
       for (int iCount = 0; iCount < ReceiverValues_.Count(); ++iCount) {
         OVK_DEBUG_ASSERT(ReceiverValuesVoid[iCount] || NumReceivers_ == 0, "Invalid receiver data "
           "pointer.");
-        ReceiverValues_(iCount) = {static_cast<user_value_type *>(ReceiverValuesVoid[iCount]),
+        ReceiverValues_(iCount) = {static_cast<value_type *>(ReceiverValuesVoid[iCount]),
           {NumReceivers_}};
       }
       Recv_.Recv(ReceiverValues_, Request);
@@ -2271,7 +2286,7 @@ private:
   private:
     T Recv_;
     long long NumReceivers_;
-    array<array_view<user_value_type>> ReceiverValues_;
+    array<array_view<value_type>> ReceiverValues_;
   };
 
   std::unique_ptr<concept> Recv_;
@@ -2280,10 +2295,10 @@ private:
 
 template <typename T> class recv_request {
 public:
-  using user_value_type = T;
-  using value_type = no_bool<T>;
-  recv_request(const exchange &Exchange, int Count, int NumRecvs, array<array<value_type,2>>
-    Buffers, array<MPI_Request> MPIRequests, array<array_view<user_value_type>> ReceiverValues):
+  using value_type = T;
+  using mpi_value_type = core::mpi_compatible_type<value_type>;
+  recv_request(const exchange &Exchange, int Count, int NumRecvs, array<array<mpi_value_type,2>>
+    Buffers, array<MPI_Request> MPIRequests, array<array_view<value_type>> ReceiverValues):
     Exchange_(&Exchange),
     Profiler_(Exchange.Profiler_),
     Count_(Count),
@@ -2312,17 +2327,17 @@ private:
   int UnpackTime_;
   int Count_;
   int NumRecvs_;
-  array<array<value_type,2>> Buffers_;
+  array<array<mpi_value_type,2>> Buffers_;
   array<MPI_Request> MPIRequests_;
-  array<array_view<user_value_type>> ReceiverValues_;
+  array<array_view<value_type>> ReceiverValues_;
 };
 
 template <typename T> class recv_impl {
 
 public:
 
-  using user_value_type = T;
-  using value_type = no_bool<T>;
+  using value_type = T;
+  using mpi_value_type = core::mpi_compatible_type<value_type>;
   using request_type = recv_request<T>;
 
   recv_impl() = default;
@@ -2345,11 +2360,11 @@ public:
 
   }
 
-  void Recv(array_view<array_view<user_value_type>> ReceiverValues, request &Request) {
+  void Recv(array_view<array_view<value_type>> ReceiverValues, request &Request) {
 
     const exchange &Exchange = *Exchange_;
 
-    MPI_Datatype MPIDataType = core::GetMPIDataType<value_type>();
+    MPI_Datatype MPIDataType = core::GetMPIDataType<mpi_value_type>();
 
     int MemAllocTime = core::GetProfilerTimerID(*Profiler_, "SendRecv::MemAlloc");
     int MPITime = core::GetProfilerTimerID(*Profiler_, "SendRecv::MPI");
@@ -2357,7 +2372,7 @@ public:
     core::StartProfile(*Profiler_, MemAllocTime);
 
     // Will be moved into request object
-    array<array<value_type,2>> Buffers({NumRecvs_});
+    array<array<mpi_value_type,2>> Buffers({NumRecvs_});
     for (int iRecv = 0; iRecv < NumRecvs_; ++iRecv) {
       const exchange::recv &Recv = Exchange.Recvs_(iRecv);
       Buffers(iRecv).Resize({{Count_,Recv.Count}});
@@ -2379,7 +2394,7 @@ public:
     core::StartProfile(*Profiler_, MemAllocTime);
 
     // Will be moved into request object
-    array<array_view<user_value_type>> ReceiverValuesSaved({ReceiverValues});
+    array<array_view<value_type>> ReceiverValuesSaved({ReceiverValues});
 
     core::EndProfile(*Profiler_, MemAllocTime);
 
@@ -2426,7 +2441,7 @@ template <typename T> void recv_request<T>::Wait() {
     if (iRecv >= 0) {
       long long iBuffer = NextBufferEntry(iRecv);
       for (int iCount = 0; iCount < Count_; ++iCount) {
-        ReceiverValues_(iCount)(iReceiver) = user_value_type(Buffers_(iRecv)(iCount,iBuffer));
+        ReceiverValues_(iCount)(iReceiver) = value_type(Buffers_(iRecv)(iCount,iBuffer));
       }
       ++NextBufferEntry(iRecv);
     }
@@ -2507,7 +2522,7 @@ private:
 
   template <typename T> class model : public concept {
   public:
-    using user_value_type = typename T::user_value_type;
+    using value_type = typename T::value_type;
     explicit model(T Disperse):
       Disperse_(std::move(Disperse))
     {}
@@ -2528,13 +2543,13 @@ private:
       for (int iCount = 0; iCount < ReceiverValues_.Count(); ++iCount) {
         OVK_DEBUG_ASSERT(ReceiverValuesVoid[iCount] || NumReceivers_ == 0, "Invalid receiver "
           "values pointer.");
-        ReceiverValues_(iCount) = {static_cast<const user_value_type *>(ReceiverValuesVoid[iCount]),
+        ReceiverValues_(iCount) = {static_cast<const value_type *>(ReceiverValuesVoid[iCount]),
           {NumReceivers_}};
       }
       for (int iCount = 0; iCount < GridValues_.Count(); ++iCount) {
         OVK_DEBUG_ASSERT(GridValuesVoid[iCount] || NumReceivers_ == 0, "Invalid grid values "
           "pointer.");
-        GridValues_(iCount) = {static_cast<user_value_type *>(GridValuesVoid[iCount]),
+        GridValues_(iCount) = {static_cast<value_type *>(GridValuesVoid[iCount]),
           {GridValuesRange_.Count()}};
       }
       Disperse_.Disperse(ReceiverValues_, GridValues_);
@@ -2543,8 +2558,8 @@ private:
     T Disperse_;
     long long NumReceivers_;
     range GridValuesRange_;
-    array<array_view<const user_value_type>> ReceiverValues_;
-    array<array_view<user_value_type>> GridValues_;
+    array<array_view<const value_type>> ReceiverValues_;
+    array<array_view<value_type>> GridValues_;
   };
 
   std::unique_ptr<concept> Disperse_;
@@ -2555,8 +2570,7 @@ template <typename T, array_layout Layout> class disperse_base {
 
 public:
 
-  using user_value_type = T;
-  using value_type = no_bool<T>;
+  using value_type = T;
 
   disperse_base() = default;
   disperse_base(const disperse_base &) = delete;
@@ -2619,7 +2633,6 @@ protected:
 
 public:
 
-  using typename parent_type::user_value_type;
   using typename parent_type::value_type;
 
   disperse_overwrite() = default;
@@ -2630,8 +2643,8 @@ public:
 
   }
 
-  void Disperse(array_view<array_view<const user_value_type>> ReceiverValues, array_view<
-    array_view<user_value_type>> GridValues) {
+  void Disperse(array_view<array_view<const value_type>> ReceiverValues, array_view<
+    array_view<value_type>> GridValues) {
 
     for (long long iReceiver = 0; iReceiver < NumReceivers_; ++iReceiver) {
       elem<int,MAX_DIMS> Point = {
@@ -2665,7 +2678,6 @@ protected:
 
 public:
 
-  using typename parent_type::user_value_type;
   using typename parent_type::value_type;
 
   disperse_append() = default;
@@ -2676,8 +2688,8 @@ public:
 
   }
 
-  void Disperse(array_view<array_view<const user_value_type>> ReceiverValues, array_view<
-    array_view<user_value_type>> GridValues) {
+  void Disperse(array_view<array_view<const value_type>> ReceiverValues, array_view<
+    array_view<value_type>> GridValues) {
 
     for (long long iReceiver = 0; iReceiver < NumReceivers_; ++iReceiver) {
       elem<int,MAX_DIMS> Point = {

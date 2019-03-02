@@ -48,6 +48,14 @@ template <> inline MPI_Datatype GetMPIDataType<unsigned long long>() { return MP
 template <> inline MPI_Datatype GetMPIDataType<float>() { return MPI_FLOAT; }
 template <> inline MPI_Datatype GetMPIDataType<double>() { return MPI_DOUBLE; }
 
+// Use unsigned char in place of bool for MPI sends/recvs
+namespace data_type_internal {
+template <typename T> struct mpi_compatible_type_helper { using type = T; };
+template <> struct mpi_compatible_type_helper<bool> { using type = unsigned char; };
+}
+template <typename T> using mpi_compatible_type = typename data_type_internal::
+  mpi_compatible_type_helper<T>::type;
+
 }
 
 }
