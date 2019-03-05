@@ -2043,15 +2043,15 @@ public:
   send_request(const exchange &Exchange, int Count, int NumSends, array<array<mpi_value_type,2>>
     Buffers, array<MPI_Request> MPIRequests):
     Exchange_(&Exchange),
-    Profiler_(Exchange.Profiler_),
     Count_(Count),
     NumSends_(NumSends),
     Buffers_(std::move(Buffers)),
-    MPIRequests_(std::move(MPIRequests))
+    MPIRequests_(std::move(MPIRequests)),
+    Profiler_(Exchange.Profiler_),
+    MemAllocTime_(core::GetProfilerTimerID(*Profiler_, "SendRecv::MemAlloc")),
+    MPITime_(core::GetProfilerTimerID(*Profiler_, "SendRecv::MPI"))
   {
     GetConnectivityDonorSide(*Exchange.Connectivity_, Donors_);
-    MemAllocTime_ = core::GetProfilerTimerID(*Profiler_, "SendRecv::MemAlloc");
-    MPITime_ = core::GetProfilerTimerID(*Profiler_, "SendRecv::MPI");
   }
   void Wait();
   array_view<MPI_Request> MPIRequests() { return MPIRequests_; }
@@ -2062,13 +2062,13 @@ public:
 private:
   const exchange *Exchange_;
   const connectivity_d *Donors_;
-  mutable core::profiler *Profiler_;
-  int MemAllocTime_;
-  int MPITime_;
   int Count_;
   int NumSends_;
   array<array<mpi_value_type,2>> Buffers_;
   array<MPI_Request> MPIRequests_;
+  mutable core::profiler *Profiler_;
+  int MemAllocTime_;
+  int MPITime_;
 };
 
 template <typename T> class send_impl {
@@ -2300,17 +2300,17 @@ public:
   recv_request(const exchange &Exchange, int Count, int NumRecvs, array<array<mpi_value_type,2>>
     Buffers, array<MPI_Request> MPIRequests, array<array_view<value_type>> ReceiverValues):
     Exchange_(&Exchange),
-    Profiler_(Exchange.Profiler_),
     Count_(Count),
     NumRecvs_(NumRecvs),
     Buffers_(std::move(Buffers)),
     MPIRequests_(std::move(MPIRequests)),
-    ReceiverValues_(std::move(ReceiverValues))
+    ReceiverValues_(std::move(ReceiverValues)),
+    Profiler_(Exchange.Profiler_),
+    MemAllocTime_(core::GetProfilerTimerID(*Profiler_, "SendRecv::MemAlloc")),
+    MPITime_(core::GetProfilerTimerID(*Profiler_, "SendRecv::MPI")),
+    UnpackTime_(core::GetProfilerTimerID(*Profiler_, "SendRecv::Unpack"))
   {
     GetConnectivityReceiverSide(*Exchange.Connectivity_, Receivers_);
-    MemAllocTime_ = core::GetProfilerTimerID(*Profiler_, "SendRecv::MemAlloc");
-    MPITime_ = core::GetProfilerTimerID(*Profiler_, "SendRecv::MPI");
-    UnpackTime_ = core::GetProfilerTimerID(*Profiler_, "SendRecv::Unpack");
   }
   void Wait();
   array_view<MPI_Request> MPIRequests() { return MPIRequests_; }
@@ -2321,15 +2321,15 @@ public:
 private:
   const exchange *Exchange_;
   const connectivity_r *Receivers_;
-  mutable core::profiler *Profiler_;
-  int MemAllocTime_;
-  int MPITime_;
-  int UnpackTime_;
   int Count_;
   int NumRecvs_;
   array<array<mpi_value_type,2>> Buffers_;
   array<MPI_Request> MPIRequests_;
   array<array_view<value_type>> ReceiverValues_;
+  mutable core::profiler *Profiler_;
+  int MemAllocTime_;
+  int MPITime_;
+  int UnpackTime_;
 };
 
 template <typename T> class recv_impl {
