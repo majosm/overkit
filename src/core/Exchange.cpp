@@ -2053,8 +2053,9 @@ public:
   {
     GetConnectivityDonorSide(*Exchange.Connectivity_, Donors_);
   }
-  void Wait();
   array_view<MPI_Request> MPIRequests() { return MPIRequests_; }
+  void Finish(int) { /* Nothing to finish */ }
+  void Wait();
   void StartProfileMemAlloc() const { core::StartProfile(*Profiler_, MemAllocTime_); }
   void EndProfileMemAlloc() const { core::EndProfile(*Profiler_, MemAllocTime_); }
   void StartProfileMPI() const { core::StartProfile(*Profiler_, MPITime_); }
@@ -2312,8 +2313,9 @@ public:
   {
     GetConnectivityReceiverSide(*Exchange.Connectivity_, Receivers_);
   }
-  void Wait();
   array_view<MPI_Request> MPIRequests() { return MPIRequests_; }
+  void Finish(int) { /* Can't finish until all requests are done */ }
+  void Wait();
   void StartProfileMemAlloc() const { core::StartProfile(*Profiler_, MemAllocTime_); }
   void EndProfileMemAlloc() const { core::EndProfile(*Profiler_, MemAllocTime_); }
   void StartProfileMPI() const { core::StartProfile(*Profiler_, MPITime_); }

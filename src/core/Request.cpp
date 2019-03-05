@@ -11,6 +11,7 @@
 #include <mpi.h>
 
 #include <memory>
+#include <tuple>
 #include <utility>
 
 namespace ovk {
@@ -171,10 +172,10 @@ void request::internal_WaitAll(array_view<request *> Requests) {
   StartProfileMemAlloc();
 
   array<MPI_Request> AllMPIRequests;
-  array<int> MPIRequestToRequest;
+  array<std::tuple<int,int>> AllMPIRequestToRequest;
 
   AllMPIRequests.Reserve(TotalMPIRequests);
-  MPIRequestToRequest.Reserve(TotalMPIRequests);
+  AllMPIRequestToRequest.Reserve(TotalMPIRequests);
 
   EndProfileMemAlloc();
 
@@ -185,27 +186,27 @@ void request::internal_WaitAll(array_view<request *> Requests) {
         array_view<MPI_Request> MPIRequests = Request.MPIRequests();
         for (int iMPIRequest = 0; iMPIRequest < MPIRequests.Count(); ++iMPIRequest) {
           AllMPIRequests.Append(MPIRequests(iMPIRequest));
-          MPIRequestToRequest.Append(iRequest);
+          AllMPIRequestToRequest.Append(iRequest, iMPIRequest);
         }
       }
     }
   }
 
   while (true) {
-    int iMPIRequest;
+    int iDone;
     StartProfileMPI();
-    MPI_Waitany(TotalMPIRequests, AllMPIRequests.Data(), &iMPIRequest, MPI_STATUSES_IGNORE);
+    MPI_Waitany(TotalMPIRequests, AllMPIRequests.Data(), &iDone, MPI_STATUSES_IGNORE);
     EndProfileMPI();
-    if (iMPIRequest == MPI_UNDEFINED) {
+    if (iDone == MPI_UNDEFINED) {
       break;
     }
-    int iRequest = MPIRequestToRequest(iMPIRequest);
+    int iRequest, iMPIRequest;
+    std::tie(iRequest, iMPIRequest) = AllMPIRequestToRequest(iDone);
+    Requests(iRequest)->MPIRequests()(iMPIRequest) = MPI_REQUEST_NULL;
+    Requests(iRequest)->Finish(iMPIRequest);
     --NumRemainingMPIRequests(iRequest);
     if (NumRemainingMPIRequests(iRequest) == 0) {
-      request &Request = *Requests(iRequest);
-      Request.MPIRequests().Fill(MPI_REQUEST_NULL);
-      Request.Wait();
-      Request = request();
+      Requests(iRequest)->Wait();
     }
   }
 
@@ -271,10 +272,10 @@ void request::internal_WaitAny(array_view<request *> Requests, int &Index) {
   StartProfileMemAlloc();
 
   array<MPI_Request> AllMPIRequests;
-  array<int> MPIRequestToRequest;
+  array<std::tuple<int,int>> AllMPIRequestToRequest;
 
   AllMPIRequests.Reserve(TotalMPIRequests);
-  MPIRequestToRequest.Reserve(TotalMPIRequests);
+  AllMPIRequestToRequest.Reserve(TotalMPIRequests);
 
   EndProfileMemAlloc();
 
@@ -285,28 +286,28 @@ void request::internal_WaitAny(array_view<request *> Requests, int &Index) {
         array_view<MPI_Request> MPIRequests = Request.MPIRequests();
         for (int iMPIRequest = 0; iMPIRequest < MPIRequests.Count(); ++iMPIRequest) {
           AllMPIRequests.Append(MPIRequests(iMPIRequest));
-          MPIRequestToRequest.Append(iRequest);
+          AllMPIRequestToRequest.Append(iRequest, iMPIRequest);
         }
       }
     }
   }
 
   while (true) {
-    int iMPIRequest;
+    int iDone;
     StartProfileMPI();
-    MPI_Waitany(TotalMPIRequests, AllMPIRequests.Data(), &iMPIRequest, MPI_STATUSES_IGNORE);
+    MPI_Waitany(TotalMPIRequests, AllMPIRequests.Data(), &iDone, MPI_STATUSES_IGNORE);
     EndProfileMPI();
-    if (iMPIRequest == MPI_UNDEFINED) {
+    if (iDone == MPI_UNDEFINED) {
       Index = -1;
       break;
     }
-    int iRequest = MPIRequestToRequest(iMPIRequest);
+    int iRequest, iMPIRequest;
+    std::tie(iRequest, iMPIRequest) = AllMPIRequestToRequest(iDone);
+    Requests(iRequest)->MPIRequests()(iMPIRequest) = MPI_REQUEST_NULL;
+    Requests(iRequest)->Finish(iMPIRequest);
     --NumRemainingMPIRequests(iRequest);
     if (NumRemainingMPIRequests(iRequest) == 0) {
-      request &Request = *Requests(iRequest);
-      Request.MPIRequests().Fill(MPI_REQUEST_NULL);
-      Request.Wait();
-      Request = request();
+      Requests(iRequest)->Wait();
       Index = iRequest;
       break;
     }

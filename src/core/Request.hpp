@@ -21,9 +21,12 @@ public:
   request() = default;
   request(const request &) = delete;
   request(request &&) = default;
+  ~request() {
+    if (Request_) Request_->Wait();
+  }
 
-  request &operator=(const request &) = delete;
-  request &operator=(request &&) = default;
+  request &operator=(const request &Other) = delete;
+  request &operator=(request &&Other) = default;
 
   explicit operator bool() { return static_cast<bool>(Request_); }
 
@@ -38,6 +41,7 @@ public:
 
   void Wait() {
     Request_->Wait();
+    Request_.reset();
   }
 
   static void internal_WaitAll(array_view<request> Requests);
@@ -51,8 +55,9 @@ private:
   class concept {
   public:
     virtual ~concept() {}
-    virtual void Wait() = 0;
     virtual array_view<MPI_Request> MPIRequests() = 0;
+    virtual void Finish(int iMPIRequest) = 0;
+    virtual void Wait() = 0;
     virtual void StartProfileMemAlloc() const = 0;
     virtual void EndProfileMemAlloc() const = 0;
     virtual void StartProfileMPI() const = 0;
@@ -64,11 +69,14 @@ private:
     explicit model(T Request):
       Request_(std::move(Request))
     {}
-    virtual void Wait() override {
-      Request_.Wait();
-    }
     virtual array_view<MPI_Request> MPIRequests() override {
       return Request_.MPIRequests();
+    }
+    virtual void Finish(int iMPIRequest) override {
+      Request_.Finish(iMPIRequest);
+    }
+    virtual void Wait() override {
+      Request_.Wait();
     }
     virtual void StartProfileMemAlloc() const override {
       Request_.StartProfileMemAlloc();
@@ -90,6 +98,10 @@ private:
 
   array_view<MPI_Request> MPIRequests() {
     return Request_->MPIRequests();
+  }
+
+  void Finish(int iMPIRequest) {
+    Request_->Finish(iMPIRequest);
   }
 
   void StartProfileMemAlloc() {

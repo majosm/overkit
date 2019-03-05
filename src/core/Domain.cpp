@@ -1229,7 +1229,6 @@ void Wait(const domain &Domain, request &Request) {
 
   if (Request) {
     Request.Wait();
-    Request = request();
   }
 
   core::EndProfile(Domain.Profiler_, SendRecvTime);
