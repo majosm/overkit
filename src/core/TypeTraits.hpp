@@ -6,6 +6,7 @@
 
 #include <ovk/core/Global.hpp>
 
+#include <cstdint>
 #include <type_traits>
 
 namespace ovk {
@@ -44,6 +45,18 @@ template <typename FRef, typename... Args> constexpr std::false_type Test(...) {
 }
 template <typename FRef, typename... Args> constexpr bool IsCallableWith() {
   return decltype(is_callable_with_internal::Test<FRef, Args...>(nullptr))::value;
+}
+
+// Unique integer value for every type
+using type_id_type = std::uintptr_t;
+namespace type_id_internal {
+template <typename T> struct helper {
+  static int dummy;
+};
+}
+template <typename T> int type_id_internal::helper<T>::dummy;
+template <typename T> constexpr type_id_type GetTypeID() {
+  return reinterpret_cast<std::uintptr_t>(&type_id_internal::helper<T>::dummy);
 }
 
 }}
