@@ -4,66 +4,55 @@
 #ifndef OVK_CORE_CART_HPP_INCLUDED
 #define OVK_CORE_CART_HPP_INCLUDED
 
-#include <ovk/core/ArrayTraits.hpp>
-#include <ovk/core/CartBase.h>
+#include <ovk/core/Constants.hpp>
 #include <ovk/core/Global.hpp>
-#include <ovk/core/Requires.hpp>
-
-#include <type_traits>
+#include <ovk/core/Range.hpp>
+#include <ovk/core/Tuple.hpp>
 
 namespace ovk {
 
-using cart = ovk_cart;
+class cart {
 
-namespace cart_internal {
+public:
 
-template <typename TupleType> static constexpr bool is_compatible_int_tuple_type() {
-  return (core::IsArray<TupleType>() && std::is_same<core::array_value_type<TupleType>, int>::value
-    && core::ArrayRank<TupleType>() == 1) || std::is_same<TupleType, int *>::value;
-}
+  cart() = default;
+  cart(int NumDims, const range &Range, const tuple<bool> &Periodic, periodic_storage
+    PeriodicStorage);
 
-template <typename TupleType> static constexpr bool is_compatible_bool_tuple_type() {
-  return (core::IsArray<TupleType>() && std::is_same<core::array_value_type<TupleType>, bool>::value
-    && core::ArrayRank<TupleType>() == 1) || std::is_same<TupleType, bool *>::value;
-}
+  int Dimension() const { return NumDims_; }
 
-}
+  const range &Range() const { return Range_; }
+  range &Range() { return Range_; }
 
-inline void DefaultCart(cart &Cart, int NumDims);
+  const tuple<bool> &Periodic() const { return Periodic_; }
+  tuple<bool> &Periodic() { return Periodic_; }
+  const bool &Periodic(int iDim) const { return Periodic_[iDim]; }
+  bool &Periodic(int iDim) { return Periodic_[iDim]; }
 
-template <typename SizeTupleType, typename PeriodicTupleType, OVK_FUNCDECL_REQUIRES(
-  cart_internal::is_compatible_int_tuple_type<SizeTupleType>() &&
-  cart_internal::is_compatible_bool_tuple_type<PeriodicTupleType>())>
-  inline void SetCart(cart &Cart, int NumDims, const SizeTupleType &Size, const PeriodicTupleType
-  &Periodic);
+  const periodic_storage &PeriodicStorage() const { return PeriodicStorage_; }
+  periodic_storage &PeriodicStorage() { return PeriodicStorage_; }
 
-template <typename IntegerType, OVK_FUNCDECL_REQUIRES(std::is_integral<IntegerType>::value)> inline
-  void CartCount(const cart &Cart, IntegerType &Count);
+  tuple<int> GetPeriod(const tuple<int> &Point) const;
+  tuple<int> PeriodicAdjust(const tuple<int> &Point) const;
 
-// && in order to bind to temporary pointers (i.e., const pointer to non-const data); not sure if
-// there is a nicer way to do this
-template <typename PointTupleType, typename PeriodTupleType, OVK_FUNCDECL_REQUIRES(
-  cart_internal::is_compatible_int_tuple_type<PointTupleType>() &&
-  cart_internal::is_compatible_int_tuple_type<typename std::decay<PeriodTupleType>::type>() &&
-  !std::is_const<typename std::decay<PeriodTupleType>::type>::value)> inline void
-  CartFindPeriod(const cart &Cart, const PointTupleType &Point, PeriodTupleType &&Period);
+private:
 
-// && in order to bind to temporary pointers (i.e., const pointer to non-const data); not sure if
-// there is a nicer way to do this
-template <typename TupleTupleType, typename AdjustedTupleTupleType, OVK_FUNCDECL_REQUIRES(
-  cart_internal::is_compatible_int_tuple_type<TupleTupleType>() &&
-  cart_internal::is_compatible_int_tuple_type<typename std::decay<AdjustedTupleTupleType>::type>()
-  && !std::is_const<typename std::decay<AdjustedTupleTupleType>::type>::value)> inline void
-  CartPeriodicAdjust(const cart &Cart, const TupleTupleType &Tuple, AdjustedTupleTupleType
-  &&AdjustedTuple);
+  int NumDims_;
+  range Range_;
+  tuple<bool> Periodic_;
+  periodic_storage PeriodicStorage_;
 
-inline void CartPointToCell(const cart &PointCart, cart &CellCart);
+  friend bool operator==(const cart &Left, const cart &Right);
+
+};
+
+inline bool operator==(const cart &Left, const cart &Right);
+inline bool operator!=(const cart &Left, const cart &Right);
+
+inline cart MakeEmptyCart(int NumDims);
+inline cart CartPointToCell(const cart &PointCart);
 
 }
-
-// Can't put these in the ovk namespace (ADL won't work since ovk_cart isn't defined there)
-inline bool operator==(const ovk::cart &LeftCart, const ovk::cart &RightCart);
-inline bool operator!=(const ovk::cart &LeftCart, const ovk::cart &RightCart);
 
 #include <ovk/core/Cart.inl>
 

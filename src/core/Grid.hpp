@@ -47,13 +47,10 @@ struct grid {
   mutable core::error_handler *ErrorHandler_;
   int ID_;
   std::string Name_;
-  int NumDims_;
-  core::comm Comm_;
   cart Cart_;
-  periodic_storage PeriodicStorage_;
+  core::comm Comm_;
   tuple<double> PeriodicLength_;
   geometry_type GeometryType_;
-  range GlobalRange_;
   range LocalRange_;
   array<core::grid_neighbor> Neighbors_;
   core::partition_hash PartitionHash_;
@@ -62,12 +59,10 @@ struct grid {
 struct grid_info {
   int ID_;
   std::string Name_;
-  int NumDims_;
   int RootRank_;
   cart Cart_;
   tuple<double> PeriodicLength_;
   geometry_type GeometryType_;
-  range GlobalRange_;
   bool IsLocal_;
 };
 
@@ -128,7 +123,6 @@ void DestroyGridInfo(grid_info &Info);
 
 void GetGridInfoID(const grid_info &Info, int &ID);
 void GetGridInfoName(const grid_info &Info, std::string &Name);
-void GetGridInfoDimension(const grid_info &Info, int &NumDims);
 void GetGridInfoRootRank(const grid_info &Info, int &RootRank);
 void GetGridInfoCart(const grid_info &Info, cart &Cart);
 void GetGridInfoPeriodicLength(const grid_info &Info, double *PeriodicLength);

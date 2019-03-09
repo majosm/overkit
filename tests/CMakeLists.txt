@@ -43,6 +43,7 @@ set(TEST_SOURCES
   ArrayTests.cpp
   ArrayTraitsTests.cpp
   ArrayViewTests.cpp
+  CartTests.cpp
   ElemTests.cpp
   ExampleTests.cpp
   ForEachTests.cpp

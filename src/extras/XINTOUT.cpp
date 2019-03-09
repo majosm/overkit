@@ -1948,9 +1948,7 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
   const xintout_receivers &XINTOUTReceivers = XINTOUTGrid.Receivers;
 
   cart Cart;
-  range GlobalRange;
   GetGridCart(Grid, Cart);
-  GetGridGlobalRange(Grid, GlobalRange);
 
   const core::partition_hash &Hash = core::GetGridPartitionHash(Grid);
 
@@ -1981,7 +1979,7 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
         DonorRange.Begin(iDim) = DonorChunk.Data.Extents(0,iDim,iDonor);
         DonorRange.End(iDim) = DonorChunk.Data.Extents(1,iDim,iDonor);
       }
-      bool AwayFromEdge = GlobalRange.Includes(DonorRange);
+      bool AwayFromEdge = Cart.Range().Includes(DonorRange);
       if (AwayFromEdge) {
         for (int k = DonorRange.Begin(2); k < DonorRange.End(2); ++k) {
           for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
@@ -1998,8 +1996,7 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
         for (int k = DonorRange.Begin(2); k < DonorRange.End(2); ++k) {
           for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
             for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
-              elem<int,MAX_DIMS> Point = {i,j,k};
-              CartPeriodicAdjust(Cart, Point, Point);
+              elem<int,MAX_DIMS> Point = Cart.PeriodicAdjust({i,j,k});
               for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
                 ChunkDonorPoints(iDim,iDonorPoint) = Point[iDim];
               }

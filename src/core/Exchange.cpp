@@ -352,8 +352,7 @@ void UpdateCollectSendInfo(exchange &Exchange) {
           for (int k = DonorRange.Begin(2); k < DonorRange.End(2); ++k) {
             for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
               for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
-                elem<int,MAX_DIMS> Point = {i,j,k};
-                CartPeriodicAdjust(Cart, Point, Point);
+                elem<int,MAX_DIMS> Point = Cart.PeriodicAdjust({i,j,k});
                 if (GridNeighbors(iNeighbor).LocalRange.Contains(Point)) {
                   Overlaps = true;
                   goto done_checking_for_overlap1;
@@ -366,8 +365,7 @@ void UpdateCollectSendInfo(exchange &Exchange) {
             for (int k = DonorRange.Begin(2); k < DonorRange.End(2); ++k) {
               for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
                 for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
-                  elem<int,MAX_DIMS> Point = {i,j,k};
-                  CartPeriodicAdjust(Cart, Point, Point);
+                  elem<int,MAX_DIMS> Point = Cart.PeriodicAdjust({i,j,k});
                   if (LocalRange.Contains(Point)) {
                     ExtendRange(SendToNeighborRanges(iNeighbor), Point);
                   }
@@ -435,8 +433,7 @@ void UpdateCollectSendInfo(exchange &Exchange) {
           for (int k = DonorRange.Begin(2); k < DonorRange.End(2); ++k) {
             for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
               for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
-                elem<int,MAX_DIMS> Point = {i,j,k};
-                CartPeriodicAdjust(Cart, Point, Point);
+                elem<int,MAX_DIMS> Point = Cart.PeriodicAdjust({i,j,k});
                 if (GridNeighbors(iNeighbor).LocalRange.Contains(Point)) {
                   Overlaps = true;
                   goto done_checking_for_overlap2;
@@ -449,8 +446,7 @@ void UpdateCollectSendInfo(exchange &Exchange) {
             for (int k = DonorRange.Begin(2); k < DonorRange.End(2); ++k) {
               for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
                 for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
-                  elem<int,MAX_DIMS> Point = {i,j,k};
-                  CartPeriodicAdjust(Cart, Point, Point);
+                  elem<int,MAX_DIMS> Point = Cart.PeriodicAdjust({i,j,k});
                   if (LocalRange.Contains(Point)) {
                     long long iPoint = Indexer.ToIndex(Point);
                     CollectSendMasks(iCollectSend)(iPoint) = true;
@@ -553,8 +549,7 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
           for (int k = DonorRange.Begin(2); k < DonorRange.End(2); ++k) {
             for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
               for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
-                elem<int,MAX_DIMS> Point = {i,j,k};
-                CartPeriodicAdjust(Cart, Point, Point);
+                elem<int,MAX_DIMS> Point = Cart.PeriodicAdjust({i,j,k});
                 if (GridNeighbors(iNeighbor).LocalRange.Contains(Point)) {
                   ExtendRange(RecvFromNeighborRanges(iNeighbor), Point);
                 }
@@ -617,8 +612,7 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
           for (int k = DonorRange.Begin(2); k < DonorRange.End(2); ++k) {
             for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
               for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
-                elem<int,MAX_DIMS> Point = {i,j,k};
-                CartPeriodicAdjust(Cart, Point, Point);
+                elem<int,MAX_DIMS> Point = Cart.PeriodicAdjust({i,j,k});
                 if (GridNeighbors(iNeighbor).LocalRange.Contains(Point)) {
                   long long iPoint = Indexer.ToIndex(Point);
                   CollectRecvMasks(iCollectRecv)(iPoint) = true;
@@ -663,8 +657,7 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
         for (int k = DonorRange.Begin(2); k < DonorRange.End(2); ++k) {
           for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
             for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
-              elem<int,MAX_DIMS> Point = {i,j,k};
-              CartPeriodicAdjust(Cart, Point, Point);
+              elem<int,MAX_DIMS> Point = Cart.PeriodicAdjust({i,j,k});
               if (!LocalRange.Contains(Point)) {
                 ++NumRemoteDonorPoints;
               }
@@ -747,8 +740,7 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
           for (int k = DonorRange.Begin(2); k < DonorRange.End(2); ++k) {
             for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
               for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
-                elem<int,MAX_DIMS> Point = {i,j,k};
-                CartPeriodicAdjust(Cart, Point, Point);
+                elem<int,MAX_DIMS> Point = Cart.PeriodicAdjust({i,j,k});
                 if (GridNeighbors(iNeighbor).LocalRange.Contains(Point)) {
                   long long iPoint = RecvFromNeighborIndexer.ToIndex(Point);
                   CellCollectRecvs(iPointInCell) = iCollectRecv;
@@ -1027,12 +1019,11 @@ void UpdateSendInfo(exchange &Exchange) {
     for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
       bool Communicates = Exchange.DonorDestRanks_(iDonor) >= 0;
       if (Communicates) {
-        elem<int,MAX_DIMS> DonorCell = {
+        elem<int,MAX_DIMS> DonorCell = Cart.PeriodicAdjust({
           Donors->Extents_(0,0,iDonor),
           Donors->Extents_(0,1,iDonor),
           Donors->Extents_(0,2,iDonor)
-        };
-        CartPeriodicAdjust(Cart, DonorCell, DonorCell);
+        });
         Communicates = LocalRange.Contains(DonorCell);
       }
       DonorCommunicates(iDonor) = Communicates;
@@ -1435,8 +1426,7 @@ protected:
         for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
           for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
             elem<int,MAX_DIMS> Point = {i,j,k};
-            elem<int,MAX_DIMS> AdjustedPoint;
-            CartPeriodicAdjust(Cart_, Point, AdjustedPoint);
+            elem<int,MAX_DIMS> AdjustedPoint = Cart_.PeriodicAdjust(Point);
             if (LocalRange_.Contains(AdjustedPoint)) {
               LocalDonorPointIndices_(iLocalDonorPoint) = DonorIndexer.ToIndex(Point);
               LocalDonorPointGridValuesIndices_(iLocalDonorPoint) = GridValuesIndexer_.ToIndex(

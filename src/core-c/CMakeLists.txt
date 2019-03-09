@@ -30,7 +30,6 @@ set(SOURCES
 set(PUBLIC_HEADERS
   AssemblyOptions.h
   Box.h
-  Cart.h
   Connectivity.h
   ConnectivityD.h
   ConnectivityR.h

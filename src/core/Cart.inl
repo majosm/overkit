@@ -3,69 +3,104 @@
 
 namespace ovk {
 
-inline void DefaultCart(cart &Cart, int NumDims) {
+inline cart::cart(int NumDims, const range &Range, const tuple<bool> &Periodic, periodic_storage
+  PeriodicStorage):
+  NumDims_(NumDims),
+  Range_(Range),
+  Periodic_(Periodic),
+  PeriodicStorage_(PeriodicStorage)
+{}
 
-  ovkDefaultCart(&Cart, NumDims);
+inline tuple<int> cart::GetPeriod(const tuple<int> &Tuple) const {
 
-}
+  tuple<int> Period = MakeUniformTuple<int>(0);
 
-template <typename SizeArrayType, typename PeriodicArrayType, OVK_FUNCDEF_REQUIRES(
-  cart_internal::is_compatible_int_tuple_type<SizeArrayType>() &&
-  cart_internal::is_compatible_bool_tuple_type<PeriodicArrayType>())>
-  inline void SetCart(cart &Cart, int NumDims, const SizeArrayType &Size, const PeriodicArrayType
-  &Periodic) {
+  switch (PeriodicStorage_) {
+  case periodic_storage::UNIQUE:
+    for (int iDim = 0; iDim < OVK_MAX_DIMS; ++iDim) {
+      if (Periodic_[iDim]) {
+        int PeriodSize = Range_.Size(iDim);
+        int Offset = Tuple[iDim] - Range_.Begin(iDim);
+        Period[iDim] = Offset/PeriodSize - int(Offset % PeriodSize < 0);
+      }
+    }
+    break;
+  case periodic_storage::DUPLICATED:
+    for (int iDim = 0; iDim < OVK_MAX_DIMS; ++iDim) {
+      if (Periodic_[iDim]) {
+        int PeriodSize = Range_.Size(iDim)-1;
+        int Offset = Tuple[iDim] - Range_.Begin(iDim);
+        Period[iDim] = Offset/PeriodSize - int(Offset % PeriodSize < 0);
+      }
+    }
+    break;
+  }
 
-  ovkSetCart(&Cart, NumDims, &Size[0], &Periodic[0]);
-
-}
-
-template <typename IntegerType, OVK_FUNCDEF_REQUIRES(std::is_integral<IntegerType>::value)> inline
-  void CartCount(const cart &Cart, IntegerType &Count) {
-
-  long long CountLongLong;
-  ovkCartCount(&Cart, &CountLongLong);
-
-  Count = IntegerType(CountLongLong);
-
-}
-
-template <typename PointArrayType, typename PeriodArrayType, OVK_FUNCDEF_REQUIRES(
-  cart_internal::is_compatible_int_tuple_type<PointArrayType>() &&
-  cart_internal::is_compatible_int_tuple_type<typename std::decay<PeriodArrayType>::type>() &&
-  !std::is_const<typename std::decay<PeriodArrayType>::type>::value)> inline void CartFindPeriod(
-  const cart &Cart, const PointArrayType &Point, PeriodArrayType &&Period) {
-
-  ovkCartFindPeriod(&Cart, &Point[0], &Period[0]);
-
-}
-
-template <typename TupleArrayType, typename AdjustedTupleArrayType, OVK_FUNCDEF_REQUIRES(
-  cart_internal::is_compatible_int_tuple_type<TupleArrayType>() &&
-  cart_internal::is_compatible_int_tuple_type<typename std::decay<AdjustedTupleArrayType>::type>()
-  && !std::is_const<typename std::decay<AdjustedTupleArrayType>::type>::value)> inline void
-  CartPeriodicAdjust(const cart &Cart, const TupleArrayType &Tuple, AdjustedTupleArrayType
-  &&AdjustedTuple) {
-
-  ovkCartPeriodicAdjust(&Cart, &Tuple[0], &AdjustedTuple[0]);
+  return Period;
 
 }
 
-inline void CartPointToCell(const cart &PointCart, cart &CellCart) {
+inline tuple<int> cart::PeriodicAdjust(const tuple<int> &Tuple) const {
 
-  ovkCartPointToCell(&PointCart, &CellCart);
+  tuple<int> AdjustedTuple = Tuple;
+
+  switch (PeriodicStorage_) {
+  case periodic_storage::UNIQUE:
+    for (int iDim = 0; iDim < OVK_MAX_DIMS; ++iDim) {
+      if (Periodic_[iDim]) {
+        int PeriodSize = Range_.Size(iDim);
+        int Mod = (Tuple[iDim] - Range_.Begin(iDim)) % PeriodSize;
+        AdjustedTuple[iDim] = Range_.Begin(iDim) + Mod + PeriodSize * (Mod < 0);
+      }
+    }
+    break;
+  case periodic_storage::DUPLICATED:
+    for (int iDim = 0; iDim < OVK_MAX_DIMS; ++iDim) {
+      if (Periodic_[iDim]) {
+        int PeriodSize = Range_.Size(iDim)-1;
+        int Mod = (Tuple[iDim] - Range_.Begin(iDim)) % PeriodSize;
+        AdjustedTuple[iDim] = Range_.Begin(iDim) + Mod + PeriodSize * (Mod < 0);
+      }
+    }
+    break;
+  }
+
+  return AdjustedTuple;
 
 }
 
+inline bool operator==(const cart &Left, const cart &Right) {
+
+  return
+    Left.NumDims_ == Right.NumDims_ &&
+    Left.Range_ == Right.Range_ &&
+    Left.Periodic_ == Right.Periodic_ &&
+    Left.PeriodicStorage_ == Right.PeriodicStorage_;
+
 }
 
-inline bool operator==(const ovk::cart &LeftCart, const ovk::cart &RightCart) {
+inline bool operator!=(const cart &Left, const cart &Right) {
 
-  return ovkCartEquals(&LeftCart, &RightCart);
+  return !(Left == Right);
 
 }
 
-inline bool operator!=(const ovk::cart &LeftCart, const ovk::cart &RightCart) {
+inline cart MakeEmptyCart(int NumDims) {
 
-  return ovkCartEquals(&LeftCart, &RightCart);
+  return {NumDims, MakeEmptyRange(NumDims), MakeUniformTuple<int>(false), periodic_storage::UNIQUE};
+
+}
+
+inline cart CartPointToCell(const cart &PointCart) {
+
+  cart CellCart = PointCart;
+
+  for (int iDim = 0; iDim < CellCart.Dimension(); ++iDim) {
+    if (!CellCart.Periodic(iDim)) CellCart.Range().End(iDim) -= 1;
+  }
+
+  return CellCart;
+
+}
 
 }

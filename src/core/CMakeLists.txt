@@ -70,8 +70,6 @@ set(INTERNAL_HEADERS
   ArrayTraitsBase.hpp
   BoxBase.h
   BoxBase.inl
-  CartBase.h
-  CartBase.inl
   Comm.hpp
   Comm.inl
   ConstantsBase.h

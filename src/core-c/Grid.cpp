@@ -3,10 +3,8 @@
 
 #include "ovk/core-c/Grid.h"
 
-#include "ovk/core-c/Cart.h"
 #include "ovk/core-c/Constants.h"
 #include "ovk/core-c/Global.h"
-#include "ovk/core/Cart.hpp"
 #include "ovk/core/Constants.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Global.hpp"
@@ -79,16 +77,6 @@ void ovkGetGridCommRank(const ovk_grid *Grid, int *CommRank) {
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
   ovk::GetGridCommRank(GridCPP, *CommRank);
-
-}
-
-void ovkGetGridCart(const ovk_grid *Grid, ovk_cart *Cart) {
-
-  OVK_DEBUG_ASSERT(Grid, "Invalid grid pointer.");
-  OVK_DEBUG_ASSERT(Cart, "Invalid cart pointer.");
-
-  auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-  ovk::GetGridCart(GridCPP, *Cart);
 
 }
 
@@ -439,6 +427,7 @@ void ovkGetGridInfoID(const ovk_grid_info *Info, int *ID) {
 
   auto &InfoCPP = *reinterpret_cast<const ovk::grid_info *>(Info);
   ovk::GetGridInfoID(InfoCPP, *ID);
+
 }
 
 void ovkGetGridInfoName(const ovk_grid_info *Info, char *Name) {
@@ -455,16 +444,6 @@ void ovkGetGridInfoName(const ovk_grid_info *Info, char *Name) {
 
 }
 
-void ovkGetGridInfoDimension(const ovk_grid_info *Info, int *NumDims) {
-
-  OVK_DEBUG_ASSERT(Info, "Invalid info pointer.");
-  OVK_DEBUG_ASSERT(NumDims, "Invalid num dims pointer.");
-
-  auto &InfoCPP = *reinterpret_cast<const ovk::grid_info *>(Info);
-  ovk::GetGridInfoDimension(InfoCPP, *NumDims);
-
-}
-
 void ovkGetGridInfoRootRank(const ovk_grid_info *Info, int *RootRank) {
 
   OVK_DEBUG_ASSERT(Info, "Invalid info pointer.");
@@ -475,16 +454,65 @@ void ovkGetGridInfoRootRank(const ovk_grid_info *Info, int *RootRank) {
 
 }
 
-void ovkGetGridInfoCart(const ovk_grid_info *Info, ovk_cart *Cart) {
+void ovkGetGridInfoDimension(const ovk_grid_info *Info, int *NumDims) {
 
   OVK_DEBUG_ASSERT(Info, "Invalid info pointer.");
-  OVK_DEBUG_ASSERT(Cart, "Invalid cart pointer.");
+  OVK_DEBUG_ASSERT(NumDims, "Invalid num dims pointer.");
 
   auto &InfoCPP = *reinterpret_cast<const ovk::grid_info *>(Info);
-  ovk::GetGridInfoCart(InfoCPP, *Cart);
+
+  ovk::cart Cart;
+  ovk::GetGridInfoCart(InfoCPP, Cart);
+
+  *NumDims = Cart.Dimension();
 
 }
 
+void ovkGetGridInfoSize(const ovk_grid_info *Info, int *Size) {
+
+  OVK_DEBUG_ASSERT(Info, "Invalid info pointer.");
+  OVK_DEBUG_ASSERT(Size, "Invalid size pointer.");
+
+  auto &InfoCPP = *reinterpret_cast<const ovk::grid_info *>(Info);
+
+  ovk::cart Cart;
+  ovk::GetGridInfoCart(InfoCPP, Cart);
+
+  for (int iDim = 0; iDim < Cart.Dimension(); ++iDim) {
+    Size[iDim] = Cart.Range().Size(iDim);
+  }
+
+}
+
+void ovkGetGridInfoPeriodic(const ovk_grid_info *Info, bool *Periodic) {
+
+  OVK_DEBUG_ASSERT(Info, "Invalid info pointer.");
+  OVK_DEBUG_ASSERT(Periodic, "Invalid periodic pointer.");
+
+  auto &InfoCPP = *reinterpret_cast<const ovk::grid_info *>(Info);
+
+  ovk::cart Cart;
+  ovk::GetGridInfoCart(InfoCPP, Cart);
+
+  for (int iDim = 0; iDim < Cart.Dimension(); ++iDim) {
+    Periodic[iDim] = Cart.Periodic(iDim);
+  }
+
+}
+
+void ovkGetGridInfoPeriodicStorage(const ovk_grid_info *Info, ovk_periodic_storage *PeriodicStorage) {
+
+  OVK_DEBUG_ASSERT(Info, "Invalid info pointer.");
+  OVK_DEBUG_ASSERT(PeriodicStorage, "Invalid periodic storage pointer.");
+
+  auto &InfoCPP = *reinterpret_cast<const ovk::grid_info *>(Info);
+
+  ovk::cart Cart;
+  ovk::GetGridInfoCart(InfoCPP, Cart);
+
+  *PeriodicStorage = ovk_periodic_storage(Cart.PeriodicStorage());
+
+}
 
 void ovkGetGridInfoPeriodicLength(const ovk_grid_info *Info, double *PeriodicLength) {
 
@@ -506,27 +534,6 @@ void ovkGetGridInfoGeometryType(const ovk_grid_info *Info, ovk_geometry_type *Ge
   ovk::GetGridInfoGeometryType(InfoCPP, GeometryTypeCPP);
 
   *GeometryType = ovk_geometry_type(GeometryTypeCPP);
-
-}
-
-void ovkGetGridInfoGlobalRange(const ovk_grid_info *Info, int *GlobalBegin, int *GlobalEnd) {
-
-  OVK_DEBUG_ASSERT(Info, "Invalid info pointer.");
-  OVK_DEBUG_ASSERT(GlobalBegin, "Invalid global begin pointer.");
-  OVK_DEBUG_ASSERT(GlobalEnd, "Invalid global end pointer.");
-
-  auto &InfoCPP = *reinterpret_cast<const ovk::grid_info *>(Info);
-
-  int NumDims;
-  ovk::GetGridInfoDimension(InfoCPP, NumDims);
-
-  ovk::range GlobalRange;
-  ovk::GetGridInfoGlobalRange(InfoCPP, GlobalRange);
-
-  for (int iDim = 0; iDim < NumDims; ++iDim) {
-    GlobalBegin[iDim] = GlobalRange.Begin(iDim);
-    GlobalEnd[iDim] = GlobalRange.End(iDim);
-  }
 
 }
 
