@@ -55,6 +55,7 @@ set(PUBLIC_HEADERS
   Range.hpp
   Range.inl
   Request.hpp
+  ScalarTraits.hpp
 )
 
 set(INTERNAL_HEADERS
@@ -76,13 +77,13 @@ set(INTERNAL_HEADERS
   IteratorTraits.hpp
   Logger.hpp
   Logger.inl
-  MinMax.h
   PartitionHash.hpp
   Profiler.hpp
   Profiler.inl
   RangeBase.h
   RangeBase.inl
   Requires.hpp
+  ScalarOps.hpp
   ScopeGuard.hpp
   ScopeGuard.inl
   TextProcessing.hpp

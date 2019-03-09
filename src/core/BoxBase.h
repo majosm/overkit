@@ -6,7 +6,6 @@
 
 #include <ovk/core/ConstantsBase.h>
 #include <ovk/core/GlobalBase.h>
-#include <ovk/core/MinMax.h>
 
 #ifdef __cplusplus
 extern "C" {

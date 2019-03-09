@@ -6,4 +6,7 @@
 
 #include <ovk/core/Config.h>
 
+#define ovk_min(a, b) ((a) < (b) ? (a) : (b))
+#define ovk_max(a, b) ((a) > (b) ? (a) : (b))
+
 #endif
