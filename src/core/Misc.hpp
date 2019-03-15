@@ -42,7 +42,7 @@ void CheckSignal(signal &Signal, bool &Done);
 void DestroySignal(signal &Signal);
 
 // Given known list of ranks on one end of communication, generate list of ranks on other end
-void DynamicHandshake(MPI_Comm Comm, array_view<const int> Ranks, array<int> &MatchedRanks);
+array<int> DynamicHandshake(MPI_Comm Comm, array_view<const int> Ranks);
 
 // Generate permutation corresponding to ascending-order sort
 template <typename ArrayType, OVK_FUNCDECL_REQUIRES(IsArray<ArrayType>() && ArrayRank<ArrayType>()

@@ -1661,10 +1661,8 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
   core::EndProfile(Profiler, MapToBinsTime);
   core::StartProfileSync(Profiler, HandshakeTime, Comm);
 
-  array<int> DonorRecvFromRanks, ReceiverRecvFromRanks;
-
-  core::DynamicHandshake(Comm, DonorSendToRanks, DonorRecvFromRanks);
-  core::DynamicHandshake(Comm, ReceiverSendToRanks, ReceiverRecvFromRanks);
+  array<int> DonorRecvFromRanks = core::DynamicHandshake(Comm, DonorSendToRanks);
+  array<int> ReceiverRecvFromRanks = core::DynamicHandshake(Comm, ReceiverSendToRanks);
 
   DonorSendToRanks.clear();
   ReceiverSendToRanks.clear();
@@ -2236,10 +2234,8 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
   core::EndProfile(Profiler, FindRanksTime);
   core::StartProfileSync(Profiler, HandshakeTime, Comm);
 
-  array<int> DonorRecvFromRanks, ReceiverRecvFromRanks;
-
-  core::DynamicHandshake(Comm, DonorSendToRanks, DonorRecvFromRanks);
-  core::DynamicHandshake(Comm, ReceiverSendToRanks, ReceiverRecvFromRanks);
+  array<int> DonorRecvFromRanks = core::DynamicHandshake(Comm, DonorSendToRanks);
+  array<int> ReceiverRecvFromRanks = core::DynamicHandshake(Comm, ReceiverSendToRanks);
 
   DonorSendToRanks.clear();
   ReceiverSendToRanks.clear();

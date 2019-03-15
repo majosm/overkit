@@ -120,7 +120,7 @@ void DestroySignal(signal &Signal) {
 
 }
 
-void DynamicHandshake(MPI_Comm Comm, array_view<const int> Ranks, array<int> &MatchedRanks) {
+array<int> DynamicHandshake(MPI_Comm Comm, array_view<const int> Ranks) {
 
   char SendBuffer[1], RecvBuffer[1];
 
@@ -164,7 +164,7 @@ void DynamicHandshake(MPI_Comm Comm, array_view<const int> Ranks, array<int> &Ma
 
   DestroySignal(AllSendsDoneSignal);
 
-  MatchedRanks.Assign({int(MatchedRanksSet.size())}, MatchedRanksSet.begin());
+  return {{int(MatchedRanksSet.size())}, MatchedRanksSet.begin()};
 
 }
 

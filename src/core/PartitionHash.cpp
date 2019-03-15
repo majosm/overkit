@@ -93,9 +93,7 @@ void CreatePartitionHash(partition_hash &Hash, int NumDims, const comm &Comm, co
 
   // Collect partitions into bins
 
-  array<int> PartitionRanks;
-
-  core::DynamicHandshake(Hash.Comm_, OverlappedBinIndices, PartitionRanks);
+  array<int> PartitionRanks = core::DynamicHandshake(Hash.Comm_, OverlappedBinIndices);
 
   int NumPartitions = PartitionRanks.Size(0);
 
@@ -210,9 +208,7 @@ void RetrievePartitionBins(const partition_hash &Hash, std::map<int, partition_b
 
   int NumUnretrievedBins = UnretrievedBinIndices.Count();
 
-  array<int> RetrieveRanks;
-
-  core::DynamicHandshake(Hash.Comm_, UnretrievedBinIndices, RetrieveRanks);
+  array<int> RetrieveRanks = core::DynamicHandshake(Hash.Comm_, UnretrievedBinIndices);
 
   int NumRetrieves = RetrieveRanks.Size(0);
 
