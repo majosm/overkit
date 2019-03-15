@@ -120,23 +120,23 @@ void DestroySignal(signal &Signal) {
 
 }
 
-void DynamicHandshake(MPI_Comm Comm, array_view<const int> DestRanks, array<int> &SourceRanks) {
+void DynamicHandshake(MPI_Comm Comm, array_view<const int> Ranks, array<int> &MatchedRanks) {
 
   char SendBuffer[1], RecvBuffer[1];
 
-  int NumDestRanks = DestRanks.Count();
+  int NumRanks = Ranks.Count();
 
   array<MPI_Request> SendRequests;
-  SendRequests.Reserve(NumDestRanks);
-  for (int iDestRank = 0; iDestRank < NumDestRanks; ++iDestRank) {
+  SendRequests.Reserve(NumRanks);
+  for (int iRank = 0; iRank < NumRanks; ++iRank) {
     MPI_Request &Request = SendRequests.Append();
-    MPI_Issend(SendBuffer, 1, MPI_CHAR, DestRanks(iDestRank), 0, Comm, &Request);
+    MPI_Issend(SendBuffer, 1, MPI_CHAR, Ranks(iRank), 0, Comm, &Request);
   }
 
   signal AllSendsDoneSignal;
   CreateSignal(AllSendsDoneSignal, Comm);
 
-  std::set<int> SourceRanksSet;
+  std::set<int> MatchedRanksSet;
 
   bool Done = false;
   int SendsDone = false;
@@ -146,14 +146,14 @@ void DynamicHandshake(MPI_Comm Comm, array_view<const int> DestRanks, array<int>
       MPI_Status Status;
       MPI_Iprobe(MPI_ANY_SOURCE, 0, Comm, &IncomingMessage, &Status);
       if (!IncomingMessage) break;
-      int SourceRank = Status.MPI_SOURCE;
-      MPI_Recv(RecvBuffer, 1, MPI_CHAR, SourceRank, 0, Comm, MPI_STATUS_IGNORE);
-      SourceRanksSet.insert(SourceRank);
+      int MatchedRank = Status.MPI_SOURCE;
+      MPI_Recv(RecvBuffer, 1, MPI_CHAR, MatchedRank, 0, Comm, MPI_STATUS_IGNORE);
+      MatchedRanksSet.insert(MatchedRank);
     }
     if (SendsDone) {
       CheckSignal(AllSendsDoneSignal, Done);
     } else {
-      MPI_Testall(NumDestRanks, SendRequests.Data(), &SendsDone, MPI_STATUSES_IGNORE);
+      MPI_Testall(NumRanks, SendRequests.Data(), &SendsDone, MPI_STATUSES_IGNORE);
       if (SendsDone) {
         StartSignal(AllSendsDoneSignal);
       }
@@ -164,7 +164,7 @@ void DynamicHandshake(MPI_Comm Comm, array_view<const int> DestRanks, array<int>
 
   DestroySignal(AllSendsDoneSignal);
 
-  SourceRanks.Assign({int(SourceRanksSet.size())}, SourceRanksSet.begin());
+  MatchedRanks.Assign({int(MatchedRanksSet.size())}, MatchedRanksSet.begin());
 
 }
 
