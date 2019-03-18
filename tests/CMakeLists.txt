@@ -60,10 +60,6 @@ set(TEST_SOURCES
 add_executable(overkit-unit-tests UnitTestMain.cpp ${TEST_SOURCES})
 list(APPEND LOCAL_TARGETS overkit-unit-tests)
 
-add_dependencies(overkit-unit-tests overkit-parallel)
-
-target_include_directories(overkit-unit-tests PRIVATE ${CMAKE_BINARY_DIR}/include)
-
 add_test(NAME UnitTests COMMAND "${CMAKE_CURRENT_BINARY_DIR}/overkit-unit-tests")
 
 #-------------------
