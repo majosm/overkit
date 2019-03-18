@@ -46,4 +46,72 @@ inline comm CreateSubsetComm(const comm &Comm, bool InSubset) {
 
 }
 
+inline comm CreateCartComm(const comm &Comm, int NumDims, const tuple<int> &Dims, const tuple<bool>
+  &Periodic, bool AllowReorder) {
+
+  tuple<int> PeriodicInt = tuple<int>(Periodic);
+  MPI_Comm CartCommRaw;
+  MPI_Cart_create(Comm, NumDims, Dims.Data(), PeriodicInt.Data(), AllowReorder, &CartCommRaw);
+
+  return comm(CartCommRaw, false);
+
+}
+
+inline bool IsCartComm(const comm &Comm) {
+
+  int TopologyType;
+  MPI_Topo_test(Comm, &TopologyType);
+
+  return TopologyType == MPI_CART;
+
+}
+
+inline int GetCartCommDimension(const comm &Comm) {
+
+  int NumDims;
+  MPI_Cartdim_get(Comm, &NumDims);
+
+  return NumDims;
+
+}
+
+inline tuple<int> GetCartCommDims(const comm &Comm) {
+
+  int NumDims = GetCartCommDimension(Comm);
+
+  tuple<int> CartDims = MakeUniformTuple<int>(1);
+  tuple<int> PeriodicInt;
+  tuple<int> CartCoords;
+  MPI_Cart_get(Comm, NumDims, CartDims.Data(), PeriodicInt.Data(), CartCoords.Data());
+
+  return CartDims;
+
+}
+
+inline tuple<bool> GetCartCommPeriodic(const comm &Comm) {
+
+  int NumDims = GetCartCommDimension(Comm);
+
+  tuple<int> CartDims;
+  tuple<int> PeriodicInt = MakeUniformTuple<int>(0);
+  tuple<int> CartCoords;
+  MPI_Cart_get(Comm, NumDims, CartDims.Data(), PeriodicInt.Data(), CartCoords.Data());
+
+  return tuple<bool>(PeriodicInt);
+
+}
+
+inline tuple<int> GetCartCommCoords(const comm &Comm) {
+
+  int NumDims = GetCartCommDimension(Comm);
+
+  tuple<int> CartDims;
+  tuple<int> PeriodicInt;
+  tuple<int> CartCoords = MakeUniformTuple<int>(0);
+  MPI_Cart_get(Comm, NumDims, CartDims.Data(), PeriodicInt.Data(), CartCoords.Data());
+
+  return CartCoords;
+
+}
+
 }}

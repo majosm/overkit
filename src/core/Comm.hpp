@@ -5,6 +5,7 @@
 #define OVK_CORE_COMM_HPP_INCLUDED
 
 #include <ovk/core/Global.hpp>
+#include <ovk/core/Tuple.hpp>
 
 #include <mpi.h>
 
@@ -45,7 +46,16 @@ private:
 };
 
 inline comm DuplicateComm(const comm &Comm);
+
 inline comm CreateSubsetComm(const comm &Comm, bool InSubset);
+
+inline comm CreateCartComm(const comm &Comm, int NumDims, const tuple<int> &Dims, const tuple<bool>
+  &Periodic, bool AllowReorder=true);
+inline bool IsCartComm(const comm &Comm);
+inline int GetCartCommDimension(const comm &Comm);
+inline tuple<int> GetCartCommDims(const comm &Comm);
+inline tuple<bool> GetCartCommPeriodic(const comm &Comm);
+inline tuple<int> GetCartCommCoords(const comm &Comm);
 
 }}
 
