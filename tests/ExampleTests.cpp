@@ -1,9 +1,10 @@
 // Copyright (c) 2018 Matthew J. Smith and Overkit contributors
 // License: MIT (http://opensource.org/licenses/MIT)
 
+#include "MPITest.hpp"
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "MPITest.hpp"
 
 #include <ovk/core/Comm.hpp>
 

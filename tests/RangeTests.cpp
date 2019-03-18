@@ -1,12 +1,14 @@
 // Copyright (c) 2018 Matthew J. Smith and Overkit contributors
 // License: MIT (http://opensource.org/licenses/MIT)
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <ovk/core/Range.hpp>
+
 #include "MPITest.hpp"
 
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+
 #include <ovk/core/Comm.hpp>
-#include <ovk/core/Range.hpp>
 #include <ovk/core/Tuple.hpp>
 
 #include <mpi.h>

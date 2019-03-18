@@ -1,13 +1,15 @@
 // Copyright (c) 2018 Matthew J. Smith and Overkit contributors
 // License: MIT (http://opensource.org/licenses/MIT)
 
+#include <ovk/core/Indexer.hpp>
+
+#include "MPITest.hpp"
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "MPITest.hpp"
 
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Elem.hpp>
-#include <ovk/core/Indexer.hpp>
 #include <ovk/core/Interval.hpp>
 
 #include <mpi.h>
