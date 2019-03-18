@@ -26,8 +26,10 @@ set(SOURCES
   ErrorHandler.cpp
   Exchange.cpp
   Grid.cpp
+  Halo.cpp
   Logger.cpp
   Misc.cpp
+  Partition.cpp
   PartitionHash.cpp
   Profiler.cpp
   Request.cpp
@@ -81,10 +83,14 @@ set(INTERNAL_HEADERS
   ErrorHandler.hpp
   ForEach.hpp
   GlobalBase.h
+  Halo.hpp
+  Halo.inl
   IntegerSequence.hpp
   IteratorTraits.hpp
   Logger.hpp
   Logger.inl
+  Partition.hpp
+  PartitionBase.hpp
   PartitionHash.hpp
   Profiler.hpp
   Profiler.inl

@@ -7,35 +7,12 @@
 #include <ovk/core/Cart.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Constants.hpp>
+#include <ovk/core/Partition.hpp>
 #include <ovk/core/Range.hpp>
 #include <ovk/core/Tuple.hpp>
 
 #include <memory>
 #include <utility>
-
-namespace {
-
-ovk::range ExtendLocalRange(const ovk::cart &Cart, const ovk::range &LocalRange, int ExtendAmount) {
-
-  const ovk::range &GlobalRange = Cart.Range();
-  const ovk::tuple<bool> &Periodic = Cart.Periodic();
-
-  ovk::range ExtendedRange = LocalRange;
-
-  for (int iDim = 0; iDim < Cart.Dimension(); ++iDim) {
-    if (LocalRange.Begin(iDim) != GlobalRange.Begin(iDim) || Periodic[iDim]) {
-      ExtendedRange.Begin(iDim) -= ExtendAmount;
-    }
-    if (LocalRange.End(iDim) != GlobalRange.End(iDim) || Periodic[iDim]) {
-      ExtendedRange.End(iDim) += ExtendAmount;
-    }
-  }
-
-  return ExtendedRange;
-
-}
-
-}
 
 namespace support {
 
@@ -46,7 +23,7 @@ grid::grid(params Params):
   Comm_(std::move(Params.Comm_)),
   PeriodicLength_(Params.PeriodicLength_),
   LocalRange_(Params.LocalRange_),
-  ExtendedRange_(ExtendLocalRange(Cart_, LocalRange_, Params.ExtendAmount_)),
+  ExtendedRange_(ovk::core::ExtendLocalRange(Cart_, LocalRange_, Params.ExtendAmount_)),
   Layout_(Params.Layout_)
 {
 

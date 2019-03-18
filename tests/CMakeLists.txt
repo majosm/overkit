@@ -48,8 +48,10 @@ set(SOURCES
   ElemTests.cpp
   ExampleTests.cpp
   ForEachTests.cpp
+  HaloTests.cpp
   IndexerTests.cpp
   IntervalTests.cpp
+  PartitionTests.cpp
   RangeTests.cpp
   UnitTestMain.cpp
   VectorTests.cpp
@@ -107,6 +109,9 @@ endif()
 
 # Overkit
 target_link_libraries(unit-tests PRIVATE overkit-parallel)
+
+# Support library
+target_link_libraries(unit-tests PRIVATE support)
 
 # MPI
 if(EXTERNAL_MPI)
