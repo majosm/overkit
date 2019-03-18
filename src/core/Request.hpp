@@ -6,6 +6,7 @@
 
 #include <ovk/core/ArrayView.hpp>
 #include <ovk/core/Global.hpp>
+#include <ovk/core/Requires.hpp>
 
 #include <mpi.h>
 
@@ -19,25 +20,23 @@ class request {
 public:
 
   request() = default;
-  request(const request &) = delete;
-  request(request &&) = default;
+
+  template <typename T, OVK_FUNCTION_REQUIRES(!std::is_same<typename std::decay<T>::type, request>
+    ::value)> request(T &&Request):
+    Request_(new model<T>(std::forward<T>(Request)))
+  {}
+
   ~request() {
     if (Request_) Request_->Wait();
   }
 
+  request(const request &Other) = delete;
+  request(request &&Other) noexcept = default;
+
   request &operator=(const request &Other) = delete;
-  request &operator=(request &&Other) = default;
+  request &operator=(request &&Other) noexcept = default;
 
   explicit operator bool() { return static_cast<bool>(Request_); }
-
-  template <typename T> explicit request(T &&Request):
-    Request_(new model<T>(std::forward<T>(Request)))
-  {}
-
-  template <typename T> request &operator=(T &&Request) {
-    Request_.reset(new model<T>(std::forward<T>(Request)));
-    return *this;
-  }
 
   void Wait() {
     Request_->Wait();
