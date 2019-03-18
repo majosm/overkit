@@ -193,15 +193,15 @@ void request::internal_WaitAll(array_view<request *> Requests) {
   }
 
   while (true) {
-    int iDone;
+    int iCompleted;
     StartProfileMPI();
-    MPI_Waitany(TotalMPIRequests, AllMPIRequests.Data(), &iDone, MPI_STATUSES_IGNORE);
+    MPI_Waitany(TotalMPIRequests, AllMPIRequests.Data(), &iCompleted, MPI_STATUSES_IGNORE);
     EndProfileMPI();
-    if (iDone == MPI_UNDEFINED) {
+    if (iCompleted == MPI_UNDEFINED) {
       break;
     }
     int iRequest, iMPIRequest;
-    std::tie(iRequest, iMPIRequest) = AllMPIRequestToRequest(iDone);
+    std::tie(iRequest, iMPIRequest) = AllMPIRequestToRequest(iCompleted);
     Requests(iRequest)->MPIRequests()(iMPIRequest) = MPI_REQUEST_NULL;
     Requests(iRequest)->Finish(iMPIRequest);
     --NumRemainingMPIRequests(iRequest);
@@ -293,16 +293,16 @@ void request::internal_WaitAny(array_view<request *> Requests, int &Index) {
   }
 
   while (true) {
-    int iDone;
+    int iCompleted;
     StartProfileMPI();
-    MPI_Waitany(TotalMPIRequests, AllMPIRequests.Data(), &iDone, MPI_STATUSES_IGNORE);
+    MPI_Waitany(TotalMPIRequests, AllMPIRequests.Data(), &iCompleted, MPI_STATUSES_IGNORE);
     EndProfileMPI();
-    if (iDone == MPI_UNDEFINED) {
+    if (iCompleted == MPI_UNDEFINED) {
       Index = -1;
       break;
     }
     int iRequest, iMPIRequest;
-    std::tie(iRequest, iMPIRequest) = AllMPIRequestToRequest(iDone);
+    std::tie(iRequest, iMPIRequest) = AllMPIRequestToRequest(iCompleted);
     Requests(iRequest)->MPIRequests()(iMPIRequest) = MPI_REQUEST_NULL;
     Requests(iRequest)->Finish(iMPIRequest);
     --NumRemainingMPIRequests(iRequest);
