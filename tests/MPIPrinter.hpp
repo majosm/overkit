@@ -38,7 +38,6 @@
 
 #include "gtest/gtest.h"
 
-#include <ovk/core/Comm.hpp>
 #include <ovk/core/TextProcessing.hpp>
 
 #include <mpi.h>
@@ -59,18 +58,21 @@ public:
   mpi_printer():
     testing::EmptyTestEventListener(),
     Comm_(MPI_COMM_WORLD)
-  {}
+  {
+    MPI_Comm_size(Comm_, &CommSize_);
+    MPI_Comm_rank(Comm_, &CommRank_);
+  }
 
   // Fired before each iteration of tests starts.  There may be more than
   // one iteration if GTEST_FLAG(repeat) is set. iteration is the iteration
   // index, starting from 0.
   virtual void OnTestIterationStart(const testing::UnitTest& unit_test, int iteration) override {
 
-    if (Comm_.Rank() == 0) {
+    if (CommRank_ == 0) {
       std::string NumTestsString = FormatNumber(unit_test.test_to_run_count(), "tests", "test");
       std::string NumTestSuitesString = FormatNumber(unit_test.test_case_to_run_count(),
         "test suites", "test suite");
-      std::string NumProcsString = FormatNumber(Comm_.Size(), "processes", "process");
+      std::string NumProcsString = FormatNumber(CommSize_, "processes", "process");
       std::cout << StringPrint("[==========] Running %s from %s on %s", NumTestsString,
         NumTestSuitesString, NumProcsString) << std::endl << std::flush;
     }
@@ -82,7 +84,7 @@ public:
   // Fired before environment set-up for each iteration of tests starts.
   virtual void OnEnvironmentsSetUpStart(const testing::UnitTest& unit_test) override {
 
-    if (Comm_.Rank() == 0) {
+    if (CommRank_ == 0) {
       std::cout << "[----------] Global test environment set-up" << std::endl << std::flush;
     }
 
@@ -93,7 +95,7 @@ public:
   // Fired before the test case starts.
   virtual void OnTestCaseStart(const testing::TestCase& test_case) override {
 
-    if (Comm_.Rank() == 0) {
+    if (CommRank_ == 0) {
       std::string NumTestsString = FormatNumber(test_case.test_to_run_count(), "tests", "test");
       std::cout << StringPrint("[----------] %s from %s", NumTestsString, test_case.name());
       if (!test_case.type_param()) {
@@ -111,7 +113,7 @@ public:
   // Fired before the test starts.
   virtual void OnTestStart(const testing::TestInfo& test_info) override {
 
-    if (Comm_.Rank() == 0) {
+    if (CommRank_ == 0) {
       std::cout << StringPrint("[ RUN      ] %s.%s", test_info.test_case_name(), test_info.name());
       std::cout << std::endl;
       std::cout << std::flush;
@@ -138,11 +140,11 @@ public:
   virtual void OnTestEnd(const testing::TestInfo& test_info) override {
 
     char TestPassedLocal = test_info.result()->Passed();
-    std::vector<char> TestPassedAll(Comm_.Size());
+    std::vector<char> TestPassedAll(CommSize_);
     MPI_Gather(&TestPassedLocal, 1, MPI_CHAR, TestPassedAll.data(), 1, MPI_CHAR, 0, Comm_);
 
     bool TestPassed = true;
-    for (int iRank = 0; iRank < Comm_.Size(); ++iRank) {
+    for (int iRank = 0; iRank < CommSize_; ++iRank) {
       TestPassed = TestPassed && TestPassedAll[iRank];
     }
 
@@ -156,7 +158,7 @@ public:
         }
       }
 
-      if (Comm_.Rank() > 0) {
+      if (CommRank_ > 0) {
         if (!TestPassedLocal) {
           int NumChars = int(LocalResultString.length());
           MPI_Send(&NumChars, 1, MPI_INT, 0, 0, Comm_);
@@ -168,7 +170,7 @@ public:
           ResultString += "[  FAILED  ] Rank 0 produced the following error(s):\n";
           ResultString += LocalResultString;
         }
-        for (int iRank = 1; iRank < Comm_.Size(); ++iRank) {
+        for (int iRank = 1; iRank < CommSize_; ++iRank) {
           if (!TestPassedAll[iRank]) {
             std::vector<char> RemoteResultChars;
             int NumChars;
@@ -188,7 +190,7 @@ public:
 
     MPI_Barrier(Comm_);
 
-    if (Comm_.Rank() == 0) {
+    if (CommRank_ == 0) {
       if (TestPassed) {
         std::cout << "[       OK ] ";
       } else {
@@ -206,18 +208,18 @@ public:
       int ElapsedTimeMs = int(test_info.result()->elapsed_time());
       int MaxElapsedTimeMs;
       MPI_Reduce(&ElapsedTimeMs, &MaxElapsedTimeMs, 1, MPI_INT, MPI_MAX, 0, Comm_);
-      if (Comm_.Rank() == 0) {
+      if (CommRank_ == 0) {
         std::string MaxElapsedTimeString = StringPrint("%i ms", MaxElapsedTimeMs);
         std::cout << StringPrint(" (%s)", MaxElapsedTimeString);
         std::cout << std::endl;
       }
     } else {
-      if (Comm_.Rank() == 0) {
+      if (CommRank_ == 0) {
         std::cout << std::endl;
       }
     }
 
-    if (Comm_.Rank() == 0) {
+    if (CommRank_ == 0) {
       std::cout << std::flush;
     }
 
@@ -235,7 +237,7 @@ public:
     int MaxElapsedTimeMs;
     MPI_Reduce(&ElapsedTimeMs, &MaxElapsedTimeMs, 1, MPI_INT, MPI_MAX, 0, Comm_);
 
-    if (Comm_.Rank() == 0) {
+    if (CommRank_ == 0) {
       std::string NumTestsString = FormatNumber(test_case.test_to_run_count(), "tests", "test");
       std::string MaxElapsedTimeString = StringPrint("%i ms", MaxElapsedTimeMs);
       std::cout << StringPrint("[----------] %s from %s (%s total)", NumTestsString,
@@ -249,7 +251,7 @@ public:
   // Fired before environment tear-down for each iteration of tests starts.
   virtual void OnEnvironmentsTearDownStart(const testing::UnitTest& unit_test) override {
 
-    if (Comm_.Rank() == 0) {
+    if (CommRank_ == 0) {
       std::cout << "[----------] Global test environment tear-down" << std::endl << std::flush;
     }
 
@@ -261,7 +263,7 @@ public:
   virtual void OnTestIterationEnd(const testing::UnitTest& unit_test,
                                   int iteration) override {
 
-    if (Comm_.Rank() == 0) {
+    if (CommRank_ == 0) {
       std::string NumTestsString = FormatNumber(unit_test.test_to_run_count(), "tests", "test");
       std::string NumTestSuitesString = FormatNumber(unit_test.test_case_to_run_count(), "test suites",
         "test suite");
@@ -274,13 +276,13 @@ public:
       int ElapsedTimeMs = int(unit_test.elapsed_time());
       int MaxElapsedTimeMs;
       MPI_Reduce(&ElapsedTimeMs, &MaxElapsedTimeMs, 1, MPI_INT, MPI_MAX, 0, Comm_);
-      if (Comm_.Rank() == 0) {
+      if (CommRank_ == 0) {
         std::string MaxElapsedTimeString = StringPrint("%i ms", MaxElapsedTimeMs);
         std::cout << StringPrint(" (%s total)", MaxElapsedTimeString);
         std::cout << std::endl;
       }
     } else {
-      if (Comm_.Rank() == 0) {
+      if (CommRank_ == 0) {
         std::cout << std::endl;
       }
     }
@@ -303,7 +305,7 @@ public:
 
     std::vector<char> TestResults;
 
-    if (Comm_.Rank() > 0) {
+    if (CommRank_ > 0) {
       MPI_Reduce(LocalTestResults.data(), NULL, TotalTests, MPI_CHAR, MPI_LAND, 0, Comm_);
     } else {
       TestResults.resize(TotalTests);
@@ -311,7 +313,7 @@ public:
         Comm_);
     }
 
-    if (Comm_.Rank() == 0) {
+    if (CommRank_ == 0) {
 
       int NumPassedTests = std::accumulate(TestResults.begin(), TestResults.end(), 0);
       int NumFailedTests = TotalTests - NumPassedTests;
@@ -365,7 +367,9 @@ public:
 
 private:
 
-  ovk::core::comm Comm_;
+  MPI_Comm Comm_;
+  int CommSize_;
+  int CommRank_;
   std::vector<testing::TestPartResult> TestResults_;
 
   void PrintFullTestCommentIfPresent(const testing::TestInfo& test_info) {
