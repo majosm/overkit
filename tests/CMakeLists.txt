@@ -39,7 +39,7 @@ set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_SAVED})
 # Source files
 #--------------
 
-set(TEST_SOURCES
+set(SOURCES
   ArrayTests.cpp
   ArrayTraitsTests.cpp
   ArrayViewTests.cpp
@@ -50,17 +50,28 @@ set(TEST_SOURCES
   IndexerTests.cpp
   IntervalTests.cpp
   RangeTests.cpp
+  UnitTestMain.cpp
   VectorTests.cpp
+)
+
+set(HEADERS
+  MPITest.hpp
+  mocks/MultidimArray.hpp
+  mocks/Noncopyable.hpp
+  mocks/Nondefaultconstructible.hpp
 )
 
 #-------------------
 # Executable target
 #-------------------
 
-add_executable(overkit-unit-tests UnitTestMain.cpp ${TEST_SOURCES})
+add_executable(overkit-unit-tests ${SOURCES})
 list(APPEND LOCAL_TARGETS overkit-unit-tests)
 
 add_test(NAME UnitTests COMMAND "${CMAKE_CURRENT_BINARY_DIR}/overkit-unit-tests")
+
+# Generate/copy headers to build tree before compiling
+add_dependencies(overkit-unit-tests tests-headers)
 
 #-------------------
 # Compiling/linking
@@ -106,6 +117,26 @@ target_link_libraries(overkit-unit-tests PRIVATE ${C_MATH_LIBRARY})
 
 # Google Test
 target_link_libraries(overkit-unit-tests PRIVATE gtest_main gmock_main)
+
+#----------------
+# Header targets
+#----------------
+
+set(BUILT_HEADER_PREFIX tests)
+set(BUILT_HEADERS)
+foreach(HEADER_NAME ${HEADERS})
+  set(BUILT_HEADER ${CMAKE_BINARY_DIR}/include/${BUILT_HEADER_PREFIX}/${HEADER_NAME})
+  set(HEADER ${CMAKE_CURRENT_SOURCE_DIR}/${HEADER_NAME})
+  add_custom_command(OUTPUT ${BUILT_HEADER}
+    MAIN_DEPENDENCY ${HEADER}
+    COMMAND "${CMAKE_COMMAND}" -E copy "${HEADER}" "${BUILT_HEADER}"
+  )
+  list(APPEND BUILT_HEADERS ${BUILT_HEADER})
+endforeach()
+set_source_files_properties(${BUILT_HEADERS} PROPERTIES GENERATED TRUE)
+
+add_custom_target(tests-headers ALL DEPENDS ${BUILT_HEADERS})
+list(APPEND LOCAL_TARGETS tests-headers)
 
 #==============
 # Finalization

@@ -3,9 +3,10 @@
 
 #include <ovk/core/ForEach.hpp>
 
+#include "tests/MPITest.hpp"
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "MPITest.hpp"
 
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Elem.hpp>

@@ -3,11 +3,12 @@
 
 #include <ovk/core/Vector.hpp>
 
+#include "tests/MPITest.hpp"
+#include "tests/mocks/Noncopyable.hpp"
+#include "tests/mocks/Nondefaultconstructible.hpp"
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "MPITest.hpp"
-#include "mocks/Noncopyable.hpp"
-#include "mocks/Nondefaultconstructible.hpp"
 
 #include <ovk/core/Comm.hpp>
 

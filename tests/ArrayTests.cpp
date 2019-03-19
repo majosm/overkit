@@ -3,12 +3,13 @@
 
 #include <ovk/core/Array.hpp>
 
+#include "tests/MPITest.hpp"
+#include "tests/mocks/MultidimArray.hpp"
+#include "tests/mocks/Noncopyable.hpp"
+#include "tests/mocks/Nondefaultconstructible.hpp"
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "MPITest.hpp"
-#include "mocks/MultidimArray.hpp"
-#include "mocks/Noncopyable.hpp"
-#include "mocks/Nondefaultconstructible.hpp"
 
 #include <ovk/core/ArrayView.hpp>
 #include <ovk/core/ArrayTraits.hpp>

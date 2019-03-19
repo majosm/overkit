@@ -3,9 +3,10 @@
 
 #include <ovk/core/Elem.hpp>
 
+#include "tests/MPITest.hpp"
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "MPITest.hpp"
 
 #include <ovk/core/ArrayTraits.hpp>
 #include <ovk/core/Comm.hpp>

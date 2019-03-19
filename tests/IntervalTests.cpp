@@ -3,7 +3,7 @@
 
 #include <ovk/core/Interval.hpp>
 
-#include "MPITest.hpp"
+#include "tests/MPITest.hpp"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
