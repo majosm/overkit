@@ -65,13 +65,13 @@ set(HEADERS
 # Executable target
 #-------------------
 
-add_executable(overkit-unit-tests ${SOURCES})
-list(APPEND LOCAL_TARGETS overkit-unit-tests)
+add_executable(unit-tests ${SOURCES})
+list(APPEND LOCAL_TARGETS unit-tests)
 
-add_test(NAME UnitTests COMMAND "${CMAKE_CURRENT_BINARY_DIR}/overkit-unit-tests")
+add_test(NAME UnitTests COMMAND "${CMAKE_CURRENT_BINARY_DIR}/unit-tests")
 
 # Generate/copy headers to build tree before compiling
-add_dependencies(overkit-unit-tests tests-headers)
+add_dependencies(unit-tests tests-headers)
 
 #-------------------
 # Compiling/linking
@@ -79,7 +79,7 @@ add_dependencies(overkit-unit-tests tests-headers)
 
 set(BASE_CXX_FLAGS_DEBUG ${WARNING_CXX_FLAGS})
 set(BASE_CXX_FLAGS_RELEASE ${OPT_CXX_FLAGS})
-target_compile_options(overkit-unit-tests PRIVATE
+target_compile_options(unit-tests PRIVATE
   $<$<CONFIG:Debug>:${BASE_CXX_FLAGS_DEBUG}>
   $<$<CONFIG:SlowDebug>:${BASE_CXX_FLAGS_DEBUG}>
   $<$<CONFIG:Release>:${BASE_CXX_FLAGS_RELEASE}>
@@ -89,34 +89,34 @@ target_compile_options(overkit-unit-tests PRIVATE
 
 # Profiling
 if(PROFILE)
-  target_compile_options(overkit-unit-tests PRIVATE ${PROFILE_COMPILE_FLAGS})
+  target_compile_options(unit-tests PRIVATE ${PROFILE_COMPILE_FLAGS})
 endif()
 
 # Language feature requirements
 if(BUILT_IN_DIALECT_SUPPORT)
   if(DIALECT_COMPILE_FEATURE_SUPPORT)
-    target_compile_features(overkit-unit-tests PRIVATE cxx_std_11)
+    target_compile_features(unit-tests PRIVATE cxx_std_11)
   else()
-    set_property(TARGET overkit-unit-tests PROPERTY CXX_STANDARD 11)
+    set_property(TARGET unit-tests PROPERTY CXX_STANDARD 11)
   endif()
 else()
-  target_compile_options(overkit-unit-tests PRIVATE ${DIALECT_CXX_FLAGS})
+  target_compile_options(unit-tests PRIVATE ${DIALECT_CXX_FLAGS})
 endif()
 
 # Overkit
-target_link_libraries(overkit-unit-tests PRIVATE overkit-parallel)
+target_link_libraries(unit-tests PRIVATE overkit-parallel)
 
 # MPI
 if(EXTERNAL_MPI)
-  target_include_directories(overkit-unit-tests SYSTEM PRIVATE ${MPI_INCLUDE_PATH})
-  target_link_libraries(overkit-unit-tests PRIVATE ${MPI_C_LIBRARIES})
+  target_include_directories(unit-tests SYSTEM PRIVATE ${MPI_INCLUDE_PATH})
+  target_link_libraries(unit-tests PRIVATE ${MPI_C_LIBRARIES})
 endif()
 
 # C math library
-target_link_libraries(overkit-unit-tests PRIVATE ${C_MATH_LIBRARY})
+target_link_libraries(unit-tests PRIVATE ${C_MATH_LIBRARY})
 
 # Google Test
-target_link_libraries(overkit-unit-tests PRIVATE gtest_main gmock_main)
+target_link_libraries(unit-tests PRIVATE gtest_main gmock_main)
 
 #----------------
 # Header targets
