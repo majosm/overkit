@@ -62,6 +62,7 @@ set(PUBLIC_HEADERS
   Range.inl
   Request.hpp
   ScalarTraits.hpp
+  Tuple.hpp
 )
 
 set(INTERNAL_HEADERS
