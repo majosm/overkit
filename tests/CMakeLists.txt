@@ -46,7 +46,6 @@ set(SOURCES
   CartTests.cpp
   CommTests.cpp
   ElemTests.cpp
-  ExampleTests.cpp
   ForEachTests.cpp
   HaloTests.cpp
   IndexerTests.cpp
