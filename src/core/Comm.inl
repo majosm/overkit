@@ -29,6 +29,18 @@ inline void comm::Reset() {
 
 }
 
+inline bool operator==(const comm &Left, const comm &Right) {
+
+  return Left.Get() == Right.Get();
+
+}
+
+inline bool operator!=(const comm &Left, const comm &Right) {
+
+  return !(Left == Right);
+
+}
+
 inline comm DuplicateComm(const comm &Comm) {
 
   return comm(Comm.Get());

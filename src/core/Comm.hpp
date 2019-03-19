@@ -45,6 +45,9 @@ private:
 
 };
 
+inline bool operator==(const comm &Left, const comm &Right);
+inline bool operator!=(const comm &Left, const comm &Right);
+
 inline comm DuplicateComm(const comm &Comm);
 
 inline comm CreateSubsetComm(const comm &Comm, bool InSubset);
