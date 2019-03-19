@@ -55,6 +55,7 @@ set(SOURCES
 )
 
 set(HEADERS
+  MPIPrinter.hpp
   MPITest.hpp
   mocks/MultidimArray.hpp
   mocks/Noncopyable.hpp
