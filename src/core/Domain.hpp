@@ -78,7 +78,7 @@ void GetDomainGridIDs(const domain &Domain, int *GridIDs);
 void GetNextAvailableGridID(const domain &Domain, int &GridID);
 
 namespace core {
-const comm &GetDomainComm(const domain &Domain);
+comm_view GetDomainComm(const domain &Domain);
 logger &GetDomainLogger(const domain &Domain);
 error_handler &GetDomainErrorHandler(const domain &Domain);
 profiler &GetDomainProfiler(const domain &Domain);

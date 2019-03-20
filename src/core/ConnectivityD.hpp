@@ -31,7 +31,7 @@ struct connectivity_d {
   int GridID_;
   int DestinationGridID_;
   int NumDims_;
-  core::comm Comm_;
+  core::comm_view Comm_;
   long long Count_;
   int MaxSize_;
   const grid *Grid_;

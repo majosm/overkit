@@ -39,13 +39,13 @@ struct profiler {
   using timer = profiler_internal::timer;
   using timer_entry = std::pair<std::string, timer>;
 
-  core::comm Comm_;
+  core::comm_view Comm_;
   bool Enabled_;
   array<timer_entry> Timers_;
 
 };
 
-void CreateProfiler(profiler &Profiler, const comm &Comm);
+void CreateProfiler(profiler &Profiler, comm_view Comm);
 void DestroyProfiler(profiler &Profiler);
 
 void EnableProfiler(profiler &Profiler);
@@ -58,7 +58,7 @@ void RemoveProfilerTimer(profiler &Profiler, const char *TimerName);
 int GetProfilerTimerID(const profiler &Profiler, const char *TimerName);
 
 OVK_FORCE_INLINE void StartProfile(profiler &Profiler, int TimerID);
-OVK_FORCE_INLINE void StartProfileSync(profiler &Profiler, int TimerID, const comm &Comm);
+OVK_FORCE_INLINE void StartProfileSync(profiler &Profiler, int TimerID, comm_view Comm);
 OVK_FORCE_INLINE void EndProfile(profiler &Profiler, int TimerID);
 
 std::string WriteProfileTimes(const profiler &Profiler);

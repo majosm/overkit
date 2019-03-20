@@ -38,7 +38,7 @@ struct partition_hash {
   using bin_indexer = indexer<int, int, MAX_DIMS>;
 
   int NumDims_;
-  comm Comm_;
+  comm_view Comm_;
   range GlobalRange_;
   range LocalRange_;
   range BinRange_;
@@ -51,7 +51,7 @@ struct partition_hash {
 
 };
 
-void CreatePartitionHash(partition_hash &Hash, int NumDims, const comm &Comm, const range
+void CreatePartitionHash(partition_hash &Hash, int NumDims, comm_view Comm, const range
   &GlobalRange, const range &LocalRange);
 void DestroyPartitionHash(partition_hash &Hash);
 

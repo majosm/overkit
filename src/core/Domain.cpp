@@ -64,11 +64,11 @@ void AssembleExchange(domain &Domain);
 
 void ResetAllConnectivityEdits(domain &Domain);
 
-void CreateDomainGridInfo(domain::grid_info &GridInfo, grid *Grid, const core::comm &Comm);
+void CreateDomainGridInfo(domain::grid_info &GridInfo, grid *Grid, core::comm_view Comm);
 void DestroyDomainGridInfo(domain::grid_info &GridInfo);
 
 void CreateDomainConnectivityInfo(domain::connectivity_info &ConnectivityInfo, connectivity
-  *Connectivity, const core::comm &Comm);
+  *Connectivity, core::comm_view Comm);
 void DestroyDomainConnectivityInfo(domain::connectivity_info &ConnectivityInfo);
 
 }
@@ -273,7 +273,7 @@ void GetNextAvailableGridID(const domain &Domain, int &GridID) {
 
 namespace core {
 
-const comm &GetDomainComm(const domain &Domain) {
+comm_view GetDomainComm(const domain &Domain) {
 
   return Domain.Comm_;
 
@@ -1148,7 +1148,7 @@ void Collect(const domain &Domain, int DonorGridID, int ReceiverGridID, data_typ
   }
 
   int CollectTime = core::GetProfilerTimerID(Domain.Profiler_, "Collect");
-  const core::comm &Comm = core::GetGridComm(Domain.LocalGrids_.at(DonorGridID));
+  core::comm_view Comm = core::GetGridComm(Domain.LocalGrids_.at(DonorGridID));
   core::StartProfileSync(Domain.Profiler_, CollectTime, Comm);
 
   const exchange &Exchange = Domain.LocalExchanges_.at(DonorGridID).at(ReceiverGridID);
@@ -1323,7 +1323,7 @@ void Disperse(const domain &Domain, int DonorGridID, int ReceiverGridID, data_ty
 
 namespace {
 
-void CreateDomainGridInfo(domain::grid_info &GridInfo, grid *Grid, const core::comm &Comm) {
+void CreateDomainGridInfo(domain::grid_info &GridInfo, grid *Grid, core::comm_view Comm) {
 
   core::CreateGridInfo(GridInfo, Grid, Comm);
   GridInfo.EditRefCount_ = 0;
@@ -1337,7 +1337,7 @@ void DestroyDomainGridInfo(domain::grid_info &GridInfo) {
 }
 
 void CreateDomainConnectivityInfo(domain::connectivity_info &ConnectivityInfo, connectivity
-  *Connectivity, const core::comm &Comm) {
+  *Connectivity, core::comm_view Comm) {
 
   core::CreateConnectivityInfo(ConnectivityInfo, Connectivity, Comm);
   ConnectivityInfo.EditRefCount_ = 0;

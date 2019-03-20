@@ -44,6 +44,7 @@ set(SOURCES
   ArrayTraitsTests.cpp
   ArrayViewTests.cpp
   CartTests.cpp
+  CommTests.cpp
   ElemTests.cpp
   ExampleTests.cpp
   ForEachTests.cpp

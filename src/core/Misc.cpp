@@ -5,6 +5,7 @@
 
 #include "ovk/core/Array.hpp"
 #include "ovk/core/ArrayView.hpp"
+#include "ovk/core/Comm.hpp"
 #include "ovk/core/Global.hpp"
 
 #include <mpi.h>
@@ -14,16 +15,13 @@
 namespace ovk {
 namespace core {
 
-void BroadcastAnySource(void *Data, int Count, MPI_Datatype DataType, bool IsSource, MPI_Comm Comm)
+void BroadcastAnySource(void *Data, int Count, MPI_Datatype DataType, bool IsSource, comm_view Comm)
   {
 
-  int Rank;
-  MPI_Comm_rank(Comm, &Rank);
-
   // Send to the root rank first if necessary
-  if (Rank == 0 && !IsSource) {
+  if (Comm.Rank() == 0 && !IsSource) {
     MPI_Recv(Data, Count, DataType, MPI_ANY_SOURCE, 0, Comm, MPI_STATUS_IGNORE);
-  } else if (Rank != 0 && IsSource) {
+  } else if (Comm.Rank() != 0 && IsSource) {
     MPI_Send(Data, Count, DataType, 0, 0, Comm);
   }
 
@@ -42,85 +40,73 @@ void BroadcastAnySource(void *Data, int Count, MPI_Datatype DataType, bool IsSou
 // to use some kind of tree-like communication instead of sending everything to the root,
 // but who has time for that?
 
-void CreateSignal(signal &Signal, MPI_Comm Comm) {
-
+signal::signal(comm_view Comm):
 #ifdef OVK_HAVE_MPI_IBARRIER
-  Signal.Comm_ = Comm;
-  Signal.Request_ = MPI_REQUEST_NULL;
+  Comm_(Comm),
+  Request_(MPI_REQUEST_NULL)
 #else
-  MPI_Comm_dup(Comm, &Signal.Comm_);
-  MPI_Comm_size(Signal.Comm_, &Signal.CommSize_);
-  MPI_Comm_rank(Signal.Comm_, &Signal.CommRank_);
-  Signal.Requests_[0] = MPI_REQUEST_NULL;
-  Signal.Requests_[1] = MPI_REQUEST_NULL;
-  Signal.NumCompleted_ = 0;
+  Comm_(DuplicateComm(Comm)),
+  Requests_({MPI_REQUEST_NULL, MPI_REQUEST_NULL}),
+  NumCompleted_(0)
 #endif
+{}
 
-}
-
-void StartSignal(signal &Signal) {
+void signal::Start() {
 
 #ifdef OVK_HAVE_MPI_IBARRIER
-  MPI_Ibarrier(Signal.Comm_, &Signal.Request_);
+  MPI_Ibarrier(Comm_, &Request_);
 #else
-  if (Signal.CommRank_ > 0) {
-    MPI_Isend(Signal.SendBuffer_, 1, MPI_CHAR, 0, 0, Signal.Comm_, Signal.Requests_);
-    MPI_Issend(Signal.SendBuffer_+1, 1, MPI_CHAR, 0, 1, Signal.Comm_, Signal.Requests_+1);
+  if (Comm_.Rank() > 0) {
+    MPI_Isend(SendBuffer_, 1, MPI_CHAR, 0, 0, Comm_, Requests_);
+    MPI_Issend(SendBuffer_+1, 1, MPI_CHAR, 0, 1, Comm_, Requests_+1);
   }
 #endif
 
 }
 
-void CheckSignal(signal &Signal, bool &Done) {
+bool signal::Check() {
 
-  int DoneInt;
+  bool Done;
 
 #ifdef OVK_HAVE_MPI_IBARRIER
-  MPI_Test(&Signal.Request_, &DoneInt, MPI_STATUS_IGNORE);
+  int DoneInt;
+  MPI_Test(&Request_, &DoneInt, MPI_STATUS_IGNORE);
   Done = bool(DoneInt);
 #else
-  if (Signal.CommRank_ > 0) {
-    MPI_Testall(2, Signal.Requests_, &DoneInt, MPI_STATUSES_IGNORE);
+  if (Comm_.Rank() > 0) {
+    int DoneInt;
+    MPI_Testall(2, Requests_, &DoneInt, MPI_STATUSES_IGNORE);
     Done = bool(DoneInt);
   } else {
     Done = false;
-    while (Signal.NumCompleted_ < Signal.CommSize_-1) {
+    while (NumCompleted_ < Comm_.Size()-1) {
       int IncomingMessage;
       MPI_Status Status;
-      MPI_Iprobe(MPI_ANY_SOURCE, 0, Signal.Comm_, &IncomingMessage, &Status);
+      MPI_Iprobe(MPI_ANY_SOURCE, 0, Comm_, &IncomingMessage, &Status);
       if (!IncomingMessage) break;
-      MPI_Recv(Signal.RecvBuffer_, 1, MPI_CHAR, Status.MPI_SOURCE, 0, Signal.Comm_,
-        MPI_STATUS_IGNORE);
-      ++Signal.NumCompleted_;
+      MPI_Recv(RecvBuffer_, 1, MPI_CHAR, Status.MPI_SOURCE, 0, Comm_, MPI_STATUS_IGNORE);
+      ++NumCompleted_;
     }
-    if (Signal.NumCompleted_ == Signal.CommSize_-1) {
+    if (NumCompleted_ == Comm_.Size()-1) {
       int OtherRank;
-      for (OtherRank = 1; OtherRank < Signal.CommSize_; ++OtherRank) {
-        MPI_Recv(Signal.RecvBuffer_, 1, MPI_CHAR, OtherRank, 1, Signal.Comm_, MPI_STATUS_IGNORE);
+      for (OtherRank = 1; OtherRank < Comm_.Size(); ++OtherRank) {
+        MPI_Recv(RecvBuffer_, 1, MPI_CHAR, OtherRank, 1, Comm_, MPI_STATUS_IGNORE);
       }
       Done = true;
     }
   }
   if (Done) {
-    Signal.Requests_[0] = MPI_REQUEST_NULL;
-    Signal.Requests_[1] = MPI_REQUEST_NULL;
-    Signal.NumCompleted_ = 0;
+    Requests_[0] = MPI_REQUEST_NULL;
+    Requests_[1] = MPI_REQUEST_NULL;
+    NumCompleted_ = 0;
   }
 #endif
 
-}
-
-void DestroySignal(signal &Signal) {
-
-#ifdef OVK_HAVE_MPI_IBARRIER
-  // Do nothing
-#else
-  MPI_Comm_free(&Signal.Comm_);
-#endif
+  return Done;
 
 }
 
-array<int> DynamicHandshake(MPI_Comm Comm, array_view<const int> Ranks) {
+array<int> DynamicHandshake(comm_view Comm, array_view<const int> Ranks) {
 
   char SendBuffer[1], RecvBuffer[1];
 
@@ -133,8 +119,7 @@ array<int> DynamicHandshake(MPI_Comm Comm, array_view<const int> Ranks) {
     MPI_Issend(SendBuffer, 1, MPI_CHAR, Ranks(iRank), 0, Comm, &Request);
   }
 
-  signal AllSendsDoneSignal;
-  CreateSignal(AllSendsDoneSignal, Comm);
+  signal AllSendsDoneSignal(Comm);
 
   std::set<int> MatchedRanksSet;
 
@@ -151,18 +136,16 @@ array<int> DynamicHandshake(MPI_Comm Comm, array_view<const int> Ranks) {
       MatchedRanksSet.insert(MatchedRank);
     }
     if (SendsDone) {
-      CheckSignal(AllSendsDoneSignal, Done);
+      Done = AllSendsDoneSignal.Check();
     } else {
       MPI_Testall(NumRanks, SendRequests.Data(), &SendsDone, MPI_STATUSES_IGNORE);
       if (SendsDone) {
-        StartSignal(AllSendsDoneSignal);
+        AllSendsDoneSignal.Start();
       }
     }
   }
 
   MPI_Barrier(Comm);
-
-  DestroySignal(AllSendsDoneSignal);
 
   return {{int(MatchedRanksSet.size())}, MatchedRanksSet.begin()};
 

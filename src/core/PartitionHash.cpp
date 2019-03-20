@@ -35,7 +35,7 @@ inline elem<int,MAX_DIMS> MapToUniformCell(const elem<int,MAX_DIMS> &Origin, con
 
 }
 
-void CreatePartitionHash(partition_hash &Hash, int NumDims, const comm &Comm, const range
+void CreatePartitionHash(partition_hash &Hash, int NumDims, comm_view Comm, const range
   &GlobalRange, const range &LocalRange) {
 
   Hash.NumDims_ = NumDims;

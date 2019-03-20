@@ -29,7 +29,7 @@ struct connectivity_r {
   int GridID_;
   int SourceGridID_;
   int NumDims_;
-  core::comm Comm_;
+  core::comm_view Comm_;
   long long Count_;
   const grid *Grid_;
   edits Edits_;

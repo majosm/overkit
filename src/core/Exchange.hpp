@@ -50,7 +50,7 @@ struct exchange {
   mutable core::error_handler *ErrorHandler_;
   mutable core::profiler *Profiler_;
   int NumDims_;
-  core::comm Comm_;
+  core::comm_view Comm_;
 
   array<long long> DonorsSorted_;
   array<long long> ReceiversSorted_;
@@ -91,7 +91,7 @@ void CreateExchange(exchange &Exchange, const connectivity &Connectivity, logger
   error_handler &ErrorHandler, profiler &Profiler);
 void DestroyExchange(exchange &Exchange);
 
-void CreateExchangeInfo(exchange_info &Info, const exchange *Exchange, const comm &Comm);
+void CreateExchangeInfo(exchange_info &Info, const exchange *Exchange, comm_view Comm);
 void DestroyExchangeInfo(exchange_info &Info);
 
 }

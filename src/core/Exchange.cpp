@@ -161,7 +161,7 @@ void DestroyExchange(exchange &Exchange) {
 
 }
 
-void CreateExchangeInfo(exchange_info &Info, const exchange *Exchange, const comm &Comm) {
+void CreateExchangeInfo(exchange_info &Info, const exchange *Exchange, comm_view Comm) {
 
   bool IsLocal = Exchange != nullptr;
   bool IsRoot = false;

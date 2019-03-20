@@ -30,11 +30,11 @@ bool EditingDonorSide(const connectivity &Connectivity);
 bool EditingReceiverSide(const connectivity &Connectivity);
 
 void CreateDonorInfo(connectivity::donor_info &DonorInfo, const grid *DonorGrid,
-  int DestinationGridID, const core::comm &Comm);
+  int DestinationGridID, core::comm_view Comm);
 void DestroyDonorInfo(connectivity::donor_info &DonorInfo);
 
 void CreateReceiverInfo(connectivity::receiver_info &ReceiverInfo, const grid *ReceiverGrid,
-  int SourceGridID, const core::comm &Comm);
+  int SourceGridID, core::comm_view Comm);
 void DestroyReceiverInfo(connectivity::receiver_info &ReceiverInfo);
 
 void EditDonorSideGlobal(connectivity &Connectivity, connectivity_d *&Donors, bool IsLocal);
@@ -124,8 +124,8 @@ void DestroyConnectivity(connectivity &Connectivity) {
 
 }
 
-void CreateConnectivityInfo(connectivity_info &Info, const connectivity *Connectivity, const comm
-  &Comm) {
+void CreateConnectivityInfo(connectivity_info &Info, const connectivity *Connectivity, comm_view
+  Comm) {
 
   bool IsLocal = Connectivity != nullptr;
   bool IsRoot = false;
@@ -172,7 +172,7 @@ void DestroyConnectivityInfo(connectivity_info &Info) {
 namespace {
 
 void CreateDonorInfo(connectivity::donor_info &DonorInfo, const grid *DonorGrid,
-  int DestinationGridID, const core::comm &Comm) {
+  int DestinationGridID, core::comm_view Comm) {
 
   core::CreateGridInfo(DonorInfo, DonorGrid, Comm);
 
@@ -188,7 +188,7 @@ void DestroyDonorInfo(connectivity::donor_info &DonorInfo) {
 }
 
 void CreateReceiverInfo(connectivity::receiver_info &ReceiverInfo, const grid *ReceiverGrid,
-  int SourceGridID, const core::comm &Comm) {
+  int SourceGridID, core::comm_view Comm) {
 
   core::CreateGridInfo(ReceiverInfo, ReceiverGrid, Comm);
 
@@ -249,7 +249,7 @@ void GetConnectivityCommRank(const connectivity &Connectivity, int &CommRank) {
 
 namespace core {
 
-const comm &GetConnectivityComm(const connectivity &Connectivity) {
+comm_view GetConnectivityComm(const connectivity &Connectivity) {
 
   return Connectivity.Comm_;
 

@@ -19,9 +19,9 @@
 namespace ovk {
 namespace core {
 
-void CreateProfiler(profiler &Profiler, const comm &Comm) {
+void CreateProfiler(profiler &Profiler, comm_view Comm) {
 
-  Profiler.Comm_ = DuplicateComm(Comm);
+  Profiler.Comm_ = Comm;
 
   Profiler.Enabled_ = false;
 

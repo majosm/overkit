@@ -90,7 +90,7 @@ void GetGridGlobalCount(const grid &Grid, long long &NumGlobal);
 void GetGridLocalCount(const grid &Grid, long long &NumLocal);
 
 namespace core {
-const comm &GetGridComm(const grid &Grid);
+comm_view GetGridComm(const grid &Grid);
 const array<grid_neighbor> &GetGridNeighbors(const grid &Grid);
 const partition_hash &GetGridPartitionHash(const grid &Grid);
 }
@@ -117,7 +117,7 @@ void SetGridParamLocalRange(grid_params &Params, const range &LocalRange);
 void GetGridParamLocalRange(const grid_params &Params, range &LocalRange);
 
 namespace core {
-void CreateGridInfo(grid_info &Info, const grid *Grid, const comm &Comm);
+void CreateGridInfo(grid_info &Info, const grid *Grid, comm_view Comm);
 void DestroyGridInfo(grid_info &Info);
 }
 

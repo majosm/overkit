@@ -97,7 +97,7 @@ struct xintout_grid {
   int ID;
   std::string Name;
   int NumDims;
-  core::comm Comm;
+  core::comm_view Comm;
   elem<int,MAX_DIMS> GlobalSize;
   xintout_donors Donors;
   xintout_receivers Receivers;
@@ -120,20 +120,20 @@ struct xintout {
   mutable core::logger *Logger;
   mutable core::error_handler *ErrorHandler;
   int NumDims;
-  core::comm Comm;
+  core::comm_view Comm;
   int NumGrids;
   int NumLocalGrids;
   std::vector<xintout_grid> Grids;
   xintout_connections Connections;
 };
 
-void CreateXINTOUT(xintout &XINTOUT, int NumDims, core::comm Comm, int NumGrids, int NumLocalGrids,
-  const std::vector<int> &LocalGridIDs, const std::vector<std::string> &LocalGridNames,
-  const std::vector<core::comm> &LocalGridComms, const std::vector<elem<int,MAX_DIMS>>
-  &LocalGridGlobalSizes, core::logger &Logger, core::error_handler &ErrorHandler);
+void CreateXINTOUT(xintout &XINTOUT, int NumDims, core::comm_view Comm, int NumGrids, int
+  NumLocalGrids, const std::vector<int> &LocalGridIDs, const std::vector<std::string>
+  &LocalGridNames, const std::vector<core::comm_view> &LocalGridComms, const std::vector<elem<int,
+  MAX_DIMS>> &LocalGridGlobalSizes, core::logger &Logger, core::error_handler &ErrorHandler);
 
 void CreateXINTOUTGrid(xintout_grid &XINTOUTGrid, int ID, const std::string &Name, int NumDims,
-  core::comm Comm, const elem<int,MAX_DIMS> &GlobalSize, core::logger &Logger,
+  core::comm_view Comm, const elem<int,MAX_DIMS> &GlobalSize, core::logger &Logger,
   core::error_handler &ErrorHandler);
 
 error ReadXINTOUT(xintout &XINTOUT, const std::string &HOPath, const std::string &XPath,
@@ -174,9 +174,9 @@ void ImportConnectivityData(int NumGrids, int NumLocalGrids, const std::vector<i
   const std::vector<donor_data> &LocalDonorData, const std::vector<receiver_data>
   &LocalReceiverData, domain &Domain);
 
-void ImportDonors(const donor_data &GridDonors, const core::comm &Comm, int NumReceiverGrids, const
+void ImportDonors(const donor_data &GridDonors, core::comm_view Comm, int NumReceiverGrids, const
   std::vector<connectivity_d *> &OverkitDonors);
-void ImportReceivers(const receiver_data &GridReceivers, const core::comm &Comm, int NumDonorGrids,
+void ImportReceivers(const receiver_data &GridReceivers, core::comm_view Comm, int NumDonorGrids,
   const std::vector<connectivity_r *> &OverkitReceivers);
 
 void CreateDonorData(donor_data &Data, long long Count, int MaxSize);
@@ -188,7 +188,7 @@ void Chunkify(long long Count, int MaxChunks, long long TargetChunkSize, int Adj
   int &ChunkRankInterval, int &NumChunks, long long &ChunkSize);
 
 int File_read_all_endian(MPI_File File, void *Buffer, int Count, MPI_Datatype DataType,
-  endian Endian, MPI_Status *Status, core::profiler &Profiler, const core::comm &Comm);
+  endian Endian, MPI_Status *Status, core::profiler &Profiler, core::comm_view Comm);
 int File_read_at_endian(MPI_File File, MPI_Offset Offset, void *Buffer, int Count,
   MPI_Datatype DataType, endian Endian, MPI_Status *Status, core::profiler &Profiler);
 
@@ -208,7 +208,7 @@ error ImportXINTOUT(domain &Domain, const std::string &HOPath, const std::string
   GetDomainDimension(Domain, NumDims);
   GetDomainGridCount(Domain, NumGrids);
 
-  const core::comm &Comm = core::GetDomainComm(Domain);
+  core::comm_view Comm = core::GetDomainComm(Domain);
 
   core::profiler &Profiler = core::GetDomainProfiler(Domain);
   core::AddProfilerTimer(Profiler, "XINTOUT::Import");
@@ -247,7 +247,7 @@ error ImportXINTOUT(domain &Domain, const std::string &HOPath, const std::string
     std::vector<const grid *> LocalGrids(NumLocalGrids);
     std::vector<int> LocalGridIDs(NumLocalGrids);
     std::vector<std::string> LocalGridNames(NumLocalGrids);
-    std::vector<core::comm> LocalGridComms(NumLocalGrids);
+    std::vector<core::comm_view> LocalGridComms(NumLocalGrids);
     std::vector<elem<int,MAX_DIMS>> LocalGridGlobalSizes(NumLocalGrids);
     int iLocalGrid = 0;
     for (int iGrid = 0; iGrid < NumGrids; ++iGrid) {
@@ -260,11 +260,11 @@ error ImportXINTOUT(domain &Domain, const std::string &HOPath, const std::string
         elem<int,MAX_DIMS> GlobalSize;
         GetGridName(Grid, Name);
         GetGridSize(Grid, GlobalSize.Data());
-        core::comm GridComm = core::GetGridComm(Grid);
+        core::comm_view GridComm = core::GetGridComm(Grid);
         LocalGrids[iLocalGrid] = GridPtr;
         LocalGridIDs[iLocalGrid] = GridID;
         LocalGridNames[iLocalGrid] = Name;
-        LocalGridComms[iLocalGrid] = std::move(GridComm);
+        LocalGridComms[iLocalGrid] = GridComm;
         LocalGridGlobalSizes[iLocalGrid] = GlobalSize;
         ++iLocalGrid;
       }
@@ -321,12 +321,12 @@ error ExportXINTOUT(const domain &Domain, const std::string &HOPath, const std::
 
 namespace {
 
-void CreateXINTOUT(xintout &XINTOUT, int NumDims, core::comm Comm, int NumGrids, int NumLocalGrids,
-  const std::vector<int> &LocalGridIDs, const std::vector<std::string> &LocalGridNames,
-  const std::vector<core::comm> &LocalGridComms, const std::vector<elem<int,MAX_DIMS>>
-  &LocalGridGlobalSizes, core::logger &Logger, core::error_handler &ErrorHandler) {
+void CreateXINTOUT(xintout &XINTOUT, int NumDims, core::comm_view Comm, int NumGrids, int
+  NumLocalGrids, const std::vector<int> &LocalGridIDs, const std::vector<std::string>
+  &LocalGridNames, const std::vector<core::comm_view> &LocalGridComms, const std::vector<elem<int,
+  MAX_DIMS>> &LocalGridGlobalSizes, core::logger &Logger, core::error_handler &ErrorHandler) {
 
-  XINTOUT.Comm = std::move(Comm);
+  XINTOUT.Comm = Comm;
 
   MPI_Barrier(XINTOUT.Comm);
 
@@ -354,10 +354,10 @@ void CreateXINTOUT(xintout &XINTOUT, int NumDims, core::comm Comm, int NumGrids,
 }
 
 void CreateXINTOUTGrid(xintout_grid &XINTOUTGrid, int ID, const std::string &Name, int NumDims,
-  core::comm Comm, const elem<int,MAX_DIMS> &GlobalSize, core::logger &Logger,
+  core::comm_view Comm, const elem<int,MAX_DIMS> &GlobalSize, core::logger &Logger,
   core::error_handler &ErrorHandler) {
 
-  XINTOUTGrid.Comm = std::move(Comm);
+  XINTOUTGrid.Comm = Comm;
 
   MPI_Barrier(XINTOUTGrid.Comm);
 
@@ -384,7 +384,7 @@ void CreateXINTOUTGrid(xintout_grid &XINTOUTGrid, int ID, const std::string &Nam
 error ReadXINTOUT(xintout &XINTOUT, const std::string &HOPath, const std::string &XPath,
   int ReadGranularityAdjust, MPI_Info MPIInfo, core::profiler &Profiler) {
 
-  const core::comm &Comm = XINTOUT.Comm;
+  core::comm_view Comm = XINTOUT.Comm;
 
   MPI_Barrier(Comm);
 
@@ -444,7 +444,7 @@ error ReadXINTOUT(xintout &XINTOUT, const std::string &HOPath, const std::string
 error ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath, endian &Endian,
   xintout_format &Format, bool &WithIBlank, core::profiler &Profiler) {
 
-  const core::comm &Comm = XINTOUT.Comm;
+  core::comm_view Comm = XINTOUT.Comm;
 
   int NumGrids = XINTOUT.NumGrids;
 
@@ -675,7 +675,7 @@ error ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath,
   int GridID = XINTOUTGrid.ID;
   int iGrid = GridID-1;
 
-  const core::comm &Comm = XINTOUTGrid.Comm;
+  core::comm_view Comm = XINTOUTGrid.Comm;
 
   core::logger &Logger = *XINTOUTGrid.Logger;
   core::error_handler &ErrorHandler = *XINTOUTGrid.ErrorHandler;
@@ -974,7 +974,7 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
 
   int GridID = XINTOUTGrid.ID;
 
-  const core::comm &Comm = XINTOUTGrid.Comm;
+  core::comm_view Comm = XINTOUTGrid.Comm;
 
   core::logger &Logger = *XINTOUTGrid.Logger;
   core::error_handler &ErrorHandler = *XINTOUTGrid.ErrorHandler;
@@ -1294,7 +1294,7 @@ error ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath,
 
   int GridID = XINTOUTGrid.ID;
 
-  const core::comm &Comm = XINTOUTGrid.Comm;
+  core::comm_view Comm = XINTOUTGrid.Comm;
 
   core::logger &Logger = *XINTOUTGrid.Logger;
   core::error_handler &ErrorHandler = *XINTOUTGrid.ErrorHandler;
@@ -1482,7 +1482,7 @@ error ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath,
 
 void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
 
-  const core::comm &Comm = XINTOUT.Comm;
+  core::comm_view Comm = XINTOUT.Comm;
 
   MPI_Barrier(Comm);
 
@@ -1909,7 +1909,7 @@ void DistributeConnectivityData(const xintout &XINTOUT, const std::vector<const 
   std::vector<donor_data> &LocalDonorData, std::vector<receiver_data> &LocalReceiverData,
   core::profiler &Profiler) {
 
-  const core::comm &Comm = XINTOUT.Comm;
+  core::comm_view Comm = XINTOUT.Comm;
 
   MPI_Barrier(Comm);
 
@@ -1934,7 +1934,7 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
   donor_data &DonorData, receiver_data &ReceiverData, core::profiler &Profiler) {
 
   int NumDims = XINTOUTGrid.NumDims;
-  const core::comm &Comm = XINTOUTGrid.Comm;
+  core::comm_view Comm = XINTOUTGrid.Comm;
 
   int MapToBinsTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Distribute::MapToBins");
   int RetrieveBinsTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Distribute::RetrieveBins");
@@ -2428,7 +2428,7 @@ void ImportConnectivityData(int NumGrids, int NumLocalGrids, const std::vector<i
   std::string DomainName;
   GetDomainName(Domain, DomainName);
 
-  const core::comm &Comm = core::GetDomainComm(Domain);
+  core::comm_view Comm = core::GetDomainComm(Domain);
 
   MPI_Barrier(Comm);
 
@@ -2501,7 +2501,7 @@ void ImportConnectivityData(int NumGrids, int NumLocalGrids, const std::vector<i
 
     const grid *Grid;
     GetGrid(Domain, GridID, Grid);
-    const core::comm &GridComm = core::GetGridComm(*Grid);
+    core::comm_view GridComm = core::GetGridComm(*Grid);
 
     int NumReceiverGrids = 0;
     int NumDonorGrids = 0;
@@ -2572,7 +2572,7 @@ void ImportConnectivityData(int NumGrids, int NumLocalGrids, const std::vector<i
 
 }
 
-void ImportDonors(const donor_data &GridDonors, const core::comm &Comm, int NumDestinationGrids,
+void ImportDonors(const donor_data &GridDonors, core::comm_view Comm, int NumDestinationGrids,
   const std::vector<connectivity_d *> &OverkitDonors) {
 
   if (NumDestinationGrids == 0) return;
@@ -2696,7 +2696,7 @@ void ImportDonors(const donor_data &GridDonors, const core::comm &Comm, int NumD
 
 }
 
-void ImportReceivers(const receiver_data &GridReceivers, const core::comm &Comm, int NumSourceGrids,
+void ImportReceivers(const receiver_data &GridReceivers, core::comm_view Comm, int NumSourceGrids,
   const std::vector<connectivity_r *> &OverkitReceivers) {
 
   if (NumSourceGrids == 0) return;
@@ -2855,7 +2855,7 @@ void Chunkify(long long Count, int MaxChunks, long long TargetChunkSize, int Adj
 }
 
 int File_read_all_endian(MPI_File File, void *Buffer, int Count, MPI_Datatype DataType,
-  endian Endian, MPI_Status *Status, core::profiler &Profiler, const core::comm &Comm) {
+  endian Endian, MPI_Status *Status, core::profiler &Profiler, core::comm_view Comm) {
 
   int MPIIOReadTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Read");
   core::StartProfileSync(Profiler, MPIIOReadTime, Comm);

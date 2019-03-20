@@ -65,7 +65,7 @@ OVK_FORCE_INLINE void StartProfile(profiler &Profiler, int TimerID) {
 
 }
 
-OVK_FORCE_INLINE void StartProfileSync(profiler &Profiler, int TimerID, const comm &Comm) {
+OVK_FORCE_INLINE void StartProfileSync(profiler &Profiler, int TimerID, comm_view Comm) {
 
   if (Profiler.Enabled_) {
     OVK_DEBUG_ASSERT(TimerID >= 0 && TimerID < int(Profiler.Timers_.Count()), "Invalid timer ID.");

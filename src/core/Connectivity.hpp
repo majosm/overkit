@@ -74,8 +74,8 @@ void CreateConnectivity(connectivity &Connectivity, int NumDims, core::comm Comm
   *DonorGrid, const grid *ReceiverGrid, core::logger &Logger, core::error_handler &ErrorHandler);
 void DestroyConnectivity(connectivity &Connectivity);
 
-void CreateConnectivityInfo(connectivity_info &Info, const connectivity *Connectivity, const comm
-  &Comm);
+void CreateConnectivityInfo(connectivity_info &Info, const connectivity *Connectivity, comm_view
+  Comm);
 void DestroyConnectivityInfo(connectivity_info &Info);
 
 }
@@ -89,7 +89,7 @@ void GetConnectivityCommSize(const connectivity &Connectivity, int &CommSize);
 void GetConnectivityCommRank(const connectivity &Connectivity, int &CommRank);
 
 namespace core {
-const comm &GetConnectivityComm(const connectivity &Connectivity);
+comm_view GetConnectivityComm(const connectivity &Connectivity);
 }
 
 void GetConnectivityDonorGridInfo(const connectivity &Connectivity, const grid_info
