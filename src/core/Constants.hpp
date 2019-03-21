@@ -22,16 +22,16 @@ enum class log_level {
   ALL = OVK_LOG_ALL
 };
 
-inline log_level operator|(log_level Left, log_level Right) {
+constexpr inline log_level operator|(log_level Left, log_level Right) {
   return log_level(int(Left) | int(Right));
 }
-inline log_level operator&(log_level Left, log_level Right) {
+constexpr inline log_level operator&(log_level Left, log_level Right) {
   return log_level(int(Left) & int(Right));
 }
-inline log_level operator^(log_level Left, log_level Right) {
+constexpr inline log_level operator^(log_level Left, log_level Right) {
   return log_level(int(Left) ^ int(Right));
 }
-inline log_level operator~(log_level LogLevel) {
+constexpr inline log_level operator~(log_level LogLevel) {
   return log_level(~int(LogLevel));
 }
 inline log_level operator|=(log_level &Left, log_level Right) {
@@ -67,16 +67,16 @@ enum class domain_config {
   ALL = OVK_DOMAIN_CONFIG_ALL
 };
 
-inline domain_config operator|(domain_config Left, domain_config Right) {
+constexpr inline domain_config operator|(domain_config Left, domain_config Right) {
   return domain_config(int(Left) | int(Right));
 }
-inline domain_config operator&(domain_config Left, domain_config Right) {
+constexpr inline domain_config operator&(domain_config Left, domain_config Right) {
   return domain_config(int(Left) & int(Right));
 }
-inline domain_config operator^(domain_config Left, domain_config Right) {
+constexpr inline domain_config operator^(domain_config Left, domain_config Right) {
   return domain_config(int(Left) ^ int(Right));
 }
-inline domain_config operator~(domain_config Config) {
+constexpr inline domain_config operator~(domain_config Config) {
   return domain_config(~int(Config));
 }
 inline domain_config operator|=(domain_config &Left, domain_config Right) {
