@@ -44,6 +44,7 @@ set(TEST_SOURCES
   ArrayViewTests.cpp
   ElemTests.cpp
   ExampleTests.cpp
+  ForEachTests.cpp
   IndexerTests.cpp
   IntervalTests.cpp
   RangeTests.cpp

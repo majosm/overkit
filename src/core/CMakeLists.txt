@@ -79,6 +79,7 @@ set(INTERNAL_HEADERS
   Debug.hpp
   DebugBase.h
   ErrorHandler.hpp
+  ForEach.hpp
   GlobalBase.h
   IntegerSequence.hpp
   IteratorTraits.hpp
