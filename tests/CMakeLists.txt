@@ -43,6 +43,7 @@ set(TEST_SOURCES
   ArrayTraitsTests.cpp
   ElemTests.cpp
   ExampleTests.cpp
+  IndexerTests.cpp
   IntervalTests.cpp
   RangeTests.cpp
 )
