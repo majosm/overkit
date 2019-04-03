@@ -5,6 +5,7 @@
 
 #include <iterator>
 #include <type_traits>
+#include <utility>
 
 namespace ovk {
 namespace core {
@@ -120,6 +121,54 @@ template <typename T> struct deref_type_helper<T, OVK_SPECIALIZATION_REQUIRES(!I
 }
 template <typename T> using iterator_deref_type = typename iterator_traits_internal::
   deref_type_helper<T>::type;
+
+namespace forwarding_iterator_internal {
+using std::begin;
+using std::end;
+template <typename IterType, typename RefType, typename=void> struct helper;
+template <typename IterType, typename RefType> struct helper<IterType, RefType,
+  OVK_SPECIALIZATION_REQUIRES(IsIterator<IterType>() && !std::is_rvalue_reference<RefType>::value)> {
+  using type = IterType;
+};
+template <typename IterType, typename RefType> struct helper<IterType, RefType,
+  OVK_SPECIALIZATION_REQUIRES(IsIterator<IterType>() && std::is_rvalue_reference<RefType>::value)> {
+  using type = std::move_iterator<IterType>;
+};
+template <typename IterType, typename RefType> struct helper<IterType, RefType,
+  OVK_SPECIALIZATION_REQUIRES(!IsIterator<IterType>())> {
+  using type = std::false_type;
+};
+}
+template <typename IterType, typename RefType> using forwarding_iterator = typename
+  forwarding_iterator_internal::helper<IterType, RefType>::type;
+
+template <typename RefType, typename IterType> forwarding_iterator<IterType, RefType>
+  MakeForwardingIterator(IterType Iter) {
+  return forwarding_iterator<IterType, RefType>(Iter);
+}
+
+namespace forwarding_begin_end_internal {
+using std::begin;
+using std::end;
+template <typename T> auto BeginHelper(typename std::remove_reference<T>::type &Container) ->
+  decltype(MakeForwardingIterator<mimicked_ref<T &&, decltype(*begin(Container))>>(
+  begin(Container))) {
+  return MakeForwardingIterator<mimicked_ref<T &&, decltype(*begin(Container))>>(begin(Container));
+}
+template <typename T> auto EndHelper(typename std::remove_reference<T>::type &Container) ->
+  decltype(MakeForwardingIterator<mimicked_ref<T &&, decltype(*begin(Container))>>(
+  end(Container))) {
+  return MakeForwardingIterator<mimicked_ref<T &&, decltype(*begin(Container))>>(end(Container));
+}
+}
+template <typename T> auto ForwardingBegin(typename std::remove_reference<T>::type &Container) ->
+  decltype(forwarding_begin_end_internal::BeginHelper<T>(Container)) {
+  return forwarding_begin_end_internal::BeginHelper<T>(Container);
+}
+template <typename T> auto ForwardingEnd(typename std::remove_reference<T>::type &Container) ->
+  decltype(forwarding_begin_end_internal::EndHelper<T>(Container)) {
+  return forwarding_begin_end_internal::EndHelper<T>(Container);
+}
 
 }}
 
