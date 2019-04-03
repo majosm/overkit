@@ -79,6 +79,7 @@ set(INTERNAL_HEADERS
   Profiler.inl
   RangeBase.h
   RangeBase.inl
+  Requires.hpp
   ScopeGuard.hpp
   ScopeGuard.inl
   TextProcessing.hpp
