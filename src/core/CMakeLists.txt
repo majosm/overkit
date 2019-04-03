@@ -97,6 +97,7 @@ set(INTERNAL_HEADERS
   TextProcessing.inl
   TypeSequence.hpp
   TypeTraits.hpp
+  Vector.hpp
 )
 
 #-----------------

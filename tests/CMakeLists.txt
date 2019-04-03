@@ -47,6 +47,7 @@ set(TEST_SOURCES
   IndexerTests.cpp
   IntervalTests.cpp
   RangeTests.cpp
+  VectorTests.cpp
 )
 
 #-------------------
