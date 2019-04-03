@@ -86,6 +86,7 @@ set(INTERNAL_HEADERS
   TextProcessing.hpp
   TextProcessing.inl
   TypeSequence.hpp
+  TypeTraits.hpp
 )
 
 #-----------------
