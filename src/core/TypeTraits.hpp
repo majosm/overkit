@@ -11,6 +11,10 @@
 namespace ovk {
 namespace core {
 
+// Remove cv and reference qualifiers
+template <typename T> using remove_cvref = typename std::remove_cv<typename std::remove_reference<T
+  >::type>::type;
+
 // Apply const & reference qualifiers of one type to another type
 namespace mimicked_ref_internal {
 template <typename T, typename U> struct helper {
