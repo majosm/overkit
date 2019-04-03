@@ -70,6 +70,7 @@ set(INTERNAL_HEADERS
   DebugBase.h
   ErrorHandler.hpp
   GlobalBase.h
+  IntegerSequence.hpp
   Logger.hpp
   Logger.inl
   MinMax.h
@@ -84,6 +85,7 @@ set(INTERNAL_HEADERS
   ScopeGuard.inl
   TextProcessing.hpp
   TextProcessing.inl
+  TypeSequence.hpp
 )
 
 #-----------------
