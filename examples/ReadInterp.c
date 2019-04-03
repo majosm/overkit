@@ -140,8 +140,7 @@ int main(int argc, char **argv) {
       ovkSetGridParamPeriodic(GridParams, InputGrid->periodic);
       ovkSetGridParamPeriodicStorage(GridParams, OVK_PERIODIC_STORAGE_UNIQUE);
       ovkSetGridParamPeriodicLength(GridParams, InputGrid->periodic_length);
-      ovk_range LocalRange = ovkRange(2, InputGrid->is, InputGrid->ie);
-      ovkSetGridParamLocalRange(GridParams, &LocalRange);
+      ovkSetGridParamLocalRange(GridParams, InputGrid->is, InputGrid->ie);
       ovkCreateGridLocal(Domain, GridID, GridParams);
       ovkDestroyGridParams(&GridParams);
     } else {
@@ -215,14 +214,13 @@ int main(int argc, char **argv) {
       input_grid *InputGrid = InputGrids+iLocalGrid;
       input_state *InputState = InputStates+iLocalGrid;
       int LocalGridID = InputGrid->id;
-      ovk_range GridDataRange = ovkRange(2, InputGrid->is, InputGrid->ie);
       for (iGrid = 0; iGrid < 2; ++iGrid) {
         int OtherGridID = iGrid+1;
         if (ovkConnectivityExists(Domain, LocalGridID, OtherGridID)) {
           const void *GridData = InputState->values;
           void *DonorData = SendBuffers[iSend];
           ovkCollect(Domain, LocalGridID, OtherGridID, OVK_DOUBLE, 1, OVK_COLLECT_INTERPOLATE,
-            &GridDataRange, OVK_COLUMN_MAJOR, &GridData, &DonorData);
+            InputGrid->is, InputGrid->ie, OVK_COLUMN_MAJOR, &GridData, &DonorData);
           ++iSend;
         }
       }
@@ -273,14 +271,13 @@ int main(int argc, char **argv) {
       input_grid *InputGrid = InputGrids+iLocalGrid;
       input_state *InputState = InputStates+iLocalGrid;
       int LocalGridID = InputGrid->id;
-      ovk_range GridDataRange = ovkRange(2, InputGrid->is, InputGrid->ie);
       for (iGrid = 0; iGrid < 2; ++iGrid) {
         int OtherGridID = iGrid+1;
         if (ovkConnectivityExists(Domain, OtherGridID, LocalGridID)) {
           const void *ReceiverData = ReceiveBuffers[iReceive];
           void *GridData = InputState->values;
           ovkDisperse(Domain, OtherGridID, LocalGridID, OVK_DOUBLE, 1, OVK_DISPERSE_OVERWRITE,
-            &ReceiverData, &GridDataRange, OVK_COLUMN_MAJOR, &GridData);
+            &ReceiverData, InputGrid->is, InputGrid->ie, OVK_COLUMN_MAJOR, &GridData);
           ++iReceive;
         }
       }

@@ -99,7 +99,7 @@ void CreateExchange(exchange &Exchange, const connectivity &Connectivity, logger
   range DonorGridGlobalRange;
   GetGridInfoGlobalRange(*DonorGridInfo, DonorGridGlobalRange);
 
-  range DonorGridLocalRange(Exchange.NumDims_);
+  range DonorGridLocalRange = MakeEmptyRange(Exchange.NumDims_);
   if (DonorGrid) {
     GetGridLocalRange(*DonorGrid, DonorGridLocalRange);
   }
@@ -110,7 +110,7 @@ void CreateExchange(exchange &Exchange, const connectivity &Connectivity, logger
   range ReceiverGridGlobalRange;
   GetGridInfoGlobalRange(*ReceiverGridInfo, ReceiverGridGlobalRange);
 
-  range ReceiverGridLocalRange(Exchange.NumDims_);
+  range ReceiverGridLocalRange = MakeEmptyRange(Exchange.NumDims_);
   if (ReceiverGrid) {
     GetGridLocalRange(*ReceiverGrid, ReceiverGridLocalRange);
   }
@@ -330,17 +330,16 @@ void UpdateCollectSendInfo(exchange &Exchange) {
 
     array<range> SendToNeighborRanges({NumNeighbors});
     for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
-      SendToNeighborRanges(iNeighbor) = range(NumDims);
+      SendToNeighborRanges(iNeighbor) = MakeEmptyRange(NumDims);
     }
 
     for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      elem<int,MAX_DIMS> DonorBegin, DonorEnd;
+      range DonorRange;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        DonorBegin[iDim] = Donors->Extents_(0,iDim,iDonor);
-        DonorEnd[iDim] = Donors->Extents_(1,iDim,iDonor);
+        DonorRange.Begin(iDim) = Donors->Extents_(0,iDim,iDonor);
+        DonorRange.End(iDim) = Donors->Extents_(1,iDim,iDonor);
       }
-      range DonorRange(NumDims, DonorBegin, DonorEnd);
-      bool AwayFromEdge = RangeIncludes(GlobalRange, DonorRange);
+      bool AwayFromEdge = GlobalRange.Includes(DonorRange);
       for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
         if (AwayFromEdge) {
           bool Overlaps = RangesOverlap(GridNeighbors(iNeighbor).LocalRange, DonorRange);
@@ -350,12 +349,12 @@ void UpdateCollectSendInfo(exchange &Exchange) {
           }
         } else {
           bool Overlaps = false;
-          for (int k = DonorBegin[2]; k < DonorEnd[2]; ++k) {
-            for (int j = DonorBegin[1]; j < DonorEnd[1]; ++j) {
-              for (int i = DonorBegin[0]; i < DonorEnd[0]; ++i) {
+          for (int k = DonorRange.Begin(2); k < DonorRange.End(2); ++k) {
+            for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
+              for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
                 elem<int,MAX_DIMS> Point = {i,j,k};
                 CartPeriodicAdjust(Cart, Point, Point);
-                if (RangeContains(GridNeighbors(iNeighbor).LocalRange, Point)) {
+                if (GridNeighbors(iNeighbor).LocalRange.Contains(Point)) {
                   Overlaps = true;
                   goto done_checking_for_overlap1;
                 }
@@ -364,12 +363,12 @@ void UpdateCollectSendInfo(exchange &Exchange) {
           }
           done_checking_for_overlap1:;
           if (Overlaps) {
-            for (int k = DonorBegin[2]; k < DonorEnd[2]; ++k) {
-              for (int j = DonorBegin[1]; j < DonorEnd[1]; ++j) {
-                for (int i = DonorBegin[0]; i < DonorEnd[0]; ++i) {
+            for (int k = DonorRange.Begin(2); k < DonorRange.End(2); ++k) {
+              for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
+                for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
                   elem<int,MAX_DIMS> Point = {i,j,k};
                   CartPeriodicAdjust(Cart, Point, Point);
-                  if (RangeContains(LocalRange, Point)) {
+                  if (LocalRange.Contains(Point)) {
                     ExtendRange(SendToNeighborRanges(iNeighbor), Point);
                   }
                 }
@@ -384,8 +383,7 @@ void UpdateCollectSendInfo(exchange &Exchange) {
     array<range_indexer> SendToNeighborIndexers({NumNeighbors});
     for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
       const range &SendToNeighborRange = SendToNeighborRanges(iNeighbor);
-      SendToNeighborIndexers(iNeighbor) = range_indexer({SendToNeighborRange.Begin(),
-        SendToNeighborRange.End()});
+      SendToNeighborIndexers(iNeighbor) = range_indexer(SendToNeighborRange);
     }
 
     array<int> CollectSendIndexToNeighbor;
@@ -410,13 +408,12 @@ void UpdateCollectSendInfo(exchange &Exchange) {
     }
 
     for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      elem<int,MAX_DIMS> DonorBegin, DonorEnd;
+      range DonorRange;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        DonorBegin[iDim] = Donors->Extents_(0,iDim,iDonor);
-        DonorEnd[iDim] = Donors->Extents_(1,iDim,iDonor);
+        DonorRange.Begin(iDim) = Donors->Extents_(0,iDim,iDonor);
+        DonorRange.End(iDim) = Donors->Extents_(1,iDim,iDonor);
       }
-      range DonorRange(NumDims, DonorBegin, DonorEnd);
-      bool AwayFromEdge = RangeIncludes(GlobalRange, DonorRange);
+      bool AwayFromEdge = GlobalRange.Includes(DonorRange);
       for (int iCollectSend = 0; iCollectSend < NumCollectSends; ++iCollectSend) {
         int iNeighbor = CollectSendIndexToNeighbor(iCollectSend);
         const range_indexer &Indexer = SendToNeighborIndexers(iNeighbor);
@@ -435,12 +432,12 @@ void UpdateCollectSendInfo(exchange &Exchange) {
           }
         } else {
           bool Overlaps = false;
-          for (int k = DonorBegin[2]; k < DonorEnd[2]; ++k) {
-            for (int j = DonorBegin[1]; j < DonorEnd[1]; ++j) {
-              for (int i = DonorBegin[0]; i < DonorEnd[0]; ++i) {
+          for (int k = DonorRange.Begin(2); k < DonorRange.End(2); ++k) {
+            for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
+              for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
                 elem<int,MAX_DIMS> Point = {i,j,k};
                 CartPeriodicAdjust(Cart, Point, Point);
-                if (RangeContains(GridNeighbors(iNeighbor).LocalRange, Point)) {
+                if (GridNeighbors(iNeighbor).LocalRange.Contains(Point)) {
                   Overlaps = true;
                   goto done_checking_for_overlap2;
                 }
@@ -449,12 +446,12 @@ void UpdateCollectSendInfo(exchange &Exchange) {
           }
           done_checking_for_overlap2:;
           if (Overlaps) {
-            for (int k = DonorBegin[2]; k < DonorEnd[2]; ++k) {
-              for (int j = DonorBegin[1]; j < DonorEnd[1]; ++j) {
-                for (int i = DonorBegin[0]; i < DonorEnd[0]; ++i) {
+            for (int k = DonorRange.Begin(2); k < DonorRange.End(2); ++k) {
+              for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
+                for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
                   elem<int,MAX_DIMS> Point = {i,j,k};
                   CartPeriodicAdjust(Cart, Point, Point);
-                  if (RangeContains(LocalRange, Point)) {
+                  if (LocalRange.Contains(Point)) {
                     long long iPoint = Indexer.ToIndex(Point);
                     CollectSendMasks(iCollectSend)(iPoint) = true;
                   }
@@ -538,28 +535,27 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
 
     array<range> RecvFromNeighborRanges({NumNeighbors});
     for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
-      RecvFromNeighborRanges(iNeighbor) = range(NumDims);
+      RecvFromNeighborRanges(iNeighbor) = MakeEmptyRange(NumDims);
     }
 
     for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      elem<int,MAX_DIMS> DonorBegin, DonorEnd;
+      range DonorRange;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        DonorBegin[iDim] = Donors->Extents_(0,iDim,iDonor);
-        DonorEnd[iDim] = Donors->Extents_(1,iDim,iDonor);
+        DonorRange.Begin(iDim) = Donors->Extents_(0,iDim,iDonor);
+        DonorRange.End(iDim) = Donors->Extents_(1,iDim,iDonor);
       }
-      range DonorRange(NumDims, DonorBegin, DonorEnd);
-      bool AwayFromEdge = RangeIncludes(GlobalRange, DonorRange);
+      bool AwayFromEdge = GlobalRange.Includes(DonorRange);
       for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
         if (AwayFromEdge) {
           RecvFromNeighborRanges(iNeighbor) = UnionRanges(RecvFromNeighborRanges(iNeighbor),
             IntersectRanges(GridNeighbors(iNeighbor).LocalRange, DonorRange));
         } else {
-          for (int k = DonorBegin[2]; k < DonorEnd[2]; ++k) {
-            for (int j = DonorBegin[1]; j < DonorEnd[1]; ++j) {
-              for (int i = DonorBegin[0]; i < DonorEnd[0]; ++i) {
+          for (int k = DonorRange.Begin(2); k < DonorRange.End(2); ++k) {
+            for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
+              for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
                 elem<int,MAX_DIMS> Point = {i,j,k};
                 CartPeriodicAdjust(Cart, Point, Point);
-                if (RangeContains(GridNeighbors(iNeighbor).LocalRange, Point)) {
+                if (GridNeighbors(iNeighbor).LocalRange.Contains(Point)) {
                   ExtendRange(RecvFromNeighborRanges(iNeighbor), Point);
                 }
               }
@@ -573,8 +569,7 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
     array<range_indexer> RecvFromNeighborIndexers({NumNeighbors});
     for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
       const range &RecvFromNeighborRange = RecvFromNeighborRanges(iNeighbor);
-      RecvFromNeighborIndexers(iNeighbor) = range_indexer({RecvFromNeighborRange.Begin(),
-        RecvFromNeighborRange.End()});
+      RecvFromNeighborIndexers(iNeighbor) = range_indexer(RecvFromNeighborRange);
     }
 
     array<int> CollectRecvIndexToNeighbor;
@@ -599,13 +594,12 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
     }
 
     for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      elem<int,MAX_DIMS> DonorBegin, DonorEnd;
+      range DonorRange;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        DonorBegin[iDim] = Donors->Extents_(0,iDim,iDonor);
-        DonorEnd[iDim] = Donors->Extents_(1,iDim,iDonor);
+        DonorRange.Begin(iDim) = Donors->Extents_(0,iDim,iDonor);
+        DonorRange.End(iDim) = Donors->Extents_(1,iDim,iDonor);
       }
-      range DonorRange(NumDims, DonorBegin, DonorEnd);
-      bool AwayFromEdge = RangeIncludes(GlobalRange, DonorRange);
+      bool AwayFromEdge = GlobalRange.Includes(DonorRange);
       for (int iCollectRecv = 0; iCollectRecv < NumCollectRecvs; ++iCollectRecv) {
         int iNeighbor = CollectRecvIndexToNeighbor(iCollectRecv);
         const range_indexer &Indexer = RecvFromNeighborIndexers(iNeighbor);
@@ -620,12 +614,12 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
             }
           }
         } else {
-          for (int k = DonorBegin[2]; k < DonorEnd[2]; ++k) {
-            for (int j = DonorBegin[1]; j < DonorEnd[1]; ++j) {
-              for (int i = DonorBegin[0]; i < DonorEnd[0]; ++i) {
+          for (int k = DonorRange.Begin(2); k < DonorRange.End(2); ++k) {
+            for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
+              for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
                 elem<int,MAX_DIMS> Point = {i,j,k};
                 CartPeriodicAdjust(Cart, Point, Point);
-                if (RangeContains(GridNeighbors(iNeighbor).LocalRange, Point)) {
+                if (GridNeighbors(iNeighbor).LocalRange.Contains(Point)) {
                   long long iPoint = Indexer.ToIndex(Point);
                   CollectRecvMasks(iCollectRecv)(iPoint) = true;
                 }
@@ -654,25 +648,24 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
 
     long long TotalRemoteDonorPoints = 0;
     for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
-      elem<int,MAX_DIMS> DonorBegin, DonorEnd;
+      range DonorRange;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        DonorBegin[iDim] = Donors->Extents_(0,iDim,iDonor);
-        DonorEnd[iDim] = Donors->Extents_(1,iDim,iDonor);
+        DonorRange.Begin(iDim) = Donors->Extents_(0,iDim,iDonor);
+        DonorRange.End(iDim) = Donors->Extents_(1,iDim,iDonor);
       }
-      range DonorRange(NumDims, DonorBegin, DonorEnd);
-      bool AwayFromEdge = RangeIncludes(GlobalRange, DonorRange);
+      bool AwayFromEdge = GlobalRange.Includes(DonorRange);
       int NumRemoteDonorPoints;
       if (AwayFromEdge) {
         range LocalDonorRange = IntersectRanges(LocalRange, DonorRange);
         NumRemoteDonorPoints = DonorRange.Count() - LocalDonorRange.Count();
       } else {
         NumRemoteDonorPoints = 0;
-        for (int k = DonorBegin[2]; k < DonorEnd[2]; ++k) {
-          for (int j = DonorBegin[1]; j < DonorEnd[1]; ++j) {
-            for (int i = DonorBegin[0]; i < DonorEnd[0]; ++i) {
+        for (int k = DonorRange.Begin(2); k < DonorRange.End(2); ++k) {
+          for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
+            for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
               elem<int,MAX_DIMS> Point = {i,j,k};
               CartPeriodicAdjust(Cart, Point, Point);
-              if (!RangeContains(LocalRange, Point)) {
+              if (!LocalRange.Contains(Point)) {
                 ++NumRemoteDonorPoints;
               }
             }
@@ -726,14 +719,13 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
         CellCollectRecvs(iPointInCell) = -1;
         CellCollectRecvBufferIndices(iPointInCell) = -1;
       }
-      elem<int,MAX_DIMS> DonorBegin, DonorEnd;
+      range DonorRange;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        DonorBegin[iDim] = Donors->Extents_(0,iDim,iDonor);
-        DonorEnd[iDim] = Donors->Extents_(1,iDim,iDonor);
+        DonorRange.Begin(iDim) = Donors->Extents_(0,iDim,iDonor);
+        DonorRange.End(iDim) = Donors->Extents_(1,iDim,iDonor);
       }
-      range DonorRange(NumDims, DonorBegin, DonorEnd);
-      donor_indexer DonorIndexer({DonorBegin, DonorEnd});
-      bool AwayFromEdge = RangeIncludes(GlobalRange, DonorRange);
+      donor_indexer DonorIndexer(DonorRange);
+      bool AwayFromEdge = GlobalRange.Includes(DonorRange);
       for (int iCollectRecv = 0; iCollectRecv < NumCollectRecvs; ++iCollectRecv) {
         int iNeighbor = CollectRecvIndexToNeighbor(iCollectRecv);
         const range_indexer &RecvFromNeighborIndexer = RecvFromNeighborIndexers(iNeighbor);
@@ -752,12 +744,12 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
           }
         } else {
           int iPointInCell = 0;
-          for (int k = DonorBegin[2]; k < DonorEnd[2]; ++k) {
-            for (int j = DonorBegin[1]; j < DonorEnd[1]; ++j) {
-              for (int i = DonorBegin[0]; i < DonorEnd[0]; ++i) {
+          for (int k = DonorRange.Begin(2); k < DonorRange.End(2); ++k) {
+            for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
+              for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
                 elem<int,MAX_DIMS> Point = {i,j,k};
                 CartPeriodicAdjust(Cart, Point, Point);
-                if (RangeContains(GridNeighbors(iNeighbor).LocalRange, Point)) {
+                if (GridNeighbors(iNeighbor).LocalRange.Contains(Point)) {
                   long long iPoint = RecvFromNeighborIndexer.ToIndex(Point);
                   CellCollectRecvs(iPointInCell) = iCollectRecv;
                   CellCollectRecvBufferIndices(iPointInCell) = CollectRecvBufferIndices
@@ -771,9 +763,9 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
       }
       int iRemoteDonorPoint = 0;
       int iPointInCell = 0;
-      for (int k = DonorBegin[2]; k < DonorEnd[2]; ++k) {
-        for (int j = DonorBegin[1]; j < DonorEnd[1]; ++j) {
-          for (int i = DonorBegin[0]; i < DonorEnd[0]; ++i) {
+      for (int k = DonorRange.Begin(2); k < DonorRange.End(2); ++k) {
+        for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
+          for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
             if (CellCollectRecvs(iPointInCell) >= 0) {
               Exchange.RemoteDonorPoints_(iDonor)[iRemoteDonorPoint] = iPointInCell;
               Exchange.RemoteDonorPointCollectRecvs_(iDonor)[iRemoteDonorPoint] =
@@ -817,8 +809,7 @@ void UpdateDonorsSorted(exchange &Exchange) {
       GetGridInfoGlobalRange(*ReceiverGridInfo, ReceiverGridGlobalRange);
 
       using range_indexer = indexer<long long, int, MAX_DIMS, array_layout::GRID>;
-      range_indexer ReceiverGridGlobalIndexer({ReceiverGridGlobalRange.Begin(),
-        ReceiverGridGlobalRange.End()});
+      range_indexer ReceiverGridGlobalIndexer(ReceiverGridGlobalRange);
 
       array<long long> DestinationIndices({NumDonors});
 
@@ -882,7 +873,7 @@ void UpdateReceiversSorted(exchange &Exchange) {
       GetGridGlobalRange(*ReceiverGrid, GlobalRange);
 
       using range_indexer = indexer<long long, int, MAX_DIMS, array_layout::GRID>;
-      range_indexer GlobalIndexer({GlobalRange.Begin(), GlobalRange.End()});
+      range_indexer GlobalIndexer(GlobalRange);
 
       array<long long> PointIndices({NumReceivers});
 
@@ -1042,7 +1033,7 @@ void UpdateSendInfo(exchange &Exchange) {
           Donors->Extents_(0,2,iDonor)
         };
         CartPeriodicAdjust(Cart, DonorCell, DonorCell);
-        Communicates = RangeContains(LocalRange, DonorCell);
+        Communicates = LocalRange.Contains(DonorCell);
       }
       DonorCommunicates(iDonor) = Communicates;
     }
@@ -1240,7 +1231,7 @@ public:
 
   void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) {
 
-    NumDims_ = Exchange.NumDims_;
+    int NumDims = Exchange.NumDims_;
     Count_ = Count;
 
     const connectivity &Connectivity = *Exchange.Connectivity_;
@@ -1258,18 +1249,18 @@ public:
     GetGridGlobalRange(Grid, GlobalRange_);
     GetGridLocalRange(Grid, LocalRange_);
 
-    OVK_DEBUG_ASSERT(RangeIncludes(GridValuesRange, LocalRange_), "Invalid grid values range.");
+    OVK_DEBUG_ASSERT(GridValuesRange.Includes(LocalRange_), "Invalid grid values range.");
 
     int MaxSize;
     GetConnectivityDonorSideCount(Donors, NumDonors_);
     GetConnectivityDonorSideMaxSize(Donors, MaxSize);
 
     MaxPointsInCell_ = 1;
-    for (int iDim = 0; iDim < NumDims_; ++iDim) {
+    for (int iDim = 0; iDim < NumDims; ++iDim) {
       MaxPointsInCell_ *= MaxSize;
     }
 
-    GridValuesIndexer_ = range_indexer({GridValuesRange.Begin(), GridValuesRange.End()});
+    GridValuesIndexer_ = range_indexer(GridValuesRange);
 
     Sends_ = Exchange.CollectSends_;
     Recvs_ = Exchange.CollectRecvs_;
@@ -1313,7 +1304,6 @@ protected:
   const connectivity_d *Donors_;
   const grid *Grid_;
   core::profiler *Profiler_;
-  int NumDims_;
   int Count_;
   long long NumDonors_;
   int MaxPointsInCell_;
@@ -1409,22 +1399,20 @@ protected:
 
     const connectivity_d &Donors = *Donors_;
 
-    elem<int,MAX_DIMS> DonorBegin, DonorEnd;
+    range DonorRange;
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      DonorBegin[iDim] = Donors.Extents_(0,iDim,iDonor);
-      DonorEnd[iDim] = Donors.Extents_(1,iDim,iDonor);
+      DonorRange.Begin(iDim) = Donors.Extents_(0,iDim,iDonor);
+      DonorRange.End(iDim) = Donors.Extents_(1,iDim,iDonor);
     }
-
-    range DonorRange(NumDims_, DonorBegin, DonorEnd);
 
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
       DonorSize[iDim] = DonorRange.Size(iDim);
     }
 
     using donor_indexer = indexer<int, int, MAX_DIMS, array_layout::GRID>;
-    donor_indexer DonorIndexer({DonorBegin, DonorEnd});
+    donor_indexer DonorIndexer(DonorRange);
 
-    bool AwayFromEdge = RangeIncludes(GlobalRange_, DonorRange);
+    bool AwayFromEdge = GlobalRange_.Includes(DonorRange);
 
     // Fill in the local data
     int NumLocalDonorPoints;
@@ -1443,13 +1431,13 @@ protected:
       NumLocalDonorPoints = iLocalDonorPoint;
     } else {
       int iLocalDonorPoint = 0;
-      for (int k = DonorBegin[2]; k < DonorEnd[2]; ++k) {
-        for (int j = DonorBegin[1]; j < DonorEnd[1]; ++j) {
-          for (int i = DonorBegin[0]; i < DonorEnd[0]; ++i) {
+      for (int k = DonorRange.Begin(2); k < DonorRange.End(2); ++k) {
+        for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
+          for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
             elem<int,MAX_DIMS> Point = {i,j,k};
             elem<int,MAX_DIMS> AdjustedPoint;
             CartPeriodicAdjust(Cart_, Point, AdjustedPoint);
-            if (RangeContains(LocalRange_, AdjustedPoint)) {
+            if (LocalRange_.Contains(AdjustedPoint)) {
               LocalDonorPointIndices_(iLocalDonorPoint) = DonorIndexer.ToIndex(Point);
               LocalDonorPointGridValuesIndices_(iLocalDonorPoint) = GridValuesIndexer_.ToIndex(
                 AdjustedPoint);
@@ -1785,7 +1773,6 @@ protected:
   using typename parent_type::donor_indexer;
   using parent_type::Donors_;
   using parent_type::Profiler_;
-  using parent_type::NumDims_;
   using parent_type::Count_;
   using parent_type::NumDonors_;
   using parent_type::MaxPointsInCell_;
@@ -2582,7 +2569,7 @@ public:
 
     Count_ = Count;
     GridValuesRange_ = GridValuesRange;
-    GridValuesIndexer_ = range_indexer({GridValuesRange.Begin(), GridValuesRange.End()});
+    GridValuesIndexer_ = range_indexer(GridValuesRange);
 
     const connectivity &Connectivity = *Exchange.Connectivity_;
 
@@ -2597,7 +2584,7 @@ public:
     if (OVK_DEBUG) {
       range LocalRange;
       GetGridLocalRange(Grid, LocalRange);
-      OVK_DEBUG_ASSERT(RangeIncludes(GridValuesRange, LocalRange), "Invalid grid values range.");
+      OVK_DEBUG_ASSERT(GridValuesRange.Includes(LocalRange), "Invalid grid values range.");
     }
 
     Points_ = Receivers.Points_;

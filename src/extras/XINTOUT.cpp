@@ -1976,17 +1976,16 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
     ChunkDonorPoints.Resize({{MAX_DIMS,NumChunkDonorPoints}});
     long long iDonorPoint = 0;
     for (long long iDonor = 0; iDonor < NumChunkDonors; ++iDonor) {
-      elem<int,MAX_DIMS> DonorBegin, DonorEnd;
+      range DonorRange;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        DonorBegin[iDim] = DonorChunk.Data.Extents(0,iDim,iDonor);
-        DonorEnd[iDim] = DonorChunk.Data.Extents(1,iDim,iDonor);
+        DonorRange.Begin(iDim) = DonorChunk.Data.Extents(0,iDim,iDonor);
+        DonorRange.End(iDim) = DonorChunk.Data.Extents(1,iDim,iDonor);
       }
-      range DonorRange(NumDims, DonorBegin, DonorEnd);
-      bool AwayFromEdge = RangeIncludes(GlobalRange, DonorRange);
+      bool AwayFromEdge = GlobalRange.Includes(DonorRange);
       if (AwayFromEdge) {
-        for (int k = DonorBegin[2]; k < DonorEnd[2]; ++k) {
-          for (int j = DonorBegin[1]; j < DonorEnd[1]; ++j) {
-            for (int i = DonorBegin[0]; i < DonorEnd[0]; ++i) {
+        for (int k = DonorRange.Begin(2); k < DonorRange.End(2); ++k) {
+          for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
+            for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
               elem<int,MAX_DIMS> Point = {i,j,k};
               for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
                 ChunkDonorPoints(iDim,iDonorPoint) = Point[iDim];
@@ -1996,9 +1995,9 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
           }
         }
       } else {
-        for (int k = DonorBegin[2]; k < DonorEnd[2]; ++k) {
-          for (int j = DonorBegin[1]; j < DonorEnd[1]; ++j) {
-            for (int i = DonorBegin[0]; i < DonorEnd[0]; ++i) {
+        for (int k = DonorRange.Begin(2); k < DonorRange.End(2); ++k) {
+          for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
+            for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
               elem<int,MAX_DIMS> Point = {i,j,k};
               CartPeriodicAdjust(Cart, Point, Point);
               for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {

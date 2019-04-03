@@ -19,6 +19,7 @@
 #include "ovk/core/Exchange.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
+#include "ovk/core/Range.hpp"
 #include "ovk/core/Request.hpp"
 
 #include <mpi.h>
@@ -436,16 +437,27 @@ void ovkAssemble(ovk_domain *Domain, const ovk_assembly_options *Options) {
 }
 
 void ovkCollect(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
-  ovk_data_type ValueType, int Count, ovk_collect_op CollectOp, const ovk_range *GridValuesRange,
-  ovk_array_layout GridValuesLayout, const void **GridValues, void **DonorValues) {
+  ovk_data_type ValueType, int Count, ovk_collect_op CollectOp, const int *GridValuesBegin,
+  const int *GridValuesEnd, ovk_array_layout GridValuesLayout, const void **GridValues,
+  void **DonorValues) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(GridValuesRange, "Invalid grid data range pointer.");
+  OVK_DEBUG_ASSERT(GridValuesBegin, "Invalid grid data begin pointer.");
+  OVK_DEBUG_ASSERT(GridValuesEnd, "Invalid grid data end pointer.");
 
   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  auto &GridValuesRangeCPP = static_cast<const ovk::range &>(*GridValuesRange);
+
+  int NumDims;
+  ovk::GetDomainDimension(DomainCPP, NumDims);
+
+  ovk::range GridValuesRange = ovk::MakeEmptyRange(NumDims);
+  for (int iDim = 0; iDim < NumDims; ++iDim) {
+    GridValuesRange.Begin(iDim) = GridValuesBegin[iDim];
+    GridValuesRange.End(iDim) = GridValuesEnd[iDim];
+  }
+
   ovk::Collect(DomainCPP, DonorGridID, ReceiverGridID, ovk::data_type(ValueType), Count,
-    ovk::collect_op(CollectOp), GridValuesRangeCPP, ovk::array_layout(GridValuesLayout), GridValues,
+    ovk::collect_op(CollectOp), GridValuesRange, ovk::array_layout(GridValuesLayout), GridValues,
     DonorValues);
 
 }
@@ -542,15 +554,26 @@ void ovkWaitAny(const ovk_domain *Domain, int NumRequests, ovk_request **Request
 
 void ovkDisperse(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
   ovk_data_type ValueType, int Count, ovk_disperse_op DisperseOp, const void **ReceiverValues,
-  const ovk_range *GridValuesRange, ovk_array_layout GridValuesLayout, void **GridValues) {
+  const int *GridValuesBegin, const int *GridValuesEnd, ovk_array_layout GridValuesLayout,
+  void **GridValues) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(GridValuesRange, "Invalid grid data range pointer.");
+  OVK_DEBUG_ASSERT(GridValuesBegin, "Invalid grid data begin pointer.");
+  OVK_DEBUG_ASSERT(GridValuesEnd, "Invalid grid data end pointer.");
 
   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  auto &GridValuesRangeCPP = static_cast<const ovk::range &>(*GridValuesRange);
+
+  int NumDims;
+  ovk::GetDomainDimension(DomainCPP, NumDims);
+
+  ovk::range GridValuesRange = ovk::MakeEmptyRange(NumDims);
+  for (int iDim = 0; iDim < NumDims; ++iDim) {
+    GridValuesRange.Begin(iDim) = GridValuesBegin[iDim];
+    GridValuesRange.End(iDim) = GridValuesEnd[iDim];
+  }
+
   ovk::Disperse(DomainCPP, DonorGridID, ReceiverGridID, ovk::data_type(ValueType), Count,
-    ovk::disperse_op(DisperseOp), ReceiverValues, GridValuesRangeCPP,
+    ovk::disperse_op(DisperseOp), ReceiverValues, GridValuesRange,
     ovk::array_layout(GridValuesLayout), GridValues);
 
 }

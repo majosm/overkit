@@ -11,6 +11,7 @@
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Indexer.hpp>
 #include <ovk/core/Range.hpp>
+#include <ovk/core/Tuple.hpp>
 
 #include <mpi.h>
 
@@ -22,7 +23,7 @@ namespace core {
 
 struct partition_bin {
   int Index_;
-  ovk_range Range_;
+  range Range_;
   int NumPartitions_;
   array<range> PartitionRanges_;
   array<int> PartitionRanks_;
@@ -42,7 +43,7 @@ struct partition_hash {
   range LocalRange_;
   range BinRange_;
   bin_indexer BinIndexer_;
-  int BinSize_[MAX_DIMS];
+  tuple<int> BinSize_;
   int MaxBinPartitions_;
   bool RankHasBin_;
   std::unique_ptr<partition_bin> Bin_;

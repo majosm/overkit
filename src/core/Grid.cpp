@@ -8,7 +8,6 @@
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Constants.hpp"
 #include "ovk/core/Debug.hpp"
-#include "ovk/core/Elem.hpp"
 #include "ovk/core/ErrorHandler.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Logger.hpp"
@@ -16,6 +15,7 @@
 #include "ovk/core/PartitionHash.hpp"
 #include "ovk/core/Range.hpp"
 #include "ovk/core/TextProcessing.hpp"
+#include "ovk/core/Tuple.hpp"
 
 #include <mpi.h>
 
@@ -75,7 +75,7 @@ void CreateGrid(grid &Grid, int ID, const grid_params &Params, core::logger &Log
 
   Grid.GeometryType_ = Params.GeometryType_;
 
-  Grid.GlobalRange_ = range(NumDims, MakeUniformElem<int,MAX_DIMS>(0), Params.Size_);
+  Grid.GlobalRange_ = range(MakeUniformTuple<int>(0), Params.Size_);
   Grid.LocalRange_ = Params.LocalRange_;
 
   core::CreatePartitionHash(Grid.PartitionHash_, Grid.NumDims_, Grid.Comm_, Grid.GlobalRange_,
@@ -227,14 +227,14 @@ void CreateNeighbors(grid &Grid) {
 
   range GlobalRange = Grid.GlobalRange_;
   range LocalRange = Grid.LocalRange_;
-  elem<bool,MAX_DIMS> Periodic = {
+  tuple<bool> Periodic = {
     Grid.Cart_.Periodic[0],
     Grid.Cart_.Periodic[1],
     Grid.Cart_.Periodic[2]
   };
 
-  elem<bool,MAX_DIMS> HasNeighborsBefore;
-  elem<bool,MAX_DIMS> HasNeighborsAfter;
+  tuple<bool> HasNeighborsBefore;
+  tuple<bool> HasNeighborsAfter;
   for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
     bool HasPartitionBefore = LocalRange.Begin(iDim) > GlobalRange.Begin(iDim);
     bool HasPartitionAfter = LocalRange.End(iDim) < GlobalRange.End(iDim);
@@ -252,26 +252,22 @@ void CreateNeighbors(grid &Grid) {
 //   static_array<range,2*MAX_DIMS> NeighborFaces;
   for (int iDim = 0; iDim < NumDims; ++iDim) {
     if (HasNeighborsBefore[iDim]) {
-      elem<int,MAX_DIMS> FaceBegin = LocalRange.Begin();
-      elem<int,MAX_DIMS> FaceEnd = LocalRange.End();
-      FaceBegin[iDim] -= 1;
-      FaceEnd[iDim] = FaceBegin[iDim]+1;
+      range &Face = NeighborFaces.Append(LocalRange);
+      Face.Begin(iDim) -= 1;
+      Face.End(iDim) = Face.Begin(iDim)+1;
       for (int jDim = iDim+1; jDim < NumDims; ++jDim) {
-        FaceBegin[jDim] -= int(HasNeighborsBefore[jDim]);
-        FaceEnd[jDim] += int(HasNeighborsAfter[jDim]);
+        Face.Begin(jDim) -= int(HasNeighborsBefore[jDim]);
+        Face.End(jDim) += int(HasNeighborsAfter[jDim]);
       }
-      NeighborFaces.Append(NumDims, FaceBegin, FaceEnd);
     }
     if (HasNeighborsAfter[iDim]) {
-      elem<int,MAX_DIMS> FaceBegin = LocalRange.Begin();
-      elem<int,MAX_DIMS> FaceEnd = LocalRange.End();
-      FaceEnd[iDim] += 1;
-      FaceBegin[iDim] = FaceEnd[iDim]-1;
+      range &Face = NeighborFaces.Append(LocalRange);
+      Face.End(iDim) += 1;
+      Face.Begin(iDim) = Face.End(iDim)-1;
       for (int jDim = iDim+1; jDim < NumDims; ++jDim) {
-        FaceBegin[jDim] -= int(HasNeighborsBefore[jDim]);
-        FaceEnd[jDim] += int(HasNeighborsAfter[jDim]);
+        Face.Begin(jDim) -= int(HasNeighborsBefore[jDim]);
+        Face.End(jDim) += int(HasNeighborsAfter[jDim]);
       }
-      NeighborFaces.Append(NumDims, FaceBegin, FaceEnd);
     }
   }
 
@@ -290,7 +286,7 @@ void CreateNeighbors(grid &Grid) {
     for (int k = Face.Begin(2); k < Face.End(2); ++k) {
       for (int j = Face.Begin(1); j < Face.End(1); ++j) {
         for (int i = Face.Begin(0); i < Face.End(0); ++i) {
-          int Point[MAX_DIMS] = {i,j,k};
+          tuple<int> Point = {i,j,k};
           CartPeriodicAdjust(Grid.Cart_, Point, Point);
           for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
             NeighborPoints(iDim,iNextPoint) = Point[iDim];
@@ -364,7 +360,7 @@ void CreateNeighbors(grid &Grid) {
 
   for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
     core::grid_neighbor &Neighbor = Grid.Neighbors_(iNeighbor);
-    Neighbor.LocalRange = range(NumDims, NeighborRangeValues.Data(iNeighbor,0,0),
+    Neighbor.LocalRange = range(NeighborRangeValues.Data(iNeighbor,0,0),
       NeighborRangeValues.Data(iNeighbor,1,0));
   }
 
@@ -380,7 +376,7 @@ void PrintGridSummary(const grid &Grid) {
 
   std::string GlobalSizeString;
   for (int iDim = 0; iDim < Grid.NumDims_; ++iDim) {
-    GlobalSizeString += core::FormatNumber(Grid.GlobalRange_.End(iDim));
+    GlobalSizeString += core::FormatNumber(Grid.GlobalRange_.Size(iDim));
     if (iDim != Grid.NumDims_-1) GlobalSizeString += " x ";
   }
 
@@ -463,23 +459,15 @@ void CreateGridParams(grid_params &Params, int NumDims) {
   Params.NumDims_ = NumDims;
   Params.Comm_ = MPI_COMM_NULL;
 
-  for (int iDim = 0; iDim < NumDims; ++iDim) {
-    Params.Size_[iDim] = 0;
-  }
-  for (int iDim = NumDims; iDim < MAX_DIMS; ++iDim) {
-    Params.Size_[iDim] = 1;
-  }
+  range GlobalRange = MakeEmptyRange(NumDims);
+  Params.Size_ = GlobalRange.Size();
 
-  Params.Periodic_[0] = false;
-  Params.Periodic_[1] = false;
-  Params.Periodic_[2] = false;
+  Params.Periodic_ = MakeUniformTuple<bool>(false);
   Params.PeriodicStorage_ = periodic_storage::UNIQUE;
-  Params.PeriodicLength_[0] = 0.;
-  Params.PeriodicLength_[1] = 0.;
-  Params.PeriodicLength_[2] = 0.;
+  Params.PeriodicLength_ = MakeUniformTuple<double>(0.);
   Params.GeometryType_ = geometry_type::CURVILINEAR;
 
-  Params.LocalRange_ = range(NumDims);
+  Params.LocalRange_ = MakeEmptyRange(NumDims);
 
 }
 
@@ -653,7 +641,7 @@ void CreateGridInfo(grid_info &Info, const grid *Grid, const comm &Comm) {
 
   Info.RootRank_ = RootRank;
 
-  elem<int,MAX_DIMS> PeriodicInt;
+  tuple<int> PeriodicInt;
   if (IsRoot) {
     Info.Cart_ = Grid->Cart_;
     PeriodicInt[0] = int(Info.Cart_.Periodic[0]);
@@ -668,11 +656,9 @@ void CreateGridInfo(grid_info &Info, const grid *Grid, const comm &Comm) {
   }
 
   if (IsRoot) {
-    Info.PeriodicLength_[0] = Grid->PeriodicLength_[0];
-    Info.PeriodicLength_[1] = Grid->PeriodicLength_[1];
-    Info.PeriodicLength_[2] = Grid->PeriodicLength_[2];
+    Info.PeriodicLength_ = Grid->PeriodicLength_;
   }
-  MPI_Bcast(Info.PeriodicLength_, MAX_DIMS, MPI_DOUBLE, RootRank, Comm);
+  MPI_Bcast(Info.PeriodicLength_.Data(), MAX_DIMS, MPI_DOUBLE, RootRank, Comm);
 
   int GeometryTypeInt;
   if (IsRoot) {
@@ -681,14 +667,12 @@ void CreateGridInfo(grid_info &Info, const grid *Grid, const comm &Comm) {
   MPI_Bcast(&GeometryTypeInt, 1, MPI_INT, RootRank, Comm);
   Info.GeometryType_ = ovk::geometry_type(GeometryTypeInt);
 
-  int GlobalSize[MAX_DIMS];
+  tuple<int> GlobalSize;
   if (IsRoot) {
-    GlobalSize[0] = Grid->GlobalRange_.Size(0);
-    GlobalSize[1] = Grid->GlobalRange_.Size(1);
-    GlobalSize[2] = Grid->GlobalRange_.Size(2);
+    GlobalSize = Grid->GlobalRange_.Size();
   }
-  MPI_Bcast(GlobalSize, MAX_DIMS, MPI_INT, RootRank, Comm);
-  Info.GlobalRange_ = range(Info.NumDims_, MakeUniformElem<int,MAX_DIMS>(0), GlobalSize);
+  MPI_Bcast(GlobalSize.Data(), MAX_DIMS, MPI_INT, RootRank, Comm);
+  Info.GlobalRange_ = range(MakeUniformTuple<int>(0), GlobalSize);
 
   Info.IsLocal_ = IsLocal;
 

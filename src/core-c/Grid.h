@@ -7,7 +7,6 @@
 #include <ovk/core-c/Cart.h>
 #include <ovk/core-c/Constants.h>
 #include <ovk/core-c/Global.h>
-#include <ovk/core-c/Range.h>
 
 #include <mpi.h>
 
@@ -36,8 +35,8 @@ void ovkGetGridPeriodic(const ovk_grid *Grid, bool *Periodic);
 void ovkGetGridPeriodicStorage(const ovk_grid *Grid, ovk_periodic_storage *PeriodicStorage);
 void ovkGetGridPeriodicLength(const ovk_grid *Grid, double *PeriodicLength);
 void ovkGetGridGeometryType(const ovk_grid *Grid, ovk_geometry_type *GeometryType);
-void ovkGetGridGlobalRange(const ovk_grid *Grid, ovk_range *GlobalRange);
-void ovkGetGridLocalRange(const ovk_grid *Grid, ovk_range *LocalRange);
+void ovkGetGridGlobalRange(const ovk_grid *Grid, int *GlobalBegin, int *GlobalEnd);
+void ovkGetGridLocalRange(const ovk_grid *Grid, int *LocalBegin, int *LocalEnd);
 void ovkGetGridGlobalCount(const ovk_grid *Grid, long long *NumGlobal);
 void ovkGetGridLocalCount(const ovk_grid *Grid, long long *NumLocal);
 
@@ -60,8 +59,8 @@ void ovkGetGridParamPeriodicLength(const ovk_grid_params *Params, double *Period
 void ovkSetGridParamPeriodicLength(ovk_grid_params *Params, const double *PeriodicLength);
 void ovkGetGridParamGeometryType(const ovk_grid_params *Params, ovk_geometry_type *GeometryType);
 void ovkSetGridParamGeometryType(ovk_grid_params *Params, ovk_geometry_type GeometryType);
-void ovkSetGridParamLocalRange(ovk_grid_params *Params, const ovk_range *LocalRange);
-void ovkGetGridParamLocalRange(const ovk_grid_params *Params, ovk_range *LocalRange);
+void ovkGetGridParamLocalRange(const ovk_grid_params *Params, int *LocalBegin, int *LocalEnd);
+void ovkSetGridParamLocalRange(ovk_grid_params *Params, const int *LocalBegin, const int *LocalEnd);
 
 void ovkGetGridInfoID(const ovk_grid_info *Info, int *ID);
 void ovkGetGridInfoName(const ovk_grid_info *Info, char *Name);
@@ -70,7 +69,7 @@ void ovkGetGridInfoRootRank(const ovk_grid_info *Info, int *RootRank);
 void ovkGetGridInfoCart(const ovk_grid_info *Info, ovk_cart *Cart);
 void ovkGetGridInfoPeriodicLength(const ovk_grid_info *Info, double *PeriodicLength);
 void ovkGetGridInfoGeometryType(const ovk_grid_info *Info, ovk_geometry_type *GeometryType);
-void ovkGetGridInfoGlobalRange(const ovk_grid_info *Info, ovk_range *GlobalRange);
+void ovkGetGridInfoGlobalRange(const ovk_grid_info *Info, int *GlobalBegin, int *GlobalEnd);
 void ovkGetGridInfoIsLocal(const ovk_grid_info *Info, bool *IsLocal);
 
 #ifdef __cplusplus

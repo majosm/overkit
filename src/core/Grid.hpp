@@ -13,6 +13,7 @@
 #include <ovk/core/Logger.hpp>
 #include <ovk/core/PartitionHash.hpp>
 #include <ovk/core/Range.hpp>
+#include <ovk/core/Tuple.hpp>
 
 #include <mpi.h>
 
@@ -24,10 +25,10 @@ struct grid_params {
   std::string Name_;
   int NumDims_;
   MPI_Comm Comm_;
-  int Size_[MAX_DIMS];
-  bool Periodic_[MAX_DIMS];
+  tuple<int> Size_;
+  tuple<bool> Periodic_;
   periodic_storage PeriodicStorage_;
-  double PeriodicLength_[MAX_DIMS];
+  tuple<double> PeriodicLength_;
   geometry_type GeometryType_;
   range LocalRange_;
 };
@@ -50,7 +51,7 @@ struct grid {
   core::comm Comm_;
   cart Cart_;
   periodic_storage PeriodicStorage_;
-  double PeriodicLength_[MAX_DIMS];
+  tuple<double> PeriodicLength_;
   geometry_type GeometryType_;
   range GlobalRange_;
   range LocalRange_;
@@ -64,7 +65,7 @@ struct grid_info {
   int NumDims_;
   int RootRank_;
   cart Cart_;
-  double PeriodicLength_[MAX_DIMS];
+  tuple<double> PeriodicLength_;
   geometry_type GeometryType_;
   range GlobalRange_;
   bool IsLocal_;

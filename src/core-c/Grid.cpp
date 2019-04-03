@@ -6,7 +6,6 @@
 #include "ovk/core-c/Cart.h"
 #include "ovk/core-c/Constants.h"
 #include "ovk/core-c/Global.h"
-#include "ovk/core-c/Range.h"
 #include "ovk/core/Cart.hpp"
 #include "ovk/core/Constants.hpp"
 #include "ovk/core/Debug.hpp"
@@ -148,25 +147,45 @@ void ovkGetGridGeometryType(const ovk_grid *Grid, ovk_geometry_type *GeometryTyp
 
 }
 
-void ovkGetGridGlobalRange(const ovk_grid *Grid, ovk_range *GlobalRange) {
+void ovkGetGridGlobalRange(const ovk_grid *Grid, int *GlobalBegin, int *GlobalEnd) {
 
   OVK_DEBUG_ASSERT(Grid, "Invalid grid pointer.");
-  OVK_DEBUG_ASSERT(GlobalRange, "Invalid global range pointer.");
+  OVK_DEBUG_ASSERT(GlobalBegin, "Invalid global begin pointer.");
+  OVK_DEBUG_ASSERT(GlobalEnd, "Invalid global end pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-  auto &GlobalRangeCPP = static_cast<ovk::range &>(*GlobalRange);
-  ovk::GetGridGlobalRange(GridCPP, GlobalRangeCPP);
+
+  int NumDims;
+  ovk::GetGridDimension(GridCPP, NumDims);
+
+  ovk::range GlobalRange;
+  ovk::GetGridGlobalRange(GridCPP, GlobalRange);
+
+  for (int iDim = 0; iDim < NumDims; ++iDim) {
+    GlobalBegin[iDim] = GlobalRange.Begin(iDim);
+    GlobalEnd[iDim] = GlobalRange.End(iDim);
+  }
 
 }
 
-void ovkGetGridLocalRange(const ovk_grid *Grid, ovk_range *LocalRange) {
+void ovkGetGridLocalRange(const ovk_grid *Grid, int *LocalBegin, int *LocalEnd) {
 
   OVK_DEBUG_ASSERT(Grid, "Invalid grid pointer.");
-  OVK_DEBUG_ASSERT(LocalRange, "Invalid local range pointer.");
+  OVK_DEBUG_ASSERT(LocalBegin, "Invalid local begin pointer.");
+  OVK_DEBUG_ASSERT(LocalEnd, "Invalid local end pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-  auto &LocalRangeCPP = static_cast<ovk::range &>(*LocalRange);
-  ovk::GetGridLocalRange(GridCPP, LocalRangeCPP);
+
+  int NumDims;
+  ovk::GetGridDimension(GridCPP, NumDims);
+
+  ovk::range LocalRange;
+  ovk::GetGridLocalRange(GridCPP, LocalRange);
+
+  for (int iDim = 0; iDim < NumDims; ++iDim) {
+    LocalBegin[iDim] = LocalRange.Begin(iDim);
+    LocalEnd[iDim] = LocalRange.End(iDim);
+  }
 
 }
 
@@ -371,25 +390,45 @@ void ovkSetGridParamGeometryType(ovk_grid_params *Params, ovk_geometry_type Geom
 
 }
 
-void ovkGetGridParamLocalRange(const ovk_grid_params *Params, ovk_range *LocalRange) {
+void ovkGetGridParamLocalRange(const ovk_grid_params *Params, int *LocalBegin, int *LocalEnd) {
 
   OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
-  OVK_DEBUG_ASSERT(LocalRange, "Invalid local range pointer.");
+  OVK_DEBUG_ASSERT(LocalBegin, "Invalid local begin pointer.");
+  OVK_DEBUG_ASSERT(LocalEnd, "Invalid local end pointer.");
 
   auto &ParamsCPP = *reinterpret_cast<const ovk::grid_params *>(Params);
-  auto &LocalRangeCPP = static_cast<ovk::range &>(*LocalRange);
-  ovk::GetGridParamLocalRange(ParamsCPP, LocalRangeCPP);
+
+  int NumDims;
+  ovk::GetGridParamDimension(ParamsCPP, NumDims);
+
+  ovk::range LocalRange;
+  ovk::GetGridParamLocalRange(ParamsCPP, LocalRange);
+
+  for (int iDim = 0; iDim < NumDims; ++iDim) {
+    LocalBegin[iDim] = LocalRange.Begin(iDim);
+    LocalEnd[iDim] = LocalRange.End(iDim);
+  }
 
 }
 
-void ovkSetGridParamLocalRange(ovk_grid_params *Params, const ovk_range *LocalRange) {
+void ovkSetGridParamLocalRange(ovk_grid_params *Params, const int *LocalBegin, const int *LocalEnd) {
 
   OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
-  OVK_DEBUG_ASSERT(LocalRange, "Invalid local range pointer.");
+  OVK_DEBUG_ASSERT(LocalBegin, "Invalid local begin pointer.");
+  OVK_DEBUG_ASSERT(LocalEnd, "Invalid local end pointer.");
 
   auto &ParamsCPP = *reinterpret_cast<ovk::grid_params *>(Params);
-  auto &LocalRangeCPP = static_cast<const ovk::range &>(*LocalRange);
-  ovk::SetGridParamLocalRange(ParamsCPP, LocalRangeCPP);
+
+  int NumDims;
+  ovk::GetGridParamDimension(ParamsCPP, NumDims);
+
+  ovk::range LocalRange = ovk::MakeEmptyRange(NumDims);
+  for (int iDim = 0; iDim < NumDims; ++iDim) {
+    LocalRange.Begin(iDim) = LocalBegin[iDim];
+    LocalRange.End(iDim) = LocalEnd[iDim];
+  }
+
+  ovk::SetGridParamLocalRange(ParamsCPP, LocalRange);
 
 }
 
@@ -470,14 +509,24 @@ void ovkGetGridInfoGeometryType(const ovk_grid_info *Info, ovk_geometry_type *Ge
 
 }
 
-void ovkGetGridInfoGlobalRange(const ovk_grid_info *Info, ovk_range *GlobalRange) {
+void ovkGetGridInfoGlobalRange(const ovk_grid_info *Info, int *GlobalBegin, int *GlobalEnd) {
 
   OVK_DEBUG_ASSERT(Info, "Invalid info pointer.");
-  OVK_DEBUG_ASSERT(GlobalRange, "Invalid global range pointer.");
+  OVK_DEBUG_ASSERT(GlobalBegin, "Invalid global begin pointer.");
+  OVK_DEBUG_ASSERT(GlobalEnd, "Invalid global end pointer.");
 
   auto &InfoCPP = *reinterpret_cast<const ovk::grid_info *>(Info);
-  auto &GlobalRangeCPP = static_cast<ovk::range &>(*GlobalRange);
-  ovk::GetGridInfoGlobalRange(InfoCPP, GlobalRangeCPP);
+
+  int NumDims;
+  ovk::GetGridInfoDimension(InfoCPP, NumDims);
+
+  ovk::range GlobalRange;
+  ovk::GetGridInfoGlobalRange(InfoCPP, GlobalRange);
+
+  for (int iDim = 0; iDim < NumDims; ++iDim) {
+    GlobalBegin[iDim] = GlobalRange.Begin(iDim);
+    GlobalEnd[iDim] = GlobalRange.End(iDim);
+  }
 
 }
 

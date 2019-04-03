@@ -45,44 +45,36 @@ void CreatePartitionHash(partition_hash &Hash, int NumDims, const comm &Comm, co
   Hash.GlobalRange_ = GlobalRange;
   Hash.LocalRange_ = LocalRange;
 
-  elem<int,MAX_DIMS> GlobalSize = GlobalRange.Size();
-
-  elem<int,MAX_DIMS> NumBins = BinDecomp(Hash.NumDims_, GlobalSize, Hash.Comm_.Size());
+  elem<int,MAX_DIMS> NumBins = BinDecomp(Hash.NumDims_, Hash.GlobalRange_.Size(),
+    Hash.Comm_.Size());
 
   int TotalBins = 1;
   for (int iDim = 0; iDim < NumDims; ++iDim) {
     TotalBins *= NumBins[iDim];
   }
 
-  Hash.BinRange_ = range(NumDims, MakeUniformElem<int,MAX_DIMS>(0), NumBins);
-  Hash.BinIndexer_ = partition_hash::bin_indexer({Hash.BinRange_.Begin(), Hash.BinRange_.End()});
+  Hash.BinRange_ = range(MakeUniformElem<int,MAX_DIMS>(0), NumBins);
+  Hash.BinIndexer_ = partition_hash::bin_indexer(Hash.BinRange_);
 
   Hash.RankHasBin_ = Hash.Comm_.Rank() < TotalBins;
 
   for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Hash.BinSize_[iDim] = (GlobalSize[iDim]+NumBins[iDim]-1)/NumBins[iDim];
+    Hash.BinSize_[iDim] = (Hash.GlobalRange_.Size(iDim)+NumBins[iDim]-1)/NumBins[iDim];
   }
 
   // Figure out which bins the local partition overlaps with
-  elem<int,MAX_DIMS> OverlappedBinBegin = {0,0,0};
-  elem<int,MAX_DIMS> OverlappedBinEnd = {0,0,1};
+  range OverlappedBinRange = MakeEmptyRange(NumDims);
   if (!Hash.LocalRange_.Empty()) {
     elem<int,MAX_DIMS> LowerCorner, UpperCorner;
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
       LowerCorner[iDim] = Hash.LocalRange_.Begin(iDim);
       UpperCorner[iDim] = Hash.LocalRange_.End(iDim)-1;
     }
-    elem<int,MAX_DIMS> LowerBinLoc = MapToUniformCell(Hash.GlobalRange_.Begin(), Hash.BinSize_,
-      LowerCorner);
-    elem<int,MAX_DIMS> UpperBinLoc = MapToUniformCell(Hash.GlobalRange_.Begin(), Hash.BinSize_,
-      UpperCorner);
-    for (int iDim = 0; iDim < NumDims; ++iDim) {
-      OverlappedBinBegin[iDim] = LowerBinLoc[iDim];
-      OverlappedBinEnd[iDim] = UpperBinLoc[iDim]+1;
-    }
+    ExtendRange(OverlappedBinRange, MapToUniformCell(Hash.GlobalRange_.Begin(), Hash.BinSize_,
+      LowerCorner));
+    ExtendRange(OverlappedBinRange, MapToUniformCell(Hash.GlobalRange_.Begin(), Hash.BinSize_,
+      UpperCorner));
   }
-
-  range OverlappedBinRange(NumDims, OverlappedBinBegin, OverlappedBinEnd);
 
   int NumOverlappedBins = OverlappedBinRange.Count<int>();
 
@@ -153,12 +145,11 @@ void CreatePartitionHash(partition_hash &Hash, int NumDims, const comm &Comm, co
 
     elem<int,MAX_DIMS> BinLoc = Hash.BinIndexer_.ToTuple(BinIndex);
 
-    elem<int,MAX_DIMS> RangeBegin, RangeEnd;
+    range Range = MakeEmptyRange(NumDims);
     for (int iDim = 0; iDim < NumDims; ++iDim) {
-      RangeBegin[iDim] = Hash.GlobalRange_.Begin(iDim)+Hash.BinSize_[iDim]*BinLoc[iDim];
-      RangeEnd[iDim] = Hash.GlobalRange_.Begin(iDim)+Hash.BinSize_[iDim]*(BinLoc[iDim]+1);
+      Range.Begin(iDim) = Hash.GlobalRange_.Begin(iDim)+Hash.BinSize_[iDim]*BinLoc[iDim];
+      Range.End(iDim) = Hash.GlobalRange_.Begin(iDim)+Hash.BinSize_[iDim]*(BinLoc[iDim]+1);
     }
-    range Range(NumDims, RangeBegin, RangeEnd);
     Range = IntersectRanges(Range, Hash.GlobalRange_);
 
     Hash.Bin_.reset(new partition_bin());
@@ -169,7 +160,7 @@ void CreatePartitionHash(partition_hash &Hash, int NumDims, const comm &Comm, co
 
     int iPartition = 0;
     for (int Rank : PartitionRanks) {
-      Bin.PartitionRanges_(iPartition) = range(NumDims, PartitionRangeValues.Data(iPartition,0,0),
+      Bin.PartitionRanges_(iPartition) = range(PartitionRangeValues.Data(iPartition,0,0),
         PartitionRangeValues.Data(iPartition,1,0));
       Bin.PartitionRanks_(iPartition) = Rank;
       ++iPartition;
@@ -198,7 +189,7 @@ void MapToPartitionBins(const partition_hash &Hash, array_view<const int,2> Poin
   for (long long iPoint = 0; iPoint < NumPoints; ++iPoint) {
     elem<int,MAX_DIMS> Point = {Points(0,iPoint), Points(1,iPoint), Points(2,iPoint)};
     elem<int,MAX_DIMS> BinLoc = MapToUniformCell(Hash.GlobalRange_.Begin(), Hash.BinSize_, Point);
-    ClampToRange(BinLoc, Hash.BinRange_);
+    ClampToRange(Hash.BinRange_, BinLoc);
     BinIndices(iPoint) = Hash.BinIndexer_.ToIndex(BinLoc);
   }
 
@@ -281,17 +272,16 @@ void RetrievePartitionBins(const partition_hash &Hash, std::map<int, partition_b
   for (int iBin = 0; iBin < NumUnretrievedBins; ++iBin) {
     int BinIndex = UnretrievedBinIndices(iBin);
     elem<int,MAX_DIMS> BinLoc = Hash.BinIndexer_.ToTuple(BinIndex);
-    elem<int,MAX_DIMS> RangeBegin, RangeEnd;
+    range Range = MakeEmptyRange(NumDims);
     for (int iDim = 0; iDim < NumDims; ++iDim) {
-      RangeBegin[iDim] = Hash.GlobalRange_.Begin(iDim)+Hash.BinSize_[iDim]*BinLoc[iDim];
-      RangeEnd[iDim] = Hash.GlobalRange_.Begin(iDim)+Hash.BinSize_[iDim]*(BinLoc[iDim]+1);
+      Range.Begin(iDim) = Hash.GlobalRange_.Begin(iDim)+Hash.BinSize_[iDim]*BinLoc[iDim];
+      Range.End(iDim) = Hash.GlobalRange_.Begin(iDim)+Hash.BinSize_[iDim]*(BinLoc[iDim]+1);
     }
-    range Range(NumDims, RangeBegin, RangeEnd);
     partition_bin &Bin = Bins[UnretrievedBinIndices(iBin)];
     CreatePartitionBin(Bin, NumDims, BinIndex, Range, NumPartitions(iBin));
     for (int iPartition = 0; iPartition < NumPartitions(iBin); ++iPartition) {
-      Bin.PartitionRanges_(iPartition) = range(NumDims, PartitionRangeValues.Data(iBin,iPartition,
-        0,0), PartitionRangeValues.Data(iBin,iPartition,1,0));
+      Bin.PartitionRanges_(iPartition) = range(PartitionRangeValues.Data(iBin,iPartition,0,0),
+        PartitionRangeValues.Data(iBin,iPartition,1,0));
       Bin.PartitionRanks_(iPartition) = PartitionRanks(iBin,iPartition);
     }
   }
@@ -310,7 +300,7 @@ void FindPartitions(const partition_hash &Hash, const std::map<int, partition_bi
     if (BinIter != RetrievedBins.end()) {
       const partition_bin &Bin = BinIter->second;
       for (int iPartition = 0; iPartition < Bin.NumPartitions_; ++iPartition) {
-        if (RangeContains(Bin.PartitionRanges_(iPartition), Point)) {
+        if (Bin.PartitionRanges_(iPartition).Contains(Point)) {
           PartitionRanks(iPoint) = Bin.PartitionRanks_(iPartition);
           break;
         }

@@ -3,154 +3,89 @@
 
 namespace ovk {
 
-inline range::range(int NumDims) {
+inline range MakeEmptyRange(int NumDims) {
 
-  *this = static_cast<range &&>(ovkDefaultRange(NumDims));
+  range Range;
 
-}
+  for (int iDim = 0; iDim < NumDims; ++iDim) {
+    Range.Begin(iDim) = 0;
+    Range.End(iDim) = 0;
+  }
+  for (int iDim = NumDims; iDim < MAX_DIMS; ++iDim) {
+    Range.Begin(iDim) = 0;
+    Range.End(iDim) = 1;
+  }
 
-template <typename BeginTupleType, typename EndTupleType, OVK_FUNCDEF_REQUIRES(
-  range_internal::is_compatible_tuple_type<BeginTupleType>() &&
-  range_internal::is_compatible_tuple_type<EndTupleType>())>
-  inline range::range(int NumDims, const BeginTupleType &Begin, const EndTupleType &End) {
-
-  *this = static_cast<range &&>(ovkRange(NumDims, &Begin[0], &End[0]));
-
-}
-
-inline int range::Dimension() const {
-
-  return ovkRangeDimension(this);
+  return Range;
 
 }
 
-inline range::tuple_type range::Begin() const {
+inline void ExtendRange(range &Range, const tuple<int> &Tuple) {
 
-  tuple_type Result;
-
-  ovkRangeBegin(this, MAX_DIMS, Result.Data());
-
-  return Result;
-
-}
-
-inline int range::Begin(int iDim) const {
-
-  return ovkRangeBeginDim(this, iDim);
-
-}
-
-inline const int *range::BeginData() const {
-
-  return ovkRangeBeginData(this);
-
-}
-
-inline range::tuple_type range::End() const {
-
-  tuple_type Result;
-
-  ovkRangeEnd(this, MAX_DIMS, Result.Data());
-
-  return Result;
-
-}
-
-inline int range::End(int iDim) const {
-
-  return ovkRangeEndDim(this, iDim);
-
-}
-inline const int *range::EndData() const {
-
-  return ovkRangeEndData(this);
-
-}
-
-inline range::tuple_type range::Size() const {
-
-  tuple_type Result;
-
-  ovkRangeSize(this, MAX_DIMS, Result.Data());
-
-  return Result;
-
-}
-
-inline int range::Size(int iDim) const {
-
-  return ovkRangeSizeDim(this, iDim);
-
-}
-
-template <typename IntegerType, OVK_FUNCDEF_REQUIRES(std::is_integral<IntegerType>::value)> inline
-  IntegerType range::Count() const {
-
-  return IntegerType(ovkRangeCount(this));
-
-}
-
-inline bool range::Empty() const {
-
-  return ovkRangeIsEmpty(this);
-
-}
-
-inline bool operator==(const ovk::range &LeftRange, const ovk::range &RightRange) {
-
-  return ovkRangesAreEqual(&LeftRange, &RightRange);
-
-}
-
-inline bool operator!=(const ovk::range &LeftRange, const ovk::range &RightRange) {
-
-  return !ovkRangesAreEqual(&LeftRange, &RightRange);
-
-}
-
-template <typename TupleType, OVK_FUNCDEF_REQUIRES(range_internal::is_compatible_tuple_type<
-  TupleType>())> inline bool RangeContains(const range &Range, const TupleType &Point) {
-
-  return ovkRangeContains(&Range, &Point[0]);
-
-}
-
-inline bool RangeIncludes(const range &Range, const range &OtherRange) {
-
-  return ovkRangeIncludes(&Range, &OtherRange);
-
-}
-
-template <typename TupleType, OVK_FUNCDEF_REQUIRES(range_internal::is_compatible_tuple_type<
-  TupleType>())> inline void ExtendRange(range &Range, const TupleType &Point) {
-
-  ovkExtendRange(&Range, &Point[0]);
+  if (!Range.Empty()) {
+    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+      Range.Begin(iDim) = Min(Range.Begin(iDim), Tuple[iDim]);
+      Range.End(iDim) = Max(Range.End(iDim), Tuple[iDim]+1);
+    }
+  } else {
+    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+      Range.Begin(iDim) = Tuple[iDim];
+      Range.End(iDim) = Tuple[iDim]+1;
+    }
+  }
 
 }
 
 inline bool RangesOverlap(const range &LeftRange, const range &RightRange) {
 
-  return ovkRangesOverlap(&LeftRange, &RightRange);
+  return !LeftRange.Empty() && !RightRange.Empty() &&
+    RightRange.End(0) > LeftRange.Begin(0) && LeftRange.End(0) > RightRange.Begin(0) &&
+    RightRange.End(1) > LeftRange.Begin(1) && LeftRange.End(1) > RightRange.Begin(1) &&
+    RightRange.End(2) > LeftRange.Begin(2) && LeftRange.End(2) > RightRange.Begin(2);
 
 }
 
 inline range UnionRanges(const range &LeftRange, const range &RightRange) {
 
-  return static_cast<range &&>(ovkUnionRanges(&LeftRange, &RightRange));
+  range UnionRange;
+
+  if (LeftRange.Empty()) {
+    UnionRange = RightRange;
+  } else if (RightRange.Empty()) {
+    UnionRange = LeftRange;
+  } else {
+    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+      UnionRange.Begin(iDim) = Min(LeftRange.Begin(iDim), RightRange.Begin(iDim));
+      UnionRange.End(iDim) = Max(LeftRange.End(iDim), RightRange.End(iDim));
+    }
+  }
+
+  return UnionRange;
 
 }
 
 inline range IntersectRanges(const range &LeftRange, const range &RightRange) {
 
-  return static_cast<range &&>(ovkIntersectRanges(&LeftRange, &RightRange));
+  range IntersectRange;
+
+  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+    IntersectRange.Begin(iDim) = Max(LeftRange.Begin(iDim), RightRange.Begin(iDim));
+    IntersectRange.End(iDim) = Min(LeftRange.End(iDim), RightRange.End(iDim));
+  }
+
+  return IntersectRange;
 
 }
 
-template <typename TupleType, OVK_FUNCDEF_REQUIRES(range_internal::is_compatible_tuple_type<
-  typename std::decay<TupleType>::type>() && !std::is_const<typename std::decay<TupleType>::type
-  >::value)> inline void ClampToRange(TupleType &&Point, const range &Range) {
+inline void ClampToRange(const range &Range, tuple<int> &Tuple) {
 
-  ovkClampToRange(&Point[0], &Range);
+  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+    if (Tuple[iDim] < Range.Begin(iDim)) {
+      Tuple[iDim] = Range.Begin(iDim);
+    } else if (Tuple[iDim] >= Range.End(iDim)) {
+      Tuple[iDim] = Range.End(iDim)-1;
+    }
+  }
 
 }
 

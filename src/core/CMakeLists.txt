@@ -90,8 +90,6 @@ set(INTERNAL_HEADERS
   PartitionHash.hpp
   Profiler.hpp
   Profiler.inl
-  RangeBase.h
-  RangeBase.inl
   Requires.hpp
   ScalarOps.hpp
   ScopeGuard.hpp

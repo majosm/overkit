@@ -41,7 +41,6 @@ set(PUBLIC_HEADERS
   Exchange.h
   Global.h
   Grid.h
-  Range.h
   Request.h
 )
 

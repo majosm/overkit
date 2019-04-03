@@ -78,8 +78,9 @@ void ovkGetLocalReceiverCount(const ovk_domain *Domain, int DonorGridID, int Rec
 void ovkAssemble(ovk_domain *Domain, const ovk_assembly_options *Options);
 
 void ovkCollect(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
-  ovk_data_type ValueType, int Count, ovk_collect_op CollectOp, const ovk_range *GridValuesRange,
-  ovk_array_layout GridValuesLayout, const void **GridValues, void **DonorValues);
+  ovk_data_type ValueType, int Count, ovk_collect_op CollectOp, const int *GridValuesBegin,
+  const int *GridValuesEnd, ovk_array_layout GridValuesLayout, const void **GridValues,
+  void **DonorValues);
 
 void ovkSend(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, ovk_data_type ValueType,
   int Count, const void **DonorValues, int Tag, ovk_request **Request);
@@ -93,7 +94,8 @@ void ovkWaitAny(const ovk_domain *Domain, int NumRequests, ovk_request **Request
 
 void ovkDisperse(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
   ovk_data_type ValueType, int Count, ovk_disperse_op DisperseOp, const void **ReceiverValues,
-  const ovk_range *GridValuesRange, ovk_array_layout GridValuesLayout, void **GridValues);
+  const int *GridValuesBegin, const int *GridValuesEnd, ovk_array_layout GridValuesLayout, void
+  **GridValues);
 
 void ovkCreateDomainParams(ovk_domain_params **Params, int NumDims);
 void ovkDestroyDomainParams(ovk_domain_params **Params);
