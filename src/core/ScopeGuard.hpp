@@ -17,10 +17,10 @@ public:
 
   scope_guard(F ScopeExitFunc);
 
+  ~scope_guard() noexcept;
+
   scope_guard(const scope_guard &) = delete;
   scope_guard(scope_guard &&Other) noexcept;
-
-  ~scope_guard() noexcept;
 
   scope_guard &operator=(const scope_guard &Other) = delete;
   scope_guard &operator=(scope_guard &&Other) noexcept;
