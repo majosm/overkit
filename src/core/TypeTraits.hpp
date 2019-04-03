@@ -36,6 +36,16 @@ template <typename T, typename U> struct helper<const T &&, U> {
 template <typename T, typename U> using mimicked_ref = typename mimicked_ref_internal::helper<T,
 U>::type;
 
+// Check if a function can be called with a specified set of argument types
+namespace is_callable_with_internal {
+template <typename FRef, typename... Args> constexpr std::true_type Test(decltype(
+  std::declval<FRef>()(std::declval<Args>()...)) *) { return {}; }
+template <typename FRef, typename... Args> constexpr std::false_type Test(...) { return {}; }
+}
+template <typename FRef, typename... Args> constexpr bool IsCallableWith() {
+  return decltype(is_callable_with_internal::Test<FRef, Args...>(nullptr))::value;
+}
+
 }}
 
 #endif
