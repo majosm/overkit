@@ -460,7 +460,7 @@ public:
     Comm_.Reset();
   }
 
-  const comm &Comm() { return Comm_; }
+  const comm &TestComm() { return Comm_; }
 
 private:
 

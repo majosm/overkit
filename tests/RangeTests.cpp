@@ -18,7 +18,7 @@ class RangeTests : public tests::mpi_test {};
 
 TEST_F(RangeTests, ConstructEmpty2D) {
 
-  if (Comm().Rank() != 0) return;
+  if (TestComm().Rank() != 0) return;
 
   ovk::range Range(2);
 
@@ -30,7 +30,7 @@ TEST_F(RangeTests, ConstructEmpty2D) {
 
 TEST_F(RangeTests, ConstructEmpty3D) {
 
-  if (Comm().Rank() != 0) return;
+  if (TestComm().Rank() != 0) return;
 
   ovk::range Range(3);
 
@@ -42,7 +42,7 @@ TEST_F(RangeTests, ConstructEmpty3D) {
 
 TEST_F(RangeTests, ConstructAssigned2D) {
 
-  if (Comm().Rank() != 0) return;
+  if (TestComm().Rank() != 0) return;
 
   ovk::range Range(2, std::array<int,2>({1,2}), std::array<int,2>({3,4}));
 
@@ -70,7 +70,7 @@ TEST_F(RangeTests, ConstructAssigned2D) {
 
 TEST_F(RangeTests, ConstructAssigned3D) {
 
-  if (Comm().Rank() != 0) return;
+  if (TestComm().Rank() != 0) return;
 
   ovk::range Range(3, std::array<int,3>({1,2,3}), std::array<int,3>({4,5,6}));
 
@@ -96,7 +96,7 @@ TEST_F(RangeTests, ConstructAssigned3D) {
 
 TEST_F(RangeTests, CopyConstruct2D) {
 
-  if (Comm().Rank() != 0) return;
+  if (TestComm().Rank() != 0) return;
 
   ovk::range Range1(2, std::array<int,2>({1,2}), std::array<int,2>({3,4}));
   ovk::range Range2(Range1);
@@ -109,7 +109,7 @@ TEST_F(RangeTests, CopyConstruct2D) {
 
 TEST_F(RangeTests, CopyConstruct3D) {
 
-  if (Comm().Rank() != 0) return;
+  if (TestComm().Rank() != 0) return;
 
   ovk::range Range1(3, std::array<int,3>({1,2,3}), std::array<int,3>({4,5,6}));
   ovk::range Range2(Range1);
@@ -122,7 +122,7 @@ TEST_F(RangeTests, CopyConstruct3D) {
 
 TEST_F(RangeTests, CopyAssign2D) {
 
-  if (Comm().Rank() != 0) return;
+  if (TestComm().Rank() != 0) return;
 
   ovk::range Range1(2, std::array<int,2>({1,2}), std::array<int,2>({3,4}));
   ovk::range Range2;
@@ -137,7 +137,7 @@ TEST_F(RangeTests, CopyAssign2D) {
 
 TEST_F(RangeTests, CopyAssign3D) {
 
-  if (Comm().Rank() != 0) return;
+  if (TestComm().Rank() != 0) return;
 
   ovk::range Range1(3, std::array<int,3>({1,2,3}), std::array<int,3>({4,5,6}));
   ovk::range Range2;
@@ -152,7 +152,7 @@ TEST_F(RangeTests, CopyAssign3D) {
 
 TEST_F(RangeTests, Equality) {
 
-  if (Comm().Rank() != 0) return;
+  if (TestComm().Rank() != 0) return;
 
   ovk::range Range1, Range2;
 
@@ -181,7 +181,7 @@ TEST_F(RangeTests, Equality) {
 
 TEST_F(RangeTests, Size2D) {
 
-  if (Comm().Rank() != 0) return;
+  if (TestComm().Rank() != 0) return;
 
   ovk::range Range;
 
@@ -205,7 +205,7 @@ TEST_F(RangeTests, Size2D) {
 
 TEST_F(RangeTests, Size3D) {
 
-  if (Comm().Rank() != 0) return;
+  if (TestComm().Rank() != 0) return;
 
   ovk::range Range;
 
@@ -227,7 +227,7 @@ TEST_F(RangeTests, Size3D) {
 
 TEST_F(RangeTests, Count2D) {
 
-  if (Comm().Rank() != 0) return;
+  if (TestComm().Rank() != 0) return;
 
   ovk::range Range;
 
@@ -243,7 +243,7 @@ TEST_F(RangeTests, Count2D) {
 
 TEST_F(RangeTests, Count3D) {
 
-  if (Comm().Rank() != 0) return;
+  if (TestComm().Rank() != 0) return;
 
   ovk::range Range;
 
@@ -259,7 +259,7 @@ TEST_F(RangeTests, Count3D) {
 
 TEST_F(RangeTests, IsEmpty2D) {
 
-  if (Comm().Rank() != 0) return;
+  if (TestComm().Rank() != 0) return;
 
   ovk::range Range;
 
@@ -275,7 +275,7 @@ TEST_F(RangeTests, IsEmpty2D) {
 
 TEST_F(RangeTests, IsEmpty3D) {
 
-  if (Comm().Rank() != 0) return;
+  if (TestComm().Rank() != 0) return;
 
   ovk::range Range;
 
@@ -291,7 +291,7 @@ TEST_F(RangeTests, IsEmpty3D) {
 
 TEST_F(RangeTests, TupleToIndex2DRowMajor) {
 
-  if (Comm().Rank() != 0) return;
+  if (TestComm().Rank() != 0) return;
 
   ovk::range Range(2, std::array<int,2>({2,2}), std::array<int,2>({4,5}));
   std::array<int,2> Tuple;
@@ -321,7 +321,7 @@ TEST_F(RangeTests, TupleToIndex2DRowMajor) {
 
 TEST_F(RangeTests, TupleToIndex2DColumnMajor) {
 
-  if (Comm().Rank() != 0) return;
+  if (TestComm().Rank() != 0) return;
 
   ovk::range Range(2, std::array<int,2>({2,2}), std::array<int,2>({4,5}));
   std::array<int,2> Tuple;
@@ -351,7 +351,7 @@ TEST_F(RangeTests, TupleToIndex2DColumnMajor) {
 
 TEST_F(RangeTests, TupleToIndex3DRowMajor) {
 
-  if (Comm().Rank() != 0) return;
+  if (TestComm().Rank() != 0) return;
 
   ovk::range Range(3, std::array<int,3>({2,2,2}), std::array<int,3>({4,5,6}));
   std::array<int,3> Tuple;
@@ -401,7 +401,7 @@ TEST_F(RangeTests, TupleToIndex3DRowMajor) {
 
 TEST_F(RangeTests, TupleToIndex3DColumnMajor) {
 
-  if (Comm().Rank() != 0) return;
+  if (TestComm().Rank() != 0) return;
 
   ovk::range Range(3, std::array<int,3>({2,2,2}), std::array<int,3>({4,5,6}));
   std::array<int,3> Tuple;
@@ -451,7 +451,7 @@ TEST_F(RangeTests, TupleToIndex3DColumnMajor) {
 
 TEST_F(RangeTests, IndexToTuple2DRowMajor) {
 
-  if (Comm().Rank() != 0) return;
+  if (TestComm().Rank() != 0) return;
 
   ovk::range Range(2, std::array<int,2>({2,2}), std::array<int,2>({4,5}));
   std::array<int,OVK_MAX_DIMS> Tuple;
@@ -485,7 +485,7 @@ TEST_F(RangeTests, IndexToTuple2DRowMajor) {
 
 TEST_F(RangeTests, IndexToTuple2DColumnMajor) {
 
-  if (Comm().Rank() != 0) return;
+  if (TestComm().Rank() != 0) return;
 
   ovk::range Range(2, std::array<int,2>({2,2}), std::array<int,2>({4,5}));
   std::array<int,OVK_MAX_DIMS> Tuple;
@@ -519,7 +519,7 @@ TEST_F(RangeTests, IndexToTuple2DColumnMajor) {
 
 TEST_F(RangeTests, IndexToTuple3DRowMajor) {
 
-  if (Comm().Rank() != 0) return;
+  if (TestComm().Rank() != 0) return;
 
   ovk::range Range(3, std::array<int,3>({2,2,2}), std::array<int,3>({4,5,6}));
   std::array<int,OVK_MAX_DIMS> Tuple;
@@ -560,7 +560,7 @@ TEST_F(RangeTests, IndexToTuple3DRowMajor) {
 
 TEST_F(RangeTests, IndexToTuple3DColumnMajor) {
 
-  if (Comm().Rank() != 0) return;
+  if (TestComm().Rank() != 0) return;
 
   ovk::range Range(3, std::array<int,3>({2,2,2}), std::array<int,3>({4,5,6}));
   std::array<int,OVK_MAX_DIMS> Tuple;
@@ -601,7 +601,7 @@ TEST_F(RangeTests, IndexToTuple3DColumnMajor) {
 
 TEST_F(RangeTests, Contains2D) {
 
-  if (Comm().Rank() != 0) return;
+  if (TestComm().Rank() != 0) return;
 
   ovk::range Range;
   std::array<int, 2> Point;
@@ -625,7 +625,7 @@ TEST_F(RangeTests, Contains2D) {
 
 TEST_F(RangeTests, Contains3D) {
 
-  if (Comm().Rank() != 0) return;
+  if (TestComm().Rank() != 0) return;
 
   ovk::range Range;
   std::array<int, 3> Point;
