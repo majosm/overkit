@@ -25,13 +25,10 @@
 namespace ovk {
 namespace core {
 
-template <typename T, array_layout Layout> class collect_base {
-
-  using mpi_value_type = core::mpi_compatible_type<T>;
+// Put as much as possible in non-type-specific base class to reduce compile times
+template <array_layout Layout> class collect_base {
 
 public:
-
-  using value_type = T;
 
   collect_base();
   collect_base(const collect_base &Other) = delete;
@@ -42,18 +39,67 @@ public:
 
   void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange);
 
-protected:
+  void GetLocalDonorPointInfo_(long long iDonor, elem<int,MAX_DIMS> &DonorSize, int
+    &NumLocalDonorPoints, array_view<int> LocalDonorPointIndices, array_view<long long>
+    LocalDonorPointGridValuesIndices);
 
   using range_indexer = indexer<long long, int, MAX_DIMS, Layout>;
   using donor_indexer = indexer<int, int, MAX_DIMS, Layout>;
 
   const connectivity_d *Donors_;
   const grid *Grid_;
+  cart Cart_;
+  range GlobalRange_;
+  range LocalRange_;
   core::profiler *Profiler_;
   int Count_;
   long long NumDonors_;
   int MaxPointsInCell_;
   range_indexer GridValuesIndexer_;
+  array_view<const exchange::collect_send> Sends_;
+  array_view<const exchange::collect_recv> Recvs_;
+  array<MPI_Request> Requests_;
+  array_view<const int> NumRemoteDonorPoints_;
+  array_view<const long long * const> RemoteDonorPoints_;
+  array_view<const int * const> RemoteDonorPointCollectRecvs_;
+  array_view<const long long * const> RemoteDonorPointCollectRecvBufferIndices_;
+  array<int> LocalDonorPointIndices_;
+  array<long long> LocalDonorPointGridValuesIndices_;
+
+};
+
+extern template class collect_base<array_layout::ROW_MAJOR>;
+extern template class collect_base<array_layout::COLUMN_MAJOR>;
+
+template <typename T, array_layout Layout> class collect_base_for_type : private collect_base<
+  Layout> {
+
+private:
+
+  using parent_type = collect_base<Layout>;
+
+  using mpi_value_type = core::mpi_compatible_type<T>;
+
+public:
+
+  using value_type = T;
+
+  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange);
+
+protected:
+
+  using typename parent_type::range_indexer;
+  using typename parent_type::donor_indexer;
+  using parent_type::Donors_;
+  using parent_type::Grid_;
+  using parent_type::Cart_;
+  using parent_type::GlobalRange_;
+  using parent_type::LocalRange_;
+  using parent_type::Profiler_;
+  using parent_type::Count_;
+  using parent_type::NumDonors_;
+  using parent_type::MaxPointsInCell_;
+  using parent_type::GridValuesIndexer_;
 
   void AllocateRemoteDonorValues(array<array<value_type,2>> &RemoteDonorValues);
 
@@ -66,43 +112,41 @@ protected:
 
 private:
 
-  cart Cart_;
-  range GlobalRange_;
-  range LocalRange_;
-  array_view<const exchange::collect_send> Sends_;
-  array_view<const exchange::collect_recv> Recvs_;
+  using parent_type::Sends_;
+  using parent_type::Recvs_;
+  using parent_type::Requests_;
+  using parent_type::NumRemoteDonorPoints_;
+  using parent_type::RemoteDonorPoints_;
+  using parent_type::RemoteDonorPointCollectRecvs_;
+  using parent_type::RemoteDonorPointCollectRecvBufferIndices_;
+  using parent_type::LocalDonorPointIndices_;
+  using parent_type::LocalDonorPointGridValuesIndices_;
+
   array<array<mpi_value_type,2>> SendBuffers_;
   array<array<mpi_value_type,2>> RecvBuffers_;
-  array<MPI_Request> Requests_;
-  array_view<const int> NumRemoteDonorPoints_;
-  array_view<const long long * const> RemoteDonorPoints_;
-  array_view<const int * const> RemoteDonorPointCollectRecvs_;
-  array_view<const long long * const> RemoteDonorPointCollectRecvBufferIndices_;
-  array<int> LocalDonorPointIndices_;
-  array<long long> LocalDonorPointGridValuesIndices_;
 
 };
 
-extern template class collect_base<bool, array_layout::ROW_MAJOR>;
-extern template class collect_base<bool, array_layout::COLUMN_MAJOR>;
-extern template class collect_base<unsigned char, array_layout::ROW_MAJOR>;
-extern template class collect_base<unsigned char, array_layout::COLUMN_MAJOR>;
-extern template class collect_base<int, array_layout::ROW_MAJOR>;
-extern template class collect_base<int, array_layout::COLUMN_MAJOR>;
-extern template class collect_base<long, array_layout::ROW_MAJOR>;
-extern template class collect_base<long, array_layout::COLUMN_MAJOR>;
-extern template class collect_base<long long, array_layout::ROW_MAJOR>;
-extern template class collect_base<long long, array_layout::COLUMN_MAJOR>;
-extern template class collect_base<unsigned int, array_layout::ROW_MAJOR>;
-extern template class collect_base<unsigned int, array_layout::COLUMN_MAJOR>;
-extern template class collect_base<unsigned long, array_layout::ROW_MAJOR>;
-extern template class collect_base<unsigned long, array_layout::COLUMN_MAJOR>;
-extern template class collect_base<unsigned long long, array_layout::ROW_MAJOR>;
-extern template class collect_base<unsigned long long, array_layout::COLUMN_MAJOR>;
-extern template class collect_base<float, array_layout::ROW_MAJOR>;
-extern template class collect_base<float, array_layout::COLUMN_MAJOR>;
-extern template class collect_base<double, array_layout::ROW_MAJOR>;
-extern template class collect_base<double, array_layout::COLUMN_MAJOR>;
+extern template class collect_base_for_type<bool, array_layout::ROW_MAJOR>;
+extern template class collect_base_for_type<bool, array_layout::COLUMN_MAJOR>;
+extern template class collect_base_for_type<unsigned char, array_layout::ROW_MAJOR>;
+extern template class collect_base_for_type<unsigned char, array_layout::COLUMN_MAJOR>;
+extern template class collect_base_for_type<int, array_layout::ROW_MAJOR>;
+extern template class collect_base_for_type<int, array_layout::COLUMN_MAJOR>;
+extern template class collect_base_for_type<long, array_layout::ROW_MAJOR>;
+extern template class collect_base_for_type<long, array_layout::COLUMN_MAJOR>;
+extern template class collect_base_for_type<long long, array_layout::ROW_MAJOR>;
+extern template class collect_base_for_type<long long, array_layout::COLUMN_MAJOR>;
+extern template class collect_base_for_type<unsigned int, array_layout::ROW_MAJOR>;
+extern template class collect_base_for_type<unsigned int, array_layout::COLUMN_MAJOR>;
+extern template class collect_base_for_type<unsigned long, array_layout::ROW_MAJOR>;
+extern template class collect_base_for_type<unsigned long, array_layout::COLUMN_MAJOR>;
+extern template class collect_base_for_type<unsigned long long, array_layout::ROW_MAJOR>;
+extern template class collect_base_for_type<unsigned long long, array_layout::COLUMN_MAJOR>;
+extern template class collect_base_for_type<float, array_layout::ROW_MAJOR>;
+extern template class collect_base_for_type<float, array_layout::COLUMN_MAJOR>;
+extern template class collect_base_for_type<double, array_layout::ROW_MAJOR>;
+extern template class collect_base_for_type<double, array_layout::COLUMN_MAJOR>;
 
 }}
 

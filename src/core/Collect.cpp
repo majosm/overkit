@@ -31,11 +31,12 @@ namespace core {
 
 namespace {
 
-template <typename T, array_layout Layout> class collect_none : public collect_base<T, Layout> {
+template <typename T, array_layout Layout> class collect_none : public collect_base_for_type<T,
+  Layout> {
 
 protected:
 
-  using parent_type = collect_base<T, Layout>;
+  using parent_type = collect_base_for_type<T, Layout>;
 
   using typename parent_type::donor_indexer;
   using parent_type::Profiler_;
@@ -102,11 +103,12 @@ private:
 
 };
 
-template <typename T, array_layout Layout> class collect_any : public collect_base<T, Layout> {
+template <typename T, array_layout Layout> class collect_any : public collect_base_for_type<T,
+  Layout> {
 
 protected:
 
-  using parent_type = collect_base<T, Layout>;
+  using parent_type = collect_base_for_type<T, Layout>;
 
   using typename parent_type::donor_indexer;
   using parent_type::Profiler_;
@@ -171,11 +173,12 @@ private:
 
 };
 
-template <typename T, array_layout Layout> class collect_not_all : public collect_base<T, Layout> {
+template <typename T, array_layout Layout> class collect_not_all : public collect_base_for_type<T,
+  Layout> {
 
 protected:
 
-  using parent_type = collect_base<T, Layout>;
+  using parent_type = collect_base_for_type<T, Layout>;
 
   using typename parent_type::donor_indexer;
   using parent_type::Profiler_;
@@ -240,11 +243,12 @@ private:
 
 };
 
-template <typename T, array_layout Layout> class collect_all : public collect_base<T, Layout> {
+template <typename T, array_layout Layout> class collect_all : public collect_base_for_type<T,
+  Layout> {
 
 protected:
 
-  using parent_type = collect_base<T, Layout>;
+  using parent_type = collect_base_for_type<T, Layout>;
 
   using typename parent_type::donor_indexer;
   using parent_type::Profiler_;
@@ -309,11 +313,12 @@ private:
 
 };
 
-template <typename T, array_layout Layout> class collect_interp : public collect_base<T, Layout> {
+template <typename T, array_layout Layout> class collect_interp : public collect_base_for_type<T,
+  Layout> {
 
 protected:
 
-  using parent_type = collect_base<T, Layout>;
+  using parent_type = collect_base_for_type<T, Layout>;
 
   using typename parent_type::donor_indexer;
   using parent_type::Donors_;
@@ -432,6 +437,8 @@ collect MakeCollectNone(data_type ValueType, array_layout Layout) {
     }
   }
 
+  return {};
+
 }
 
 template <typename T> using collect_any_row = collect_any<T, array_layout::ROW_MAJOR>;
@@ -467,6 +474,8 @@ collect MakeCollectAny(data_type ValueType, array_layout Layout) {
     case data_type::DOUBLE: return collect_any_col<double>();
     }
   }
+
+  return {};
 
 }
 
@@ -504,6 +513,8 @@ collect MakeCollectNotAll(data_type ValueType, array_layout Layout) {
     }
   }
 
+  return {};
+
 }
 
 template <typename T> using collect_all_row = collect_all<T, array_layout::ROW_MAJOR>;
@@ -540,6 +551,8 @@ collect MakeCollectAll(data_type ValueType, array_layout Layout) {
     }
   }
 
+  return {};
+
 }
 
 template <typename T> using collect_interp_row = collect_interp<T, array_layout::ROW_MAJOR>;
@@ -563,6 +576,8 @@ collect MakeCollectInterp(data_type ValueType, array_layout Layout) {
       OVK_DEBUG_ASSERT(false, "Invalid data type for interpolation collect operation.");
     }
   }
+
+  return {};
 
 }
 
