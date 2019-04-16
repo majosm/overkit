@@ -1185,7 +1185,7 @@ void Send(const domain &Domain, int DonorGridID, int ReceiverGridID, data_type V
   int SendRecvTime = core::GetProfilerTimerID(Domain.Profiler_, "SendRecv");
   core::StartProfile(Domain.Profiler_, SendRecvTime);
 
-  core::Send(Exchange, ValueType, Count, DonorValues, Tag, Request);
+  Request = core::Send(Exchange, ValueType, Count, DonorValues, Tag);
 
   core::EndProfile(Domain.Profiler_, SendRecvTime);
 
@@ -1216,7 +1216,7 @@ void Receive(const domain &Domain, int DonorGridID, int ReceiverGridID, data_typ
 
   const exchange &Exchange = Domain.LocalExchanges_.at(DonorGridID).at(ReceiverGridID);
 
-  core::Receive(Exchange, ValueType, Count, ReceiverValues, Tag, Request);
+  Request = core::Receive(Exchange, ValueType, Count, ReceiverValues, Tag);
 
   core::EndProfile(Domain.Profiler_, SendRecvTime);
 

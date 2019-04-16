@@ -1966,8 +1966,8 @@ public:
     Send_->Initialize(Exchange, Count, Tag);
   }
 
-  void Send(const void * const *DonorValues, request &Request) {
-    Send_->Send(DonorValues, Request);
+  request Send(const void * const *DonorValues) {
+    return Send_->Send(DonorValues);
   }
 
 private:
@@ -1976,7 +1976,7 @@ private:
   public:
     virtual ~concept() {}
     virtual void Initialize(const exchange &Exchange, int Count, int Tag) = 0;
-    virtual void Send(const void * const *DonorValues, request &Request) = 0;
+    virtual request Send(const void * const *DonorValues) = 0;
   };
 
   template <typename T> class model : public concept {
@@ -1992,7 +1992,7 @@ private:
       GetConnectivityDonorSideCount(*Donors, NumDonors_);
       DonorValues_.Resize({Count});
     }
-    virtual void Send(const void * const *DonorValuesVoid, request &Request) override {
+    virtual request Send(const void * const *DonorValuesVoid) override {
       OVK_DEBUG_ASSERT(DonorValuesVoid || DonorValues_.Count() == 0, "Invalid donor values "
         "pointer.");
       for (int iCount = 0; iCount < DonorValues_.Count(); ++iCount) {
@@ -2001,7 +2001,7 @@ private:
         DonorValues_(iCount) = {static_cast<const value_type *>(DonorValuesVoid[iCount]),
           {NumDonors_}};
       }
-      Send_.Send(DonorValues_, Request);
+      return Send_.Send(DonorValues_);
     }
   private:
     T Send_;
@@ -2084,7 +2084,7 @@ public:
 
   }
 
-  void Send(array_view<array_view<const value_type>> DonorValues, request &Request) {
+  request Send(array_view<array_view<const value_type>> DonorValues) {
 
     const exchange &Exchange = *Exchange_;
     const connectivity_d &Donors = *Donors_;
@@ -2143,7 +2143,7 @@ public:
 
     core::EndProfile(*Profiler_, MPITime);
 
-    Request = request_type(Exchange, Count_, NumSends_, std::move(Buffers), std::move(MPIRequests));
+    return request_type(Exchange, Count_, NumSends_, std::move(Buffers), std::move(MPIRequests));
 
   }
 
@@ -2176,8 +2176,8 @@ template <typename T> void send_request<T>::Wait() {
 
 namespace core {
 
-void Send(const exchange &Exchange, data_type ValueType, int Count, const void * const *DonorValues,
-  int Tag, request &Request) {
+request Send(const exchange &Exchange, data_type ValueType, int Count, const void * const
+  *DonorValues, int Tag) {
 
   send SendWrapper;
 
@@ -2195,7 +2195,8 @@ void Send(const exchange &Exchange, data_type ValueType, int Count, const void *
   }
 
   SendWrapper.Initialize(Exchange, Count, Tag);
-  SendWrapper.Send(DonorValues, Request);
+
+  return SendWrapper.Send(DonorValues);
 
 }
 
@@ -2438,8 +2439,8 @@ template <typename T> void recv_request<T>::Wait() {
 
 namespace core {
 
-void Receive(const exchange &Exchange, data_type ValueType, int Count, void **ReceiverValues,
-  int Tag, request &Request) {
+request Receive(const exchange &Exchange, data_type ValueType, int Count, void **ReceiverValues,
+  int Tag) {
 
   recv RecvWrapper;
 
@@ -2457,7 +2458,11 @@ void Receive(const exchange &Exchange, data_type ValueType, int Count, void **Re
   }
 
   RecvWrapper.Initialize(Exchange, Count, Tag);
+
+  request Request;
   RecvWrapper.Recv(ReceiverValues, Request);
+
+  return Request;
 
 }
 

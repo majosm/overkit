@@ -106,10 +106,10 @@ void UpdateExchange(exchange &Exchange);
 void Collect(const exchange &Exchange, data_type ValueType, int Count, collect_op CollectOp,
   const range &GridValuesRange, array_layout GridValuesLayout, const void * const *GridValues,
   void **DonorValues);
-void Send(const exchange &Exchange, data_type ValueType, int Count, const void * const *DonorValues,
-  int Tag, request &Request);
-void Receive(const exchange &Exchange, data_type ValueType, int Count, void **ReceiverValues,
-  int Tag, request &Request);
+request Send(const exchange &Exchange, data_type ValueType, int Count, const void * const
+  *DonorValues, int Tag);
+request Receive(const exchange &Exchange, data_type ValueType, int Count, void **ReceiverValues,
+  int Tag);
 void Disperse(const exchange &Exchange, data_type ValueType, int Count, disperse_op DisperseOp,
   const void * const *ReceiverValues, const range &GridValuesRange, array_layout GridValuesLayout,
   void **GridValues);
