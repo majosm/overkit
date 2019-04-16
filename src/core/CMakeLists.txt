@@ -24,6 +24,8 @@ set(SOURCES
   ConnectivityR.cpp
   Context.cpp
   Debug.cpp
+  Disperse.cpp
+  DisperseBase.cpp
   Domain.cpp
   ErrorHandler.cpp
   Exchange.cpp
@@ -91,6 +93,10 @@ set(INTERNAL_HEADERS
   DataTypeBase.inl
   Debug.hpp
   DebugBase.h
+  Disperse.hpp
+  DisperseAppend.hpp
+  DisperseBase.hpp
+  DisperseOverwrite.hpp
   ErrorHandler.hpp
   ForEach.hpp
   GlobalBase.h
