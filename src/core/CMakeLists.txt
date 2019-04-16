@@ -76,7 +76,12 @@ set(INTERNAL_HEADERS
   BoxBase.h
   BoxBase.inl
   Collect.hpp
+  CollectAll.hpp
+  CollectAny.hpp
   CollectBase.hpp
+  CollectInterp.hpp
+  CollectNone.hpp
+  CollectNotAll.hpp
   Comm.hpp
   Comm.inl
   ConstantsBase.h

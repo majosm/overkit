@@ -3,408 +3,26 @@
 
 #include "ovk/core/Collect.hpp"
 
-#include "ovk/core/Array.hpp"
-#include "ovk/core/ArrayView.hpp"
-#include "ovk/core/CollectBase.hpp"
-#include "ovk/core/Comm.hpp"
+#include "ovk/core/CollectAll.hpp"
+#include "ovk/core/CollectAny.hpp"
+#include "ovk/core/CollectInterp.hpp"
+#include "ovk/core/CollectNone.hpp"
+#include "ovk/core/CollectNotAll.hpp"
+
 #include "ovk/core/Constants.hpp"
-#include "ovk/core/Connectivity.hpp"
 #include "ovk/core/DataType.hpp"
 #include "ovk/core/Debug.hpp"
-#include "ovk/core/Elem.hpp"
-#include "ovk/core/Exchange.hpp"
 #include "ovk/core/Global.hpp"
-#include "ovk/core/Indexer.hpp"
-#include "ovk/core/Profiler.hpp"
-#include "ovk/core/Range.hpp"
-
-#include <mpi.h>
-
-#include <map>
-#include <memory>
-#include <string>
-#include <type_traits>
-#include <utility>
 
 namespace ovk {
 namespace core {
 
 namespace {
 
-template <typename T, array_layout Layout> class collect_none : public collect_base_for_type<T,
-  Layout> {
-
-protected:
-
-  using parent_type = collect_base_for_type<T, Layout>;
-
-  using typename parent_type::donor_indexer;
-  using parent_type::Profiler_;
-  using parent_type::Count_;
-  using parent_type::NumDonors_;
-  using parent_type::MaxPointsInCell_;
-
-public:
-
-  using typename parent_type::value_type;
-
-  collect_none() = default;
-
-  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) {
-
-    parent_type::Initialize(Exchange, Count, GridValuesRange);
-
-    int MemAllocTime = core::GetProfilerTimerID(*Profiler_, "Collect::MemAlloc");
-
-    core::StartProfile(*Profiler_, MemAllocTime);
-
-    parent_type::AllocateRemoteDonorValues(RemoteDonorValues_);
-
-    DonorPointValues_.Resize({{Count_,MaxPointsInCell_}});
-
-    core::EndProfile(*Profiler_, MemAllocTime);
-
-  }
-
-  void Collect(array_view<array_view<const value_type>> GridValues, array_view<array_view<
-    value_type>> DonorValues) {
-
-    parent_type::RetrieveRemoteDonorValues(GridValues, RemoteDonorValues_);
-
-    int ReduceTime = core::GetProfilerTimerID(*Profiler_, "Collect::Reduce");
-
-    core::StartProfile(*Profiler_, ReduceTime);
-
-    for (long long iDonor = 0; iDonor < NumDonors_; ++iDonor) {
-
-      elem<int,MAX_DIMS> DonorSize;
-      parent_type::AssembleDonorPointValues(GridValues, RemoteDonorValues_, iDonor, DonorSize,
-        DonorPointValues_);
-      int NumDonorPoints = DonorSize[0]*DonorSize[1]*DonorSize[2];
-
-      for (int iCount = 0; iCount < Count_; ++iCount) {
-        DonorValues(iCount)(iDonor) = value_type(true);
-        for (int iPointInCell = 0; iPointInCell < NumDonorPoints; ++iPointInCell) {
-          DonorValues(iCount)(iDonor) = DonorValues(iCount)(iDonor) && !DonorPointValues_(iCount,
-            iPointInCell);
-        }
-      }
-
-    }
-
-    core::EndProfile(*Profiler_, ReduceTime);
-
-  }
-
-private:
-
-  array<array<value_type,2>> RemoteDonorValues_;
-  array<value_type,2> DonorPointValues_;
-
-};
-
-template <typename T, array_layout Layout> class collect_any : public collect_base_for_type<T,
-  Layout> {
-
-protected:
-
-  using parent_type = collect_base_for_type<T, Layout>;
-
-  using typename parent_type::donor_indexer;
-  using parent_type::Profiler_;
-  using parent_type::Count_;
-  using parent_type::NumDonors_;
-  using parent_type::MaxPointsInCell_;
-
-public:
-
-  using typename parent_type::value_type;
-
-  collect_any() = default;
-
-  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) {
-
-    parent_type::Initialize(Exchange, Count, GridValuesRange);
-
-    int MemAllocTime = core::GetProfilerTimerID(*Profiler_, "Collect::MemAlloc");
-    core::StartProfile(*Profiler_, MemAllocTime);
-
-    parent_type::AllocateRemoteDonorValues(RemoteDonorValues_);
-
-    DonorPointValues_.Resize({{Count_,MaxPointsInCell_}});
-
-    core::EndProfile(*Profiler_, MemAllocTime);
-
-  }
-
-  void Collect(array_view<array_view<const value_type>> GridValues, array_view<array_view<
-    value_type>> DonorValues) {
-
-    parent_type::RetrieveRemoteDonorValues(GridValues, RemoteDonorValues_);
-
-    int ReduceTime = core::GetProfilerTimerID(*Profiler_, "Collect::Reduce");
-    core::StartProfile(*Profiler_, ReduceTime);
-
-    for (long long iDonor = 0; iDonor < NumDonors_; ++iDonor) {
-
-      elem<int,MAX_DIMS> DonorSize;
-      parent_type::AssembleDonorPointValues(GridValues, RemoteDonorValues_, iDonor, DonorSize,
-        DonorPointValues_);
-      int NumDonorPoints = DonorSize[0]*DonorSize[1]*DonorSize[2];
-
-      for (int iCount = 0; iCount < Count_; ++iCount) {
-        DonorValues(iCount)(iDonor) = value_type(false);
-        for (int iPointInCell = 0; iPointInCell < NumDonorPoints; ++iPointInCell) {
-          DonorValues(iCount)(iDonor) = DonorValues(iCount)(iDonor) || DonorPointValues_(iCount,
-            iPointInCell);
-        }
-      }
-
-    }
-
-    core::EndProfile(*Profiler_, ReduceTime);
-
-  }
-
-private:
-
-  array<array<value_type,2>> RemoteDonorValues_;
-  array<value_type,2> DonorPointValues_;
-
-};
-
-template <typename T, array_layout Layout> class collect_not_all : public collect_base_for_type<T,
-  Layout> {
-
-protected:
-
-  using parent_type = collect_base_for_type<T, Layout>;
-
-  using typename parent_type::donor_indexer;
-  using parent_type::Profiler_;
-  using parent_type::Count_;
-  using parent_type::NumDonors_;
-  using parent_type::MaxPointsInCell_;
-
-public:
-
-  using typename parent_type::value_type;
-
-  collect_not_all() = default;
-
-  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) {
-
-    parent_type::Initialize(Exchange, Count, GridValuesRange);
-
-    int MemAllocTime = core::GetProfilerTimerID(*Profiler_, "Collect::MemAlloc");
-    core::StartProfile(*Profiler_, MemAllocTime);
-
-    parent_type::AllocateRemoteDonorValues(RemoteDonorValues_);
-
-    DonorPointValues_.Resize({{Count_,MaxPointsInCell_}});
-
-    core::EndProfile(*Profiler_, MemAllocTime);
-
-  }
-
-  void Collect(array_view<array_view<const value_type>> GridValues, array_view<array_view<
-    value_type>> DonorValues) {
-
-    parent_type::RetrieveRemoteDonorValues(GridValues, RemoteDonorValues_);
-
-    int ReduceTime = core::GetProfilerTimerID(*Profiler_, "Collect::Reduce");
-    core::StartProfile(*Profiler_, ReduceTime);
-
-    for (long long iDonor = 0; iDonor < NumDonors_; ++iDonor) {
-
-      elem<int,MAX_DIMS> DonorSize;
-      parent_type::AssembleDonorPointValues(GridValues, RemoteDonorValues_, iDonor, DonorSize,
-        DonorPointValues_);
-      int NumDonorPoints = DonorSize[0]*DonorSize[1]*DonorSize[2];
-
-      for (int iCount = 0; iCount < Count_; ++iCount) {
-        DonorValues(iCount)(iDonor) = value_type(false);
-        for (int iPointInCell = 0; iPointInCell < NumDonorPoints; ++iPointInCell) {
-          DonorValues(iCount)(iDonor) = DonorValues(iCount)(iDonor) || !DonorPointValues_(iCount,
-            iPointInCell);
-        }
-      }
-
-    }
-
-    core::EndProfile(*Profiler_, ReduceTime);
-
-  }
-
-private:
-
-  array<array<value_type,2>> RemoteDonorValues_;
-  array<value_type,2> DonorPointValues_;
-
-};
-
-template <typename T, array_layout Layout> class collect_all : public collect_base_for_type<T,
-  Layout> {
-
-protected:
-
-  using parent_type = collect_base_for_type<T, Layout>;
-
-  using typename parent_type::donor_indexer;
-  using parent_type::Profiler_;
-  using parent_type::Count_;
-  using parent_type::NumDonors_;
-  using parent_type::MaxPointsInCell_;
-
-public:
-
-  using typename parent_type::value_type;
-
-  collect_all() = default;
-
-  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) {
-
-    parent_type::Initialize(Exchange, Count, GridValuesRange);
-
-    int MemAllocTime = core::GetProfilerTimerID(*Profiler_, "Collect::MemAlloc");
-    core::StartProfile(*Profiler_, MemAllocTime);
-
-    parent_type::AllocateRemoteDonorValues(RemoteDonorValues_);
-
-    DonorPointValues_.Resize({{Count_,MaxPointsInCell_}});
-
-    core::EndProfile(*Profiler_, MemAllocTime);
-
-  }
-
-  void Collect(array_view<array_view<const value_type>> GridValues, array_view<array_view<
-    value_type>> DonorValues) {
-
-    parent_type::RetrieveRemoteDonorValues(GridValues, RemoteDonorValues_);
-
-    int ReduceTime = core::GetProfilerTimerID(*Profiler_, "Collect::Reduce");
-    core::StartProfile(*Profiler_, ReduceTime);
-
-    for (long long iDonor = 0; iDonor < NumDonors_; ++iDonor) {
-
-      elem<int,MAX_DIMS> DonorSize;
-      parent_type::AssembleDonorPointValues(GridValues, RemoteDonorValues_, iDonor, DonorSize,
-        DonorPointValues_);
-      int NumDonorPoints = DonorSize[0]*DonorSize[1]*DonorSize[2];
-
-      for (int iCount = 0; iCount < Count_; ++iCount) {
-        DonorValues(iCount)(iDonor) = value_type(true);
-        for (int iPointInCell = 0; iPointInCell < NumDonorPoints; ++iPointInCell) {
-          DonorValues(iCount)(iDonor) = DonorValues(iCount)(iDonor) && DonorPointValues_(iCount,
-            iPointInCell);
-        }
-      }
-
-    }
-
-    core::EndProfile(*Profiler_, ReduceTime);
-
-  }
-
-private:
-
-  array<array<value_type,2>> RemoteDonorValues_;
-  array<value_type,2> DonorPointValues_;
-
-};
-
-template <typename T, array_layout Layout> class collect_interp : public collect_base_for_type<T,
-  Layout> {
-
-protected:
-
-  using parent_type = collect_base_for_type<T, Layout>;
-
-  using typename parent_type::donor_indexer;
-  using parent_type::Donors_;
-  using parent_type::Profiler_;
-  using parent_type::Count_;
-  using parent_type::NumDonors_;
-  using parent_type::MaxPointsInCell_;
-
-public:
-
-  using typename parent_type::value_type;
-
-  collect_interp() = default;
-
-  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) {
-
-    parent_type::Initialize(Exchange, Count, GridValuesRange);
-
-    InterpCoefs_ = Donors_->InterpCoefs_;
-
-    int MemAllocTime = core::GetProfilerTimerID(*Profiler_, "Collect::MemAlloc");
-    core::StartProfile(*Profiler_, MemAllocTime);
-
-    parent_type::AllocateRemoteDonorValues(RemoteDonorValues_);
-
-    DonorPointValues_.Resize({{Count_,MaxPointsInCell_}});
-    DonorPointCoefs_.Resize({MaxPointsInCell_});
-
-    core::EndProfile(*Profiler_, MemAllocTime);
-
-  }
-
-  void Collect(array_view<array_view<const value_type>> GridValues, array_view<array_view<
-    value_type>> DonorValues) {
-
-    parent_type::RetrieveRemoteDonorValues(GridValues, RemoteDonorValues_);
-
-    int ReduceTime = core::GetProfilerTimerID(*Profiler_, "Collect::Reduce");
-    core::StartProfile(*Profiler_, ReduceTime);
-
-    for (long long iDonor = 0; iDonor < NumDonors_; ++iDonor) {
-
-      elem<int,MAX_DIMS> DonorSize;
-      parent_type::AssembleDonorPointValues(GridValues, RemoteDonorValues_, iDonor, DonorSize,
-        DonorPointValues_);
-      int NumDonorPoints = DonorSize[0]*DonorSize[1]*DonorSize[2];
-
-      donor_indexer Indexer(DonorSize);
-
-      for (int k = 0; k < DonorSize[2]; ++k) {
-        for (int j = 0; j < DonorSize[1]; ++j) {
-          for (int i = 0; i < DonorSize[0]; ++i) {
-            int iPointInCell = Indexer.ToIndex(i,j,k);
-            DonorPointCoefs_(iPointInCell) =
-              InterpCoefs_(0,i,iDonor) *
-              InterpCoefs_(1,j,iDonor) *
-              InterpCoefs_(2,k,iDonor);
-          }
-        }
-      }
-
-      for (int iCount = 0; iCount < Count_; ++iCount) {
-        DonorValues(iCount)(iDonor) = value_type(0);
-        for (int iPointInCell = 0; iPointInCell < NumDonorPoints; ++iPointInCell) {
-          DonorValues(iCount)(iDonor) += DonorPointCoefs_(iPointInCell)*DonorPointValues_(iCount,
-            iPointInCell);
-        }
-      }
-
-    }
-
-    core::EndProfile(*Profiler_, ReduceTime);
-
-  }
-
-private:
-
-  array_view<const double,3> InterpCoefs_;
-  array<array<value_type,2>> RemoteDonorValues_;
-  array<value_type,2> DonorPointValues_;
-  array<double> DonorPointCoefs_;
-
-};
-
-template <typename T> using collect_none_row = collect_none<T, array_layout::ROW_MAJOR>;
-template <typename T> using collect_none_col = collect_none<T, array_layout::COLUMN_MAJOR>;
+template <typename T> using collect_none_row = collect_internal::collect_none<T,
+  array_layout::ROW_MAJOR>;
+template <typename T> using collect_none_col = collect_internal::collect_none<T,
+  array_layout::COLUMN_MAJOR>;
 
 collect MakeCollectNone(data_type ValueType, array_layout Layout) {
 
@@ -441,8 +59,10 @@ collect MakeCollectNone(data_type ValueType, array_layout Layout) {
 
 }
 
-template <typename T> using collect_any_row = collect_any<T, array_layout::ROW_MAJOR>;
-template <typename T> using collect_any_col = collect_any<T, array_layout::COLUMN_MAJOR>;
+template <typename T> using collect_any_row = collect_internal::collect_any<T,
+  array_layout::ROW_MAJOR>;
+template <typename T> using collect_any_col = collect_internal::collect_any<T,
+  array_layout::COLUMN_MAJOR>;
 
 collect MakeCollectAny(data_type ValueType, array_layout Layout) {
 
@@ -479,8 +99,10 @@ collect MakeCollectAny(data_type ValueType, array_layout Layout) {
 
 }
 
-template <typename T> using collect_not_all_row = collect_not_all<T, array_layout::ROW_MAJOR>;
-template <typename T> using collect_not_all_col = collect_not_all<T, array_layout::COLUMN_MAJOR>;
+template <typename T> using collect_not_all_row = collect_internal::collect_not_all<T,
+  array_layout::ROW_MAJOR>;
+template <typename T> using collect_not_all_col = collect_internal::collect_not_all<T,
+  array_layout::COLUMN_MAJOR>;
 
 collect MakeCollectNotAll(data_type ValueType, array_layout Layout) {
 
@@ -517,8 +139,10 @@ collect MakeCollectNotAll(data_type ValueType, array_layout Layout) {
 
 }
 
-template <typename T> using collect_all_row = collect_all<T, array_layout::ROW_MAJOR>;
-template <typename T> using collect_all_col = collect_all<T, array_layout::COLUMN_MAJOR>;
+template <typename T> using collect_all_row = collect_internal::collect_all<T,
+  array_layout::ROW_MAJOR>;
+template <typename T> using collect_all_col = collect_internal::collect_all<T,
+  array_layout::COLUMN_MAJOR>;
 
 collect MakeCollectAll(data_type ValueType, array_layout Layout) {
 
@@ -555,8 +179,10 @@ collect MakeCollectAll(data_type ValueType, array_layout Layout) {
 
 }
 
-template <typename T> using collect_interp_row = collect_interp<T, array_layout::ROW_MAJOR>;
-template <typename T> using collect_interp_col = collect_interp<T, array_layout::COLUMN_MAJOR>;
+template <typename T> using collect_interp_row = collect_internal::collect_interp<T,
+  array_layout::ROW_MAJOR>;
+template <typename T> using collect_interp_col = collect_internal::collect_interp<T,
+  array_layout::COLUMN_MAJOR>;
 
 collect MakeCollectInterp(data_type ValueType, array_layout Layout) {
 
