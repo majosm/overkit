@@ -34,6 +34,7 @@ set(SOURCES
   Partition.cpp
   PartitionHash.cpp
   Profiler.cpp
+  Recv.cpp
   Request.cpp
   Send.cpp
 )
@@ -104,6 +105,7 @@ set(INTERNAL_HEADERS
   PartitionHash.hpp
   Profiler.hpp
   Profiler.inl
+  Recv.hpp
   Requires.hpp
   ScalarOps.hpp
   ScopeGuard.hpp

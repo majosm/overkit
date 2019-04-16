@@ -9,24 +9,15 @@
 #include "ovk/core/Constants.hpp"
 #include "ovk/core/Connectivity.hpp"
 #include "ovk/core/DataType.hpp"
-#include "ovk/core/Debug.hpp"
-#include "ovk/core/Elem.hpp"
 #include "ovk/core/Exchange.hpp"
 #include "ovk/core/Global.hpp"
-#include "ovk/core/Grid.hpp"
-#include "ovk/core/Indexer.hpp"
 #include "ovk/core/Misc.hpp"
-#include "ovk/core/PartitionHash.hpp"
 #include "ovk/core/Profiler.hpp"
 #include "ovk/core/Range.hpp"
 #include "ovk/core/Request.hpp"
-#include "ovk/core/TextProcessing.hpp"
 
 #include <mpi.h>
 
-#include <memory>
-#include <string>
-#include <type_traits>
 #include <utility>
 
 namespace ovk {
