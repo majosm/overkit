@@ -17,6 +17,8 @@ set(LOCAL_TARGETS)
 
 set(SOURCES
   AssemblyOptions.cpp
+  Collect.cpp
+  CollectBase.cpp
   Connectivity.cpp
   ConnectivityD.cpp
   ConnectivityR.cpp
@@ -33,6 +35,7 @@ set(SOURCES
   PartitionHash.cpp
   Profiler.cpp
   Request.cpp
+  Send.cpp
 )
 
 set(PUBLIC_HEADERS
@@ -72,6 +75,8 @@ set(INTERNAL_HEADERS
   ArrayTraitsBase.hpp
   BoxBase.h
   BoxBase.inl
+  Collect.hpp
+  CollectBase.hpp
   Comm.hpp
   Comm.inl
   ConstantsBase.h
@@ -98,6 +103,7 @@ set(INTERNAL_HEADERS
   ScalarOps.hpp
   ScopeGuard.hpp
   ScopeGuard.inl
+  Send.hpp
   TextProcessing.hpp
   TextProcessing.inl
   TypeSequence.hpp
