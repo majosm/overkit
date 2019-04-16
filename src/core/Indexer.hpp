@@ -24,6 +24,228 @@ namespace indexer_internal {
 template <array_layout Layout> struct layout_tag {};
 template <std::size_t Index> struct index_tag {};
 
+// Slightly faster than using constexpr recursion (compiles a bit faster too)
+// May be able to replace with C++17 fold expressions once they are widely supported
+template <typename IndexType, typename TupleElementType, typename ArrayOrIterType> constexpr
+  OVK_FORCE_INLINE IndexType TupleToIndexHelper(const elem<TupleElementType,1> &Begin, const elem<
+  IndexType,1> &, const ArrayOrIterType &Tuple) {
+  return IndexType(Tuple[0] - Begin[0]);
+}
+template <typename IndexType, typename TupleElementType, typename ArrayOrIterType> constexpr
+  OVK_FORCE_INLINE IndexType TupleToIndexHelper(const elem<TupleElementType,2> &Begin, const elem<
+  IndexType,2> &Stride, const ArrayOrIterType &Tuple) {
+  return
+    Stride[0]*IndexType(Tuple[0] - Begin[0]) +
+    Stride[1]*IndexType(Tuple[1] - Begin[1]);
+}
+template <typename IndexType, typename TupleElementType, typename ArrayOrIterType> constexpr
+  OVK_FORCE_INLINE IndexType TupleToIndexHelper(const elem<TupleElementType,3> &Begin, const elem<
+  IndexType,3> &Stride, const ArrayOrIterType &Tuple) {
+  return
+    Stride[0]*IndexType(Tuple[0] - Begin[0]) +
+    Stride[1]*IndexType(Tuple[1] - Begin[1]) +
+    Stride[2]*IndexType(Tuple[2] - Begin[2]);
+}
+template <typename IndexType, typename TupleElementType, typename ArrayOrIterType> constexpr
+  OVK_FORCE_INLINE IndexType TupleToIndexHelper(const elem<TupleElementType,4> &Begin,
+  const elem<IndexType,4> &Stride, const ArrayOrIterType &Tuple) {
+  return
+    Stride[0]*IndexType(Tuple[0] - Begin[0]) +
+    Stride[1]*IndexType(Tuple[1] - Begin[1]) +
+    Stride[2]*IndexType(Tuple[2] - Begin[2]) +
+    Stride[3]*IndexType(Tuple[3] - Begin[3]);
+}
+template <typename IndexType, typename TupleElementType, typename ArrayOrIterType> constexpr
+  OVK_FORCE_INLINE IndexType TupleToIndexHelper(const elem<TupleElementType,5> &Begin,
+  const elem<IndexType,5> &Stride, const ArrayOrIterType &Tuple) {
+  return
+    Stride[0]*IndexType(Tuple[0] - Begin[0]) +
+    Stride[1]*IndexType(Tuple[1] - Begin[1]) +
+    Stride[2]*IndexType(Tuple[2] - Begin[2]) +
+    Stride[3]*IndexType(Tuple[3] - Begin[3]) +
+    Stride[4]*IndexType(Tuple[4] - Begin[4]);
+}
+template <typename IndexType, typename TupleElementType, typename ArrayOrIterType> constexpr
+  OVK_FORCE_INLINE IndexType TupleToIndexHelper(const elem<TupleElementType,6> &Begin,
+  const elem<IndexType,6> &Stride, const ArrayOrIterType &Tuple) {
+  return
+    Stride[0]*IndexType(Tuple[0] - Begin[0]) +
+    Stride[1]*IndexType(Tuple[1] - Begin[1]) +
+    Stride[2]*IndexType(Tuple[2] - Begin[2]) +
+    Stride[3]*IndexType(Tuple[3] - Begin[3]) +
+    Stride[4]*IndexType(Tuple[4] - Begin[4]) +
+    Stride[5]*IndexType(Tuple[5] - Begin[5]);
+}
+template <typename IndexType, typename TupleElementType, typename ArrayOrIterType> constexpr
+  OVK_FORCE_INLINE IndexType TupleToIndexHelper(const elem<TupleElementType,7> &Begin,
+  const elem<IndexType,7> &Stride, const ArrayOrIterType &Tuple) {
+  return
+    Stride[0]*IndexType(Tuple[0] - Begin[0]) +
+    Stride[1]*IndexType(Tuple[1] - Begin[1]) +
+    Stride[2]*IndexType(Tuple[2] - Begin[2]) +
+    Stride[3]*IndexType(Tuple[3] - Begin[3]) +
+    Stride[4]*IndexType(Tuple[4] - Begin[4]) +
+    Stride[5]*IndexType(Tuple[5] - Begin[5]) +
+    Stride[6]*IndexType(Tuple[6] - Begin[6]);
+}
+template <typename IndexType, typename TupleElementType, typename ArrayOrIterType> constexpr
+  OVK_FORCE_INLINE IndexType TupleToIndexHelper(const elem<TupleElementType,8> &Begin,
+  const elem<IndexType,8> &Stride, const ArrayOrIterType &Tuple) {
+  return
+    Stride[0]*IndexType(Tuple[0] - Begin[0]) +
+    Stride[1]*IndexType(Tuple[1] - Begin[1]) +
+    Stride[2]*IndexType(Tuple[2] - Begin[2]) +
+    Stride[3]*IndexType(Tuple[3] - Begin[3]) +
+    Stride[4]*IndexType(Tuple[4] - Begin[4]) +
+    Stride[5]*IndexType(Tuple[5] - Begin[5]) +
+    Stride[6]*IndexType(Tuple[6] - Begin[6]) +
+    Stride[7]*IndexType(Tuple[7] - Begin[7]);
+}
+template <typename IndexType, typename TupleElementType, typename ArrayOrIterType> constexpr
+  OVK_FORCE_INLINE IndexType TupleToIndexHelper(const elem<TupleElementType,9> &Begin,
+  const elem<IndexType,9> &Stride, const ArrayOrIterType &Tuple) {
+  return
+    Stride[0]*IndexType(Tuple[0] - Begin[0]) +
+    Stride[1]*IndexType(Tuple[1] - Begin[1]) +
+    Stride[2]*IndexType(Tuple[2] - Begin[2]) +
+    Stride[3]*IndexType(Tuple[3] - Begin[3]) +
+    Stride[4]*IndexType(Tuple[4] - Begin[4]) +
+    Stride[5]*IndexType(Tuple[5] - Begin[5]) +
+    Stride[6]*IndexType(Tuple[6] - Begin[6]) +
+    Stride[7]*IndexType(Tuple[7] - Begin[7]) +
+    Stride[8]*IndexType(Tuple[8] - Begin[8]);
+}
+template <typename IndexType, typename TupleElementType, typename ArrayOrIterType> constexpr
+  OVK_FORCE_INLINE IndexType TupleToIndexHelper(const elem<TupleElementType,10> &Begin,
+  const elem<IndexType,10> &Stride, const ArrayOrIterType &Tuple) {
+  return
+    Stride[0]*IndexType(Tuple[0] - Begin[0]) +
+    Stride[1]*IndexType(Tuple[1] - Begin[1]) +
+    Stride[2]*IndexType(Tuple[2] - Begin[2]) +
+    Stride[3]*IndexType(Tuple[3] - Begin[3]) +
+    Stride[4]*IndexType(Tuple[4] - Begin[4]) +
+    Stride[5]*IndexType(Tuple[5] - Begin[5]) +
+    Stride[6]*IndexType(Tuple[6] - Begin[6]) +
+    Stride[7]*IndexType(Tuple[7] - Begin[7]) +
+    Stride[8]*IndexType(Tuple[8] - Begin[8]) +
+    Stride[9]*IndexType(Tuple[9] - Begin[9]);
+}
+
+template <typename IndexType, typename TupleElementType> constexpr OVK_FORCE_INLINE IndexType
+  TupleElementsToIndexHelper(const elem<TupleElementType,1> &Begin, const elem<IndexType,1> &,
+  TupleElementType Element0) {
+  return IndexType(Element0 - Begin[0]);
+}
+template <typename IndexType, typename TupleElementType> constexpr OVK_FORCE_INLINE IndexType
+  TupleElementsToIndexHelper(const elem<TupleElementType,2> &Begin, const elem<IndexType,2> &Stride,
+  TupleElementType Element0, TupleElementType Element1) {
+  return
+    Stride[0]*IndexType(Element0 - Begin[0]) +
+    Stride[1]*IndexType(Element1 - Begin[1]);
+}
+template <typename IndexType, typename TupleElementType> constexpr OVK_FORCE_INLINE IndexType
+  TupleElementsToIndexHelper(const elem<TupleElementType,3> &Begin, const elem<IndexType,3> &Stride,
+  TupleElementType Element0, TupleElementType Element1, TupleElementType Element2) {
+  return
+    Stride[0]*IndexType(Element0 - Begin[0]) +
+    Stride[1]*IndexType(Element1 - Begin[1]) +
+    Stride[2]*IndexType(Element2 - Begin[2]);
+}
+template <typename IndexType, typename TupleElementType> constexpr OVK_FORCE_INLINE IndexType
+  TupleElementsToIndexHelper(const elem<TupleElementType,4> &Begin, const elem<IndexType,4> &Stride,
+  TupleElementType Element0, TupleElementType Element1, TupleElementType Element2, TupleElementType
+  Element3) {
+  return
+    Stride[0]*IndexType(Element0 - Begin[0]) +
+    Stride[1]*IndexType(Element1 - Begin[1]) +
+    Stride[2]*IndexType(Element2 - Begin[2]) +
+    Stride[3]*IndexType(Element3 - Begin[3]);
+}
+template <typename IndexType, typename TupleElementType> constexpr OVK_FORCE_INLINE IndexType
+  TupleElementsToIndexHelper(const elem<TupleElementType,5> &Begin, const elem<IndexType,5> &Stride,
+  TupleElementType Element0, TupleElementType Element1, TupleElementType Element2, TupleElementType
+  Element3, TupleElementType Element4) {
+  return
+    Stride[0]*IndexType(Element0 - Begin[0]) +
+    Stride[1]*IndexType(Element1 - Begin[1]) +
+    Stride[2]*IndexType(Element2 - Begin[2]) +
+    Stride[3]*IndexType(Element3 - Begin[3]) +
+    Stride[4]*IndexType(Element4 - Begin[4]);
+}
+template <typename IndexType, typename TupleElementType> constexpr OVK_FORCE_INLINE IndexType
+  TupleElementsToIndexHelper(const elem<TupleElementType,6> &Begin, const elem<IndexType,6> &Stride,
+  TupleElementType Element0, TupleElementType Element1, TupleElementType Element2, TupleElementType
+  Element3, TupleElementType Element4, TupleElementType Element5) {
+  return
+    Stride[0]*IndexType(Element0 - Begin[0]) +
+    Stride[1]*IndexType(Element1 - Begin[1]) +
+    Stride[2]*IndexType(Element2 - Begin[2]) +
+    Stride[3]*IndexType(Element3 - Begin[3]) +
+    Stride[4]*IndexType(Element4 - Begin[4]) +
+    Stride[5]*IndexType(Element5 - Begin[5]);
+}
+template <typename IndexType, typename TupleElementType> constexpr OVK_FORCE_INLINE IndexType
+  TupleElementsToIndexHelper(const elem<TupleElementType,7> &Begin, const elem<IndexType,7> &Stride,
+  TupleElementType Element0, TupleElementType Element1, TupleElementType Element2, TupleElementType
+  Element3, TupleElementType Element4, TupleElementType Element5, TupleElementType Element6) {
+  return
+    Stride[0]*IndexType(Element0 - Begin[0]) +
+    Stride[1]*IndexType(Element1 - Begin[1]) +
+    Stride[2]*IndexType(Element2 - Begin[2]) +
+    Stride[3]*IndexType(Element3 - Begin[3]) +
+    Stride[4]*IndexType(Element4 - Begin[4]) +
+    Stride[5]*IndexType(Element5 - Begin[5]) +
+    Stride[6]*IndexType(Element6 - Begin[6]);
+}
+template <typename IndexType, typename TupleElementType> constexpr OVK_FORCE_INLINE IndexType
+  TupleElementsToIndexHelper(const elem<TupleElementType,8> &Begin, const elem<IndexType,8> &Stride,
+  TupleElementType Element0, TupleElementType Element1, TupleElementType Element2, TupleElementType
+  Element3, TupleElementType Element4, TupleElementType Element5, TupleElementType Element6,
+  TupleElementType Element7) {
+  return
+    Stride[0]*IndexType(Element0 - Begin[0]) +
+    Stride[1]*IndexType(Element1 - Begin[1]) +
+    Stride[2]*IndexType(Element2 - Begin[2]) +
+    Stride[3]*IndexType(Element3 - Begin[3]) +
+    Stride[4]*IndexType(Element4 - Begin[4]) +
+    Stride[5]*IndexType(Element5 - Begin[5]) +
+    Stride[6]*IndexType(Element6 - Begin[6]) +
+    Stride[7]*IndexType(Element7 - Begin[7]);
+}
+template <typename IndexType, typename TupleElementType> constexpr OVK_FORCE_INLINE IndexType
+  TupleElementsToIndexHelper(const elem<TupleElementType,9> &Begin, const elem<IndexType,9> &Stride,
+  TupleElementType Element0, TupleElementType Element1, TupleElementType Element2, TupleElementType
+  Element3, TupleElementType Element4, TupleElementType Element5, TupleElementType Element6,
+  TupleElementType Element7, TupleElementType Element8) {
+  return
+    Stride[0]*IndexType(Element0 - Begin[0]) +
+    Stride[1]*IndexType(Element1 - Begin[1]) +
+    Stride[2]*IndexType(Element2 - Begin[2]) +
+    Stride[3]*IndexType(Element3 - Begin[3]) +
+    Stride[4]*IndexType(Element4 - Begin[4]) +
+    Stride[5]*IndexType(Element5 - Begin[5]) +
+    Stride[6]*IndexType(Element6 - Begin[6]) +
+    Stride[7]*IndexType(Element7 - Begin[7]) +
+    Stride[8]*IndexType(Element8 - Begin[8]);
+}
+template <typename IndexType, typename TupleElementType> constexpr OVK_FORCE_INLINE IndexType
+  TupleElementsToIndexHelper(const elem<TupleElementType,10> &Begin, const elem<IndexType,10> &Stride,
+  TupleElementType Element0, TupleElementType Element1, TupleElementType Element2, TupleElementType
+  Element3, TupleElementType Element4, TupleElementType Element5, TupleElementType Element6,
+  TupleElementType Element7, TupleElementType Element8, TupleElementType Element9) {
+  return
+    Stride[0]*IndexType(Element0 - Begin[0]) +
+    Stride[1]*IndexType(Element1 - Begin[1]) +
+    Stride[2]*IndexType(Element2 - Begin[2]) +
+    Stride[3]*IndexType(Element3 - Begin[3]) +
+    Stride[4]*IndexType(Element4 - Begin[4]) +
+    Stride[5]*IndexType(Element5 - Begin[5]) +
+    Stride[6]*IndexType(Element6 - Begin[6]) +
+    Stride[7]*IndexType(Element7 - Begin[7]) +
+    Stride[8]*IndexType(Element8 - Begin[8]) +
+    Stride[9]*IndexType(Element9 - Begin[9]);
+}
+
 template <typename IndexType, typename TupleElementType, int Rank, array_layout Layout,
   typename TupleElementTypeSequence> class indexer_base;
 
@@ -75,7 +297,7 @@ public:
   template <typename IterType, OVK_FUNCTION_REQUIRES(core::IsRandomAccessIterator<IterType>() &&
     std::is_convertible<core::iterator_deref_type<IterType>, tuple_element_type>::value)> constexpr
     OVK_FORCE_INLINE index_type ToIndex(IterType First) const {
-    return TupleToIndex_(core::index_sequence_of_size<Rank>(), First);
+    return TupleToIndexHelper<index_type, tuple_element_type>(Begin_, Stride_, First);
   }
 
   // Want to use array directly here instead of constructing intermediate elem type
@@ -85,14 +307,15 @@ public:
     (core::ArrayHasRuntimeExtents<ArrayType>() || (core::StaticArrayHasBegin<ArrayType,0>() &&
     core::StaticArrayHasEnd<ArrayType,Rank>())))> constexpr OVK_FORCE_INLINE index_type ToIndex(
     const ArrayType &Array) const {
-    return TupleToIndex_(core::index_sequence_of_size<Rank>(), Array);
+    return TupleToIndexHelper<index_type, tuple_element_type>(Begin_, Stride_, Array);
   }
 
   constexpr OVK_FORCE_INLINE index_type ToIndex(TupleElementTypes... TupleElements) const {
-    return TupleElementsToIndex_(core::index_sequence_of_size<Rank>(), TupleElements...);
+    return TupleElementsToIndexHelper<index_type, tuple_element_type>(Begin_, Stride_,
+      TupleElements...);
   }
 
-  OVK_FORCE_INLINE tuple_type ToTuple(index_type Index) const {
+  tuple_type ToTuple(index_type Index) const {
     return IndexToTuple_(layout_tag<Layout>(), Index);
   }
 
@@ -128,33 +351,7 @@ private:
     return {MakeStrideElement_(layout_tag<Layout>(), index_tag<Indices>(), Begin, End)...};
   }
 
-  template <std::size_t Index1, std::size_t Index2, std::size_t... RemainingIndices, typename
-    TupleType> constexpr index_type OVK_FORCE_INLINE TupleToIndex_(core::index_sequence<Index1,
-    Index2, RemainingIndices...>, const TupleType &Tuple) const {
-    return Stride_[Index1]*(Tuple[Index1]-Begin_[Index1]) + TupleToIndex_(core::index_sequence<
-      Index2, RemainingIndices...>(), Tuple);
-  }
-
-  template <std::size_t Index, typename TupleType> constexpr index_type OVK_FORCE_INLINE
-    TupleToIndex_(core::index_sequence<Index>, const TupleType &Tuple) const {
-    return Stride_[Index]*(Tuple[Index]-Begin_[Index]);
-  }
-
-  template <std::size_t Index1, std::size_t Index2, std::size_t... RemainingIndices, typename...
-    RemainingTupleElementTypes> constexpr index_type OVK_FORCE_INLINE TupleElementsToIndex_(
-    core::index_sequence<Index1, Index2, RemainingIndices...>, TupleElementType TupleElement1,
-    RemainingTupleElementTypes... RemainingTupleElements) const {
-    return Stride_[Index1]*(TupleElement1-Begin_[Index1]) + TupleElementsToIndex_(
-      core::index_sequence<Index2, RemainingIndices...>(), RemainingTupleElements...);
-  }
-
-  template <std::size_t Index> constexpr index_type OVK_FORCE_INLINE TupleElementsToIndex_(
-    core::index_sequence<Index>, TupleElementType TupleElement) const {
-    return Stride_[Index]*(TupleElement-Begin_[Index]);
-  }
-
-  tuple_type OVK_FORCE_INLINE IndexToTuple_(layout_tag<array_layout::ROW_MAJOR>, index_type Index)
-    const {
+  tuple_type IndexToTuple_(layout_tag<array_layout::ROW_MAJOR>, index_type Index) const {
 
     tuple_type Tuple;
 
@@ -169,8 +366,7 @@ private:
 
   }
 
-  tuple_type OVK_FORCE_INLINE IndexToTuple_(layout_tag<array_layout::COLUMN_MAJOR>, index_type
-    Index) const {
+  tuple_type IndexToTuple_(layout_tag<array_layout::COLUMN_MAJOR>, index_type Index) const {
 
     tuple_type Tuple;
 
@@ -215,14 +411,14 @@ public:
 };
 
 template <typename IndexType, typename TupleElementType, int Rank, array_layout Layout> constexpr
-  OVK_FORCE_INLINE bool operator==(const indexer<IndexType, TupleElementType, Rank, Layout> &Left,
-  const indexer<IndexType, TupleElementType, Rank, Layout> &Right) {
+  bool operator==(const indexer<IndexType, TupleElementType, Rank, Layout> &Left, const indexer<
+  IndexType, TupleElementType, Rank, Layout> &Right) {
   return Left.Begin() == Right.Begin() && Left.Stride() == Right.Stride();
 }
 
 template <typename IndexType, typename TupleElementType, int Rank, array_layout Layout> constexpr
-  OVK_FORCE_INLINE bool operator!=(const indexer<IndexType, TupleElementType, Rank, Layout> &Left,
-  const indexer<IndexType, TupleElementType, Rank, Layout> &Right) {
+  bool operator!=(const indexer<IndexType, TupleElementType, Rank, Layout> &Left, const indexer<
+  IndexType, TupleElementType, Rank, Layout> &Right) {
   return !(Left == Right);
 }
 
