@@ -17,8 +17,9 @@ set(LOCAL_TARGETS)
 
 set(SOURCES
   AssemblyOptions.cpp
-  Collect.cpp
   CollectBase.cpp
+  CollectCol.cpp
+  CollectRow.cpp
   Connectivity.cpp
   ConnectivityD.cpp
   ConnectivityR.cpp

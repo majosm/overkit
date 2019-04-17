@@ -102,7 +102,23 @@ private:
 
 };
 
-collect MakeCollect(collect_op CollectOp, data_type ValueType, array_layout Layout);
+namespace collect_internal {
+collect MakeCollectRow(collect_op CollectOp, data_type ValueType);
+collect MakeCollectCol(collect_op CollectOp, data_type ValueType);
+}
+
+inline collect MakeCollect(collect_op CollectOp, data_type ValueType, array_layout Layout) {
+
+  switch (Layout) {
+  case array_layout::ROW_MAJOR:
+    return collect_internal::MakeCollectRow(CollectOp, ValueType);
+  case array_layout::COLUMN_MAJOR:
+    return collect_internal::MakeCollectCol(CollectOp, ValueType);
+  }
+
+  return {};
+
+}
 
 }}
 
