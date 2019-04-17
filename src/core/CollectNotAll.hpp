@@ -41,6 +41,11 @@ public:
   using typename parent_type::value_type;
 
   collect_not_all() = default;
+  collect_not_all(const collect_not_all &Other) = delete;
+  collect_not_all(collect_not_all &&Other) noexcept = default;
+
+  collect_not_all &operator=(const collect_not_all &Other) = delete;
+  collect_not_all &operator=(collect_not_all &&Other) noexcept = default;
 
   void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) {
 

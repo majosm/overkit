@@ -45,6 +45,11 @@ public:
   using typename parent_type::value_type;
 
   collect_interp() = default;
+  collect_interp(const collect_interp &Other) = delete;
+  collect_interp(collect_interp &&Other) noexcept = default;
+
+  collect_interp &operator=(const collect_interp &Other) = delete;
+  collect_interp &operator=(collect_interp &&Other) noexcept = default;
 
   void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) {
 

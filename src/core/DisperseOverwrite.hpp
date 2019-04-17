@@ -44,6 +44,11 @@ public:
   using value_type = T;
 
   disperse_overwrite() = default;
+  disperse_overwrite(const disperse_overwrite &Other) = delete;
+  disperse_overwrite(disperse_overwrite &&Other) noexcept = default;
+
+  disperse_overwrite &operator=(const disperse_overwrite &Other) = delete;
+  disperse_overwrite &operator=(disperse_overwrite &&Other) noexcept = default;
 
   void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) {
 

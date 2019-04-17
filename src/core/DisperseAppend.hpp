@@ -44,6 +44,11 @@ public:
   using value_type = T;
 
   disperse_append() = default;
+  disperse_append(const disperse_append &Other) = delete;
+  disperse_append(disperse_append &&Other) noexcept = default;
+
+  disperse_append &operator=(const disperse_append &Other) = delete;
+  disperse_append &operator=(disperse_append &&Other) noexcept = default;
 
   void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) {
 

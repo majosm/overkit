@@ -19,12 +19,6 @@
 namespace ovk {
 namespace core {
 
-template <array_layout Layout> collect_base<Layout>::collect_base() = default;
-template <array_layout Layout> collect_base<Layout>::collect_base(collect_base &&Other) noexcept
-  = default;
-template <array_layout Layout> collect_base<Layout> &collect_base<Layout>::operator=(collect_base
-  &&Other) noexcept = default;
-
 template <array_layout Layout> void collect_base<Layout>::Initialize(const exchange &Exchange, int
   Count, const range &GridValuesRange) {
 

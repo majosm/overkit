@@ -19,12 +19,6 @@
 namespace ovk {
 namespace core {
 
-template <array_layout Layout> disperse_base<Layout>::disperse_base() = default;
-template <array_layout Layout> disperse_base<Layout>::disperse_base(disperse_base &&Other) noexcept
-  = default;
-template <array_layout Layout> disperse_base<Layout> &disperse_base<Layout>::operator=(disperse_base
-  &&Other) noexcept = default;
-
 template <array_layout Layout> void disperse_base<Layout>::Initialize(const exchange &Exchange,
   int Count, const range &GridValuesRange) {
 

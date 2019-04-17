@@ -30,12 +30,14 @@ template <array_layout Layout> class collect_base {
 
 public:
 
-  collect_base();
-  collect_base(const collect_base &Other) = delete;
-  collect_base(collect_base &&Other) noexcept;
+  // Can't define these here due to issues with GCC < 6.3 and Intel < 17
+  // implementations of extern template
+//   collect_base() = default;
+//   collect_base(const collect_base &Other) = delete;
+//   collect_base(collect_base &&Other) noexcept = default;
 
-  collect_base &operator=(const collect_base &Other) = delete;
-  collect_base &operator=(collect_base &&Other) noexcept;
+//   collect_base &operator=(const collect_base &Other) = delete;
+//   collect_base &operator=(collect_base &&Other) noexcept = default;
 
   void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange);
 

@@ -29,12 +29,14 @@ template <array_layout Layout> class disperse_base {
 
 public:
 
-  disperse_base();
-  disperse_base(const disperse_base &Other) = delete;
-  disperse_base(disperse_base &&Other) noexcept;
+  // Can't define these here due to issues with GCC < 6.3 and Intel < 17
+  // implementations of extern template
+//   disperse_base() = default;
+//   disperse_base(const disperse_base &Other) = delete;
+//   disperse_base(disperse_base &&Other) noexcept = default;
 
-  disperse_base &operator=(const disperse_base &Other);
-  disperse_base &operator=(disperse_base &&Other) noexcept;
+//   disperse_base &operator=(const disperse_base &Other) = delete;
+//   disperse_base &operator=(disperse_base &&Other) noexcept = default;
 
   void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange);
 
