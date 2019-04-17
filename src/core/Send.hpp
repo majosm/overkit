@@ -68,26 +68,12 @@ private:
     {}
     virtual void Initialize(const exchange &Exchange, int Count, int Tag) override {
       Send_.Initialize(Exchange, Count, Tag);
-      const connectivity_d *Donors;
-      GetConnectivityDonorSide(*Exchange.Connectivity_, Donors);
-      GetConnectivityDonorSideCount(*Donors, NumDonors_);
-      DonorValues_.Resize({Count});
     }
-    virtual request Send(const void * const *DonorValuesVoid) override {
-      OVK_DEBUG_ASSERT(DonorValuesVoid || DonorValues_.Count() == 0, "Invalid donor values "
-        "pointer.");
-      for (int iCount = 0; iCount < DonorValues_.Count(); ++iCount) {
-        OVK_DEBUG_ASSERT(DonorValuesVoid[iCount] || NumDonors_ == 0, "Invalid donor values "
-          "pointer.");
-        DonorValues_(iCount) = {static_cast<const value_type *>(DonorValuesVoid[iCount]),
-          {NumDonors_}};
-      }
-      return Send_.Send(DonorValues_);
+    virtual request Send(const void * const *DonorValues) override {
+      return Send_.Send(DonorValues);
     }
   private:
     T Send_;
-    long long NumDonors_;
-    array<array_view<const value_type>> DonorValues_;
   };
 
   std::unique_ptr<concept> Send_;

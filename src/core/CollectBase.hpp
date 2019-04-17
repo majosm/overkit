@@ -55,6 +55,7 @@ public:
   int Count_;
   long long NumDonors_;
   int MaxPointsInCell_;
+  range GridValuesRange_;
   range_indexer GridValuesIndexer_;
   array_view<const exchange::collect_send> Sends_;
   array_view<const exchange::collect_recv> Recvs_;
@@ -99,9 +100,15 @@ protected:
   using parent_type::Count_;
   using parent_type::NumDonors_;
   using parent_type::MaxPointsInCell_;
+  using parent_type::GridValuesRange_;
   using parent_type::GridValuesIndexer_;
 
+  array<array_view<const value_type>> GridValues_;
+  array<array_view<value_type>> DonorValues_;
+
   void AllocateRemoteDonorValues(array<array<value_type,2>> &RemoteDonorValues);
+
+  void SetBufferViews(const void * const *GridValuesVoid, void **DonorValuesVoid);
 
   void RetrieveRemoteDonorValues(array_view<array_view<const value_type>> GridValues, array<array<
     value_type,2>> &RemoteDonorValues);

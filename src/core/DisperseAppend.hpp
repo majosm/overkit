@@ -22,11 +22,12 @@ namespace ovk {
 namespace core {
 namespace disperse_internal {
 
-template <typename T, array_layout Layout> class disperse_append : public disperse_base<Layout> {
+template <typename T, array_layout Layout> class disperse_append : public disperse_base_for_type<T,
+  Layout> {
 
 protected:
 
-  using parent_type = disperse_base<Layout>;
+  using parent_type = disperse_base_for_type<T, Layout>;
 
   using parent_type::Receivers_;
   using parent_type::Grid_;
@@ -35,6 +36,8 @@ protected:
   using parent_type::GridValuesRange_;
   using parent_type::GridValuesIndexer_;
   using parent_type::Points_;
+  using parent_type::ReceiverValues_;
+  using parent_type::GridValues_;
 
 public:
 
@@ -48,8 +51,9 @@ public:
 
   }
 
-  void Disperse(array_view<array_view<const value_type>> ReceiverValues, array_view<
-    array_view<value_type>> GridValues) {
+  void Disperse(const void * const *ReceiverValuesVoid, void **GridValuesVoid) {
+
+    parent_type::SetBufferViews(ReceiverValuesVoid, GridValuesVoid);
 
     for (long long iReceiver = 0; iReceiver < NumReceivers_; ++iReceiver) {
       elem<int,MAX_DIMS> Point = {
@@ -59,7 +63,7 @@ public:
       };
       long long iPoint = GridValuesIndexer_.ToIndex(Point);
       for (int iCount = 0; iCount < Count_; ++iCount) {
-        GridValues(iCount)(iPoint) += ReceiverValues(iCount)(iReceiver);
+        GridValues_(iCount)(iPoint) += ReceiverValues_(iCount)(iReceiver);
       }
     }
 

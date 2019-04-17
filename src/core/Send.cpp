@@ -101,17 +101,26 @@ public:
 
     NextBufferEntry_.Resize({NumSends_});
 
+    DonorValues_.Resize({Count_});
+
     core::EndProfile(*Profiler_, MemAllocTime);
 
   }
 
-  request Send(array_view<array_view<const value_type>> DonorValues) {
+  request Send(const void * const *DonorValuesVoid) {
 
     const exchange &Exchange = *Exchange_;
     const connectivity_d &Donors = *Donors_;
 
     long long NumDonors;
     GetConnectivityDonorSideCount(Donors, NumDonors);
+
+    OVK_DEBUG_ASSERT(DonorValuesVoid || Count_ == 0, "Invalid donor values pointer.");
+    for (int iCount = 0; iCount < Count_; ++iCount) {
+      OVK_DEBUG_ASSERT(DonorValuesVoid[iCount] || NumDonors == 0, "Invalid donor values pointer.");
+      DonorValues_(iCount) = {static_cast<const value_type *>(DonorValuesVoid[iCount]),
+        {NumDonors}};
+    }
 
     MPI_Datatype MPIDataType = core::GetMPIDataType<mpi_value_type>();
 
@@ -141,7 +150,7 @@ public:
       if (iSend >= 0) {
         long long iBuffer = NextBufferEntry_(iSend);
         for (int iCount = 0; iCount < Count_; ++iCount) {
-          Buffers(iSend)(iCount,iBuffer) = mpi_value_type(DonorValues(iCount)(iDonor));
+          Buffers(iSend)(iCount,iBuffer) = mpi_value_type(DonorValues_(iCount)(iDonor));
         }
         ++NextBufferEntry_(iSend);
       }
@@ -177,6 +186,7 @@ private:
   int Count_;
   int Tag_;
   int NumSends_;
+  array<array_view<const value_type>> DonorValues_;
   array<long long> NextBufferEntry_;
 
 };

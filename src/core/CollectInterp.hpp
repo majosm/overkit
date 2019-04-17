@@ -37,6 +37,8 @@ protected:
   using parent_type::Count_;
   using parent_type::NumDonors_;
   using parent_type::MaxPointsInCell_;
+  using parent_type::GridValues_;
+  using parent_type::DonorValues_;
 
 public:
 
@@ -62,10 +64,10 @@ public:
 
   }
 
-  void Collect(array_view<array_view<const value_type>> GridValues, array_view<array_view<
-    value_type>> DonorValues) {
+  void Collect(const void * const *GridValuesVoid, void **DonorValuesVoid) {
 
-    parent_type::RetrieveRemoteDonorValues(GridValues, RemoteDonorValues_);
+    parent_type::SetBufferViews(GridValuesVoid, DonorValuesVoid);
+    parent_type::RetrieveRemoteDonorValues(GridValues_, RemoteDonorValues_);
 
     int ReduceTime = core::GetProfilerTimerID(*Profiler_, "Collect::Reduce");
     core::StartProfile(*Profiler_, ReduceTime);
@@ -73,7 +75,7 @@ public:
     for (long long iDonor = 0; iDonor < NumDonors_; ++iDonor) {
 
       elem<int,MAX_DIMS> DonorSize;
-      parent_type::AssembleDonorPointValues(GridValues, RemoteDonorValues_, iDonor, DonorSize,
+      parent_type::AssembleDonorPointValues(GridValues_, RemoteDonorValues_, iDonor, DonorSize,
         DonorPointValues_);
       int NumDonorPoints = DonorSize[0]*DonorSize[1]*DonorSize[2];
 
@@ -92,9 +94,9 @@ public:
       }
 
       for (int iCount = 0; iCount < Count_; ++iCount) {
-        DonorValues(iCount)(iDonor) = value_type(0);
+        DonorValues_(iCount)(iDonor) = value_type(0);
         for (int iPointInCell = 0; iPointInCell < NumDonorPoints; ++iPointInCell) {
-          DonorValues(iCount)(iDonor) += DonorPointCoefs_(iPointInCell)*DonorPointValues_(iCount,
+          DonorValues_(iCount)(iDonor) += DonorPointCoefs_(iPointInCell)*DonorPointValues_(iCount,
             iPointInCell);
         }
       }

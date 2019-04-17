@@ -57,6 +57,7 @@ template <array_layout Layout> void collect_base<Layout>::Initialize(const excha
     MaxPointsInCell_ *= MaxSize;
   }
 
+  GridValuesRange_ = GridValuesRange;
   GridValuesIndexer_ = range_indexer(GridValuesRange);
 
   Sends_ = Exchange.CollectSends_;
@@ -140,6 +141,9 @@ template <array_layout Layout> void collect_base<Layout>::GetLocalDonorPointInfo
 
 }
 
+template class collect_base<array_layout::ROW_MAJOR>;
+template class collect_base<array_layout::COLUMN_MAJOR>;
+
 template <typename T, array_layout Layout> void collect_base_for_type<T, Layout>::Initialize(const
   exchange &Exchange, int Count, const range &GridValuesRange) {
 
@@ -164,6 +168,9 @@ template <typename T, array_layout Layout> void collect_base_for_type<T, Layout>
     }
   }
 
+  GridValues_.Resize({Count_});
+  DonorValues_.Resize({Count_});
+
   core::EndProfile(*Profiler_, MemAllocTime);
 
 }
@@ -176,6 +183,26 @@ template <typename T, array_layout Layout> void collect_base_for_type<T, Layout>
   RemoteDonorValues.Resize({NumRecvs});
   for (int iRecv = 0; iRecv < NumRecvs; ++iRecv) {
     RemoteDonorValues(iRecv).Resize({{Count_,Recvs_(iRecv).NumPoints}});
+  }
+
+}
+
+template <typename T, array_layout Layout> void collect_base_for_type<T, Layout>::
+  SetBufferViews(const void * const *GridValuesVoid, void **DonorValuesVoid) {
+
+  OVK_DEBUG_ASSERT(GridValuesVoid || Count_ == 0, "Invalid grid values pointer.");
+  OVK_DEBUG_ASSERT(DonorValuesVoid || Count_ == 0, "Invalid donor values pointer.");
+
+  for (int iCount = 0; iCount < Count_; ++iCount) {
+    OVK_DEBUG_ASSERT(GridValuesVoid[iCount] || NumDonors_ == 0, "Invalid grid values pointer.");
+    GridValues_(iCount) = {static_cast<const value_type *>(GridValuesVoid[iCount]),
+      {GridValuesRange_.Count()}};
+  }
+
+  for (int iCount = 0; iCount < Count_; ++iCount) {
+    OVK_DEBUG_ASSERT(DonorValuesVoid[iCount] || NumDonors_ == 0, "Invalid donor values pointer.");
+    DonorValues_(iCount) = {static_cast<value_type *>(DonorValuesVoid[iCount]),
+      {NumDonors_}};
   }
 
 }
@@ -282,9 +309,6 @@ template <typename T, array_layout Layout> void collect_base_for_type<T, Layout>
   }
 
 }
-
-template class collect_base<array_layout::ROW_MAJOR>;
-template class collect_base<array_layout::COLUMN_MAJOR>;
 
 template class collect_base_for_type<bool, array_layout::ROW_MAJOR>;
 template class collect_base_for_type<bool, array_layout::COLUMN_MAJOR>;

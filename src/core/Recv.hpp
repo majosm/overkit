@@ -68,26 +68,12 @@ private:
     {}
     virtual void Initialize(const exchange &Exchange, int Count, int Tag) override {
       Recv_.Initialize(Exchange, Count, Tag);
-      const connectivity_r *Receivers;
-      GetConnectivityReceiverSide(*Exchange.Connectivity_, Receivers);
-      GetConnectivityReceiverSideCount(*Receivers, NumReceivers_);
-      ReceiverValues_.Resize({Count});
     }
-    virtual request Recv(void **ReceiverValuesVoid) override {
-      OVK_DEBUG_ASSERT(ReceiverValuesVoid || ReceiverValues_.Count() == 0, "Invalid receiver values "
-        "pointer.");
-      for (int iCount = 0; iCount < ReceiverValues_.Count(); ++iCount) {
-        OVK_DEBUG_ASSERT(ReceiverValuesVoid[iCount] || NumReceivers_ == 0, "Invalid receiver data "
-          "pointer.");
-        ReceiverValues_(iCount) = {static_cast<value_type *>(ReceiverValuesVoid[iCount]),
-          {NumReceivers_}};
-      }
-      return Recv_.Recv(ReceiverValues_);
+    virtual request Recv(void **ReceiverValues) override {
+      return Recv_.Recv(ReceiverValues);
     }
   private:
     T Recv_;
-    long long NumReceivers_;
-    array<array_view<value_type>> ReceiverValues_;
   };
 
   std::unique_ptr<concept> Recv_;

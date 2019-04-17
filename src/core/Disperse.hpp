@@ -67,37 +67,12 @@ private:
     virtual void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange)
       override {
       Disperse_.Initialize(Exchange, Count, GridValuesRange);
-      const connectivity_r *Receivers;
-      GetConnectivityReceiverSide(*Exchange.Connectivity_, Receivers);
-      GetConnectivityReceiverSideCount(*Receivers, NumReceivers_);
-      GridValuesRange_ = GridValuesRange;
-      ReceiverValues_.Resize({Count});
-      GridValues_.Resize({Count});
     }
-    virtual void Disperse(const void * const *ReceiverValuesVoid, void **GridValuesVoid) override {
-      OVK_DEBUG_ASSERT(ReceiverValuesVoid || ReceiverValues_.Count() == 0, "Invalid receiver values "
-        "pointer.");
-      OVK_DEBUG_ASSERT(GridValuesVoid || GridValues_.Count() == 0, "Invalid grid values pointer.");
-      for (int iCount = 0; iCount < ReceiverValues_.Count(); ++iCount) {
-        OVK_DEBUG_ASSERT(ReceiverValuesVoid[iCount] || NumReceivers_ == 0, "Invalid receiver "
-          "values pointer.");
-        ReceiverValues_(iCount) = {static_cast<const value_type *>(ReceiverValuesVoid[iCount]),
-          {NumReceivers_}};
-      }
-      for (int iCount = 0; iCount < GridValues_.Count(); ++iCount) {
-        OVK_DEBUG_ASSERT(GridValuesVoid[iCount] || NumReceivers_ == 0, "Invalid grid values "
-          "pointer.");
-        GridValues_(iCount) = {static_cast<value_type *>(GridValuesVoid[iCount]),
-          {GridValuesRange_.Count()}};
-      }
-      Disperse_.Disperse(ReceiverValues_, GridValues_);
+    virtual void Disperse(const void * const *ReceiverValues, void **GridValues) override {
+      Disperse_.Disperse(ReceiverValues, GridValues);
     }
   private:
     T Disperse_;
-    long long NumReceivers_;
-    range GridValuesRange_;
-    array<array_view<const value_type>> ReceiverValues_;
-    array<array_view<value_type>> GridValues_;
   };
 
   std::unique_ptr<concept> Disperse_;

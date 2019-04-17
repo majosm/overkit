@@ -100,11 +100,25 @@ public:
 
     NumRecvs_ = Exchange.Recvs_.Count();
 
+    ReceiverValues_.Resize({Count_});
+
   }
 
-  request Recv(array_view<array_view<value_type>> ReceiverValues) {
+  request Recv(void **ReceiverValuesVoid) {
 
     const exchange &Exchange = *Exchange_;
+    const connectivity_r &Receivers = *Receivers_;
+
+    long long NumReceivers;
+    GetConnectivityReceiverSideCount(Receivers, NumReceivers);
+
+    OVK_DEBUG_ASSERT(ReceiverValuesVoid || Count_ == 0, "Invalid receiver values pointer.");
+    for (int iCount = 0; iCount < Count_; ++iCount) {
+      OVK_DEBUG_ASSERT(ReceiverValuesVoid[iCount] || NumReceivers == 0, "Invalid receiver data "
+        "pointer.");
+      ReceiverValues_(iCount) = {static_cast<value_type *>(ReceiverValuesVoid[iCount]),
+        {NumReceivers}};
+    }
 
     MPI_Datatype MPIDataType = core::GetMPIDataType<mpi_value_type>();
 
@@ -136,7 +150,7 @@ public:
     core::StartProfile(*Profiler_, MemAllocTime);
 
     // Will be moved into request object
-    array<array_view<value_type>> ReceiverValuesSaved({ReceiverValues});
+    array<array_view<value_type>> ReceiverValuesSaved(ReceiverValues_);
 
     core::EndProfile(*Profiler_, MemAllocTime);
 
@@ -153,6 +167,7 @@ private:
   int Count_;
   int Tag_;
   int NumRecvs_;
+  array<array_view<value_type>> ReceiverValues_;
 
 };
 
