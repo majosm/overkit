@@ -5,11 +5,13 @@
 
 #include "ovk/core/ArrayView.hpp"
 #include "ovk/core/AssemblyOptions.hpp"
+#include "ovk/core/Collect.hpp"
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Connectivity.hpp"
 #include "ovk/core/Constants.hpp"
 #include "ovk/core/DataType.hpp"
 #include "ovk/core/Debug.hpp"
+#include "ovk/core/Disperse.hpp"
 #include "ovk/core/ErrorHandler.hpp"
 #include "ovk/core/Exchange.hpp"
 #include "ovk/core/Global.hpp"
@@ -17,6 +19,9 @@
 #include "ovk/core/Logger.hpp"
 #include "ovk/core/Misc.hpp"
 #include "ovk/core/Profiler.hpp"
+#include "ovk/core/Recv.hpp"
+#include "ovk/core/Request.hpp"
+#include "ovk/core/Send.hpp"
 #include "ovk/core/TextProcessing.hpp"
 
 #include <mpi.h>
@@ -1153,8 +1158,10 @@ void Collect(const domain &Domain, int DonorGridID, int ReceiverGridID, data_typ
 
   const exchange &Exchange = Domain.LocalExchanges_.at(DonorGridID).at(ReceiverGridID);
 
-  core::Collect(Exchange, ValueType, Count, CollectOp, GridValuesRange, GridValuesLayout,
-    GridValues, DonorValues);
+  core::collect Collect_ = MakeCollect(CollectOp, ValueType, GridValuesLayout);
+
+  Collect_.Initialize(Exchange, Count, GridValuesRange);
+  Collect_.Collect(GridValues, DonorValues);
 
   core::EndProfile(Domain.Profiler_, CollectTime);
 
@@ -1185,7 +1192,10 @@ void Send(const domain &Domain, int DonorGridID, int ReceiverGridID, data_type V
   int SendRecvTime = core::GetProfilerTimerID(Domain.Profiler_, "SendRecv");
   core::StartProfile(Domain.Profiler_, SendRecvTime);
 
-  Request = core::Send(Exchange, ValueType, Count, DonorValues, Tag);
+  core::send Send_ = core::MakeSend(ValueType);
+
+  Send_.Initialize(Exchange, Count, Tag);
+  Request = Send_.Send(DonorValues);
 
   core::EndProfile(Domain.Profiler_, SendRecvTime);
 
@@ -1216,7 +1226,10 @@ void Receive(const domain &Domain, int DonorGridID, int ReceiverGridID, data_typ
 
   const exchange &Exchange = Domain.LocalExchanges_.at(DonorGridID).at(ReceiverGridID);
 
-  Request = core::Receive(Exchange, ValueType, Count, ReceiverValues, Tag);
+  core::recv Recv = core::MakeRecv(ValueType);
+
+  Recv.Initialize(Exchange, Count, Tag);
+  Request = Recv.Recv(ReceiverValues);
 
   core::EndProfile(Domain.Profiler_, SendRecvTime);
 
@@ -1314,8 +1327,10 @@ void Disperse(const domain &Domain, int DonorGridID, int ReceiverGridID, data_ty
 
   const exchange &Exchange = Domain.LocalExchanges_.at(DonorGridID).at(ReceiverGridID);
 
-  core::Disperse(Exchange, ValueType, Count, DisperseOp, ReceiverValues, GridValuesRange,
-    GridValuesLayout, GridValues);
+  core::disperse Disperse_ = core::MakeDisperse(DisperseOp, ValueType, GridValuesLayout);
+
+  Disperse_.Initialize(Exchange, Count, GridValuesRange);
+  Disperse_.Disperse(ReceiverValues, GridValues);
 
   core::EndProfile(Domain.Profiler_, DisperseTime);
 

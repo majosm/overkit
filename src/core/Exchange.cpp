@@ -5,13 +5,11 @@
 
 #include "ovk/core/Array.hpp"
 #include "ovk/core/ArrayView.hpp"
-#include "ovk/core/Collect.hpp"
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Constants.hpp"
 #include "ovk/core/Connectivity.hpp"
 #include "ovk/core/DataType.hpp"
 #include "ovk/core/Debug.hpp"
-#include "ovk/core/Disperse.hpp"
 #include "ovk/core/Elem.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
@@ -20,9 +18,7 @@
 #include "ovk/core/PartitionHash.hpp"
 #include "ovk/core/Profiler.hpp"
 #include "ovk/core/Range.hpp"
-#include "ovk/core/Recv.hpp"
 #include "ovk/core/Request.hpp"
-#include "ovk/core/Send.hpp"
 #include "ovk/core/TextProcessing.hpp"
 
 #include <mpi.h>
@@ -1131,54 +1127,6 @@ void UpdateReceiveInfo(exchange &Exchange) {
     }
 
   }
-
-}
-
-}
-
-namespace core {
-
-void Collect(const exchange &Exchange, data_type ValueType, int Count, collect_op CollectOp,
-  const range &GridValuesRange, array_layout GridValuesLayout, const void * const *GridValues,
-  void **DonorValues) {
-
-  collect Collect_ = MakeCollect(CollectOp, ValueType, GridValuesLayout);
-
-  Collect_.Initialize(Exchange, Count, GridValuesRange);
-  Collect_.Collect(GridValues, DonorValues);
-
-}
-
-request Send(const exchange &Exchange, data_type ValueType, int Count, const void * const
-  *DonorValues, int Tag) {
-
-  send Send_ = MakeSend(ValueType);
-
-  Send_.Initialize(Exchange, Count, Tag);
-
-  return Send_.Send(DonorValues);
-
-}
-
-request Receive(const exchange &Exchange, data_type ValueType, int Count, void **ReceiverValues,
-  int Tag) {
-
-  recv Recv = MakeRecv(ValueType);
-
-  Recv.Initialize(Exchange, Count, Tag);
-
-  return Recv.Recv(ReceiverValues);
-
-}
-
-void Disperse(const exchange &Exchange, data_type ValueType, int Count, disperse_op DisperseOp,
-  const void * const *ReceiverValues, const range &GridValuesRange, array_layout GridValuesLayout,
-  void **GridValues) {
-
-  disperse Disperse_ = MakeDisperse(DisperseOp, ValueType, GridValuesLayout);
-
-  Disperse_.Initialize(Exchange, Count, GridValuesRange);
-  Disperse_.Disperse(ReceiverValues, GridValues);
 
 }
 
