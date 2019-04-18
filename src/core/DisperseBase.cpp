@@ -37,8 +37,7 @@ template <array_layout Layout> void disperse_base<Layout>::Initialize(const exch
   const grid &Grid = *Grid_;
 
   if (OVK_DEBUG) {
-    range LocalRange;
-    GetGridLocalRange(Grid, LocalRange);
+    const range &LocalRange = Grid.LocalRange();
     OVK_DEBUG_ASSERT(GridValuesRange.Includes(LocalRange), "Invalid grid values range.");
   }
 

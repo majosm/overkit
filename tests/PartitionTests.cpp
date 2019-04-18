@@ -223,8 +223,7 @@ TEST_F(PartitionTests, DetectNeighbors) {
 
   auto CreatePartitionHash = [](const ovk::cart &Cart, ovk::core::comm_view Comm, const ovk::range
     &LocalRange) -> ovk::core::partition_hash {
-    ovk::core::partition_hash Hash;
-    ovk::core::CreatePartitionHash(Hash, Cart.Dimension(), Comm, Cart.Range(), LocalRange);
+    ovk::core::partition_hash Hash(Cart.Dimension(), Comm, Cart.Range(), LocalRange);
     return Hash;
   };
 
@@ -534,8 +533,7 @@ TEST_F(PartitionTests, ConstructPartition) {
     ovk::cart Cart(2, {{-1,0,0},{21,20,1}}, {false,true,false}, ovk::periodic_storage::UNIQUE);
     ovk::range LocalRange = CartesianDecomp(Cart, Comm, {3,3,1});
 
-    ovk::core::partition_hash Hash;
-    ovk::core::CreatePartitionHash(Hash, Cart.Dimension(), Comm, Cart.Range(), LocalRange);
+    ovk::core::partition_hash Hash(Cart.Dimension(), Comm, Cart.Range(), LocalRange);
     ovk::array<int> NeighborRanks = ovk::core::DetectNeighbors(Cart, Comm, LocalRange, Hash);
 
     ovk::core::profiler Profiler;

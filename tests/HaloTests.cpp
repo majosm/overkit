@@ -50,8 +50,7 @@ TEST_F(HaloTests, Exchange) {
   auto CreateNeighbors = [](const ovk::cart &Cart, ovk::core::comm_view Comm,
     const ovk::range &LocalRange, const ovk::range &ExtendedRange) -> ovk::array<
     ovk::core::partition_info> {
-    ovk::core::partition_hash Hash;
-    ovk::core::CreatePartitionHash(Hash, Cart.Dimension(), Comm, Cart.Range(), LocalRange);
+    ovk::core::partition_hash Hash(Cart.Dimension(), Comm, Cart.Range(), LocalRange);
     ovk::array<int> NeighborRanks = ovk::core::DetectNeighbors(Cart, Comm, LocalRange, Hash);
     return ovk::core::RetrievePartitionInfo(Comm, NeighborRanks, LocalRange, ExtendedRange);
   };

@@ -256,16 +256,11 @@ error ImportXINTOUT(domain &Domain, const std::string &HOPath, const std::string
         const grid *GridPtr;
         GetGrid(Domain, GridID, GridPtr);
         const grid &Grid = *GridPtr;
-        std::string Name;
-        elem<int,MAX_DIMS> GlobalSize;
-        GetGridName(Grid, Name);
-        GetGridSize(Grid, GlobalSize.Data());
-        core::comm_view GridComm = core::GetGridComm(Grid);
         LocalGrids[iLocalGrid] = GridPtr;
-        LocalGridIDs[iLocalGrid] = GridID;
-        LocalGridNames[iLocalGrid] = Name;
-        LocalGridComms[iLocalGrid] = GridComm;
-        LocalGridGlobalSizes[iLocalGrid] = GlobalSize;
+        LocalGridIDs[iLocalGrid] = Grid.ID();
+        LocalGridNames[iLocalGrid] = Grid.Name();
+        LocalGridComms[iLocalGrid] = Grid.core_Comm();
+        LocalGridGlobalSizes[iLocalGrid] = Grid.Size();
         ++iLocalGrid;
       }
     }
@@ -1945,14 +1940,12 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
   const xintout_donors &XINTOUTDonors = XINTOUTGrid.Donors;
   const xintout_receivers &XINTOUTReceivers = XINTOUTGrid.Receivers;
 
-  cart Cart;
-  GetGridCart(Grid, Cart);
-
-  const core::partition_hash &Hash = core::GetGridPartitionHash(Grid);
+  const cart &Cart = Grid.Cart();
+  const core::partition_hash &Hash = Grid.core_PartitionHash();
 
   core::StartProfileSync(Profiler, MapToBinsTime, Comm);
 
-  std::map<int, core::partition_bin> Bins;
+  std::map<int, core::partition_hash::bin> Bins;
 
   long long NumChunkDonors = 0;
   long long NumChunkDonorPoints = 0;
@@ -2005,12 +1998,12 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
       }
     }
     ChunkDonorPointBinIndices.resize(NumChunkDonorPoints);
-    core::MapToPartitionBins(Hash, ChunkDonorPoints, ChunkDonorPointBinIndices);
+    Hash.MapToBins(ChunkDonorPoints, ChunkDonorPointBinIndices);
     for (long long iDonorPoint = 0; iDonorPoint < NumChunkDonorPoints; ++iDonorPoint) {
       int BinIndex = ChunkDonorPointBinIndices[iDonorPoint];
       auto Iter = Bins.lower_bound(BinIndex);
       if (Iter == Bins.end() || Iter->first > BinIndex) {
-        Bins.emplace_hint(Iter, BinIndex, core::partition_bin());
+        Bins.emplace_hint(Iter, BinIndex, core::partition_hash::bin());
       }
     }
   }
@@ -2021,12 +2014,12 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
     const xintout_receiver_chunk &ReceiverChunk = XINTOUTReceivers.Chunk;
     NumChunkReceivers = ReceiverChunk.End - ReceiverChunk.Begin;
     ChunkReceiverBinIndices.resize(NumChunkReceivers);
-    core::MapToPartitionBins(Hash, ReceiverChunk.Data.Points, ChunkReceiverBinIndices);
+    Hash.MapToBins(ReceiverChunk.Data.Points, ChunkReceiverBinIndices);
     for (long long iReceiver = 0; iReceiver < NumChunkReceivers; ++iReceiver) {
       int BinIndex = ChunkReceiverBinIndices[iReceiver];
       auto Iter = Bins.lower_bound(BinIndex);
       if (Iter == Bins.end() || Iter->first > BinIndex) {
-        Bins.emplace_hint(Iter, BinIndex, core::partition_bin());
+        Bins.emplace_hint(Iter, BinIndex, core::partition_hash::bin());
       }
     }
   }
@@ -2034,7 +2027,7 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
   core::EndProfile(Profiler, MapToBinsTime);
   core::StartProfileSync(Profiler, RetrieveBinsTime, Comm);
 
-  core::RetrievePartitionBins(Hash, Bins);
+  Hash.RetrieveBins(Bins);
 
   core::EndProfile(Profiler, RetrieveBinsTime);
   core::StartProfileSync(Profiler, FindRanksTime, Comm);
@@ -2047,8 +2040,7 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
     NumChunkDonorRanks.resize(NumChunkDonors);
     ChunkDonorRanks.resize(NumChunkDonors);
     ChunkDonorRanksData.resize(NumChunkDonorPoints);
-    core::FindPartitions(Hash, Bins, ChunkDonorPoints, ChunkDonorPointBinIndices,
-      ChunkDonorRanksData);
+    Hash.FindPartitions(Bins, ChunkDonorPoints, ChunkDonorPointBinIndices, ChunkDonorRanksData);
     int MaxSize = DonorChunk.Data.MaxSize;
     int MaxPointsInCell = 1;
     for (int iDim = 0; iDim < NumDims; ++iDim) {
@@ -2088,7 +2080,7 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
   if (XINTOUTReceivers.HasChunk) {
     const xintout_receiver_chunk &ReceiverChunk = XINTOUTReceivers.Chunk;
     ChunkReceiverRanks.resize(NumChunkReceivers);
-    core::FindPartitions(Hash, Bins, ReceiverChunk.Data.Points, ChunkReceiverBinIndices,
+    Hash.FindPartitions(Bins, ReceiverChunk.Data.Points, ChunkReceiverBinIndices,
       ChunkReceiverRanks);
     ChunkReceiverBinIndices.clear();
   }
@@ -2501,7 +2493,7 @@ void ImportConnectivityData(int NumGrids, int NumLocalGrids, const std::vector<i
 
     const grid *Grid;
     GetGrid(Domain, GridID, Grid);
-    core::comm_view GridComm = core::GetGridComm(*Grid);
+    core::comm_view GridComm = Grid->core_Comm();
 
     int NumReceiverGrids = 0;
     int NumDonorGrids = 0;

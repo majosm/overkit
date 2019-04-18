@@ -21,19 +21,53 @@
 namespace ovk {
 namespace core {
 
-struct partition_bin {
-  int Index_;
-  range Range_;
-  int NumPartitions_;
-  array<range> PartitionRanges_;
-  array<int> PartitionRanks_;
-  // Need this for detecting unretrieved bins
-  partition_bin():
-    Index_(-1)
-  {}
-};
+class partition_hash {
 
-struct partition_hash {
+public:
+
+  class bin {
+  public:
+    bin():
+      Index_(-1),
+      Range_(MakeEmptyRange(3)),
+      NumPartitions_(0)
+    {}
+  private:
+    int Index_;
+    range Range_;
+    int NumPartitions_;
+    array<range> PartitionRanges_;
+    array<int> PartitionRanks_;
+    bin(int Index, const range &Range, int NumPartitions):
+      Index_(Index),
+      Range_(Range),
+      NumPartitions_(NumPartitions),
+      PartitionRanges_({NumPartitions}),
+      PartitionRanks_({NumPartitions})
+    {}
+    friend class partition_hash;
+  };
+
+  // Remove this when exchange no longer needs it
+  partition_hash();
+
+  partition_hash(int NumDims, comm_view Comm);
+  partition_hash(int NumDims, comm_view Comm, const range &GlobalRange, const range &LocalRange);
+
+  partition_hash(const partition_hash &Other) = delete;
+  partition_hash(partition_hash &&Other) noexcept = default;
+
+  partition_hash &operator=(const partition_hash &Other) = delete;
+  partition_hash &operator=(partition_hash &&Other) noexcept = default;
+
+  void MapToBins(array_view<const int,2> Points, array_view<int> BinIndices) const;
+
+  void RetrieveBins(std::map<int, bin> &Bins) const;
+
+  void FindPartitions(const std::map<int, bin> &Bins, array_view<const int,2> Points, array_view<
+    const int> BinIndices, array_view<int> PartitionRanks) const;
+
+private:
 
   using bin_indexer = indexer<int, int, MAX_DIMS>;
 
@@ -46,22 +80,10 @@ struct partition_hash {
   tuple<int> BinSize_;
   int MaxBinPartitions_;
   bool RankHasBin_;
-  std::unique_ptr<partition_bin> Bin_;
+  std::unique_ptr<bin> Bin_;
 //   optional<partition_bin> Bin_;
 
 };
-
-void CreatePartitionHash(partition_hash &Hash, int NumDims, comm_view Comm, const range
-  &GlobalRange, const range &LocalRange);
-void DestroyPartitionHash(partition_hash &Hash);
-
-void MapToPartitionBins(const partition_hash &Hash, array_view<const int,2> Points, array_view<int>
-  BinIndices);
-
-void RetrievePartitionBins(const partition_hash &Hash, std::map<int, partition_bin> &Bins);
-
-void FindPartitions(const partition_hash &Hash, const std::map<int, partition_bin> &RetrievedBins,
-  array_view<const int,2> Points, array_view<const int> BinIndices, array_view<int> PartitionRanks);
 
 }}
 

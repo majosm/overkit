@@ -31,20 +31,17 @@ namespace core {
 void CreateConnectivityReceiverSide(connectivity_r &Receivers, const grid &Grid, int SourceGridID,
   core::logger &Logger, core::error_handler &ErrorHandler) {
 
-  Receivers.Comm_ = core::GetGridComm(Grid);
+  Receivers.NumDims_ = Grid.Dimension();
+  Receivers.Comm_ = Grid.core_Comm();
 
   MPI_Barrier(Receivers.Comm_);
 
   Receivers.Logger_ = &Logger;
   Receivers.ErrorHandler_ = &ErrorHandler;
 
-  GetGridID(Grid, Receivers.GridID_);
-  GetGridDimension(Grid, Receivers.NumDims_);
-
+  Receivers.Grid_ = &Grid;
   Receivers.SourceGridID_ = SourceGridID;
   Receivers.Count_ = 0;
-
-  Receivers.Grid_ = &Grid;
 
   DefaultEdits(Receivers.Edits_);
 
@@ -79,7 +76,7 @@ void DestroyConnectivityReceiverSide(connectivity_r &Receivers) {
 
 void GetConnectivityReceiverSideGridID(const connectivity_r &Receivers, int &GridID) {
 
-  GridID = Receivers.GridID_;
+  GridID = Receivers.Grid_->ID();
 
 }
 

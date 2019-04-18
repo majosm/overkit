@@ -34,21 +34,18 @@ namespace core {
 void CreateConnectivityDonorSide(connectivity_d &Donors, const grid &Grid, int DestinationGridID,
   core::logger &Logger, core::error_handler &ErrorHandler) {
 
-  Donors.Comm_ = core::GetGridComm(Grid);
+  Donors.NumDims_ = Grid.Dimension();
+  Donors.Comm_ = Grid.core_Comm();
 
   MPI_Barrier(Donors.Comm_);
 
   Donors.Logger_ = &Logger;
   Donors.ErrorHandler_ = &ErrorHandler;
 
-  GetGridID(Grid, Donors.GridID_);
-  GetGridDimension(Grid, Donors.NumDims_);
-
+  Donors.Grid_ = &Grid;
   Donors.DestinationGridID_ = DestinationGridID;
   Donors.Count_ = 0;
   Donors.MaxSize_ = 1;
-
-  Donors.Grid_ = &Grid;
 
   DefaultEdits(Donors.Edits_);
 
@@ -91,7 +88,7 @@ void DestroyConnectivityDonorSide(connectivity_d &Donors) {
 
 void GetConnectivityDonorSideGridID(const connectivity_d &Donors, int &GridID) {
 
-  GridID = Donors.GridID_;
+  GridID = Donors.Grid_->ID();
 
 }
 

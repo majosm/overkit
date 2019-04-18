@@ -43,9 +43,9 @@ public:
   comm_view Comm() const { return Comm_; }
   const range &LocalRange() const { return LocalRange_; }
   const range &ExtendedRange() const { return ExtendedRange_; }
-  array_view<const range> LocalSubregions() const { return LocalSubregions_; }
-  array_view<const range> ExtendedSubregions() const { return ExtendedSubregions_; }
-  array_view<const partition_info> Neighbors() const { return Neighbors_; }
+  const array<range> &LocalSubregions() const { return LocalSubregions_; }
+  const array<range> &ExtendedSubregions() const { return ExtendedSubregions_; }
+  const array<partition_info> &Neighbors() const { return Neighbors_; }
   const halo &Halo() const { return Halo_; }
 
 private:

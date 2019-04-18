@@ -36,9 +36,9 @@ template <array_layout Layout> void collect_base<Layout>::Initialize(const excha
   Profiler_ = Exchange.Profiler_;
   int MemAllocTime = core::GetProfilerTimerID(*Profiler_, "Collect::MemAlloc");
 
-  GetGridCart(Grid, Cart_);
-  GetGridGlobalRange(Grid, GlobalRange_);
-  GetGridLocalRange(Grid, LocalRange_);
+  Cart_ = Grid.Cart();
+  GlobalRange_ = Grid.GlobalRange();
+  LocalRange_ = Grid.LocalRange();
 
   OVK_DEBUG_ASSERT(GridValuesRange.Includes(LocalRange_), "Invalid grid values range.");
 
@@ -205,8 +205,7 @@ template <typename T, array_layout Layout> void collect_base_for_type<T, Layout>
   RetrieveRemoteDonorValues(array_view<array_view<const value_type>> GridValues, array<array<
   value_type,2>> &RemoteDonorValues) {
 
-  MPI_Comm Comm;
-  GetGridComm(*Grid_, Comm);
+  const comm &Comm = Grid_->core_Comm();
 
   int MPITime = core::GetProfilerTimerID(*Profiler_, "Collect::MPI");
   int PackTime = core::GetProfilerTimerID(*Profiler_, "Collect::Pack");

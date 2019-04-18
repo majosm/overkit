@@ -11,7 +11,10 @@
 #include <ovk/core/ErrorHandler.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Logger.hpp>
+#include <ovk/core/Moveabool.hpp>
+#include <ovk/core/Partition.hpp>
 #include <ovk/core/PartitionHash.hpp>
+#include <ovk/core/Profiler.hpp>
 #include <ovk/core/Range.hpp>
 #include <ovk/core/Tuple.hpp>
 
@@ -33,27 +36,91 @@ struct grid_params {
   range LocalRange_;
 };
 
-namespace core {
+namespace grid_internal {
 
-struct grid_neighbor {
-  int Rank;
-  range LocalRange;
+// For doing stuff before grid creation and after grid destruction
+class grid_base {
+
+protected:
+
+  grid_base(core::logger &Logger, core::error_handler &ErrorHandler, core::profiler &Profiler,
+    int ID, const std::string &Name, int NumDims, MPI_Comm Comm);
+
+  grid_base(const grid_base &Other) = delete;
+  grid_base(grid_base &&Other) noexcept = default;
+
+  grid_base &operator=(const grid_base &Other) = delete;
+  grid_base &operator=(grid_base &&Other) noexcept = default;
+
+  ~grid_base();
+
+  core::moveabool Exists_;
+
+  mutable core::logger *Logger_;
+  mutable core::error_handler *ErrorHandler_;
+  mutable core::profiler *Profiler_;
+
+  int ID_;
+  std::string Name_;
+  int NumDims_;
+  core::comm Comm_;
+
 };
 
 }
 
-struct grid {
-  mutable core::logger *Logger_;
-  mutable core::error_handler *ErrorHandler_;
-  int ID_;
-  std::string Name_;
+class grid : private grid_internal::grid_base {
+
+public:
+
+  grid(int ID, const grid_params &Params, core::logger &Logger, core::error_handler &ErrorHandler,
+    core::profiler &Profiler);
+
+  grid(const grid &Other) = delete;
+  grid(grid &&Other) noexcept = default;
+
+  grid &operator=(const grid &Other) = delete;
+  grid &operator=(grid &&Other) noexcept = default;
+
+  ~grid();
+
+  int ID() const { return ID_; }
+  const std::string &Name() const { return Name_; }
+  int Dimension() const { return NumDims_; }
+  MPI_Comm Comm() const { return Comm_.Get(); }
+  int CommSize() const { return Comm_.Size(); }
+  int CommRank() const { return Comm_.Rank(); }
+  const cart &Cart() const { return Cart_; }
+  tuple<int> Size() const { return Cart_.Range().Size(); }
+  int Size(int iDim) const { return Cart_.Range().Size(iDim); }
+  const tuple<bool> &Periodic() const { return Cart_.Periodic(); }
+  bool Periodic(int iDim) const { return Cart_.Periodic(iDim); }
+  periodic_storage PeriodicStorage() const { return Cart_.PeriodicStorage(); }
+  const tuple<double> &PeriodicLength() const { return PeriodicLength_; }
+  double PeriodicLength(int iDim) const { return PeriodicLength_[iDim]; }
+  geometry_type GeometryType() const { return GeometryType_; }
+  const range &GlobalRange() const { return Cart_.Range(); }
+  const range &LocalRange() const { return Partition_->LocalRange(); }
+
+  const core::comm &core_Comm() const { return Comm_; }
+  const core::partition_hash &core_PartitionHash() const { return PartitionHash_; }
+  const core::partition &core_Partition() const { return *Partition_; }
+  const std::shared_ptr<core::partition> &core_PartitionShared() const { return Partition_; }
+  core::logger &core_Logger() const { return *Logger_; }
+  core::error_handler &core_ErrorHandler() const { return *ErrorHandler_; }
+  core::profiler &core_Profiler() const { return *Profiler_; }
+
+private:
+
   cart Cart_;
-  core::comm Comm_;
   tuple<double> PeriodicLength_;
   geometry_type GeometryType_;
-  range LocalRange_;
-  array<core::grid_neighbor> Neighbors_;
   core::partition_hash PartitionHash_;
+  std::shared_ptr<core::partition> Partition_;
+
+  void PrintSummary_() const;
+  void PrintDecomposition_() const;
+
 };
 
 struct grid_info {
@@ -65,35 +132,6 @@ struct grid_info {
   geometry_type GeometryType_;
   bool IsLocal_;
 };
-
-namespace core {
-void CreateGrid(grid &Grid, int ID, const grid_params &Params, core::logger &Logger,
-  core::error_handler &ErrorHandler);
-void DestroyGrid(grid &Grid);
-}
-
-void GetGridID(const grid &Grid, int &ID);
-void GetGridName(const grid &Grid, std::string &Name);
-void GetGridDimension(const grid &Grid, int &NumDims);
-void GetGridComm(const grid &Grid, MPI_Comm &Comm);
-void GetGridCommSize(const grid &Grid, int &CommSize);
-void GetGridCommRank(const grid &Grid, int &CommRank);
-void GetGridCart(const grid &Grid, cart &Cart);
-void GetGridSize(const grid &Grid, int *Size);
-void GetGridPeriodic(const grid &Grid, bool *Periodic);
-void GetGridPeriodicStorage(const grid &Grid, periodic_storage &PeriodicStorage);
-void GetGridPeriodicLength(const grid &Grid, double *PeriodicLength);
-void GetGridGeometryType(const grid &Grid, geometry_type &GeometryType);
-void GetGridGlobalRange(const grid &Grid, range &GlobalRange);
-void GetGridLocalRange(const grid &Grid, range &LocalRange);
-void GetGridGlobalCount(const grid &Grid, long long &NumGlobal);
-void GetGridLocalCount(const grid &Grid, long long &NumLocal);
-
-namespace core {
-comm_view GetGridComm(const grid &Grid);
-const array<grid_neighbor> &GetGridNeighbors(const grid &Grid);
-const partition_hash &GetGridPartitionHash(const grid &Grid);
-}
 
 void CreateGridParams(grid_params &Params, int NumDims);
 void DestroyGridParams(grid_params &Params);
@@ -129,15 +167,6 @@ void GetGridInfoPeriodicLength(const grid_info &Info, double *PeriodicLength);
 void GetGridInfoGeometryType(const grid_info &Info, geometry_type &GeometryType);
 void GetGridInfoGlobalRange(const grid_info &Info, range &GlobalRange);
 void GetGridInfoIsLocal(const grid_info &Info, bool &IsLocal);
-
-// namespace core {
-// static inline void GetGridLogger(const ovk_grid *Grid, t_logger **Logger) {
-//   *Logger = (t_logger *)Grid->logger;
-// }
-// static inline void GetGridErrorHandler(const ovk_grid *Grid, t_error_handler **ErrorHandler) {
-//   *ErrorHandler = (t_error_handler *)Grid->error_handler;
-// }
-// }
 
 }
 

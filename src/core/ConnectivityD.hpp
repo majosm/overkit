@@ -28,13 +28,12 @@ struct connectivity_d {
 
   mutable core::logger *Logger_;
   mutable core::error_handler *ErrorHandler_;
-  int GridID_;
-  int DestinationGridID_;
   int NumDims_;
   core::comm_view Comm_;
+  const grid *Grid_;
+  int DestinationGridID_;
   long long Count_;
   int MaxSize_;
-  const grid *Grid_;
   edits Edits_;
   array<int,3> Extents_;
   int ExtentsEditRefCount_;

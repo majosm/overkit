@@ -101,10 +101,10 @@ void CreateExchange(exchange &Exchange, const connectivity &Connectivity, logger
 
   range DonorGridLocalRange = MakeEmptyRange(Exchange.NumDims_);
   if (DonorGrid) {
-    GetGridLocalRange(*DonorGrid, DonorGridLocalRange);
+    DonorGridLocalRange = DonorGrid->LocalRange();
   }
 
-  CreatePartitionHash(Exchange.SourceHash_, Exchange.NumDims_, Exchange.Comm_, DonorGridGlobalRange,
+  Exchange.SourceHash_ = partition_hash(Exchange.NumDims_, Exchange.Comm_, DonorGridGlobalRange,
     DonorGridLocalRange);
 
   range ReceiverGridGlobalRange;
@@ -112,10 +112,10 @@ void CreateExchange(exchange &Exchange, const connectivity &Connectivity, logger
 
   range ReceiverGridLocalRange = MakeEmptyRange(Exchange.NumDims_);
   if (ReceiverGrid) {
-    GetGridLocalRange(*ReceiverGrid, ReceiverGridLocalRange);
+    ReceiverGridLocalRange = ReceiverGrid->LocalRange();
   }
 
-  CreatePartitionHash(Exchange.DestinationHash_, Exchange.NumDims_, Exchange.Comm_,
+  Exchange.DestinationHash_ = partition_hash(Exchange.NumDims_, Exchange.Comm_,
     ReceiverGridGlobalRange, ReceiverGridLocalRange);
 
   MPI_Barrier(Exchange.Comm_);
@@ -143,8 +143,8 @@ void DestroyExchange(exchange &Exchange) {
   Exchange.CollectSends_.Clear();
   Exchange.CollectRecvs_.Clear();
 
-  DestroyPartitionHash(Exchange.SourceHash_);
-  DestroyPartitionHash(Exchange.DestinationHash_);
+  Exchange.SourceHash_ = partition_hash();
+  Exchange.DestinationHash_ = partition_hash();
 
   Exchange.DonorsSorted_.Clear();
   Exchange.ReceiversSorted_.Clear();
@@ -318,15 +318,11 @@ void UpdateCollectSendInfo(exchange &Exchange) {
     const grid *Grid;
     GetConnectivityDonorSideGrid(*Donors, Grid);
 
-    range GlobalRange, LocalRange;
-    GetGridGlobalRange(*Grid, GlobalRange);
-    GetGridLocalRange(*Grid, LocalRange);
-
-    const array<core::grid_neighbor> &GridNeighbors = core::GetGridNeighbors(*Grid);
-    int NumNeighbors = GridNeighbors.Count();
-
-    cart Cart;
-    GetGridCart(*Grid, Cart);
+    const range &GlobalRange = Grid->GlobalRange();
+    const range &LocalRange = Grid->LocalRange();
+    const cart &Cart = Grid->Cart();
+    const array<core::partition_info> &Neighbors = Grid->core_Partition().Neighbors();
+    int NumNeighbors = Neighbors.Count();
 
     array<range> SendToNeighborRanges({NumNeighbors});
     for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
@@ -342,7 +338,7 @@ void UpdateCollectSendInfo(exchange &Exchange) {
       bool AwayFromEdge = GlobalRange.Includes(DonorRange);
       for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
         if (AwayFromEdge) {
-          bool Overlaps = RangesOverlap(GridNeighbors(iNeighbor).LocalRange, DonorRange);
+          bool Overlaps = RangesOverlap(Neighbors(iNeighbor).LocalRange, DonorRange);
           if (Overlaps) {
             SendToNeighborRanges(iNeighbor) = UnionRanges(SendToNeighborRanges(iNeighbor),
               IntersectRanges(LocalRange, DonorRange));
@@ -353,7 +349,7 @@ void UpdateCollectSendInfo(exchange &Exchange) {
             for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
               for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
                 elem<int,MAX_DIMS> Point = Cart.PeriodicAdjust({i,j,k});
-                if (GridNeighbors(iNeighbor).LocalRange.Contains(Point)) {
+                if (Neighbors(iNeighbor).LocalRange.Contains(Point)) {
                   Overlaps = true;
                   goto done_checking_for_overlap1;
                 }
@@ -396,7 +392,7 @@ void UpdateCollectSendInfo(exchange &Exchange) {
 
     for (int iCollectSend = 0; iCollectSend < NumCollectSends; ++iCollectSend) {
       int iNeighbor = CollectSendIndexToNeighbor(iCollectSend);
-      Exchange.CollectSends_(iCollectSend).Rank = GridNeighbors(iNeighbor).Rank;
+      Exchange.CollectSends_(iCollectSend).Rank = Neighbors(iNeighbor).Rank;
     }
 
     array<array<bool>> CollectSendMasks({NumCollectSends});
@@ -416,7 +412,7 @@ void UpdateCollectSendInfo(exchange &Exchange) {
         int iNeighbor = CollectSendIndexToNeighbor(iCollectSend);
         const range_indexer &Indexer = SendToNeighborIndexers(iNeighbor);
         if (AwayFromEdge) {
-          bool Overlaps = RangesOverlap(GridNeighbors(iNeighbor).LocalRange, DonorRange);
+          bool Overlaps = RangesOverlap(Neighbors(iNeighbor).LocalRange, DonorRange);
           if (Overlaps) {
             range LocalDonorRange = IntersectRanges(LocalRange, DonorRange);
             for (int k = LocalDonorRange.Begin(2); k < LocalDonorRange.End(2); ++k) {
@@ -434,7 +430,7 @@ void UpdateCollectSendInfo(exchange &Exchange) {
             for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
               for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
                 elem<int,MAX_DIMS> Point = Cart.PeriodicAdjust({i,j,k});
-                if (GridNeighbors(iNeighbor).LocalRange.Contains(Point)) {
+                if (Neighbors(iNeighbor).LocalRange.Contains(Point)) {
                   Overlaps = true;
                   goto done_checking_for_overlap2;
                 }
@@ -519,15 +515,11 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
     const grid *Grid;
     GetConnectivityDonorSideGrid(*Donors, Grid);
 
-    range GlobalRange, LocalRange;
-    GetGridGlobalRange(*Grid, GlobalRange);
-    GetGridLocalRange(*Grid, LocalRange);
-
-    const array<core::grid_neighbor> &GridNeighbors = core::GetGridNeighbors(*Grid);
-    int NumNeighbors = GridNeighbors.Count();
-
-    cart Cart;
-    GetGridCart(*Grid, Cart);
+    const range &GlobalRange = Grid->GlobalRange();
+    const range &LocalRange = Grid->LocalRange();
+    const cart &Cart = Grid->Cart();
+    const array<core::partition_info> &Neighbors = Grid->core_Partition().Neighbors();
+    int NumNeighbors = Neighbors.Count();
 
     array<range> RecvFromNeighborRanges({NumNeighbors});
     for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
@@ -544,13 +536,13 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
       for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
         if (AwayFromEdge) {
           RecvFromNeighborRanges(iNeighbor) = UnionRanges(RecvFromNeighborRanges(iNeighbor),
-            IntersectRanges(GridNeighbors(iNeighbor).LocalRange, DonorRange));
+            IntersectRanges(Neighbors(iNeighbor).LocalRange, DonorRange));
         } else {
           for (int k = DonorRange.Begin(2); k < DonorRange.End(2); ++k) {
             for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
               for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
                 elem<int,MAX_DIMS> Point = Cart.PeriodicAdjust({i,j,k});
-                if (GridNeighbors(iNeighbor).LocalRange.Contains(Point)) {
+                if (Neighbors(iNeighbor).LocalRange.Contains(Point)) {
                   ExtendRange(RecvFromNeighborRanges(iNeighbor), Point);
                 }
               }
@@ -579,7 +571,7 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
 
     for (int iCollectRecv = 0; iCollectRecv < NumCollectRecvs; ++iCollectRecv) {
       int iNeighbor = CollectRecvIndexToNeighbor(iCollectRecv);
-      Exchange.CollectRecvs_(iCollectRecv).Rank = GridNeighbors(iNeighbor).Rank;
+      Exchange.CollectRecvs_(iCollectRecv).Rank = Neighbors(iNeighbor).Rank;
     }
 
     array<array<bool>> CollectRecvMasks({NumCollectRecvs});
@@ -599,7 +591,7 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
         int iNeighbor = CollectRecvIndexToNeighbor(iCollectRecv);
         const range_indexer &Indexer = RecvFromNeighborIndexers(iNeighbor);
         if (AwayFromEdge) {
-          range RemoteDonorRange = IntersectRanges(GridNeighbors(iNeighbor).LocalRange, DonorRange);
+          range RemoteDonorRange = IntersectRanges(Neighbors(iNeighbor).LocalRange, DonorRange);
           for (int k = RemoteDonorRange.Begin(2); k < RemoteDonorRange.End(2); ++k) {
             for (int j = RemoteDonorRange.Begin(1); j < RemoteDonorRange.End(1); ++j) {
               for (int i = RemoteDonorRange.Begin(0); i < RemoteDonorRange.End(0); ++i) {
@@ -613,7 +605,7 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
             for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
               for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
                 elem<int,MAX_DIMS> Point = Cart.PeriodicAdjust({i,j,k});
-                if (GridNeighbors(iNeighbor).LocalRange.Contains(Point)) {
+                if (Neighbors(iNeighbor).LocalRange.Contains(Point)) {
                   long long iPoint = Indexer.ToIndex(Point);
                   CollectRecvMasks(iCollectRecv)(iPoint) = true;
                 }
@@ -723,7 +715,7 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
         int iNeighbor = CollectRecvIndexToNeighbor(iCollectRecv);
         const range_indexer &RecvFromNeighborIndexer = RecvFromNeighborIndexers(iNeighbor);
         if (AwayFromEdge) {
-          range RemoteDonorRange = IntersectRanges(GridNeighbors(iNeighbor).LocalRange, DonorRange);
+          range RemoteDonorRange = IntersectRanges(Neighbors(iNeighbor).LocalRange, DonorRange);
           for (int k = RemoteDonorRange.Begin(2); k < RemoteDonorRange.End(2); ++k) {
             for (int j = RemoteDonorRange.Begin(1); j < RemoteDonorRange.End(1); ++j) {
               for (int i = RemoteDonorRange.Begin(0); i < RemoteDonorRange.End(0); ++i) {
@@ -741,7 +733,7 @@ void UpdateCollectReceiveInfo(exchange &Exchange) {
             for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
               for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
                 elem<int,MAX_DIMS> Point = Cart.PeriodicAdjust({i,j,k});
-                if (GridNeighbors(iNeighbor).LocalRange.Contains(Point)) {
+                if (Neighbors(iNeighbor).LocalRange.Contains(Point)) {
                   long long iPoint = RecvFromNeighborIndexer.ToIndex(Point);
                   CellCollectRecvs(iPointInCell) = iCollectRecv;
                   CellCollectRecvBufferIndices(iPointInCell) = CollectRecvBufferIndices
@@ -861,8 +853,7 @@ void UpdateReceiversSorted(exchange &Exchange) {
       const grid *ReceiverGrid;
       GetConnectivityReceiverSideGrid(*Receivers, ReceiverGrid);
 
-      range GlobalRange;
-      GetGridGlobalRange(*ReceiverGrid, GlobalRange);
+      const range &GlobalRange = ReceiverGrid->GlobalRange();
 
       using range_indexer = indexer<long long, int, MAX_DIMS, array_layout::GRID>;
       range_indexer GlobalIndexer(GlobalRange);
@@ -922,27 +913,26 @@ void UpdateDestRanks(exchange &Exchange) {
 
   Exchange.DonorDestRanks_.Resize({NumDonors}, -1);
 
-  std::map<int, core::partition_bin> Bins;
+  std::map<int, core::partition_hash::bin> Bins;
 
   array<int> DestinationBinIndices;
   if (DonorGridIsLocal) {
     DestinationBinIndices.Resize({NumDonors});
-    core::MapToPartitionBins(Exchange.DestinationHash_, Donors->Destinations_,
-      DestinationBinIndices);
+    Exchange.DestinationHash_.MapToBins(Donors->Destinations_, DestinationBinIndices);
     for (long long iDonor = 0; iDonor < NumDonors; ++iDonor) {
       int BinIndex = DestinationBinIndices(iDonor);
       auto Iter = Bins.lower_bound(BinIndex);
       if (Iter == Bins.end() || Iter->first > BinIndex) {
-        Bins.emplace_hint(Iter, BinIndex, core::partition_bin());
+        Bins.emplace_hint(Iter, BinIndex, core::partition_hash::bin());
       }
     }
   }
 
-  core::RetrievePartitionBins(Exchange.DestinationHash_, Bins);
+  Exchange.DestinationHash_.RetrieveBins(Bins);
 
   if (DonorGridIsLocal) {
-    core::FindPartitions(Exchange.DestinationHash_, Bins, Donors->Destinations_,
-      DestinationBinIndices, Exchange.DonorDestRanks_);
+    Exchange.DestinationHash_.FindPartitions(Bins, Donors->Destinations_, DestinationBinIndices,
+      Exchange.DonorDestRanks_);
   }
 
 }
@@ -965,25 +955,25 @@ void UpdateSourceRanks(exchange &Exchange) {
 
   Exchange.ReceiverSourceRanks_.Resize({NumReceivers}, -1);
 
-  std::map<int, core::partition_bin> Bins;
+  std::map<int, core::partition_hash::bin> Bins;
 
   array<int> SourceBinIndices;
   if (ReceiverGridIsLocal) {
     SourceBinIndices.Resize({NumReceivers});
-    core::MapToPartitionBins(Exchange.SourceHash_, Receivers->Sources_, SourceBinIndices);
+    Exchange.SourceHash_.MapToBins(Receivers->Sources_, SourceBinIndices);
     for (long long iReceiver = 0; iReceiver < NumReceivers; ++iReceiver) {
       int BinIndex = SourceBinIndices(iReceiver);
       auto Iter = Bins.lower_bound(BinIndex);
       if (Iter == Bins.end() || Iter->first > BinIndex) {
-        Bins.emplace_hint(Iter, BinIndex, core::partition_bin());
+        Bins.emplace_hint(Iter, BinIndex, core::partition_hash::bin());
       }
     }
   }
 
-  core::RetrievePartitionBins(Exchange.SourceHash_, Bins);
+  Exchange.SourceHash_.RetrieveBins(Bins);
 
   if (ReceiverGridIsLocal) {
-    core::FindPartitions(Exchange.SourceHash_, Bins, Receivers->Sources_, SourceBinIndices,
+    Exchange.SourceHash_.FindPartitions(Bins, Receivers->Sources_, SourceBinIndices,
       Exchange.ReceiverSourceRanks_);
   }
 
@@ -1006,8 +996,8 @@ void UpdateSendInfo(exchange &Exchange) {
     GetConnectivityDonorSideCount(*Donors, NumDonors);
     const grid *DonorGrid;
     GetConnectivityDonorSideGrid(*Donors, DonorGrid);
-    GetGridCart(*DonorGrid, Cart);
-    GetGridLocalRange(*DonorGrid, LocalRange);
+    Cart = DonorGrid->Cart();
+    LocalRange = DonorGrid->LocalRange();
   }
 
   if (NumDonors > 0) {

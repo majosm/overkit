@@ -135,10 +135,6 @@ void DestroyDomain(domain &Domain) {
   }
   Domain.GridInfo_.clear();
 
-  for (auto &Pair : Domain.LocalGrids_) {
-    grid &Grid = Pair.second;
-    DestroyGrid(Grid);
-  }
   Domain.LocalGrids_.clear();
 
   std::string ProfileTimesString = core::WriteProfileTimes(Domain.Profiler_);
@@ -339,8 +335,7 @@ void CreateGridGlobal(domain &Domain, int GridID, const grid_params *Params, boo
   domain::grid_info GridInfo;
 
   if (IsLocal) {
-    grid Grid;
-    core::CreateGrid(Grid, GridID, *Params, *Domain.Logger_, *Domain.ErrorHandler_);
+    grid Grid(GridID, *Params, *Domain.Logger_, *Domain.ErrorHandler_, Domain.Profiler_);
     CreateDomainGridInfo(GridInfo, &Grid, Domain.Comm_);
     Domain.LocalGrids_.emplace(GridID, std::move(Grid));
   } else {
@@ -391,7 +386,6 @@ void DestroyGrid(domain &Domain, int GridID) {
   Domain.GridInfo_.erase(GridID);
 
   if (IsLocal) {
-    core::DestroyGrid(Domain.LocalGrids_[GridID]);
     Domain.LocalGrids_.erase(GridID);
   }
 
@@ -501,7 +495,7 @@ void EditGridGlobal(domain &Domain, int GridID, grid *&Grid, bool IsLocal) {
   }
 
   if (IsLocal) {
-    Grid = &Domain.LocalGrids_[GridID];
+    Grid = &Domain.LocalGrids_.at(GridID);
   }
 
 }
@@ -521,7 +515,7 @@ void ReleaseGridGlobal(domain &Domain, int GridID, grid *&Grid, bool IsLocal) {
     if (IsLocal) {
       OVK_DEBUG_ASSERT(RankHasGrid(Domain, GridID), "Grid %s does not have local data on rank "
         "@rank@.", GridName);
-      OVK_DEBUG_ASSERT(Grid == &Domain.LocalGrids_[GridID], "Invalid grid pointer.");
+      OVK_DEBUG_ASSERT(Grid == &Domain.LocalGrids_.at(GridID), "Invalid grid pointer.");
     }
   }
 
@@ -607,9 +601,9 @@ void CreateConnectivityGlobal(domain &Domain, int DonorGridID, int ReceiverGridI
 
   if (IsLocal) {
     const grid *DonorGrid = nullptr;
-    if (DonorGridIsLocal) DonorGrid = &Domain.LocalGrids_[DonorGridID];
+    if (DonorGridIsLocal) DonorGrid = &Domain.LocalGrids_.at(DonorGridID);
     const grid *ReceiverGrid = nullptr;
-    if (ReceiverGridIsLocal) ReceiverGrid = &Domain.LocalGrids_[ReceiverGridID];
+    if (ReceiverGridIsLocal) ReceiverGrid = &Domain.LocalGrids_.at(ReceiverGridID);
     connectivity Connectivity;
     core::CreateConnectivity(Connectivity, Domain.NumDims_, std::move(ConnectivityComm), DonorGrid,
       ReceiverGrid, *Domain.Logger_, *Domain.ErrorHandler_);
@@ -1153,12 +1147,12 @@ void Collect(const domain &Domain, int DonorGridID, int ReceiverGridID, data_typ
   }
 
   int CollectTime = core::GetProfilerTimerID(Domain.Profiler_, "Collect");
-  core::comm_view Comm = core::GetGridComm(Domain.LocalGrids_.at(DonorGridID));
+  const core::comm &Comm = Domain.LocalGrids_.at(DonorGridID).core_Comm();
   core::StartProfileSync(Domain.Profiler_, CollectTime, Comm);
 
   const exchange &Exchange = Domain.LocalExchanges_.at(DonorGridID).at(ReceiverGridID);
 
-  core::collect Collect_ = MakeCollect(CollectOp, ValueType, GridValuesLayout);
+  core::collect Collect_ = core::MakeCollect(CollectOp, ValueType, GridValuesLayout);
 
   Collect_.Initialize(Exchange, Count, GridValuesRange);
   Collect_.Collect(GridValues, DonorValues);

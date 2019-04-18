@@ -22,7 +22,7 @@ void ovkGetGridID(const ovk_grid *Grid, int *ID) {
   OVK_DEBUG_ASSERT(ID, "Invalid ID pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-  ovk::GetGridID(GridCPP, *ID);
+  *ID = GridCPP.ID();
 
 }
 
@@ -33,8 +33,7 @@ void ovkGetGridName(const ovk_grid *Grid, char *Name) {
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
 
-  std::string NameCPP;
-  ovk::GetGridName(GridCPP, NameCPP);
+  const std::string &NameCPP = GridCPP.Name();
 
   std::strcpy(Name, NameCPP.c_str());
 
@@ -46,7 +45,7 @@ void ovkGetGridDimension(const ovk_grid *Grid, int *NumDims) {
   OVK_DEBUG_ASSERT(NumDims, "Invalid num dims pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-  ovk::GetGridDimension(GridCPP, *NumDims);
+  *NumDims = GridCPP.Dimension();
 
 }
 
@@ -56,7 +55,7 @@ void ovkGetGridComm(const ovk_grid *Grid, MPI_Comm *Comm) {
   OVK_DEBUG_ASSERT(Comm, "Invalid comm pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-  ovk::GetGridComm(GridCPP, *Comm);
+  *Comm = GridCPP.Comm();
 
 }
 
@@ -66,7 +65,7 @@ void ovkGetGridCommSize(const ovk_grid *Grid, int *CommSize) {
   OVK_DEBUG_ASSERT(CommSize, "Invalid comm size pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-  ovk::GetGridCommSize(GridCPP, *CommSize);
+  *CommSize = GridCPP.CommSize();
 
 }
 
@@ -76,7 +75,7 @@ void ovkGetGridCommRank(const ovk_grid *Grid, int *CommRank) {
   OVK_DEBUG_ASSERT(CommRank, "Invalid comm rank pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-  ovk::GetGridCommRank(GridCPP, *CommRank);
+  *CommRank = GridCPP.CommRank();
 
 }
 
@@ -85,7 +84,9 @@ void ovkGetGridSize(const ovk_grid *Grid, int *Size) {
   OVK_DEBUG_ASSERT(Grid, "Invalid grid pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-  ovk::GetGridSize(GridCPP, Size);
+  for (int iDim = 0; iDim < GridCPP.Dimension(); ++iDim) {
+    Size[iDim] = GridCPP.Size(iDim);
+  }
 
 }
 
@@ -94,7 +95,9 @@ void ovkGetGridPeriodic(const ovk_grid *Grid, bool *Periodic) {
   OVK_DEBUG_ASSERT(Grid, "Invalid grid pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-  ovk::GetGridPeriodic(GridCPP, Periodic);
+  for (int iDim = 0; iDim < GridCPP.Dimension(); ++iDim) {
+    Periodic[iDim] = GridCPP.Periodic(iDim);
+  }
 
 }
 
@@ -104,11 +107,7 @@ void ovkGetGridPeriodicStorage(const ovk_grid *Grid, ovk_periodic_storage *Perio
   OVK_DEBUG_ASSERT(PeriodicStorage, "Invalid periodic storage pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-
-  ovk::periodic_storage PeriodicStorageCPP;
-  ovk::GetGridPeriodicStorage(GridCPP, PeriodicStorageCPP);
-
-  *PeriodicStorage = ovk_periodic_storage(PeriodicStorageCPP);
+  *PeriodicStorage = ovk_periodic_storage(GridCPP.PeriodicStorage());
 
 }
 
@@ -117,7 +116,9 @@ void ovkGetGridPeriodicLength(const ovk_grid *Grid, double *PeriodicLength) {
   OVK_DEBUG_ASSERT(Grid, "Invalid grid pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-  ovk::GetGridPeriodicLength(GridCPP, PeriodicLength);
+  for (int iDim = 0; iDim < GridCPP.Dimension(); ++iDim) {
+    PeriodicLength[iDim] = GridCPP.PeriodicLength(iDim);
+  }
 
 }
 
@@ -127,11 +128,7 @@ void ovkGetGridGeometryType(const ovk_grid *Grid, ovk_geometry_type *GeometryTyp
   OVK_DEBUG_ASSERT(GeometryType, "Invalid geometry type pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-
-  ovk::geometry_type GeometryTypeCPP;
-  ovk::GetGridGeometryType(GridCPP, GeometryTypeCPP);
-
-  *GeometryType = ovk_geometry_type(GeometryTypeCPP);
+  *GeometryType = ovk_geometry_type(GridCPP.GeometryType());
 
 }
 
@@ -142,16 +139,9 @@ void ovkGetGridGlobalRange(const ovk_grid *Grid, int *GlobalBegin, int *GlobalEn
   OVK_DEBUG_ASSERT(GlobalEnd, "Invalid global end pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-
-  int NumDims;
-  ovk::GetGridDimension(GridCPP, NumDims);
-
-  ovk::range GlobalRange;
-  ovk::GetGridGlobalRange(GridCPP, GlobalRange);
-
-  for (int iDim = 0; iDim < NumDims; ++iDim) {
-    GlobalBegin[iDim] = GlobalRange.Begin(iDim);
-    GlobalEnd[iDim] = GlobalRange.End(iDim);
+  for (int iDim = 0; iDim < GridCPP.Dimension(); ++iDim) {
+    GlobalBegin[iDim] = GridCPP.GlobalRange().Begin(iDim);
+    GlobalEnd[iDim] = GridCPP.GlobalRange().End(iDim);
   }
 
 }
@@ -163,16 +153,9 @@ void ovkGetGridLocalRange(const ovk_grid *Grid, int *LocalBegin, int *LocalEnd) 
   OVK_DEBUG_ASSERT(LocalEnd, "Invalid local end pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-
-  int NumDims;
-  ovk::GetGridDimension(GridCPP, NumDims);
-
-  ovk::range LocalRange;
-  ovk::GetGridLocalRange(GridCPP, LocalRange);
-
-  for (int iDim = 0; iDim < NumDims; ++iDim) {
-    LocalBegin[iDim] = LocalRange.Begin(iDim);
-    LocalEnd[iDim] = LocalRange.End(iDim);
+  for (int iDim = 0; iDim < GridCPP.Dimension(); ++iDim) {
+    LocalBegin[iDim] = GridCPP.LocalRange().Begin(iDim);
+    LocalEnd[iDim] = GridCPP.LocalRange().End(iDim);
   }
 
 }
@@ -183,7 +166,7 @@ void ovkGetGridGlobalCount(const ovk_grid *Grid, long long *NumGlobal) {
   OVK_DEBUG_ASSERT(NumGlobal, "Invalid num global pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-  ovk::GetGridGlobalCount(GridCPP, *NumGlobal);
+  *NumGlobal = GridCPP.GlobalRange().Count();
 
 }
 
@@ -193,7 +176,7 @@ void ovkGetGridLocalCount(const ovk_grid *Grid, long long *NumLocal) {
   OVK_DEBUG_ASSERT(NumLocal, "Invalid num local pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-  ovk::GetGridLocalCount(GridCPP, *NumLocal);
+  *NumLocal = GridCPP.LocalRange().Count();
 
 }
 

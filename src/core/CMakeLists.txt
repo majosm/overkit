@@ -107,6 +107,7 @@ set(INTERNAL_HEADERS
   IteratorTraits.hpp
   Logger.hpp
   Logger.inl
+  Moveabool.hpp
   Partition.hpp
   PartitionBase.hpp
   PartitionHash.hpp

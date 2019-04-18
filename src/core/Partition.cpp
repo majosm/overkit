@@ -95,23 +95,23 @@ array<int> DetectNeighbors(const cart &Cart, comm_view Comm, const range &LocalR
 
   array<int> ExtendedPointBinIndices({NumExtendedPoints});
 
-  core::MapToPartitionBins(Hash, ExtendedPoints, ExtendedPointBinIndices);
+  Hash.MapToBins(ExtendedPoints, ExtendedPointBinIndices);
 
   std::set<int> UniqueBinIndices;
   for (long long iPoint = 0; iPoint < NumExtendedPoints; ++iPoint) {
     UniqueBinIndices.insert(ExtendedPointBinIndices(iPoint));
   }
 
-  std::map<int, core::partition_bin> Bins;
+  std::map<int, core::partition_hash::bin> Bins;
   for (int iBin : UniqueBinIndices) {
-    Bins.emplace(iBin, core::partition_bin());
+    Bins.emplace(iBin, core::partition_hash::bin());
   }
 
-  core::RetrievePartitionBins(Hash, Bins);
+  Hash.RetrieveBins(Bins);
 
   array<int> ExtendedPointRanks({NumExtendedPoints});
 
-  core::FindPartitions(Hash, Bins, ExtendedPoints, ExtendedPointBinIndices, ExtendedPointRanks);
+  Hash.FindPartitions(Bins, ExtendedPoints, ExtendedPointBinIndices, ExtendedPointRanks);
 
   Bins.clear();
 
