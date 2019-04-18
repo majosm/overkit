@@ -4,42 +4,38 @@
 namespace ovk {
 namespace core {
 
-namespace logger_internal {
-void ReplaceRank(std::string &Message, int Rank);
-}
+template <typename... Ts> void logger::LogStatus(bool WriteCondition, int IncrementLevel, const
+  std::string &Format, const Ts &... Args) const {
 
-template <typename... Ts> void LogStatus(logger &Logger, bool WriteCondition, int IncrementLevel,
-  const std::string &Format, const Ts &... Args) {
-
-  if (LoggingStatus(Logger) && WriteCondition) {
+  if (LoggingStatus() && WriteCondition) {
     std::string Message = "ovk :: ";
     for (int iIncrement = 0; iIncrement+1 < IncrementLevel; ++iIncrement) Message += "  ";
     Message += StringPrint(Format, Args...);
-    logger_internal::ReplaceRank(Message, Logger.WriteRank_);
+    ReplaceRank_(Message);
     fprintf(stdout, "%s\n", Message.c_str());
     fflush(stdout);
   }
 
 }
 
-template <typename... Ts> void LogWarning(logger &Logger, bool WriteCondition, const std::string
-  &Format, const Ts &... Args) {
+template <typename... Ts> void logger::LogWarning(bool WriteCondition, const std::string &Format,
+  const Ts &... Args) const {
 
-  if (LoggingWarnings(Logger) && WriteCondition) {
+  if (LoggingWarnings() && WriteCondition) {
     std::string Message = "ovk :: WARNING: " + StringPrint(Format, Args...);
-    logger_internal::ReplaceRank(Message, Logger.WriteRank_);
+    ReplaceRank_(Message);
     fprintf(stderr, "%s\n", Message.c_str());
     fflush(stderr);
   }
 
 }
 
-template <typename... Ts> void LogError(logger &Logger, bool WriteCondition, const std::string
-  &Format, const Ts &... Args) {
+template <typename... Ts> void logger::LogError(bool WriteCondition, const std::string &Format,
+  const Ts &... Args) const {
 
-  if (LoggingErrors(Logger) && WriteCondition) {
+  if (LoggingErrors() && WriteCondition) {
     std::string Message = "ovk :: ERROR: " + StringPrint(Format, Args...);
-    logger_internal::ReplaceRank(Message, Logger.WriteRank_);
+    ReplaceRank_(Message);
     fprintf(stderr, "%s\n", Message.c_str());
     fflush(stderr);
   }

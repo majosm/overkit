@@ -13,33 +13,44 @@
 namespace ovk {
 namespace core {
 
-struct logger {
+class logger {
+
+public:
+
+  // Get rid of this when context no longer needs it
+  logger();
+
+  logger(log_level Level, int Rank);
+
+  logger(const logger &Other) = delete;
+  logger(logger &&Other) noexcept = default;
+
+  logger &operator=(const logger &Other) = delete;
+  logger &operator=(logger &&Other) noexcept = default;
+
+  log_level Level() const { return Level_; }
+
+  void SetLevel(log_level Level);
+
+  bool LoggingStatus() const { return (Level_ & log_level::STATUS) != log_level::NONE; }
+  bool LoggingWarnings() const { return (Level_ & log_level::WARNINGS) != log_level::NONE; }
+  bool LoggingErrors() const { return (Level_ & log_level::ERRORS) != log_level::NONE; }
+
+  template <typename... Ts> void LogStatus(bool WriteCondition, int IncrementLevel, const
+    std::string &Format, const Ts &... Args) const;
+  template <typename... Ts> void LogWarning(bool WriteCondition, const std::string &Format, const
+    Ts &... Args) const;
+  template <typename... Ts> void LogError(bool WriteCondition, const std::string &Format, const
+    Ts &... Args) const;
+
+private:
+
   log_level Level_;
-  int WriteRank_;
+  int Rank_;
+
+  void ReplaceRank_(std::string &Message) const;
+
 };
-
-void CreateLogger(logger &Logger, log_level LogLevel, int WriteRank);
-void DestroyLogger(logger &Logger);
-
-inline bool LoggingStatus(const logger &Logger) {
-  return (Logger.Level_ & log_level::STATUS) != log_level::NONE;
-}
-inline bool LoggingWarnings(const logger &Logger) {
-  return (Logger.Level_ & log_level::WARNINGS) != log_level::NONE;
-}
-inline bool LoggingErrors(const logger &Logger) {
-  return (Logger.Level_ & log_level::ERRORS) != log_level::NONE;
-}
-
-void GetLogLevel(const logger &Logger, log_level &LogLevel);
-void SetLogLevel(logger &Logger, log_level LogLevel);
-
-template <typename... Ts> void LogStatus(logger &Logger, bool WriteCondition, int IncrementLevel,
-  const std::string &Format, const Ts &... Args);
-template <typename... Ts> void LogWarning(logger &Logger, bool WriteCondition, const std::string
-  &Format, const Ts &... Args);
-template <typename... Ts> void LogError(logger &Logger, bool WriteCondition, const std::string
-  &Format, const Ts &... Args);
 
 }}
 

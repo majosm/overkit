@@ -12,8 +12,22 @@
 namespace ovk {
 namespace core {
 
-struct error_handler {
+class error_handler {
+
+public:
+
+  // Get rid of this when context no longer needs it
+  error_handler();
+  explicit error_handler(error_handler_type Type);
+
+  error_handler_type Type() const { return Type_; }
+
+  void SetType(error_handler_type Type);
+
+private:
+
   error_handler_type Type_;
+
 };
 
 #define OVK_EH_CHECK_SKIP_TO(Handler, Error, Label) \
@@ -28,7 +42,7 @@ struct error_handler {
     ovk::error OVK_EH_Error = (Error); \
     if (OVK_EH_Error != error::NONE) { \
       ovk::core::error_handler &OVK_EH_Handler = (Handler); \
-      switch (OVK_EH_Handler.Type_) { \
+      switch (OVK_EH_Handler.Type()) { \
       case ovk::error_handler_type::ABORT: \
         MPI_Abort(MPI_COMM_WORLD, int(OVK_EH_Error)); \
       case ovk::error_handler_type::RETURN: \
@@ -48,12 +62,6 @@ struct error_handler {
       OVK_EH_Error = OVK_EH_MinError; \
     } \
   } while (0)
-
-void CreateErrorHandler(error_handler &Handler, error_handler_type Type);
-void DestroyErrorHandler(error_handler &Handler);
-
-void GetErrorHandlerType(const error_handler &Handler, error_handler_type &Type);
-void SetErrorHandlerType(error_handler &Handler, error_handler_type Type);
 
 }}
 

@@ -388,8 +388,7 @@ error ReadXINTOUT(xintout &XINTOUT, const std::string &HOPath, const std::string
 
   int NumLocalGrids = XINTOUT.NumLocalGrids;
 
-  core::LogStatus(Logger, Comm.Rank() == 0, 0, "Reading XINTOUT files '%s' and '%s'...", HOPath,
-    XPath);
+  Logger.LogStatus(Comm.Rank() == 0, 0, "Reading XINTOUT files '%s' and '%s'...", HOPath, XPath);
 
   error Error = error::NONE;
 
@@ -430,7 +429,7 @@ error ReadXINTOUT(xintout &XINTOUT, const std::string &HOPath, const std::string
 
   MPI_Barrier(Comm);
 
-  core::LogStatus(Logger, Comm.Rank() == 0, 0, "Finished reading XINTOUT files.");
+  Logger.LogStatus(Comm.Rank() == 0, 0, "Finished reading XINTOUT files.");
 
   return error::NONE;
 
@@ -465,7 +464,7 @@ error ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath, endian &
     core::EndProfile(Profiler, MPIIOOpenTime);
     if (MPIError != MPI_SUCCESS) {
       Error = error::FILE_OPEN;
-      core::LogError(Logger, true, "Unable to open file '%s'.", HOPath);
+      Logger.LogError(true, "Unable to open file '%s'.", HOPath);
       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
     }
     auto CloseHO = core::OnScopeExit([&]() {
@@ -477,7 +476,7 @@ error ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath, endian &
     bool Success = DetectFormat(HOFile, Endian, Format, Profiler);
     if (!Success) {
       Error = error::FILE_READ;
-      core::LogError(Logger, true, "Unable to detect format of XINTOUT file '%s'.", HOPath);
+      Logger.LogError(true, "Unable to detect format of XINTOUT file '%s'.", HOPath);
       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
     }
 
@@ -491,13 +490,12 @@ error ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath, endian &
     MPI_Get_count(&Status, MPI_INT, &ReadSize);
     if (ReadSize < 1) {
       Error = error::FILE_READ;
-      core::LogError(Logger, true, "Unable to read header of XINTOUT file '%s'.", HOPath);
+      Logger.LogError(true, "Unable to read header of XINTOUT file '%s'.", HOPath);
       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
     }
     if (NumGridsInFile != NumGrids) {
       Error = error::FILE_READ;
-      core::LogError(Logger, Comm.Rank() == 0, "XINTOUT file '%s' has incorrect number of grids.",
-        HOPath);
+      Logger.LogError(Comm.Rank() == 0, "XINTOUT file '%s' has incorrect number of grids.", HOPath);
       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
     }
 
@@ -521,7 +519,7 @@ error ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath, endian &
       MPI_Get_count(&Status, MPI_INT, &ReadSize);
       if (ReadSize < 7) {
         Error = error::FILE_READ;
-        core::LogError(Logger, true, "Unable to read grid 1 header of XINTOUT file '%s'.", HOPath);
+        Logger.LogError(true, "Unable to read grid 1 header of XINTOUT file '%s'.", HOPath);
         OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
       }
       NumDonors = Data[1];
@@ -537,7 +535,7 @@ error ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath, endian &
         Profiler);
       MPI_Get_count(&Status, MPI_LONG_LONG, &ReadSize);
       if (ReadSize < 4) {
-        core::LogError(Logger, true, "Unable to read grid 1 header of XINTOUT file '%s'.", HOPath);
+        Logger.LogError(true, "Unable to read grid 1 header of XINTOUT file '%s'.", HOPath);
         Error = error::FILE_READ;
         OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
       }
@@ -546,7 +544,7 @@ error ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath, endian &
       MPI_Get_count(&Status, MPI_INT, &ReadSize);
       if (ReadSize < 3) {
         Error = error::FILE_READ;
-        core::LogError(Logger, true, "Unable to read grid 1 header of XINTOUT file '%s'.", HOPath);
+        Logger.LogError(true, "Unable to read grid 1 header of XINTOUT file '%s'.", HOPath);
         OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
       }
       HOGridOffset += 3*sizeof(int);
@@ -590,7 +588,7 @@ error ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath, endian &
           WithIBlank = false;
         } else {
           Error = error::FILE_READ;
-          core::LogError(Logger, true, "Unable to detect whether XINTOUT file '%s' contains IBlank.",
+          Logger.LogError(true, "Unable to detect whether XINTOUT file '%s' contains IBlank.",
             HOPath);
           OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
         }
@@ -696,7 +694,7 @@ error ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath,
     core::EndProfile(Profiler, MPIIOOpenTime);
     if (MPIError != MPI_SUCCESS) {
       Error = error::FILE_OPEN;
-      core::LogError(Logger, true, "Unable to open file '%s'.", HOPath);
+      Logger.LogError(true, "Unable to open file '%s'.", HOPath);
       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
     }
     auto CloseHO = core::OnScopeExit([&]() {
@@ -712,7 +710,7 @@ error ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath,
     core::EndProfile(Profiler, MPIIOOpenTime);
     if (MPIError != MPI_SUCCESS) {
       Error = error::FILE_OPEN;
-      core::LogError(Logger, true, "Unable to open file '%s'.", XPath);
+      Logger.LogError(true, "Unable to open file '%s'.", XPath);
       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
     }
     auto CloseX = core::OnScopeExit([&]() {
@@ -752,7 +750,7 @@ error ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath,
         MPI_Get_count(&Status, MPI_INT, &ReadSize);
         if (ReadSize < 7) {
           Error = error::FILE_READ;
-          core::LogError(Logger, true, "Unable to read grid %i header of XINTOUT file '%s'.", OtherGridID,
+          Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", OtherGridID,
             HOPath);
           OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
         }
@@ -770,7 +768,7 @@ error ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath,
         MPI_Get_count(&Status, MPI_LONG_LONG, &ReadSize);
         if (ReadSize < 4) {
           Error = error::FILE_READ;
-          core::LogError(Logger, true, "Unable to read grid %i header of XINTOUT file '%s'.", OtherGridID,
+          Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", OtherGridID,
             HOPath);
           OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
         }
@@ -779,7 +777,7 @@ error ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath,
         MPI_Get_count(&Status, MPI_INT, &ReadSize);
         if (ReadSize < 3) {
           Error = error::FILE_READ;
-          core::LogError(Logger, true, "Unable to read grid %i header of XINTOUT file '%s'.", OtherGridID,
+          Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", OtherGridID,
             HOPath);
           OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
         }
@@ -789,7 +787,7 @@ error ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath,
         MPI_Get_count(&Status, MPI_LONG_LONG, &ReadSize);
         if (ReadSize < 1) {
           Error = error::FILE_READ;
-          core::LogError(Logger, true, "Unable to read grid %i header of XINTOUT file '%s'.", OtherGridID,
+          Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", OtherGridID,
             HOPath);
           OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
         }
@@ -836,8 +834,8 @@ error ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath,
         MPI_Get_count(&Status, MPI_INT, &ReadSize);
         if (ReadSize < 1) {
           Error = error::FILE_READ;
-          core::LogError(Logger, true, "Unable to read grid %i data from XINTOUT file '%s'.",
-            OtherGridID, XPath);
+          Logger.LogError(true, "Unable to read grid %i data from XINTOUT file '%s'.", OtherGridID,
+            XPath);
           OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
         }
         NumInterpCoefs = RecordWrapper/sizeof(double);
@@ -860,7 +858,7 @@ error ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath,
       MPI_Get_count(&Status, MPI_INT, &ReadSize);
       if (ReadSize < 7) {
         Error = error::FILE_READ;
-        core::LogError(Logger, true, "Unable to read grid %i header of XINTOUT file '%s'.", GridID,
+        Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", GridID,
           HOPath);
         OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
       }
@@ -880,7 +878,7 @@ error ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath,
       MPI_Get_count(&Status, MPI_LONG_LONG, &ReadSize);
       if (ReadSize < 4) {
         Error = error::FILE_READ;
-        core::LogError(Logger, true, "Unable to read grid %i header of XINTOUT file '%s'.", GridID,
+        Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", GridID,
           HOPath);
         OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
       }
@@ -889,7 +887,7 @@ error ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath,
       MPI_Get_count(&Status, MPI_INT, &ReadSize);
       if (ReadSize < 3) {
         Error = error::FILE_READ;
-        core::LogError(Logger, true, "Unable to read grid %i header of XINTOUT file '%s'.", GridID,
+        Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", GridID,
           HOPath);
         OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
       }
@@ -899,7 +897,7 @@ error ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath,
       MPI_Get_count(&Status, MPI_LONG_LONG, &ReadSize);
       if (ReadSize < 1) {
         Error = error::FILE_READ;
-        core::LogError(Logger, true, "Unable to read grid %i header of XINTOUT file '%s'.", GridID,
+        Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", GridID,
           HOPath);
         OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
       }
@@ -918,8 +916,7 @@ error ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath,
     if (GridSize[0] != XINTOUTGrid.GlobalSize[0] || GridSize[1] != XINTOUTGrid.GlobalSize[1] ||
       GridSize[2] != XINTOUTGrid.GlobalSize[2]) {
       Error = error::FILE_READ;
-      core::LogError(Logger, true, "Grid %i of XINTOUT file '%s' has incorrect size.", GridID,
-        HOPath);
+      Logger.LogError(true, "Grid %i of XINTOUT file '%s' has incorrect size.", GridID, HOPath);
       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
     }
 
@@ -992,11 +989,11 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
     NumChunks, ChunkSize);
   bool HasChunk = Comm.Rank() % ChunkRankInterval == 0;
 
-  if (LoggingStatus(Logger)) {
+  if (Logger.LoggingStatus()) {
     std::string NumDonorsString = core::FormatNumber(NumDonors, "donors", "donor");
     std::string NumRanksString = core::FormatNumber(NumChunks, "I/O ranks", "I/O rank");
-    core::LogStatus(Logger, Comm.Rank() == 0, 1, "Grid %s has %s; using %s.",
-      XINTOUTGrid.Name, NumDonorsString, NumRanksString);
+    Logger.LogStatus(Comm.Rank() == 0, 1, "Grid %s has %s; using %s.", XINTOUTGrid.Name,
+      NumDonorsString, NumRanksString);
   }
 
   XINTOUTDonors.ChunkSize = ChunkSize;
@@ -1019,7 +1016,7 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
     }
     OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
     if (Error != error::NONE) {
-      core::LogError(Logger, ChunkComm.Rank() == 0, "Donor chunk size too big; increase number of "
+      Logger.LogError(ChunkComm.Rank() == 0, "Donor chunk size too big; increase number of "
         "processes or read granularity.");
       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
     }
@@ -1045,7 +1042,7 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
     core::EndProfile(Profiler, MPIIOOpenTime);
     if (MPIError != MPI_SUCCESS) {
       Error = error::FILE_OPEN;
-      core::LogError(Logger, true, "Unable to open file '%s'.", HOPath);
+      Logger.LogError(true, "Unable to open file '%s'.", HOPath);
       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
     }
     auto CloseHO = core::OnScopeExit([&]() {
@@ -1061,7 +1058,7 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
     core::EndProfile(Profiler, MPIIOOpenTime);
     if (MPIError != MPI_SUCCESS) {
       Error = error::FILE_OPEN;
-      core::LogError(Logger, true, "Unable to open file '%s'.", XPath);
+      Logger.LogError(true, "Unable to open file '%s'.", XPath);
       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
     }
     auto CloseX = core::OnScopeExit([&]() {
@@ -1084,7 +1081,7 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
 //     if (ReadSize < DataSize) Error = error::FILE_READ;
 //     OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
 //     if (Error != error::NONE) {
-//       core::LogError(Logger, ChunkComm.Rank() == 0, "Unable to read grid %i donor sizes from "
+//       Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i donor sizes from "
 //         "XINTOUT file '%s'.", GridID, XPath);
 //       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
 //     }
@@ -1103,8 +1100,8 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
       if (ReadSize < NumLocalDonors) Error = error::FILE_READ;
       OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
       if (Error != error::NONE) {
-        core::LogError(Logger, ChunkComm.Rank() == 0, "Unable to read grid %i donor sizes from "
-          "XINTOUT file '%s'.", GridID, XPath);
+        Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i donor sizes from XINTOUT "
+          "file '%s'.", GridID, XPath);
         OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
       }
       DatasetOffset += NumDonors*sizeof(int);
@@ -1132,7 +1129,7 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
 //     if (ReadSize < DataSize) Error = error::FILE_READ;
 //     OVK_EH_SYNC(ErrorHandler, Error, ChunkComm); 
 //     if (Error != error::NONE) {
-//       core::LogError(Logger, ChunkComm.Rank() == 0, "Unable to read grid %i donor cells from "
+//       Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i donor cells from "
 //         XINTOUT file '%s'.", GridID, HOPath);
 //       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
 //     }
@@ -1151,8 +1148,8 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
       if (ReadSize < NumLocalDonors) Error = error::FILE_READ;
       OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
       if (Error != error::NONE) {
-        core::LogError(Logger, ChunkComm.Rank() == 0, "Unable to read grid %i donor cells from "
-          "XINTOUT file '%s'.", GridID, HOPath);
+        Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i donor cells from XINTOUT "
+          "file '%s'.", GridID, HOPath);
         OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
       }
       DatasetOffset += NumDonors*sizeof(int);
@@ -1178,7 +1175,7 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
 //     if (ReadSize < DataSize) Error = error::FILE_READ;
 //     OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
 //     if (Error != error::NONE) {
-//       core::LogError(Logger, ChunkComm.Rank() == 0, "Unable to read grid %i donor Coords from "
+//       Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i donor Coords from "
 //         "XINTOUT file '%s'.", GridID, HOPath);
 //       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
 //     }
@@ -1197,8 +1194,8 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
       if (ReadSize < NumLocalDonors) Error = error::FILE_READ;
       OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
       if (Error != error::NONE) {
-        core::LogError(Logger, ChunkComm.Rank() == 0, "Unable to read grid %i donor Coords from "
-          "XINTOUT file '%s'.", GridID, HOPath);
+        Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i donor Coords from XINTOUT "
+          "file '%s'.", GridID, HOPath);
         OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
       }
       DatasetOffset += NumDonors*sizeof(double);
@@ -1220,7 +1217,7 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
     }
     OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
     if (Error != error::NONE) {
-      core::LogError(Logger, ChunkComm.Rank() == 0, "Donor chunk size too big; increase number of "
+      Logger.LogError(ChunkComm.Rank() == 0, "Donor chunk size too big; increase number of "
         "processes or read granularity.");
       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
     }
@@ -1250,7 +1247,7 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
       if (ReadSize < NumLocalInterpCoefs[iDim]) Error = error::FILE_READ;
       OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
       if (Error != error::NONE) {
-        core::LogError(Logger, ChunkComm.Rank() == 0, "Unable to read grid %i donor interpolation "
+        Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i donor interpolation "
           "coefficients from XINTOUT file '%s'.", GridID, XPath);
         OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
       }
@@ -1312,11 +1309,11 @@ error ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath,
     NumChunks, ChunkSize);
   bool HasChunk = Comm.Rank() % ChunkRankInterval == 0;
 
-  if (LoggingStatus(Logger)) {
+  if (Logger.LoggingStatus()) {
     std::string NumReceiversString = core::FormatNumber(NumReceivers, "receivers", "receiver");
     std::string NumRanksString = core::FormatNumber(NumChunks, "I/O ranks", "I/O rank");
-    core::LogStatus(Logger, Comm.Rank() == 0, 1, "Grid %s has %s; using %s.",
-      XINTOUTGrid.Name, NumReceiversString, NumRanksString);
+    Logger.LogStatus(Comm.Rank() == 0, 1, "Grid %s has %s; using %s.", XINTOUTGrid.Name,
+      NumReceiversString, NumRanksString);
   }
 
   XINTOUTReceivers.ChunkSize = ChunkSize;
@@ -1339,7 +1336,7 @@ error ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath,
     }
     OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
     if (Error != error::NONE) {
-      core::LogError(Logger, ChunkComm.Rank() == 0, "Receiver chunk size too big; increase number of "
+      Logger.LogError(ChunkComm.Rank() == 0, "Receiver chunk size too big; increase number of "
         "processes or read granularity.");
       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
     }
@@ -1369,7 +1366,7 @@ error ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath,
     core::EndProfile(Profiler, MPIIOOpenTime);
     if (MPIError != MPI_SUCCESS) {
       Error = error::FILE_OPEN;
-      core::LogError(Logger, true, "Unable to open file '%s'.", HOPath);
+      Logger.LogError(true, "Unable to open file '%s'.", HOPath);
       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
     }
     auto CloseHO = core::OnScopeExit([&]() {
@@ -1390,7 +1387,7 @@ error ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath,
 //     if (ReadSize < DataSize) Error = error::FILE_READ;
 //     OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
 //     if (Error != error::NONE) {
-//       core::LogError(Logger, ChunkComm.Rank() == 0, "Unable to read grid %i receiver points from "
+//       Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i receiver points from "
 //         "XINTOUT file '%s'.", GridID, HOPath);
 //       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
 //     }
@@ -1409,7 +1406,7 @@ error ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath,
       if (ReadSize < NumLocalReceivers) Error = error::FILE_READ;
       OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
       if (Error != error::NONE) {
-        core::LogError(Logger, ChunkComm.Rank() == 0, "Unable to read grid %i receiver points from "
+        Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i receiver points from "
           "XINTOUT file '%s'.", GridID, HOPath);
         OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
       }
@@ -1446,7 +1443,7 @@ error ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath,
     if (ReadSize < NumLocalReceivers) Error = error::FILE_READ;
     OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
     if (Error != error::NONE) {
-      core::LogError(Logger, ChunkComm.Rank() == 0, "Unable to read grid %i receiver connection IDs "
+      Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i receiver connection IDs "
         "from XINTOUT file '%s'.", GridID, HOPath);
       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
     }
@@ -1483,7 +1480,7 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
 
   core::logger &Logger = *XINTOUT.Logger;
 
-  core::LogStatus(Logger, Comm.Rank() == 0, 0, "Matching donors and receivers...");
+  Logger.LogStatus(Comm.Rank() == 0, 0, "Matching donors and receivers...");
 
   int MapToBinsTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Match::MapToBins");
   int HandshakeTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Match::Handshake");
@@ -1896,7 +1893,7 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
 
   MPI_Barrier(Comm);
 
-  core::LogStatus(Logger, Comm.Rank() == 0, 0, "Finished matching donors and receivers.");
+  Logger.LogStatus(Comm.Rank() == 0, 0, "Finished matching donors and receivers.");
 
 }
 
@@ -1910,7 +1907,7 @@ void DistributeConnectivityData(const xintout &XINTOUT, const std::vector<const 
 
   core::logger &Logger = *XINTOUT.Logger;
 
-  core::LogStatus(Logger, Comm.Rank() == 0, 0, "Distributing connectivity data to ranks...");
+  Logger.LogStatus(Comm.Rank() == 0, 0, "Distributing connectivity data to ranks...");
 
   for (int iLocalGrid = 0; iLocalGrid < XINTOUT.NumLocalGrids; ++iLocalGrid) {
     const xintout_grid &XINTOUTGrid = XINTOUT.Grids[iLocalGrid];
@@ -1921,7 +1918,7 @@ void DistributeConnectivityData(const xintout &XINTOUT, const std::vector<const 
 
   MPI_Barrier(Comm);
 
-  core::LogStatus(Logger, Comm.Rank() == 0, 0, "Finished distributing connectivity data to ranks.");
+  Logger.LogStatus(Comm.Rank() == 0, 0, "Finished distributing connectivity data to ranks.");
 
 }
 
@@ -2426,7 +2423,7 @@ void ImportConnectivityData(int NumGrids, int NumLocalGrids, const std::vector<i
 
   core::logger &Logger = core::GetDomainLogger(Domain);
 
-  core::LogStatus(Logger, Comm.Rank() == 0, 0, "Importing connectivity data into domain %s...",
+  Logger.LogStatus(Comm.Rank() == 0, 0, "Importing connectivity data into domain %s...",
     DomainName);
 
   std::vector<long long *> NumConnections(NumGrids);
@@ -2559,7 +2556,7 @@ void ImportConnectivityData(int NumGrids, int NumLocalGrids, const std::vector<i
 
   MPI_Barrier(Comm);
 
-  core::LogStatus(Logger, Comm.Rank() == 0, 0, "Finished importing connectivity data into domain %s.",
+  Logger.LogStatus(Comm.Rank() == 0, 0, "Finished importing connectivity data into domain %s.",
     DomainName);
 
 }

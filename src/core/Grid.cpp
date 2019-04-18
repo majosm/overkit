@@ -47,7 +47,7 @@ grid_base::~grid_base() {
 
   if (Exists_) {
     MPI_Barrier(Comm_);
-    core::LogStatus(*Logger_, Comm_.Rank() == 0, 0, "Destroyed grid %s.", Name_);
+    Logger_->LogStatus(Comm_.Rank() == 0, 0, "Destroyed grid %s.", Name_);
   }
 
 }
@@ -97,7 +97,7 @@ void grid::PrintSummary_() const {
   std::string TotalPointsString = core::FormatNumber(Cart_.Range().Count(), "points", "point");
   std::string ProcessesString = core::FormatNumber(Comm_.Size(), "processes", "process");
 
-  core::LogStatus(*Logger_, true, 0, "Created grid %s (ID=%i): %s (%s) on %s.", Name_, ID_,
+  Logger_->LogStatus(true, 0, "Created grid %s (ID=%i): %s (%s) on %s.", Name_, ID_,
     GlobalSizeString, TotalPointsString, ProcessesString);
 
 }
@@ -125,18 +125,17 @@ void grid::PrintDecomposition_() const {
     if (iNeighbor != Neighbors.Count()-1) NeighborRanksString += ", ";
   }
 
-  core::LogStatus(*Logger_, Comm_.Rank() == 0, 0, "Grid %s decomposition info:", Name_);
+  Logger_->LogStatus(Comm_.Rank() == 0, 0, "Grid %s decomposition info:", Name_);
 
   MPI_Barrier(Comm_);
 
   for (int OtherRank = 0; OtherRank < Comm_.Size(); ++OtherRank) {
     if (OtherRank == Comm_.Rank()) {
       std::string RankString = core::FormatNumber(Comm_.Rank());
-      core::LogStatus(*Logger_, true, 1, "Rank %s (global rank @rank@) contains %s (%s).",
-        RankString, LocalRangeString, TotalLocalPointsString);
+      Logger_->LogStatus(true, 1, "Rank %s (global rank @rank@) contains %s (%s).", RankString,
+        LocalRangeString, TotalLocalPointsString);
       if (Neighbors.Count() > 0) {
-        core::LogStatus(*Logger_, true, 1, "Rank %s has neighbors: %s", RankString,
-          NeighborRanksString);
+        Logger_->LogStatus(true, 1, "Rank %s has neighbors: %s", RankString, NeighborRanksString);
       }
     }
     MPI_Barrier(Comm_);

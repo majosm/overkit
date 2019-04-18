@@ -93,8 +93,8 @@ void CreateConnectivity(connectivity &Connectivity, int NumDims, core::comm Comm
 
   MPI_Barrier(Connectivity.Comm_);
 
-  core::LogStatus(*Connectivity.Logger_, Connectivity.Comm_.Rank() == 0, 0, "Created connectivity "
-    "%s.", Connectivity.Name_);
+  Connectivity.Logger_->LogStatus(Connectivity.Comm_.Rank() == 0, 0, "Created connectivity %s.",
+    Connectivity.Name_);
 
 }
 
@@ -117,7 +117,7 @@ void DestroyConnectivity(connectivity &Connectivity) {
 
   MPI_Barrier(Connectivity.Comm_);
 
-  LogStatus(*Connectivity.Logger_, Connectivity.Comm_.Rank() == 0, 0, "Destroyed connectivity %s.",
+  Connectivity.Logger_->LogStatus(Connectivity.Comm_.Rank() == 0, 0, "Destroyed connectivity %s.",
     Connectivity.Name_);
 
   Connectivity.Comm_.Reset();

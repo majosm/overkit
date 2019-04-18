@@ -10,31 +10,21 @@
 namespace ovk {
 namespace core {
 
-void CreateErrorHandler(error_handler &Handler, error_handler_type Type) {
+error_handler::error_handler():
+  Type_(error_handler_type::ABORT)
+{}
+
+error_handler::error_handler(error_handler_type Type):
+  Type_(Type)
+{
+  OVK_DEBUG_ASSERT(ValidErrorHandlerType(Type_), "Invalid error handler type.");
+}
+
+void error_handler::SetType(error_handler_type Type) {
 
   OVK_DEBUG_ASSERT(ValidErrorHandlerType(Type), "Invalid error handler type.");
 
-  Handler.Type_ = Type;
-
-}
-
-void DestroyErrorHandler(error_handler &Handler) {
-
-  Handler.Type_ = error_handler_type::ABORT;
-
-}
-
-void GetErrorHandlerType(const error_handler &Handler, error_handler_type &Type) {
-
-  Type = Handler.Type_;
-
-}
-
-void SetErrorHandlerType(error_handler &Handler, error_handler_type Type) {
-
-  OVK_DEBUG_ASSERT(ValidErrorHandlerType(Type), "Invalid error handler type.");
-
-  Handler.Type_ = Type;
+  Type_ = Type;
 
 }
 

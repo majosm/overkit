@@ -109,7 +109,7 @@ void CreateDomain(domain &Domain, const domain_params &Params, logger &Logger, e
 
   if (Domain.Comm_.Rank() == 0) {
     std::string ProcessesString = FormatNumber(Domain.Comm_.Size(), "processes", "process");
-    core::LogStatus(*Domain.Logger_, true, 0, "Created %1iD domain %s on %s.", Domain.NumDims_,
+    Domain.Logger_->LogStatus(true, 0, "Created %1iD domain %s on %s.", Domain.NumDims_,
       Domain.Name_, ProcessesString);
   }
 
@@ -145,8 +145,7 @@ void DestroyDomain(domain &Domain) {
 
   MPI_Barrier(Domain.Comm_);
 
-  core::LogStatus(*Domain.Logger_, Domain.Comm_.Rank() == 0, 0, "Destroyed domain %s.",
-    Domain.Name_);
+  Domain.Logger_->LogStatus(Domain.Comm_.Rank() == 0, 0, "Destroyed domain %s.", Domain.Name_);
 
   Domain.Comm_.Reset();
 
@@ -1070,7 +1069,7 @@ void Assemble(domain &Domain, const assembly_options &Options) {
 
   bool IsDomainRoot = Domain.Comm_.Rank() == 0;
 
-  core::LogStatus(*Domain.Logger_, IsDomainRoot, 0, "Beginning overset assembly on domain %s.",
+  Domain.Logger_->LogStatus(IsDomainRoot, 0, "Beginning overset assembly on domain %s.",
     Domain.Name_);
 
 //   bool HasOverlap = (Domain.Config_ & domain_config::OVERLAP) != domain_config::NONE;
@@ -1093,7 +1092,7 @@ void Assemble(domain &Domain, const assembly_options &Options) {
     ResetAllConnectivityEdits(Domain);
   }
 
-  core::LogStatus(*Domain.Logger_, IsDomainRoot, 0, "Finished overset assembly on domain %s.",
+  Domain.Logger_->LogStatus(IsDomainRoot, 0, "Finished overset assembly on domain %s.",
     Domain.Name_);
 
 }

@@ -13,46 +13,36 @@
 namespace ovk {
 namespace core {
 
-void CreateLogger(logger &Logger, log_level LogLevel, int WriteRank) {
+logger::logger():
+  Level_(log_level::NONE),
+  Rank_(-1)
+{}
 
-  OVK_DEBUG_ASSERT(ValidLogLevel(LogLevel), "Invalid log level.");
-  OVK_DEBUG_ASSERT(WriteRank >= 0, "Invalid write rank.");
+logger::logger(log_level Level, int Rank):
+  Level_(Level),
+  Rank_(Rank)
+{
 
-  Logger.Level_ = LogLevel;
-  Logger.WriteRank_ = WriteRank;
-
-}
-
-void DestroyLogger(logger &Logger) {
-
-  Logger.Level_ = log_level::NONE;
-  Logger.WriteRank_ = -1;
+  OVK_DEBUG_ASSERT(ValidLogLevel(Level_), "Invalid log level.");
+  OVK_DEBUG_ASSERT(Rank_ >= 0, "Invalid log rank.");
 
 }
 
-void GetLogLevel(const logger &Logger, log_level &LogLevel) {
+void logger::SetLevel(log_level Level) {
 
-  LogLevel = Logger.Level_;
+  OVK_DEBUG_ASSERT(ValidLogLevel(Level), "Invalid log level.");
 
-}
-
-void SetLogLevel(logger &Logger, log_level LogLevel) {
-
-  OVK_DEBUG_ASSERT(ValidLogLevel(LogLevel), "Invalid log level.");
-
-  Logger.Level_ = LogLevel;
+  Level_ = Level;
 
 }
 
-namespace logger_internal {
-
-void ReplaceRank(std::string &Message, int Rank) {
+void logger::ReplaceRank_(std::string &Message) const {
 
   size_t RankPos = Message.find("@rank@");
 
   if (RankPos == std::string::npos) return;
 
-  std::string RankString = FormatNumber(Rank);
+  std::string RankString = FormatNumber(Rank_);
 
   std::string NewMessage;
 
@@ -66,8 +56,6 @@ void ReplaceRank(std::string &Message, int Rank) {
   NewMessage.append(Message, Pos, std::string::npos);
 
   Message = NewMessage;
-
-}
 
 }
 

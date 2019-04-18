@@ -120,7 +120,7 @@ void CreateExchange(exchange &Exchange, const connectivity &Connectivity, logger
 
   MPI_Barrier(Exchange.Comm_);
 
-  core::LogStatus(*Exchange.Logger_, Exchange.Comm_.Rank() == 0, 0, "Created exchange %s.",
+  Exchange.Logger_->LogStatus(Exchange.Comm_.Rank() == 0, 0, "Created exchange %s.",
     Connectivity.Name_);
 
 }
@@ -154,7 +154,7 @@ void DestroyExchange(exchange &Exchange) {
 
   MPI_Barrier(Exchange.Comm_);
 
-  LogStatus(*Exchange.Logger_, Exchange.Comm_.Rank() == 0, 0, "Destroyed exchange %s.",
+  Exchange.Logger_->LogStatus(Exchange.Comm_.Rank() == 0, 0, "Destroyed exchange %s.",
     Connectivity.Name_);
 
   Exchange.Comm_.Reset();
@@ -229,7 +229,7 @@ void UpdateExchange(exchange &Exchange) {
 
   const connectivity &Connectivity = *Exchange.Connectivity_;
 
-  core::LogStatus(*Exchange.Logger_, Exchange.Comm_.Rank() == 0, 0, "Updating exchange %s...",
+  Exchange.Logger_->LogStatus(Exchange.Comm_.Rank() == 0, 0, "Updating exchange %s...",
     Connectivity.Name_);
 
   const connectivity::edits *Edits;
@@ -290,7 +290,7 @@ void UpdateExchange(exchange &Exchange) {
 
   MPI_Barrier(Exchange.Comm_);
 
-  core::LogStatus(*Exchange.Logger_, Exchange.Comm_.Rank() == 0, 0, "Done updating exchange %s.",
+  Exchange.Logger_->LogStatus(Exchange.Comm_.Rank() == 0, 0, "Done updating exchange %s.",
     Connectivity.Name_);
 
 }

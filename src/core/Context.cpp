@@ -37,8 +37,8 @@ error CreateContext(context &Context, const context_params &Params) {
 
   MPI_Barrier(Context.Comm_);
 
-  core::CreateLogger(Context.Logger_, Params.LogLevel_, Context.Comm_.Rank());
-  core::CreateErrorHandler(Context.ErrorHandler_, Params.ErrorHandlerType_);
+  Context.Logger_ = core::logger(Params.LogLevel_, Context.Comm_.Rank());
+  Context.ErrorHandler_ = core::error_handler(Params.ErrorHandlerType_);
 
   switch (Params.ErrorHandlerType_) {
   case error_handler_type::ABORT:
@@ -51,9 +51,9 @@ error CreateContext(context &Context, const context_params &Params) {
 
   MPI_Barrier(Context.Comm_);
 
-  if (Context.Comm_.Rank() == 0 && LoggingStatus(Context.Logger_)) {
+  if (Context.Comm_.Rank() == 0 && Context.Logger_.LoggingStatus()) {
     std::string ProcessesString = core::FormatNumber(Context.Comm_.Size(), "processes", "process");
-    core::LogStatus(Context.Logger_, true, 0, "Created context on %s.", ProcessesString);
+    Context.Logger_.LogStatus(true, 0, "Created context on %s.", ProcessesString);
   }
 
   return error::NONE;
@@ -69,12 +69,9 @@ void DestroyContext(context &Context) {
   }
   Context.Domains_.clear();
 
-  core::DestroyErrorHandler(Context.ErrorHandler_);
-
   MPI_Barrier(Context.Comm_);
 
-  core::LogStatus(Context.Logger_, Context.Comm_.Rank() == 0, 0, "Destroyed context.");
-  core::DestroyLogger(Context.Logger_);
+  Context.Logger_.LogStatus(Context.Comm_.Rank() == 0, 0, "Destroyed context.");
 
   Context.Comm_.Reset();
 
@@ -88,26 +85,25 @@ void GetContextComm(const context &Context, MPI_Comm &Comm) {
 
 void GetContextLogLevel(const context &Context, log_level &LogLevel) {
 
-  GetLogLevel(Context.Logger_, LogLevel);
+  LogLevel = Context.Logger_.Level();
 
 }
 
 void SetContextLogLevel(context &Context, log_level LogLevel) {
 
-  SetLogLevel(Context.Logger_, LogLevel);
+  Context.Logger_.SetLevel(LogLevel);
 
 }
 
-void GetContextErrorHandlerType(const context &Context, error_handler_type
-  &ErrorHandlerType) {
+void GetContextErrorHandlerType(const context &Context, error_handler_type &ErrorHandlerType) {
 
-  GetErrorHandlerType(Context.ErrorHandler_, ErrorHandlerType);
+  ErrorHandlerType = Context.ErrorHandler_.Type();
 
 }
 
 void SetContextErrorHandlerType(context &Context, error_handler_type ErrorHandlerType) {
 
-  SetErrorHandlerType(Context.ErrorHandler_, ErrorHandlerType);
+  Context.ErrorHandler_.SetType(ErrorHandlerType);
 
 }
 
