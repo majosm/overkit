@@ -3,6 +3,13 @@
 
 namespace ovk {
 
+inline cart::cart(int NumDims):
+  NumDims_(NumDims),
+  Range_(MakeEmptyRange(NumDims)),
+  Periodic_(false,false,false),
+  PeriodicStorage_(periodic_storage::UNIQUE)
+{}
+
 inline cart::cart(int NumDims, const range &Range, const tuple<bool> &Periodic, periodic_storage
   PeriodicStorage):
   NumDims_(NumDims),

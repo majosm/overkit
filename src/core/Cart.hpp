@@ -15,7 +15,10 @@ class cart {
 
 public:
 
+  // Remove this eventually?
   cart() = default;
+
+  cart(int NumDims);
   cart(int NumDims, const range &Range, const tuple<bool> &Periodic, periodic_storage
     PeriodicStorage);
 
