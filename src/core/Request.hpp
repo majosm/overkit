@@ -7,10 +7,12 @@
 #include <ovk/core/ArrayView.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Requires.hpp>
+#include <ovk/core/TypeTraits.hpp>
 
 #include <mpi.h>
 
 #include <memory>
+#include <type_traits>
 #include <utility>
 
 namespace ovk {
@@ -21,8 +23,8 @@ public:
 
   request() = default;
 
-  template <typename T, OVK_FUNCTION_REQUIRES(!std::is_same<typename std::decay<T>::type, request>
-    ::value)> request(T &&Request):
+  template <typename T, OVK_FUNCTION_REQUIRES(!std::is_same<core::remove_cvref<T>, request>::value)>
+    request(T &&Request):
     Request_(new model<T>(std::forward<T>(Request)))
   {}
 
@@ -32,6 +34,12 @@ public:
 
   request(const request &Other) = delete;
   request(request &&Other) noexcept = default;
+
+  template <typename T, OVK_FUNCTION_REQUIRES(!std::is_same<core::remove_cvref<T>, request>::value)>
+    request &operator=(T &&Request) {
+    Request_.reset(new model<T>(std::forward<T>(Request)));
+    return *this;
+  }
 
   request &operator=(const request &Other) = delete;
   request &operator=(request &&Other) noexcept = default;
