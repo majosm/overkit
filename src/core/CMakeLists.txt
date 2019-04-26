@@ -16,6 +16,7 @@ set(LOCAL_TARGETS)
 #--------------
 
 set(SOURCES
+  Assembly.cpp
   AssemblyOptions.cpp
   CollectBase.cpp
   CollectCol.cpp

@@ -47,6 +47,34 @@ struct domain {
     int EditRefCount_;
   };
 
+  mutable core::logger *Logger_;
+  mutable core::error_handler *ErrorHandler_;
+  mutable core::profiler Profiler_;
+
+  std::string Name_;
+  int NumDims_;
+  core::comm Comm_;
+  domain_config Config_;
+
+  int NumGrids_;
+  std::map<int, grid_info> GridInfo_;
+  int AllGridsEditRefCount_;
+  std::map<int, grid> LocalGrids_;
+
+  std::map<int, std::map<int, connectivity_info>> ConnectivityInfo_;
+  int AllConnectivitiesEditRefCount_;
+  std::map<int, std::map<int, connectivity>> LocalConnectivities_;
+
+//   std::map<int, std::map<int, connectivity_m_info>> DonorInfo_;
+//   int AllDonorsEditRefCount_;
+//   std::map<int, std::map<int, connectivity_m>> LocalDonors_;
+
+//   std::map<int, std::map<int, connectivity_n_info>> ReceiverInfo_;
+//   int AllReceiversEditRefCount_;
+//   std::map<int, std::map<int, connectivity_n>> LocalReceivers_;
+
+//   std::map<int, std::map<int, core::exchange>> Exchanges_;
+
   struct collect_data {
     core::collect_map Map;
     std::map<int, core::collect> Collects;
@@ -66,26 +94,13 @@ struct domain {
     std::map<int, core::disperse> Disperses;
   };
 
-  mutable core::logger *Logger_;
-  mutable core::error_handler *ErrorHandler_;
-  mutable core::profiler Profiler_;
-  std::string Name_;
-  int NumDims_;
-  core::comm Comm_;
-  domain_config Config_;
-  int NumGrids_;
-  std::map<int, grid_info> GridInfo_;
-  int AllGridsEditRefCount_;
-  std::map<int, grid> LocalGrids_;
-  std::map<int, std::map<int, connectivity_info>> ConnectivityInfo_;
-  int AllConnectivitiesEditRefCount_;
-  std::map<int, std::map<int, connectivity>> LocalConnectivities_;
-//   std::map<int, std::map<int, exchange_info>> ExchangeInfo_;
-//   std::map<int, std::map<int, exchange>> LocalExchanges_;
   std::map<int, std::map<int, collect_data>> CollectData_;
   std::map<int, std::map<int, send_data>> SendData_;
   std::map<int, std::map<int, recv_data>> RecvData_;
   std::map<int, std::map<int, disperse_data>> DisperseData_;
+
+//   std::map<int, std::map<int, exchange_info>> ExchangeInfo_;
+//   std::map<int, std::map<int, exchange>> LocalExchanges_;
 
 };
 
@@ -207,6 +222,11 @@ void SetDomainParamName(domain_params &Params, std::string Name);
 void GetDomainParamDimension(const domain_params &Params, int &NumDims);
 void GetDomainParamComm(const domain_params &Params, MPI_Comm &Comm);
 void SetDomainParamComm(domain_params &Params, MPI_Comm Comm);
+
+namespace domain_internal {
+void UpdateConnectivitySourceDestRanks(domain &Domain);
+void UpdateExchanges(domain &Domain);
+}
 
 }
 
