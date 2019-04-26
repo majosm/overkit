@@ -13,7 +13,7 @@
 #include <ovk/core/Constants.hpp>
 #include <ovk/core/Disperse.hpp>
 #include <ovk/core/ErrorHandler.hpp>
-#include <ovk/core/Exchange.hpp>
+// #include <ovk/core/Exchange.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Grid.hpp>
 #include <ovk/core/Logger.hpp>
@@ -80,8 +80,8 @@ struct domain {
   std::map<int, std::map<int, connectivity_info>> ConnectivityInfo_;
   int AllConnectivitiesEditRefCount_;
   std::map<int, std::map<int, connectivity>> LocalConnectivities_;
-  std::map<int, std::map<int, exchange_info>> ExchangeInfo_;
-  std::map<int, std::map<int, exchange>> LocalExchanges_;
+//   std::map<int, std::map<int, exchange_info>> ExchangeInfo_;
+//   std::map<int, std::map<int, exchange>> LocalExchanges_;
   std::map<int, std::map<int, collect_data>> CollectData_;
   std::map<int, std::map<int, send_data>> SendData_;
   std::map<int, std::map<int, recv_data>> RecvData_;
@@ -141,12 +141,12 @@ void ReleaseConnectivityLocal(domain &Domain, int DonorGridID, int ReceiverGridI
   connectivity *&Connectivity);
 void ReleaseConnectivityRemote(domain &Domain, int DonorGridID, int ReceiverGridID);
 
-bool ExchangeExists(const domain &Domain, int DonorGridID, int ReceiverGridID);
-void GetExchangeInfo(const domain &Domain, int DonorGridID, int ReceiverGridID, const exchange_info
-  *&ExchangeInfo);
-bool RankHasExchange(const domain &Domain, int DonorGridID, int ReceiverGridID);
-void GetExchange(const domain &Domain, int DonorGridID, int ReceiverGridID,
-  const exchange *&Exchange);
+// bool ExchangeExists(const domain &Domain, int DonorGridID, int ReceiverGridID);
+// void GetExchangeInfo(const domain &Domain, int DonorGridID, int ReceiverGridID, const exchange_info
+//   *&ExchangeInfo);
+// bool RankHasExchange(const domain &Domain, int DonorGridID, int ReceiverGridID);
+// void GetExchange(const domain &Domain, int DonorGridID, int ReceiverGridID,
+//   const exchange *&Exchange);
 
 void GetLocalDonorCount(const domain &Domain, int DonorGridID, int ReceiverGridID,
   long long &NumDonors);

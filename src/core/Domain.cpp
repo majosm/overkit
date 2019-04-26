@@ -16,7 +16,7 @@
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Disperse.hpp"
 #include "ovk/core/ErrorHandler.hpp"
-#include "ovk/core/Exchange.hpp"
+// #include "ovk/core/Exchange.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
 #include "ovk/core/Indexer.hpp"
@@ -65,8 +65,8 @@ void DisableExchangeComponent(domain &Domain);
 void CreateExchangesForGrid(domain &Domain, int GridID);
 void DestroyExchangesForGrid(domain &Domain, int GridID);
 
-void CreateExchangeGlobal(domain &Domain, int DonorGridID, int ReceiverGridID);
-void DestroyExchangeGlobal(domain &Domain, int DonorGridID, int ReceiverGridID);
+// void CreateExchangeGlobal(domain &Domain, int DonorGridID, int ReceiverGridID);
+// void DestroyExchangeGlobal(domain &Domain, int DonorGridID, int ReceiverGridID);
 
 bool EditingGrid(const domain &Domain, int GridID);
 bool EditingConnectivity(const domain &Domain, int DonorGridID, int ReceiverGridID);
@@ -832,29 +832,29 @@ void EnableExchangeComponent(domain &Domain) {
   AddProfilerTimer(Domain.Profiler_, "SendRecv::Unpack");
   AddProfilerTimer(Domain.Profiler_, "Disperse");
 
-  for (auto &GridNPair : Domain.GridInfo_) {
-    int ReceiverGridID = GridNPair.first;
-    for (auto &GridMPair : Domain.GridInfo_) {
-      int DonorGridID = GridMPair.first;
-      if (DonorGridID != ReceiverGridID) {
-        CreateExchangeGlobal(Domain, DonorGridID, ReceiverGridID);
-      }
-    }
-  }
+//   for (auto &GridNPair : Domain.GridInfo_) {
+//     int ReceiverGridID = GridNPair.first;
+//     for (auto &GridMPair : Domain.GridInfo_) {
+//       int DonorGridID = GridMPair.first;
+//       if (DonorGridID != ReceiverGridID) {
+//         CreateExchangeGlobal(Domain, DonorGridID, ReceiverGridID);
+//       }
+//     }
+//   }
 
 }
 
 void DisableExchangeComponent(domain &Domain) {
 
-  for (auto &GridNPair : Domain.GridInfo_) {
-    int ReceiverGridID = GridNPair.first;
-    for (auto &GridMPair : Domain.GridInfo_) {
-      int DonorGridID = GridMPair.first;
-      if (DonorGridID != ReceiverGridID) {
-        DestroyExchangeGlobal(Domain, DonorGridID, ReceiverGridID);
-      }
-    }
-  }
+//   for (auto &GridNPair : Domain.GridInfo_) {
+//     int ReceiverGridID = GridNPair.first;
+//     for (auto &GridMPair : Domain.GridInfo_) {
+//       int DonorGridID = GridMPair.first;
+//       if (DonorGridID != ReceiverGridID) {
+//         DestroyExchangeGlobal(Domain, DonorGridID, ReceiverGridID);
+//       }
+//     }
+//   }
 
   int CollectTime = core::GetProfilerTimerID(Domain.Profiler_, "Collect");
   int SendRecvTime = core::GetProfilerTimerID(Domain.Profiler_, "SendRecv");
@@ -875,25 +875,25 @@ void DisableExchangeComponent(domain &Domain) {
 
 void CreateExchangesForGrid(domain &Domain, int GridID) {
 
-  for (auto &Pair : Domain.GridInfo_) {
-    int OtherGridID = Pair.first;
-    if (OtherGridID != GridID) {
-      CreateExchangeGlobal(Domain, GridID, OtherGridID);
-      CreateExchangeGlobal(Domain, OtherGridID, GridID);
-    }
-  }
+//   for (auto &Pair : Domain.GridInfo_) {
+//     int OtherGridID = Pair.first;
+//     if (OtherGridID != GridID) {
+//       CreateExchangeGlobal(Domain, GridID, OtherGridID);
+//       CreateExchangeGlobal(Domain, OtherGridID, GridID);
+//     }
+//   }
 
 }
 
 void DestroyExchangesForGrid(domain &Domain, int GridID) {
 
-  for (auto &Pair : Domain.GridInfo_) {
-    int OtherGridID = Pair.first;
-    if (OtherGridID != GridID) {
-      DestroyExchangeGlobal(Domain, GridID, OtherGridID);
-      DestroyExchangeGlobal(Domain, OtherGridID, GridID);
-    }
-  }
+//   for (auto &Pair : Domain.GridInfo_) {
+//     int OtherGridID = Pair.first;
+//     if (OtherGridID != GridID) {
+//       DestroyExchangeGlobal(Domain, GridID, OtherGridID);
+//       DestroyExchangeGlobal(Domain, OtherGridID, GridID);
+//     }
+//   }
 
   int CollectTime = core::GetProfilerTimerID(Domain.Profiler_, "Collect");
   int SendRecvTime = core::GetProfilerTimerID(Domain.Profiler_, "SendRecv");
@@ -954,130 +954,130 @@ void DestroyExchangesForGrid(domain &Domain, int GridID) {
 
 }
 
-void CreateExchangeGlobal(domain &Domain, int DonorGridID, int ReceiverGridID) {
+// void CreateExchangeGlobal(domain &Domain, int DonorGridID, int ReceiverGridID) {
 
-  MPI_Barrier(Domain.Comm_);
+//   MPI_Barrier(Domain.Comm_);
 
-  bool IsLocal = RankHasConnectivity(Domain, DonorGridID, ReceiverGridID);
+//   bool IsLocal = RankHasConnectivity(Domain, DonorGridID, ReceiverGridID);
 
-  exchange_info ExchangeInfo;
+//   exchange_info ExchangeInfo;
 
-  if (IsLocal) {
-    const connectivity &Connectivity = Domain.LocalConnectivities_[DonorGridID][ReceiverGridID];
-    exchange Exchange;
-    core::CreateExchange(Exchange, Connectivity, *Domain.Logger_, *Domain.ErrorHandler_,
-      Domain.Profiler_);
-    core::CreateExchangeInfo(ExchangeInfo, &Exchange, Domain.Comm_);
-    Domain.LocalExchanges_[DonorGridID].emplace(ReceiverGridID, std::move(Exchange));
-    if (RankHasConnectivityDonorSide(Connectivity)) {
-      const connectivity_d *Donors;
-      GetConnectivityDonorSide(Connectivity, Donors);
-      const grid *DonorGrid;
-      GetConnectivityDonorSideGrid(*Donors, DonorGrid);
-    }
-  } else {
-    core::CreateExchangeInfo(ExchangeInfo, nullptr, Domain.Comm_);
-  }
+//   if (IsLocal) {
+//     const connectivity &Connectivity = Domain.LocalConnectivities_[DonorGridID][ReceiverGridID];
+//     exchange Exchange;
+//     core::CreateExchange(Exchange, Connectivity, *Domain.Logger_, *Domain.ErrorHandler_,
+//       Domain.Profiler_);
+//     core::CreateExchangeInfo(ExchangeInfo, &Exchange, Domain.Comm_);
+//     Domain.LocalExchanges_[DonorGridID].emplace(ReceiverGridID, std::move(Exchange));
+//     if (RankHasConnectivityDonorSide(Connectivity)) {
+//       const connectivity_d *Donors;
+//       GetConnectivityDonorSide(Connectivity, Donors);
+//       const grid *DonorGrid;
+//       GetConnectivityDonorSideGrid(*Donors, DonorGrid);
+//     }
+//   } else {
+//     core::CreateExchangeInfo(ExchangeInfo, nullptr, Domain.Comm_);
+//   }
 
-  Domain.ExchangeInfo_[DonorGridID].emplace(ReceiverGridID, std::move(ExchangeInfo));
+//   Domain.ExchangeInfo_[DonorGridID].emplace(ReceiverGridID, std::move(ExchangeInfo));
 
-  MPI_Barrier(Domain.Comm_);
+//   MPI_Barrier(Domain.Comm_);
 
-}
+// }
 
-void DestroyExchangeGlobal(domain &Domain, int DonorGridID, int ReceiverGridID) {
+// void DestroyExchangeGlobal(domain &Domain, int DonorGridID, int ReceiverGridID) {
 
-  MPI_Barrier(Domain.Comm_);
+//   MPI_Barrier(Domain.Comm_);
 
-  bool IsLocal = RankHasExchange(Domain, DonorGridID, ReceiverGridID);
+//   bool IsLocal = RankHasExchange(Domain, DonorGridID, ReceiverGridID);
 
-  core::DestroyExchangeInfo(Domain.ExchangeInfo_[DonorGridID][ReceiverGridID]);
+//   core::DestroyExchangeInfo(Domain.ExchangeInfo_[DonorGridID][ReceiverGridID]);
 
-  Domain.ExchangeInfo_[DonorGridID].erase(ReceiverGridID);
-  if (Domain.ExchangeInfo_[DonorGridID].empty()) {
-    Domain.ExchangeInfo_.erase(DonorGridID);
-  }
+//   Domain.ExchangeInfo_[DonorGridID].erase(ReceiverGridID);
+//   if (Domain.ExchangeInfo_[DonorGridID].empty()) {
+//     Domain.ExchangeInfo_.erase(DonorGridID);
+//   }
 
-  if (IsLocal) {
-    core::DestroyExchange(Domain.LocalExchanges_[DonorGridID][ReceiverGridID]);
-    Domain.LocalExchanges_[DonorGridID].erase(ReceiverGridID);
-    if (Domain.LocalExchanges_[DonorGridID].empty()) {
-      Domain.LocalExchanges_.erase(DonorGridID);
-    }
-  }
+//   if (IsLocal) {
+//     core::DestroyExchange(Domain.LocalExchanges_[DonorGridID][ReceiverGridID]);
+//     Domain.LocalExchanges_[DonorGridID].erase(ReceiverGridID);
+//     if (Domain.LocalExchanges_[DonorGridID].empty()) {
+//       Domain.LocalExchanges_.erase(DonorGridID);
+//     }
+//   }
 
-  MPI_Barrier(Domain.Comm_);
+//   MPI_Barrier(Domain.Comm_);
 
-}
-
-}
-
-bool ExchangeExists(const domain &Domain, int DonorGridID, int ReceiverGridID) {
-
-  OVK_DEBUG_ASSERT(DonorGridID >= 0, "Invalid donor grid ID.");
-  OVK_DEBUG_ASSERT(ReceiverGridID >= 0, "Invalid receiver grid ID.");
-  OVK_DEBUG_ASSERT(GridExists(Domain, DonorGridID), "Grid %i does not exist.", DonorGridID);
-  OVK_DEBUG_ASSERT(GridExists(Domain, ReceiverGridID), "Grid %i does not exist.", ReceiverGridID);
-
-  auto RowIter = Domain.ExchangeInfo_.find(DonorGridID);
-  if (RowIter != Domain.ExchangeInfo_.end()) {
-    const std::map<int, exchange_info> &Row = RowIter->second;
-    return Row.find(ReceiverGridID) != Row.end();
-  } else {
-    return false;
-  }
+// }
 
 }
 
-void GetExchangeInfo(const domain &Domain, int DonorGridID, int ReceiverGridID, const exchange_info
-  *&ExchangeInfo) {
+// bool ExchangeExists(const domain &Domain, int DonorGridID, int ReceiverGridID) {
 
-  OVK_DEBUG_ASSERT(DonorGridID >= 0, "Invalid donor grid ID.");
-  OVK_DEBUG_ASSERT(ReceiverGridID >= 0, "Invalid receiver grid ID.");
-  OVK_DEBUG_ASSERT(ExchangeExists(Domain, DonorGridID, ReceiverGridID), "Exchange (%i,%i) does not "
-    "exist.", DonorGridID, ReceiverGridID);
+//   OVK_DEBUG_ASSERT(DonorGridID >= 0, "Invalid donor grid ID.");
+//   OVK_DEBUG_ASSERT(ReceiverGridID >= 0, "Invalid receiver grid ID.");
+//   OVK_DEBUG_ASSERT(GridExists(Domain, DonorGridID), "Grid %i does not exist.", DonorGridID);
+//   OVK_DEBUG_ASSERT(GridExists(Domain, ReceiverGridID), "Grid %i does not exist.", ReceiverGridID);
 
-  ExchangeInfo = &Domain.ExchangeInfo_.at(DonorGridID).at(ReceiverGridID);
+//   auto RowIter = Domain.ExchangeInfo_.find(DonorGridID);
+//   if (RowIter != Domain.ExchangeInfo_.end()) {
+//     const std::map<int, exchange_info> &Row = RowIter->second;
+//     return Row.find(ReceiverGridID) != Row.end();
+//   } else {
+//     return false;
+//   }
 
-}
+// }
 
-bool RankHasExchange(const domain &Domain, int DonorGridID, int ReceiverGridID) {
+// void GetExchangeInfo(const domain &Domain, int DonorGridID, int ReceiverGridID, const exchange_info
+//   *&ExchangeInfo) {
 
-  OVK_DEBUG_ASSERT(DonorGridID >= 0, "Invalid donor grid ID.");
-  OVK_DEBUG_ASSERT(ReceiverGridID >= 0, "Invalid receiver grid ID.");
-  OVK_DEBUG_ASSERT(GridExists(Domain, DonorGridID), "Grid %i does not exist.", DonorGridID);
-  OVK_DEBUG_ASSERT(GridExists(Domain, ReceiverGridID), "Grid %i does not exist.", ReceiverGridID);
-  OVK_DEBUG_ASSERT(ExchangeExists(Domain, DonorGridID, ReceiverGridID), "Exchange (%i,%i) does not "
-    "exist.", DonorGridID, ReceiverGridID);
+//   OVK_DEBUG_ASSERT(DonorGridID >= 0, "Invalid donor grid ID.");
+//   OVK_DEBUG_ASSERT(ReceiverGridID >= 0, "Invalid receiver grid ID.");
+//   OVK_DEBUG_ASSERT(ExchangeExists(Domain, DonorGridID, ReceiverGridID), "Exchange (%i,%i) does not "
+//     "exist.", DonorGridID, ReceiverGridID);
 
-  auto RowIter = Domain.LocalExchanges_.find(DonorGridID);
-  if (RowIter != Domain.LocalExchanges_.end()) {
-    const std::map<int, exchange> &Row = RowIter->second;
-    return Row.find(ReceiverGridID) != Row.end();
-  } else {
-    return false;
-  }
+//   ExchangeInfo = &Domain.ExchangeInfo_.at(DonorGridID).at(ReceiverGridID);
 
-}
+// }
 
-void GetExchange(const domain &Domain, int DonorGridID, int ReceiverGridID, const exchange
-  *&Exchange) {
+// bool RankHasExchange(const domain &Domain, int DonorGridID, int ReceiverGridID) {
 
-  OVK_DEBUG_ASSERT(DonorGridID >= 0, "Invalid donor grid ID.");
-  OVK_DEBUG_ASSERT(ReceiverGridID >= 0, "Invalid receiver grid ID.");
-  OVK_DEBUG_ASSERT(ExchangeExists(Domain, DonorGridID, ReceiverGridID), "Exchange (%i,%i) does not "
-    "exist.", DonorGridID, ReceiverGridID);
-  if (OVK_DEBUG) {
-    const exchange_info &ExchangeInfo = Domain.ExchangeInfo_.at(DonorGridID).at(ReceiverGridID);
-    std::string Name;
-    GetExchangeInfoName(ExchangeInfo, Name);
-    OVK_DEBUG_ASSERT(RankHasExchange(Domain, DonorGridID, ReceiverGridID), "Exchange %s does not "
-      "have local data on rank @rank@.", Name);
-  }
+//   OVK_DEBUG_ASSERT(DonorGridID >= 0, "Invalid donor grid ID.");
+//   OVK_DEBUG_ASSERT(ReceiverGridID >= 0, "Invalid receiver grid ID.");
+//   OVK_DEBUG_ASSERT(GridExists(Domain, DonorGridID), "Grid %i does not exist.", DonorGridID);
+//   OVK_DEBUG_ASSERT(GridExists(Domain, ReceiverGridID), "Grid %i does not exist.", ReceiverGridID);
+//   OVK_DEBUG_ASSERT(ExchangeExists(Domain, DonorGridID, ReceiverGridID), "Exchange (%i,%i) does not "
+//     "exist.", DonorGridID, ReceiverGridID);
 
-  Exchange = &Domain.LocalExchanges_.at(DonorGridID).at(ReceiverGridID);
+//   auto RowIter = Domain.LocalExchanges_.find(DonorGridID);
+//   if (RowIter != Domain.LocalExchanges_.end()) {
+//     const std::map<int, exchange> &Row = RowIter->second;
+//     return Row.find(ReceiverGridID) != Row.end();
+//   } else {
+//     return false;
+//   }
 
-}
+// }
+
+// void GetExchange(const domain &Domain, int DonorGridID, int ReceiverGridID, const exchange
+//   *&Exchange) {
+
+//   OVK_DEBUG_ASSERT(DonorGridID >= 0, "Invalid donor grid ID.");
+//   OVK_DEBUG_ASSERT(ReceiverGridID >= 0, "Invalid receiver grid ID.");
+//   OVK_DEBUG_ASSERT(ExchangeExists(Domain, DonorGridID, ReceiverGridID), "Exchange (%i,%i) does not "
+//     "exist.", DonorGridID, ReceiverGridID);
+//   if (OVK_DEBUG) {
+//     const exchange_info &ExchangeInfo = Domain.ExchangeInfo_.at(DonorGridID).at(ReceiverGridID);
+//     std::string Name;
+//     GetExchangeInfoName(ExchangeInfo, Name);
+//     OVK_DEBUG_ASSERT(RankHasExchange(Domain, DonorGridID, ReceiverGridID), "Exchange %s does not "
+//       "have local data on rank @rank@.", Name);
+//   }
+
+//   Exchange = &Domain.LocalExchanges_.at(DonorGridID).at(ReceiverGridID);
+
+// }
 
 namespace {
 
@@ -1421,12 +1421,12 @@ void AssembleExchange(domain &Domain) {
 
   MPI_Barrier(Domain.Comm_);
 
-  for (auto &MPair : Domain.LocalExchanges_) {
-    for (auto &NPair : MPair.second) {
-      exchange &Exchange = NPair.second;
-      core::UpdateExchange(Exchange);
-    }
-  }
+//   for (auto &MPair : Domain.LocalExchanges_) {
+//     for (auto &NPair : MPair.second) {
+//       exchange &Exchange = NPair.second;
+//       core::UpdateExchange(Exchange);
+//     }
+//   }
 
   int CollectTime = core::GetProfilerTimerID(Domain.Profiler_, "Collect");
   int SendRecvTime = core::GetProfilerTimerID(Domain.Profiler_, "SendRecv");

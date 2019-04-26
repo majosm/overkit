@@ -7,7 +7,7 @@
 #include <ovk/core-c/AssemblyOptions.h>
 #include <ovk/core-c/Connectivity.h>
 #include <ovk/core-c/Constants.h>
-#include <ovk/core-c/Exchange.h>
+// #include <ovk/core-c/Exchange.h>
 #include <ovk/core-c/Global.h>
 #include <ovk/core-c/Grid.h>
 #include <ovk/core-c/Request.h>
@@ -63,12 +63,12 @@ void ovkReleaseConnectivityLocal(ovk_domain *Domain, int DonorGridID, int Receiv
   ovk_connectivity **Connectivity);
 void ovkReleaseConnectivityRemote(ovk_domain *Domain, int DonorGridID, int ReceiverGridID);
 
-bool ovkExchangeExists(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID);
-void ovkGetExchangeInfo(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, const
-  ovk_exchange_info **ExchangeInfo);
-bool ovkRankHasExchange(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID);
-void ovkGetExchange(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
-  const ovk_exchange **Exchange);
+// bool ovkExchangeExists(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID);
+// void ovkGetExchangeInfo(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, const
+//   ovk_exchange_info **ExchangeInfo);
+// bool ovkRankHasExchange(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID);
+// void ovkGetExchange(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
+//   const ovk_exchange **Exchange);
 
 void ovkGetLocalDonorCount(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
   long long *NumDonors);

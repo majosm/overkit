@@ -6,7 +6,7 @@
 #include "ovk/core-c/AssemblyOptions.h"
 #include "ovk/core-c/Connectivity.h"
 #include "ovk/core-c/Constants.h"
-#include "ovk/core-c/Exchange.h"
+// #include "ovk/core-c/Exchange.h"
 #include "ovk/core-c/Global.h"
 #include "ovk/core-c/Grid.h"
 #include "ovk/core-c/Request.h"
@@ -16,7 +16,7 @@
 #include "ovk/core/Constants.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Domain.hpp"
-#include "ovk/core/Exchange.hpp"
+// #include "ovk/core/Exchange.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
 #include "ovk/core/Range.hpp"
@@ -355,53 +355,53 @@ void ovkReleaseConnectivityRemote(ovk_domain *Domain, int DonorGridID, int Recei
 
 }
 
-bool ovkExchangeExists(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID) {
+// bool ovkExchangeExists(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID) {
 
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+//   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
 
-  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  return ovk::ExchangeExists(DomainCPP, DonorGridID, ReceiverGridID);
+//   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+//   return ovk::ExchangeExists(DomainCPP, DonorGridID, ReceiverGridID);
 
-}
+// }
 
-void ovkGetExchangeInfo(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, const
-  ovk_exchange_info **ExchangeInfo) {
+// void ovkGetExchangeInfo(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, const
+//   ovk_exchange_info **ExchangeInfo) {
 
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(ExchangeInfo, "Invalid exchange info pointer.");
+//   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+//   OVK_DEBUG_ASSERT(ExchangeInfo, "Invalid exchange info pointer.");
 
-  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+//   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
 
-  const ovk::exchange_info *ExchangeInfoCPPPtr;
-  ovk::GetExchangeInfo(DomainCPP, DonorGridID, ReceiverGridID, ExchangeInfoCPPPtr);
+//   const ovk::exchange_info *ExchangeInfoCPPPtr;
+//   ovk::GetExchangeInfo(DomainCPP, DonorGridID, ReceiverGridID, ExchangeInfoCPPPtr);
 
-  *ExchangeInfo = reinterpret_cast<const ovk_exchange_info *>(ExchangeInfoCPPPtr);
+//   *ExchangeInfo = reinterpret_cast<const ovk_exchange_info *>(ExchangeInfoCPPPtr);
 
-}
+// }
 
-bool ovkRankHasExchange(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID) {
+// bool ovkRankHasExchange(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID) {
 
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+//   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
 
-  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  return ovk::RankHasExchange(DomainCPP, DonorGridID, ReceiverGridID);
+//   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+//   return ovk::RankHasExchange(DomainCPP, DonorGridID, ReceiverGridID);
 
-}
+// }
 
-void ovkGetExchange(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
-  const ovk_exchange **Exchange) {
+// void ovkGetExchange(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
+//   const ovk_exchange **Exchange) {
 
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(Exchange, "Invalid exchange pointer.");
+//   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+//   OVK_DEBUG_ASSERT(Exchange, "Invalid exchange pointer.");
 
-  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+//   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
 
-  const ovk::exchange *ExchangeCPPPtr;
-  ovk::GetExchange(DomainCPP, DonorGridID, ReceiverGridID, ExchangeCPPPtr);
+//   const ovk::exchange *ExchangeCPPPtr;
+//   ovk::GetExchange(DomainCPP, DonorGridID, ReceiverGridID, ExchangeCPPPtr);
 
-  *Exchange = reinterpret_cast<const ovk_exchange *>(ExchangeCPPPtr);
+//   *Exchange = reinterpret_cast<const ovk_exchange *>(ExchangeCPPPtr);
 
-}
+// }
 
 void ovkGetLocalDonorCount(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
   long long *NumDonors) {
