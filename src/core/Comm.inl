@@ -8,8 +8,8 @@ inline comm_view::comm_view():
   Comm_(MPI_COMM_NULL)
 {}
 
-template <typename T, OVK_FUNCDEF_REQUIRES(std::is_convertible<T, MPI_Comm>::value)>
-  comm_view::comm_view(const T &Comm):
+template <typename T, OVK_FUNCDEF_REQUIRES(!std::is_same<T,comm_view>::value &&
+  std::is_convertible<T, MPI_Comm>::value)> comm_view::comm_view(const T &Comm):
   Comm_(Comm)
 {}
 

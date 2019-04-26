@@ -22,8 +22,8 @@ class comm_view {
 public:
 
   comm_view();
-  template <typename T, OVK_FUNCDECL_REQUIRES(std::is_convertible<T, MPI_Comm>::value)>
-    comm_view(const T &Comm);
+  template <typename T, OVK_FUNCDECL_REQUIRES(!std::is_same<T, comm_view>::value &&
+    std::is_convertible<T, MPI_Comm>::value)> comm_view(const T &Comm);
 
   void Reset() { *this = comm_view(); }
 
