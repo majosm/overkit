@@ -89,7 +89,7 @@ void GetConnectivityCommSize(const connectivity &Connectivity, int &CommSize);
 void GetConnectivityCommRank(const connectivity &Connectivity, int &CommRank);
 
 namespace core {
-comm_view GetConnectivityComm(const connectivity &Connectivity);
+const comm &GetConnectivityComm(const connectivity &Connectivity);
 }
 
 void GetConnectivityDonorGridInfo(const connectivity &Connectivity, const grid_info

@@ -180,7 +180,7 @@ void ovkGetGridInfo(const ovk_domain *Domain, int GridID, const ovk_grid_info **
   OVK_DEBUG_ASSERT(GridInfo, "Invalid grid info pointer.");
 
   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  
+
   const ovk::grid_info *GridInfoCPPPtr;
   ovk::GetGridInfo(DomainCPP, GridID, GridInfoCPPPtr);
 
@@ -274,7 +274,7 @@ void ovkGetConnectivityInfo(const ovk_domain *Domain, int DonorGridID, int Recei
   OVK_DEBUG_ASSERT(ConnectivityInfo, "Invalid connectivity info pointer.");
 
   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  
+
   const ovk::connectivity_info *ConnectivityInfoCPPPtr;
   ovk::GetConnectivityInfo(DomainCPP, DonorGridID, ReceiverGridID, ConnectivityInfoCPPPtr);
 
@@ -371,7 +371,7 @@ void ovkGetExchangeInfo(const ovk_domain *Domain, int DonorGridID, int ReceiverG
   OVK_DEBUG_ASSERT(ExchangeInfo, "Invalid exchange info pointer.");
 
   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  
+
   const ovk::exchange_info *ExchangeInfoCPPPtr;
   ovk::GetExchangeInfo(DomainCPP, DonorGridID, ReceiverGridID, ExchangeInfoCPPPtr);
 
@@ -436,16 +436,15 @@ void ovkAssemble(ovk_domain *Domain, const ovk_assembly_options *Options) {
 
 }
 
-void ovkCollect(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
-  ovk_data_type ValueType, int Count, ovk_collect_op CollectOp, const int *GridValuesBegin,
-  const int *GridValuesEnd, ovk_array_layout GridValuesLayout, const void **GridValues,
-  void **DonorValues) {
+void ovkCreateCollect(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int CollectID,
+  ovk_collect_op CollectOp, ovk_data_type ValueType, int Count, const int *GridValuesBegin, const
+  int *GridValuesEnd, ovk_array_layout GridValuesLayout) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(GridValuesBegin, "Invalid grid data begin pointer.");
-  OVK_DEBUG_ASSERT(GridValuesEnd, "Invalid grid data end pointer.");
+  OVK_DEBUG_ASSERT(GridValuesBegin, "Invalid grid values begin pointer.");
+  OVK_DEBUG_ASSERT(GridValuesEnd, "Invalid grid values end pointer.");
 
-  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
 
   int NumDims;
   ovk::GetDomainDimension(DomainCPP, NumDims);
@@ -456,41 +455,167 @@ void ovkCollect(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
     GridValuesRange.End(iDim) = GridValuesEnd[iDim];
   }
 
-  ovk::Collect(DomainCPP, DonorGridID, ReceiverGridID, ovk::data_type(ValueType), Count,
-    ovk::collect_op(CollectOp), GridValuesRange, ovk::array_layout(GridValuesLayout), GridValues,
-    DonorValues);
+  ovk::CreateCollect(DomainCPP, DonorGridID, ReceiverGridID, CollectID, ovk::collect_op(CollectOp),
+    ovk::data_type(ValueType), Count, GridValuesRange, ovk::array_layout(GridValuesLayout));
 
 }
 
-void ovkSend(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, ovk_data_type ValueType,
-  int Count, const void **DonorValues, int Tag, ovk_request **Request) {
+void ovkDestroyCollect(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int CollectID) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+
+  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
+
+  ovk::DestroyCollect(DomainCPP, DonorGridID, ReceiverGridID, CollectID);
+
+}
+
+void ovkCollect(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int CollectID, const void
+  **GridValues, void **DonorValues) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+
+  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
+
+  ovk::Collect(DomainCPP, DonorGridID, ReceiverGridID, CollectID, GridValues, DonorValues);
+
+}
+
+bool ovkCollectExists(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int
+  CollectID) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+
+  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+
+  return ovk::CollectExists(DomainCPP, DonorGridID, ReceiverGridID, CollectID);
+
+}
+
+void ovkGetNextAvailableCollectID(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int
+  *CollectID) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+
+  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+
+  ovk::GetNextAvailableCollectID(DomainCPP, DonorGridID, ReceiverGridID, *CollectID);
+
+}
+
+void ovkCreateSend(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int SendID,
+  ovk_data_type ValueType, int Count, int Tag) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+
+  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
+
+  ovk::CreateSend(DomainCPP, DonorGridID, ReceiverGridID, SendID, ovk::data_type(ValueType), Count,
+    Tag);
+
+}
+
+void ovkDestroySend(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int SendID) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+
+  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
+
+  ovk::DestroySend(DomainCPP, DonorGridID, ReceiverGridID, SendID);
+
+}
+
+void ovkSend(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int SendID, const void
+  **DonorValues, ovk_request **Request) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
   OVK_DEBUG_ASSERT(Request, "Invalid request pointer.");
 
-  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
   auto RequestCPPPtr = new ovk::request();
 
-  ovk::Send(DomainCPP, DonorGridID, ReceiverGridID, ovk::data_type(ValueType), Count, DonorValues,
-    Tag, *RequestCPPPtr);
+  *RequestCPPPtr = ovk::Send(DomainCPP, DonorGridID, ReceiverGridID, SendID, DonorValues);
 
   *Request = reinterpret_cast<ovk_request *>(RequestCPPPtr);
 
 }
 
-void ovkReceive(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
-  ovk_data_type ValueType, int Count, void **ReceiverValues, int Tag, ovk_request **Request) {
+bool ovkSendExists(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int SendID) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+
+  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+
+  return ovk::SendExists(DomainCPP, DonorGridID, ReceiverGridID, SendID);
+
+}
+
+void ovkGetNextAvailableSendID(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int
+  *SendID) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+
+  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+
+  ovk::GetNextAvailableSendID(DomainCPP, DonorGridID, ReceiverGridID, *SendID);
+
+}
+
+void ovkCreateReceive(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int RecvID,
+  ovk_data_type ValueType, int Count, int Tag) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+
+  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
+
+  ovk::CreateReceive(DomainCPP, DonorGridID, ReceiverGridID, RecvID, ovk::data_type(ValueType),
+    Count, Tag);
+
+}
+
+void ovkDestroyReceive(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int RecvID) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+
+  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
+
+  ovk::DestroyReceive(DomainCPP, DonorGridID, ReceiverGridID, RecvID);
+
+}
+
+void ovkReceive(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int RecvID, void
+  **ReceiverValues, ovk_request **Request) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
   OVK_DEBUG_ASSERT(Request, "Invalid request pointer.");
 
-  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
   auto RequestCPPPtr = new ovk::request();
 
-  ovk::Receive(DomainCPP, DonorGridID, ReceiverGridID, ovk::data_type(ValueType), Count,
-    ReceiverValues, Tag, *RequestCPPPtr);
+  *RequestCPPPtr = ovk::Receive(DomainCPP, DonorGridID, ReceiverGridID, RecvID, ReceiverValues);
 
   *Request = reinterpret_cast<ovk_request *>(RequestCPPPtr);
+
+}
+
+bool ovkReceiveExists(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int RecvID) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+
+  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+
+  return ovk::ReceiveExists(DomainCPP, DonorGridID, ReceiverGridID, RecvID);
+
+}
+
+void ovkGetNextAvailableReceiveID(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int
+  *RecvID) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+
+  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+
+  ovk::GetNextAvailableReceiveID(DomainCPP, DonorGridID, ReceiverGridID, *RecvID);
 
 }
 
@@ -552,16 +677,15 @@ void ovkWaitAny(const ovk_domain *Domain, int NumRequests, ovk_request **Request
 
 }
 
-void ovkDisperse(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
-  ovk_data_type ValueType, int Count, ovk_disperse_op DisperseOp, const void **ReceiverValues,
-  const int *GridValuesBegin, const int *GridValuesEnd, ovk_array_layout GridValuesLayout,
-  void **GridValues) {
+void ovkCreateDisperse(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int DisperseID,
+  ovk_disperse_op DisperseOp, ovk_data_type ValueType, int Count, const int *GridValuesBegin, const
+  int *GridValuesEnd, ovk_array_layout GridValuesLayout) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(GridValuesBegin, "Invalid grid data begin pointer.");
-  OVK_DEBUG_ASSERT(GridValuesEnd, "Invalid grid data end pointer.");
+  OVK_DEBUG_ASSERT(GridValuesBegin, "Invalid grid values begin pointer.");
+  OVK_DEBUG_ASSERT(GridValuesEnd, "Invalid grid values end pointer.");
 
-  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
 
   int NumDims;
   ovk::GetDomainDimension(DomainCPP, NumDims);
@@ -572,9 +696,52 @@ void ovkDisperse(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
     GridValuesRange.End(iDim) = GridValuesEnd[iDim];
   }
 
-  ovk::Disperse(DomainCPP, DonorGridID, ReceiverGridID, ovk::data_type(ValueType), Count,
-    ovk::disperse_op(DisperseOp), ReceiverValues, GridValuesRange,
-    ovk::array_layout(GridValuesLayout), GridValues);
+  ovk::CreateDisperse(DomainCPP, DonorGridID, ReceiverGridID, DisperseID, ovk::disperse_op(
+    DisperseOp), ovk::data_type(ValueType), Count, GridValuesRange, ovk::array_layout(
+    GridValuesLayout));
+
+}
+
+void ovkDestroyDisperse(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int DisperseID) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+
+  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
+
+  ovk::DestroyDisperse(DomainCPP, DonorGridID, ReceiverGridID, DisperseID);
+
+}
+
+void ovkDisperse(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int DisperseID, const void
+  **ReceiverValues, void **GridValues) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+
+  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
+
+  ovk::Disperse(DomainCPP, DonorGridID, ReceiverGridID, DisperseID, ReceiverValues, GridValues);
+
+}
+
+bool ovkDisperseExists(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int
+  DisperseID) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+
+  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+
+  return ovk::DisperseExists(DomainCPP, DonorGridID, ReceiverGridID, DisperseID);
+
+}
+
+void ovkGetNextAvailableDisperseID(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
+  int *DisperseID) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+
+  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+
+  ovk::GetNextAvailableDisperseID(DomainCPP, DonorGridID, ReceiverGridID, *DisperseID);
 
 }
 

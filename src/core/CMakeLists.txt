@@ -19,6 +19,7 @@ set(SOURCES
   AssemblyOptions.cpp
   CollectBase.cpp
   CollectCol.cpp
+  CollectMap.cpp
   CollectRow.cpp
   Connectivity.cpp
   ConnectivityD.cpp
@@ -38,8 +39,10 @@ set(SOURCES
   PartitionHash.cpp
   Profiler.cpp
   Recv.cpp
+  RecvMap.cpp
   Request.cpp
   Send.cpp
+  SendMap.cpp
 )
 
 set(PUBLIC_HEADERS
@@ -84,6 +87,7 @@ set(INTERNAL_HEADERS
   CollectAny.hpp
   CollectBase.hpp
   CollectInterp.hpp
+  CollectMap.hpp
   CollectNone.hpp
   CollectNotAll.hpp
   Comm.hpp
@@ -114,11 +118,13 @@ set(INTERNAL_HEADERS
   Profiler.hpp
   Profiler.inl
   Recv.hpp
+  RecvMap.hpp
   Requires.hpp
   ScalarOps.hpp
   ScopeGuard.hpp
   ScopeGuard.inl
   Send.hpp
+  SendMap.hpp
   TextProcessing.hpp
   TextProcessing.inl
   TypeSequence.hpp

@@ -77,25 +77,48 @@ void ovkGetLocalReceiverCount(const ovk_domain *Domain, int DonorGridID, int Rec
 
 void ovkAssemble(ovk_domain *Domain, const ovk_assembly_options *Options);
 
-void ovkCollect(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
-  ovk_data_type ValueType, int Count, ovk_collect_op CollectOp, const int *GridValuesBegin,
-  const int *GridValuesEnd, ovk_array_layout GridValuesLayout, const void **GridValues,
-  void **DonorValues);
+void ovkCreateCollect(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int CollectID,
+  ovk_collect_op CollectOp, ovk_data_type ValueType, int Count, const int *GridValuesBegin, const
+  int *GridValuesEnd, ovk_array_layout GridValuesLayout);
+void ovkDestroyCollect(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int CollectID);
+void ovkCollect(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int CollectID, const void
+  **GridValues, void **DonorValues);
+bool ovkCollectExists(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int CollectID);
+void ovkGetNextAvailableCollectID(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int
+  *CollectID);
 
-void ovkSend(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, ovk_data_type ValueType,
-  int Count, const void **DonorValues, int Tag, ovk_request **Request);
+void ovkCreateSend(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int SendID,
+  ovk_data_type ValueType, int Count, int Tag);
+void ovkDestroySend(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int SendID);
+void ovkSend(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int SendID, const void
+  **DonorValues, ovk_request **Request);
+bool SendExists(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int SendID);
+void GetNextAvailableSendID(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int
+  *SendID);
 
-void ovkReceive(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
-  ovk_data_type ValueType, int Count, void **ReceiverValues, int Tag, ovk_request **Request);
+void ovkCreateReceive(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int RecvID,
+  ovk_data_type ValueType, int Count, int Tag);
+void ovkDestroyReceive(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int RecvID);
+void ovkReceive(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int RecvID, void
+  **ReceiverValues, ovk_request **Request);
+bool ReceiveExists(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int RecvID);
+void GetNextAvailableReceiveID(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int
+  *RecvID);
 
 void ovkWait(const ovk_domain *Domain, ovk_request **Request);
 void ovkWaitAll(const ovk_domain *Domain, int NumRequests, ovk_request **Requests);
 void ovkWaitAny(const ovk_domain *Domain, int NumRequests, ovk_request **Requests, int *Index);
 
-void ovkDisperse(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
-  ovk_data_type ValueType, int Count, ovk_disperse_op DisperseOp, const void **ReceiverValues,
-  const int *GridValuesBegin, const int *GridValuesEnd, ovk_array_layout GridValuesLayout, void
-  **GridValues);
+void ovkCreateDisperse(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int DisperseID,
+  ovk_disperse_op DisperseOp, ovk_data_type ValueType, int Count, const int *GridValuesBegin, const
+  int *GridValuesEnd, ovk_array_layout GridValuesLayout);
+void ovkDestroyDisperse(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int DisperseID);
+void ovkDisperse(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int DisperseID, const void
+  **ReceiverValues, void **GridValues);
+bool ovkDisperseExists(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int
+  DisperseID);
+void ovkGetNextAvailableDisperseID(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
+  int *DisperseID);
 
 void ovkCreateDomainParams(ovk_domain_params **Params, int NumDims);
 void ovkDestroyDomainParams(ovk_domain_params **Params);

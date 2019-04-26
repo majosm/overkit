@@ -4,17 +4,15 @@
 #ifndef OVK_CORE_COLLECT_NONE_HPP_INCLUDED
 #define OVK_CORE_COLLECT_NONE_HPP_INCLUDED
 
-#include "ovk/core/Array.hpp"
-#include "ovk/core/ArrayView.hpp"
-#include "ovk/core/CollectBase.hpp"
-#include "ovk/core/Comm.hpp"
-#include "ovk/core/ConnectivityD.hpp"
-#include "ovk/core/Constants.hpp"
-#include "ovk/core/Elem.hpp"
-#include "ovk/core/Exchange.hpp"
-#include "ovk/core/Global.hpp"
-#include "ovk/core/Profiler.hpp"
-#include "ovk/core/Range.hpp"
+#include <ovk/core/Array.hpp>
+#include <ovk/core/ArrayView.hpp>
+#include <ovk/core/Cart.hpp>
+#include <ovk/core/CollectBase.hpp>
+#include <ovk/core/CollectMap.hpp>
+#include <ovk/core/Constants.hpp>
+#include <ovk/core/Global.hpp>
+#include <ovk/core/Profiler.hpp>
+#include <ovk/core/Range.hpp>
 
 #include <mpi.h>
 
@@ -29,74 +27,76 @@ protected:
 
   using parent_type = collect_base_for_type<T, Layout>;
 
+  using typename parent_type::cell_indexer;
+  using parent_type::CollectMap_;
   using parent_type::Profiler_;
   using parent_type::Count_;
-  using parent_type::NumDonors_;
-  using parent_type::MaxPointsInCell_;
-  using parent_type::GridValues_;
-  using parent_type::DonorValues_;
+  using parent_type::FieldValues_;
+  using parent_type::PackedValues_;
 
 public:
 
   using typename parent_type::value_type;
 
-  collect_none() = default;
+  collect_none(comm_view Comm, const cart &Cart, const range &LocalRange, const collect_map
+    &CollectMap, int Count, const range &FieldValuesRange, profiler &Profiler):
+    parent_type(Comm, Cart, LocalRange, CollectMap, Count, FieldValuesRange, Profiler),
+    MemAllocTime_(GetProfilerTimerID(*Profiler_, "Collect::MemAlloc")),
+    ReduceTime_(GetProfilerTimerID(*Profiler_, "Collect::Reduce"))
+  {
+
+    StartProfile(*Profiler_, MemAllocTime_);
+
+    parent_type::AllocateRemoteValues_(RemoteValues_);
+
+    VertexValues_.Resize({{Count_,CollectMap_->MaxVertices()}});
+
+    EndProfile(*Profiler_, MemAllocTime_);
+
+  }
+
   collect_none(const collect_none &Other) = delete;
   collect_none(collect_none &&Other) noexcept = default;
 
   collect_none &operator=(const collect_none &Other) = delete;
   collect_none &operator=(collect_none &&Other) noexcept = default;
 
-  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) {
+  void Collect(const void * const *FieldValuesVoid, void **PackedValuesVoid) {
 
-    parent_type::Initialize(Exchange, Count, GridValuesRange);
+    parent_type::SetBufferViews_(FieldValuesVoid, PackedValuesVoid);
+    parent_type::RetrieveRemoteValues_(FieldValues_, RemoteValues_);
 
-    int MemAllocTime = core::GetProfilerTimerID(*Profiler_, "Collect::MemAlloc");
+    StartProfile(*Profiler_, ReduceTime_);
 
-    core::StartProfile(*Profiler_, MemAllocTime);
+    for (long long iCell = 0; iCell < CollectMap_->Count(); ++iCell) {
 
-    parent_type::AllocateRemoteDonorValues(RemoteDonorValues_);
+      range CellRange = parent_type::GetCellRange_(iCell);
+      cell_indexer CellIndexer(CellRange);
+      int NumVertices = CellRange.Count<int>();
 
-    DonorPointValues_.Resize({{Count_,MaxPointsInCell_}});
-
-    core::EndProfile(*Profiler_, MemAllocTime);
-
-  }
-
-  void Collect(const void * const *GridValuesVoid, void **DonorValuesVoid) {
-
-    parent_type::SetBufferViews(GridValuesVoid, DonorValuesVoid);
-    parent_type::RetrieveRemoteDonorValues(GridValues_, RemoteDonorValues_);
-
-    int ReduceTime = core::GetProfilerTimerID(*Profiler_, "Collect::Reduce");
-
-    core::StartProfile(*Profiler_, ReduceTime);
-
-    for (long long iDonor = 0; iDonor < NumDonors_; ++iDonor) {
-
-      elem<int,MAX_DIMS> DonorSize;
-      parent_type::AssembleDonorPointValues(GridValues_, RemoteDonorValues_, iDonor, DonorSize,
-        DonorPointValues_);
-      int NumDonorPoints = DonorSize[0]*DonorSize[1]*DonorSize[2];
+      parent_type::AssembleVertexValues_(FieldValues_, RemoteValues_, iCell, CellRange, CellIndexer,
+        VertexValues_);
 
       for (int iCount = 0; iCount < Count_; ++iCount) {
-        DonorValues_(iCount)(iDonor) = value_type(true);
-        for (int iPointInCell = 0; iPointInCell < NumDonorPoints; ++iPointInCell) {
-          DonorValues_(iCount)(iDonor) = DonorValues_(iCount)(iDonor) && !DonorPointValues_(iCount,
-            iPointInCell);
+        PackedValues_(iCount)(iCell) = value_type(true);
+        for (int iVertex = 0; iVertex < NumVertices; ++iVertex) {
+          PackedValues_(iCount)(iCell) = PackedValues_(iCount)(iVertex) && !VertexValues_(iCount,
+            iVertex);
         }
       }
 
     }
 
-    core::EndProfile(*Profiler_, ReduceTime);
+    EndProfile(*Profiler_, ReduceTime_);
 
   }
 
 private:
 
-  array<array<value_type,2>> RemoteDonorValues_;
-  array<value_type,2> DonorPointValues_;
+  int MemAllocTime_;
+  int ReduceTime_;
+  array<array<value_type,2>> RemoteValues_;
+  array<value_type,2> VertexValues_;
 
 };
 

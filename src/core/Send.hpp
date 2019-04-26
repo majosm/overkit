@@ -9,14 +9,16 @@
 #include <ovk/core/Constants.hpp>
 #include <ovk/core/Connectivity.hpp>
 #include <ovk/core/DataType.hpp>
-#include <ovk/core/Exchange.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Profiler.hpp>
 #include <ovk/core/Request.hpp>
+#include <ovk/core/SendMap.hpp>
+#include <ovk/core/TypeTraits.hpp>
 
 #include <mpi.h>
 
 #include <memory>
+#include <type_traits>
 #include <utility>
 
 namespace ovk {
@@ -28,14 +30,16 @@ public:
 
   send() = default;
 
-  template <typename T> send(T &&Send):
+  template <typename T, OVK_FUNCTION_REQUIRES(!std::is_same<remove_cvref<T>, send>::value)>
+    send(T &&Send):
     Send_(new model<T>(std::forward<T>(Send)))
   {}
 
   send(const send &Other) = delete;
   send(send &&Other) noexcept = default;
 
-  template <typename T> send &operator=(T &&Send) {
+  template <typename T, OVK_FUNCTION_REQUIRES(!std::is_same<remove_cvref<T>, send>::value)>
+    send &operator=(T &&Send) {
     Send_.reset(new model<T>(std::forward<T>(Send)));
     return *this;
   }
@@ -43,12 +47,8 @@ public:
   send &operator=(const send &Other) = delete;
   send &operator=(send &&Other) noexcept = default;
 
-  void Initialize(const exchange &Exchange, int Count, int Tag) {
-    Send_->Initialize(Exchange, Count, Tag);
-  }
-
-  request Send(const void * const *DonorValues) {
-    return Send_->Send(DonorValues);
+  request Send(const void * const *Values) {
+    return Send_->Send(Values);
   }
 
 private:
@@ -56,21 +56,16 @@ private:
   class concept {
   public:
     virtual ~concept() {}
-    virtual void Initialize(const exchange &Exchange, int Count, int Tag) = 0;
-    virtual request Send(const void * const *DonorValues) = 0;
+    virtual request Send(const void * const *Values) = 0;
   };
 
   template <typename T> class model : public concept {
   public:
-    using value_type = typename T::value_type;
     explicit model(T Send):
       Send_(std::move(Send))
     {}
-    virtual void Initialize(const exchange &Exchange, int Count, int Tag) override {
-      Send_.Initialize(Exchange, Count, Tag);
-    }
-    virtual request Send(const void * const *DonorValues) override {
-      return Send_.Send(DonorValues);
+    virtual request Send(const void * const *Values) override {
+      return Send_.Send(Values);
     }
   private:
     T Send_;
@@ -80,7 +75,8 @@ private:
 
 };
 
-send MakeSend(data_type ValueType);
+send MakeSend(comm_view Comm, const send_map &SendMap, data_type ValueType, int Count, int Tag,
+  profiler &Profiler);
 
 }}
 

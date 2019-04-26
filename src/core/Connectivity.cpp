@@ -249,7 +249,7 @@ void GetConnectivityCommRank(const connectivity &Connectivity, int &CommRank) {
 
 namespace core {
 
-comm_view GetConnectivityComm(const connectivity &Connectivity) {
+const comm &GetConnectivityComm(const connectivity &Connectivity) {
 
   return Connectivity.Comm_;
 

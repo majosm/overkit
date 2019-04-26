@@ -406,6 +406,32 @@ void ExchangeTest(int argc, char **argv) {
     }
   }
 
+  for (iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
+    input_grid *InputGrid = InputGrids+iLocalGrid;
+    int LocalGridID = InputGrid->id;
+    for (iGrid = 0; iGrid < 2; ++iGrid) {
+      int OtherGridID = iGrid+1;
+      if (ovkConnectivityExists(Domain, LocalGridID, OtherGridID)) {
+        ovkCreateCollect(Domain, LocalGridID, OtherGridID, 1, OVK_COLLECT_INTERPOLATE, OVK_DOUBLE,
+          1, InputGrid->is, InputGrid->ie, OVK_COLUMN_MAJOR);
+        ovkCreateSend(Domain, LocalGridID, OtherGridID, 1, OVK_DOUBLE, 1, 1);
+      }
+    }
+  }
+
+  for (iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
+    input_grid *InputGrid = InputGrids+iLocalGrid;
+    int LocalGridID = InputGrid->id;
+    for (iGrid = 0; iGrid < 2; ++iGrid) {
+      int OtherGridID = iGrid+1;
+      if (ovkConnectivityExists(Domain, OtherGridID, LocalGridID)) {
+        ovkCreateReceive(Domain, OtherGridID, LocalGridID, 1, OVK_DOUBLE, 1, 1);
+        ovkCreateDisperse(Domain, OtherGridID, LocalGridID, 1, OVK_DISPERSE_OVERWRITE, OVK_DOUBLE,
+          1, InputGrid->is, InputGrid->ie, OVK_COLUMN_MAJOR);
+      }
+    }
+  }
+
   double **SendBuffers = malloc(NumSends*sizeof(double *));
   double **ReceiveBuffers = malloc(NumReceives*sizeof(double *));
   iSend = 0;
@@ -439,8 +465,7 @@ void ExchangeTest(int argc, char **argv) {
       if (ovkConnectivityExists(Domain, LocalGridID, OtherGridID)) {
         const void *GridData = InputState->values;
         void *DonorData = SendBuffers[iSend];
-        ovkCollect(Domain, LocalGridID, OtherGridID, OVK_DOUBLE, 1, OVK_COLLECT_INTERPOLATE,
-          InputGrid->is, InputGrid->ie, OVK_COLUMN_MAJOR, &GridData, &DonorData);
+        ovkCollect(Domain, LocalGridID, OtherGridID, 1, &GridData, &DonorData);
         ++iSend;
       }
     }
@@ -455,8 +480,7 @@ void ExchangeTest(int argc, char **argv) {
       int OtherGridID = iGrid+1;
       if (ovkConnectivityExists(Domain, OtherGridID, LocalGridID)) {
         void *ReceiverData = ReceiveBuffers[iReceive];
-        ovkReceive(Domain, OtherGridID, LocalGridID, OVK_DOUBLE, 1, &ReceiverData, 1,
-          &Requests[iReceive]);
+        ovkReceive(Domain, OtherGridID, LocalGridID, 1, &ReceiverData, &Requests[iReceive]);
         ++iReceive;
       }
     }
@@ -469,8 +493,7 @@ void ExchangeTest(int argc, char **argv) {
       int OtherGridID = iGrid+1;
       if (ovkConnectivityExists(Domain, LocalGridID, OtherGridID)) {
         const void *DonorData = SendBuffers[iSend];
-        ovkSend(Domain, LocalGridID, OtherGridID, OVK_DOUBLE, 1, &DonorData, 1,
-          &Requests[NumReceives+iSend]);
+        ovkSend(Domain, LocalGridID, OtherGridID, 1, &DonorData, &Requests[NumReceives+iSend]);
         ++iSend;
       }
     }
@@ -490,8 +513,7 @@ void ExchangeTest(int argc, char **argv) {
       if (ovkConnectivityExists(Domain, OtherGridID, LocalGridID)) {
         const void *ReceiverData = ReceiveBuffers[iReceive];
         void *GridData = InputState->values;
-        ovkDisperse(Domain, OtherGridID, LocalGridID, OVK_DOUBLE, 1, OVK_DISPERSE_OVERWRITE,
-          &ReceiverData, InputGrid->is, InputGrid->ie, OVK_COLUMN_MAJOR, &GridData);
+        ovkDisperse(Domain, OtherGridID, LocalGridID, 1, &ReceiverData, &GridData);
         ++iReceive;
       }
     }

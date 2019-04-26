@@ -24,55 +24,12 @@ namespace ovk {
 
 struct exchange {
 
-  struct collect_send {
-    int Rank;
-    long long NumPoints;
-    array<int,2> Points;
-  };
-
-  struct collect_recv {
-    int Rank;
-    long long NumPoints;
-  };
-
-  struct send {
-    int Rank;
-    long long Count;
-  };
-
-  struct recv {
-    int Rank;
-    long long Count;
-  };
-
   const connectivity *Connectivity_;
   mutable core::logger *Logger_;
   mutable core::error_handler *ErrorHandler_;
   mutable core::profiler *Profiler_;
   int NumDims_;
   core::comm_view Comm_;
-
-  array<long long> DonorsSorted_;
-  array<long long> ReceiversSorted_;
-  array<int> DonorDestRanks_;
-  array<int> ReceiverSourceRanks_;
-  core::partition_hash SourceHash_;
-  core::partition_hash DestinationHash_;
-
-  array<collect_send> CollectSends_;
-  array<collect_recv> CollectRecvs_;
-  array<int> NumRemoteDonorPoints_;
-  array<long long *> RemoteDonorPoints_;
-  array<long long> RemoteDonorPointsData_;
-  array<int *> RemoteDonorPointCollectRecvs_;
-  array<int> RemoteDonorPointCollectRecvsData_;
-  array<long long *> RemoteDonorPointCollectRecvBufferIndices_;
-  array<long long> RemoteDonorPointCollectRecvBufferIndicesData_;
-
-  array<send> Sends_;
-  array<recv> Recvs_;
-  array<int> DonorSendIndices_;
-  array<int> ReceiverRecvIndices_;
 
 };
 

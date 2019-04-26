@@ -6,15 +6,16 @@
 
 #include <ovk/core/Array.hpp>
 #include <ovk/core/Constants.hpp>
-#include <ovk/core/Connectivity.hpp>
-#include <ovk/core/ConnectivityR.hpp>
 #include <ovk/core/DataType.hpp>
-#include <ovk/core/Exchange.hpp>
 #include <ovk/core/Global.hpp>
+#include <ovk/core/Profiler.hpp>
+#include <ovk/core/Range.hpp>
+#include <ovk/core/TypeTraits.hpp>
 
 #include <mpi.h>
 
 #include <memory>
+#include <type_traits>
 #include <utility>
 
 namespace ovk {
@@ -26,14 +27,16 @@ public:
 
   disperse() = default;
 
-  template <typename T> disperse(T &&Disperse):
+  template <typename T, OVK_FUNCTION_REQUIRES(!std::is_same<remove_cvref<T>, disperse>::value)>
+    disperse(T &&Disperse):
     Disperse_(new model<T>(std::forward<T>(Disperse)))
   {}
 
   disperse(const disperse &Other) = delete;
   disperse(disperse &&Other) noexcept = default;
 
-  template <typename T> disperse &operator=(T &&Disperse) {
+  template <typename T, OVK_FUNCTION_REQUIRES(!std::is_same<remove_cvref<T>, disperse>::value)>
+    disperse &operator=(T &&Disperse) {
     Disperse_.reset(new model<T>(std::forward<T>(Disperse)));
     return *this;
   }
@@ -41,12 +44,8 @@ public:
   disperse &operator=(const disperse &Other) = delete;
   disperse &operator=(disperse &&Other) noexcept = default;
 
-  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) {
-    Disperse_->Initialize(Exchange, Count, GridValuesRange);
-  }
-
-  void Disperse(const void * const *ReceiverValues, void **GridValues) {
-    Disperse_->Disperse(ReceiverValues, GridValues);
+  void Disperse(const void * const *PackedValues, void **FieldValues) {
+    Disperse_->Disperse(PackedValues, FieldValues);
   }
 
 private:
@@ -54,22 +53,16 @@ private:
   class concept {
   public:
     virtual ~concept() {}
-    virtual void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) = 0;
-    virtual void Disperse(const void * const *ReceiverValues, void **GridValues) = 0;
+    virtual void Disperse(const void * const *PackedValues, void **FieldValues) = 0;
   };
 
   template <typename T> class model : public concept {
   public:
-    using value_type = typename T::value_type;
     explicit model(T Disperse):
       Disperse_(std::move(Disperse))
     {}
-    virtual void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange)
-      override {
-      Disperse_.Initialize(Exchange, Count, GridValuesRange);
-    }
-    virtual void Disperse(const void * const *ReceiverValues, void **GridValues) override {
-      Disperse_.Disperse(ReceiverValues, GridValues);
+    virtual void Disperse(const void * const *PackedValues, void **FieldValues) override {
+      Disperse_.Disperse(PackedValues, FieldValues);
     }
   private:
     T Disperse_;
@@ -79,7 +72,10 @@ private:
 
 };
 
-disperse MakeDisperse(disperse_op DisperseOp, data_type ValueType, array_layout Layout);
+disperse MakeDisperseOverwrite(const array<int,2> &Points, data_type ValueType, int Count,
+  const range &FieldValuesRange, array_layout FieldValuesLayout, profiler &Profiler);
+disperse MakeDisperseAppend(const array<int,2> &Points, data_type ValueType, int Count,
+  const range &FieldValuesRange, array_layout FieldValuesLayout, profiler &Profiler);
 
 }}
 

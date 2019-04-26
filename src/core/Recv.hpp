@@ -12,11 +12,14 @@
 #include <ovk/core/Exchange.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Profiler.hpp>
+#include <ovk/core/RecvMap.hpp>
 #include <ovk/core/Request.hpp>
+#include <ovk/core/TypeTraits.hpp>
 
 #include <mpi.h>
 
 #include <memory>
+#include <type_traits>
 #include <utility>
 
 namespace ovk {
@@ -28,24 +31,22 @@ public:
 
   recv() = default;
 
-  template <typename T> recv(T &&Recv):
+  template <typename T, OVK_FUNCTION_REQUIRES(!std::is_same<remove_cvref<T>, recv>::value)>
+    recv(T &&Recv):
     Recv_(new model<T>(std::forward<T>(Recv)))
   {}
 
   recv(const recv &Other) = delete;
   recv(recv &&Other) noexcept = default;
 
-  template <typename T> recv &operator=(T &&Recv) {
+  template <typename T, OVK_FUNCTION_REQUIRES(!std::is_same<remove_cvref<T>, recv>::value)>
+    recv &operator=(T &&Recv) {
     Recv_.reset(new model<T>(std::forward<T>(Recv)));
     return *this;
   }
 
   recv &operator=(const recv &Other) = delete;
   recv &operator=(recv &&Other) noexcept = default;
-
-  void Initialize(const exchange &Exchange, int Count, int Tag) {
-    Recv_->Initialize(Exchange, Count, Tag);
-  }
 
   request Recv(void **ReceiverValues) {
     return Recv_->Recv(ReceiverValues);
@@ -56,19 +57,14 @@ private:
   class concept {
   public:
     virtual ~concept() {}
-    virtual void Initialize(const exchange &Exchange, int Count, int Tag) = 0;
     virtual request Recv(void **ReceiverValues) = 0;
   };
 
   template <typename T> class model : public concept {
   public:
-    using value_type = typename T::value_type;
     explicit model(T Recv):
       Recv_(std::move(Recv))
     {}
-    virtual void Initialize(const exchange &Exchange, int Count, int Tag) override {
-      Recv_.Initialize(Exchange, Count, Tag);
-    }
     virtual request Recv(void **ReceiverValues) override {
       return Recv_.Recv(ReceiverValues);
     }
@@ -80,7 +76,8 @@ private:
 
 };
 
-recv MakeRecv(data_type ValueType);
+recv MakeRecv(comm_view Comm, const recv_map &RecvMap, data_type ValueType, int Count, int Tag,
+  profiler &Profiler);
 
 }}
 

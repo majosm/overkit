@@ -4,19 +4,15 @@
 #ifndef OVK_CORE_COLLECT_INTERP_HPP_INCLUDED
 #define OVK_CORE_COLLECT_INTERP_HPP_INCLUDED
 
-#include "ovk/core/Array.hpp"
-#include "ovk/core/ArrayView.hpp"
-#include "ovk/core/CollectBase.hpp"
-#include "ovk/core/Comm.hpp"
-#include "ovk/core/Constants.hpp"
-#include "ovk/core/ConnectivityD.hpp"
-#include "ovk/core/Debug.hpp"
-#include "ovk/core/Elem.hpp"
-#include "ovk/core/Exchange.hpp"
-#include "ovk/core/Global.hpp"
-#include "ovk/core/Indexer.hpp"
-#include "ovk/core/Profiler.hpp"
-#include "ovk/core/Range.hpp"
+#include <ovk/core/Array.hpp>
+#include <ovk/core/ArrayView.hpp>
+#include <ovk/core/Cart.hpp>
+#include <ovk/core/CollectBase.hpp>
+#include <ovk/core/CollectMap.hpp>
+#include <ovk/core/Constants.hpp>
+#include <ovk/core/Global.hpp>
+#include <ovk/core/Profiler.hpp>
+#include <ovk/core/Range.hpp>
 
 #include <mpi.h>
 
@@ -31,93 +27,92 @@ protected:
 
   using parent_type = collect_base_for_type<T, Layout>;
 
-  using typename parent_type::donor_indexer;
-  using parent_type::Donors_;
+  using typename parent_type::cell_indexer;
+  using parent_type::CollectMap_;
   using parent_type::Profiler_;
   using parent_type::Count_;
-  using parent_type::NumDonors_;
-  using parent_type::MaxPointsInCell_;
-  using parent_type::GridValues_;
-  using parent_type::DonorValues_;
+  using parent_type::FieldValues_;
+  using parent_type::PackedValues_;
 
 public:
 
   using typename parent_type::value_type;
 
-  collect_interp() = default;
+  collect_interp(comm_view Comm, const cart &Cart, const range &LocalRange, const collect_map
+    &CollectMap, int Count, const range &FieldValuesRange, profiler &Profiler,
+    array_view<const double,3> InterpCoefs):
+    parent_type(Comm, Cart, LocalRange, CollectMap, Count, FieldValuesRange, Profiler),
+    InterpCoefs_(InterpCoefs),
+    MemAllocTime_(GetProfilerTimerID(*Profiler_, "Collect::MemAlloc")),
+    ReduceTime_(GetProfilerTimerID(*Profiler_, "Collect::Reduce"))
+  {
+
+    StartProfile(*Profiler_, MemAllocTime_);
+
+    parent_type::AllocateRemoteValues_(RemoteValues_);
+
+    VertexValues_.Resize({{Count_,CollectMap_->MaxVertices()}});
+    VertexCoefs_.Resize({CollectMap_->MaxVertices()});
+
+    EndProfile(*Profiler_, MemAllocTime_);
+
+  }
+
   collect_interp(const collect_interp &Other) = delete;
   collect_interp(collect_interp &&Other) noexcept = default;
 
   collect_interp &operator=(const collect_interp &Other) = delete;
   collect_interp &operator=(collect_interp &&Other) noexcept = default;
 
-  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) {
+  void Collect(const void * const *FieldValuesVoid, void **PackedValuesVoid) {
 
-    parent_type::Initialize(Exchange, Count, GridValuesRange);
+    parent_type::SetBufferViews_(FieldValuesVoid, PackedValuesVoid);
+    parent_type::RetrieveRemoteValues_(FieldValues_, RemoteValues_);
 
-    InterpCoefs_ = Donors_->InterpCoefs_;
+    StartProfile(*Profiler_, ReduceTime_);
 
-    int MemAllocTime = core::GetProfilerTimerID(*Profiler_, "Collect::MemAlloc");
-    core::StartProfile(*Profiler_, MemAllocTime);
+    for (long long iCell = 0; iCell < CollectMap_->Count(); ++iCell) {
 
-    parent_type::AllocateRemoteDonorValues(RemoteDonorValues_);
+      range CellRange = parent_type::GetCellRange_(iCell);
+      cell_indexer CellIndexer(CellRange);
+      int NumVertices = CellRange.Count<int>();
 
-    DonorPointValues_.Resize({{Count_,MaxPointsInCell_}});
-    DonorPointCoefs_.Resize({MaxPointsInCell_});
+      parent_type::AssembleVertexValues_(FieldValues_, RemoteValues_, iCell, CellRange, CellIndexer,
+        VertexValues_);
 
-    core::EndProfile(*Profiler_, MemAllocTime);
-
-  }
-
-  void Collect(const void * const *GridValuesVoid, void **DonorValuesVoid) {
-
-    parent_type::SetBufferViews(GridValuesVoid, DonorValuesVoid);
-    parent_type::RetrieveRemoteDonorValues(GridValues_, RemoteDonorValues_);
-
-    int ReduceTime = core::GetProfilerTimerID(*Profiler_, "Collect::Reduce");
-    core::StartProfile(*Profiler_, ReduceTime);
-
-    for (long long iDonor = 0; iDonor < NumDonors_; ++iDonor) {
-
-      elem<int,MAX_DIMS> DonorSize;
-      parent_type::AssembleDonorPointValues(GridValues_, RemoteDonorValues_, iDonor, DonorSize,
-        DonorPointValues_);
-      int NumDonorPoints = DonorSize[0]*DonorSize[1]*DonorSize[2];
-
-      donor_indexer Indexer(DonorSize);
-
-      for (int k = 0; k < DonorSize[2]; ++k) {
-        for (int j = 0; j < DonorSize[1]; ++j) {
-          for (int i = 0; i < DonorSize[0]; ++i) {
-            int iPointInCell = Indexer.ToIndex(i,j,k);
-            DonorPointCoefs_(iPointInCell) =
-              InterpCoefs_(0,i,iDonor) *
-              InterpCoefs_(1,j,iDonor) *
-              InterpCoefs_(2,k,iDonor);
+      for (int k = CellRange.Begin(2); k < CellRange.End(2); ++k) {
+        for (int j = CellRange.Begin(1); j < CellRange.End(1); ++j) {
+          for (int i = CellRange.Begin(0); i < CellRange.End(0); ++i) {
+            int iVertex = CellIndexer.ToIndex(i,j,k);
+            VertexCoefs_(iVertex) =
+              InterpCoefs_(0,i-CellRange.Begin(0),iCell) *
+              InterpCoefs_(1,j-CellRange.Begin(1),iCell) *
+              InterpCoefs_(2,k-CellRange.Begin(2),iCell);
           }
         }
       }
 
       for (int iCount = 0; iCount < Count_; ++iCount) {
-        DonorValues_(iCount)(iDonor) = value_type(0);
-        for (int iPointInCell = 0; iPointInCell < NumDonorPoints; ++iPointInCell) {
-          DonorValues_(iCount)(iDonor) += DonorPointCoefs_(iPointInCell)*DonorPointValues_(iCount,
-            iPointInCell);
+        PackedValues_(iCount)(iCell) = value_type(0);
+        for (int iVertex = 0; iVertex < NumVertices; ++iVertex) {
+          PackedValues_(iCount)(iCell) += VertexCoefs_(iVertex)*VertexValues_(iCount,iVertex);
         }
       }
 
     }
 
-    core::EndProfile(*Profiler_, ReduceTime);
+    EndProfile(*Profiler_, ReduceTime_);
 
   }
 
 private:
 
   array_view<const double,3> InterpCoefs_;
-  array<array<value_type,2>> RemoteDonorValues_;
-  array<value_type,2> DonorPointValues_;
-  array<double> DonorPointCoefs_;
+  int MemAllocTime_;
+  int ReduceTime_;
+  array<array<value_type,2>> RemoteValues_;
+  array<value_type,2> VertexValues_;
+  array<double> VertexCoefs_;
 
 };
 

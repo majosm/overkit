@@ -6,18 +6,26 @@
 
 #include <ovk/core/ArrayView.hpp>
 #include <ovk/core/AssemblyOptions.hpp>
+#include <ovk/core/Collect.hpp>
+#include <ovk/core/CollectMap.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Connectivity.hpp>
 #include <ovk/core/Constants.hpp>
+#include <ovk/core/Disperse.hpp>
 #include <ovk/core/ErrorHandler.hpp>
 #include <ovk/core/Exchange.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Grid.hpp>
 #include <ovk/core/Logger.hpp>
 #include <ovk/core/Profiler.hpp>
+#include <ovk/core/Recv.hpp>
+#include <ovk/core/RecvMap.hpp>
+#include <ovk/core/Send.hpp>
+#include <ovk/core/SendMap.hpp>
 
 #include <mpi.h>
 
+#include <list>
 #include <map>
 #include <string>
 
@@ -39,6 +47,25 @@ struct domain {
     int EditRefCount_;
   };
 
+  struct collect_data {
+    core::collect_map Map;
+    std::map<int, core::collect> Collects;
+  };
+
+  struct send_data {
+    core::send_map Map;
+    std::map<int, core::send> Sends;
+  };
+
+  struct recv_data {
+    core::recv_map Map;
+    std::map<int, core::recv> Recvs;
+  };
+
+  struct disperse_data {
+    std::map<int, core::disperse> Disperses;
+  };
+
   mutable core::logger *Logger_;
   mutable core::error_handler *ErrorHandler_;
   mutable core::profiler Profiler_;
@@ -55,6 +82,10 @@ struct domain {
   std::map<int, std::map<int, connectivity>> LocalConnectivities_;
   std::map<int, std::map<int, exchange_info>> ExchangeInfo_;
   std::map<int, std::map<int, exchange>> LocalExchanges_;
+  std::map<int, std::map<int, collect_data>> CollectData_;
+  std::map<int, std::map<int, send_data>> SendData_;
+  std::map<int, std::map<int, recv_data>> RecvData_;
+  std::map<int, std::map<int, disperse_data>> DisperseData_;
 
 };
 
@@ -124,15 +155,32 @@ void GetLocalReceiverCount(const domain &Domain, int DonorGridID, int ReceiverGr
 
 void Assemble(domain &Domain, const assembly_options &Options);
 
-void Collect(const domain &Domain, int DonorGridID, int ReceiverGridID, data_type ValueType,
-  int Count, collect_op CollectOp, const range &GridValuesRange, array_layout GridValuesLayout,
-  const void * const *GridValues, void **DonorValues);
+void CreateCollect(domain &Domain, int DonorGridID, int ReceiverGridID, int CollectID, collect_op
+  CollectOp, data_type ValueType, int Count, const range &GridValuesRange, array_layout
+  GridValuesLayout);
+void DestroyCollect(domain &Domain, int DonorGridID, int ReceiverGridID, int CollectID);
+void Collect(domain &Domain, int DonorGridID, int ReceiverGridID, int CollectID, const void * const
+  *GridValues, void **DonorValues);
+bool CollectExists(const domain &Domain, int DonorGridID, int ReceiverGridID, int CollectID);
+void GetNextAvailableCollectID(const domain &Domain, int DonorGridID, int ReceiverGridID, int
+  &CollectID);
 
-void Send(const domain &Domain, int DonorGridID, int ReceiverGridID, data_type ValueType, int Count,
-  const void * const *DonorValues, int Tag, request &Request);
+void CreateSend(domain &Domain, int DonorGridID, int ReceiverGridID, int SendID, data_type
+  ValueType, int Count, int Tag);
+void DestroySend(domain &Domain, int DonorGridID, int ReceiverGridID, int SendID);
+request Send(domain &Domain, int DonorGridID, int ReceiverGridID, int SendID, const void * const
+  *DonorValues);
+bool SendExists(const domain &Domain, int DonorGridID, int ReceiverGridID, int SendID);
+void GetNextAvailableSendID(const domain &Domain, int DonorGridID, int ReceiverGridID, int &SendID);
 
-void Receive(const domain &Domain, int DonorGridID, int ReceiverGridID, data_type ValueType,
-  int Count, void **ReceiverValues, int Tag, request &Request);
+void CreateReceive(domain &Domain, int DonorGridID, int ReceiverGridID, int RecvID, data_type
+  ValueType, int Count, int Tag);
+void DestroyReceive(domain &Domain, int DonorGridID, int ReceiverGridID, int RecvID);
+request Receive(domain &Domain, int DonorGridID, int ReceiverGridID, int RecvID, void
+  **ReceiverValues);
+bool ReceiveExists(const domain &Domain, int DonorGridID, int ReceiverGridID, int RecvID);
+void GetNextAvailableReceiveID(const domain &Domain, int DonorGridID, int ReceiverGridID, int
+  &RecvID);
 
 void Wait(const domain &Domain, request &Request);
 void WaitAll(const domain &Domain, array_view<request> Requests);
@@ -141,10 +189,15 @@ void WaitAny(const domain &Domain, array_view<request> Requests, int &Index);
 void WaitAll(const domain &Domain, array_view<request *> Requests);
 void WaitAny(const domain &Domain, array_view<request *> Requests, int &Index);
 
-
-void Disperse(const domain &Domain, int DonorGridID, int ReceiverGridID, data_type ValueType,
-  int Count, disperse_op DisperseOp, const void * const *ReceiverValues, const range
-  &GridValuesRange, array_layout GridValuesLayout, void **GridValues);
+void CreateDisperse(domain &Domain, int DonorGridID, int ReceiverGridID, int DisperseID, disperse_op
+  DisperseOp, data_type ValueType, int Count, const range &GridValuesRange, array_layout
+  GridValuesLayout);
+void DestroyDisperse(domain &Domain, int DonorGridID, int ReceiverGridID, int DisperseID);
+void Disperse(domain &Domain, int DonorGridID, int ReceiverGridID, int DisperseID, const void *
+  const *ReceiverValues, void **GridValues);
+bool DisperseExists(const domain &Domain, int DonorGridID, int ReceiverGridID, int DisperseID);
+void GetNextAvailableDisperseID(const domain &Domain, int DonorGridID, int ReceiverGridID, int
+  &DisperseID);
 
 void CreateDomainParams(domain_params &Params, int NumDims);
 void DestroyDomainParams(domain_params &Params);

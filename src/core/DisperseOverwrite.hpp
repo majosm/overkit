@@ -7,14 +7,11 @@
 #include "ovk/core/Array.hpp"
 #include "ovk/core/ArrayView.hpp"
 #include "ovk/core/DisperseBase.hpp"
-#include "ovk/core/Comm.hpp"
-#include "ovk/core/ConnectivityR.hpp"
 #include "ovk/core/Constants.hpp"
-#include "ovk/core/Elem.hpp"
-#include "ovk/core/Exchange.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Profiler.hpp"
 #include "ovk/core/Range.hpp"
+#include "ovk/core/Tuple.hpp"
 
 #include <mpi.h>
 
@@ -29,46 +26,44 @@ protected:
 
   using parent_type = disperse_base_for_type<T, Layout>;
 
-  using parent_type::Receivers_;
-  using parent_type::Grid_;
-  using parent_type::Count_;
-  using parent_type::NumReceivers_;
-  using parent_type::GridValuesRange_;
-  using parent_type::GridValuesIndexer_;
   using parent_type::Points_;
-  using parent_type::ReceiverValues_;
-  using parent_type::GridValues_;
+  using parent_type::Profiler_;
+  using parent_type::Count_;
+  using parent_type::FieldValuesRange_;
+  using parent_type::FieldValuesIndexer_;
+  using parent_type::PackedValues_;
+  using parent_type::FieldValues_;
 
 public:
 
   using value_type = T;
 
-  disperse_overwrite() = default;
+  disperse_overwrite(const array<int,2> &Points, int Count, const range &FieldValuesRange,
+    profiler &Profiler):
+    parent_type(Points, Count, FieldValuesRange, Profiler)
+  {}
+
   disperse_overwrite(const disperse_overwrite &Other) = delete;
   disperse_overwrite(disperse_overwrite &&Other) noexcept = default;
 
   disperse_overwrite &operator=(const disperse_overwrite &Other) = delete;
   disperse_overwrite &operator=(disperse_overwrite &&Other) noexcept = default;
 
-  void Initialize(const exchange &Exchange, int Count, const range &GridValuesRange) {
+  void Disperse(const void * const *PackedValuesVoid, void **FieldValuesVoid) {
 
-    parent_type::Initialize(Exchange, Count, GridValuesRange);
+    parent_type::SetBufferViews(PackedValuesVoid, FieldValuesVoid);
 
-  }
+    long long NumPoints = Points_.Size(1);
 
-  void Disperse(const void * const *ReceiverValuesVoid, void **GridValuesVoid) {
-
-    parent_type::SetBufferViews(ReceiverValuesVoid, GridValuesVoid);
-
-    for (long long iReceiver = 0; iReceiver < NumReceivers_; ++iReceiver) {
-      elem<int,MAX_DIMS> Point = {
-        Points_(0,iReceiver),
-        Points_(1,iReceiver),
-        Points_(2,iReceiver)
+    for (long long iPoint = 0; iPoint < NumPoints; ++iPoint) {
+      tuple<int> Point = {
+        Points_(0,iPoint),
+        Points_(1,iPoint),
+        Points_(2,iPoint)
       };
-      long long iPoint = GridValuesIndexer_.ToIndex(Point);
+      long long iFieldValue = FieldValuesIndexer_.ToIndex(Point);
       for (int iCount = 0; iCount < Count_; ++iCount) {
-        GridValues_(iCount)(iPoint) = ReceiverValues_(iCount)(iReceiver);
+        FieldValues_(iCount)(iFieldValue) = PackedValues_(iCount)(iPoint);
       }
     }
 

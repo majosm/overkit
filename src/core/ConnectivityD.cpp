@@ -386,7 +386,6 @@ void ReleaseDonorDestinations(connectivity_d &Donors, int Dimension, int *&Desti
     MPI_Barrier(Donors.Comm_);
   }
 
-
 }
 
 void GetDonorDestinationRanks(const connectivity_d &Donors, const int *&DestinationRanks) {
