@@ -627,14 +627,14 @@ void DestroyConnectivityGlobal(domain &Domain, int DonorGridID, int ReceiverGrid
   DestroyDomainConnectivityInfo(Domain.ConnectivityInfo_[DonorGridID][ReceiverGridID]);
 
   Domain.ConnectivityInfo_[DonorGridID].erase(ReceiverGridID);
-  if (Domain.ConnectivityInfo_[DonorGridID].size() == 0) {
+  if (Domain.ConnectivityInfo_[DonorGridID].empty()) {
     Domain.ConnectivityInfo_.erase(DonorGridID);
   }
 
   if (IsLocal) {
     core::DestroyConnectivity(Domain.LocalConnectivities_[DonorGridID][ReceiverGridID]);
     Domain.LocalConnectivities_[DonorGridID].erase(ReceiverGridID);
-    if (Domain.LocalConnectivities_[DonorGridID].size() == 0) {
+    if (Domain.LocalConnectivities_[DonorGridID].empty()) {
       Domain.LocalConnectivities_.erase(DonorGridID);
     }
   }
@@ -908,14 +908,14 @@ void DestroyExchangeGlobal(domain &Domain, int DonorGridID, int ReceiverGridID) 
   core::DestroyExchangeInfo(Domain.ExchangeInfo_[DonorGridID][ReceiverGridID]);
 
   Domain.ExchangeInfo_[DonorGridID].erase(ReceiverGridID);
-  if (Domain.ExchangeInfo_[DonorGridID].size() == 0) {
+  if (Domain.ExchangeInfo_[DonorGridID].empty()) {
     Domain.ExchangeInfo_.erase(DonorGridID);
   }
 
   if (IsLocal) {
     core::DestroyExchange(Domain.LocalExchanges_[DonorGridID][ReceiverGridID]);
     Domain.LocalExchanges_[DonorGridID].erase(ReceiverGridID);
-    if (Domain.LocalExchanges_[DonorGridID].size() == 0) {
+    if (Domain.LocalExchanges_[DonorGridID].empty()) {
       Domain.LocalExchanges_.erase(DonorGridID);
     }
   }
