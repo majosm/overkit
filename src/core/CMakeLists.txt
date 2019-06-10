@@ -54,23 +54,17 @@ set(PUBLIC_HEADERS
   ArrayView.hpp
   AssemblyOptions.hpp
   Box.hpp
-  Box.inl
   Cart.hpp
-  Cart.inl
   ConnectivityComponent.hpp
   ConnectivityM.hpp
   ConnectivityN.hpp
   Context.hpp
   DataType.hpp
   Domain.hpp
-  Domain.inl
   Editor.hpp
-  Editor.inl
   Elem.hpp
-  Elem.inl
   Error.hpp
   Event.hpp
-  Event.inl
   Exchanger.hpp
   FloatingRef.hpp
   Global.hpp
@@ -80,11 +74,8 @@ set(PUBLIC_HEADERS
   Indexer.hpp
   Interval.hpp
   Misc.hpp
-  Misc.inl
   Optional.hpp
-  Optional.inl
   Range.hpp
-  Range.inl
   Request.hpp
   ScalarOps.hpp
   ScalarTraits.hpp
@@ -94,6 +85,8 @@ set(PUBLIC_HEADERS
 set(INTERNAL_HEADERS
   ArrayTraitsBase.hpp
   AssemblyOptionsBase.h
+  Box.inl
+  Cart.inl
   Collect.hpp
   CollectAll.hpp
   CollectAny.hpp
@@ -115,9 +108,13 @@ set(INTERNAL_HEADERS
   DisperseAppend.hpp
   DisperseBase.hpp
   DisperseOverwrite.hpp
+  Domain.inl
   DomainBase.hpp
   DomainBase.h
+  Editor.inl
+  Elem.inl
   ErrorBase.h
+  Event.inl
   ExchangerBase.h
   FloatingRef.inl
   ForEach.hpp
@@ -129,12 +126,15 @@ set(INTERNAL_HEADERS
   IteratorTraits.hpp
   Logger.hpp
   Logger.inl
+  Misc.inl
   Moveabool.hpp
+  Optional.inl
   Partition.hpp
   PartitionBase.hpp
   PartitionHash.hpp
   Profiler.hpp
   Profiler.inl
+  Range.inl
   Recv.hpp
   RecvMap.hpp
   Requires.hpp
