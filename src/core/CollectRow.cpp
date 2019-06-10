@@ -33,40 +33,52 @@ collect CreateCollectNoneRow(std::shared_ptr<context> &&Context, comm_view Comm,
   const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
   range &FieldValuesRange) {
 
+  collect Collect;
+
   switch (ValueType) {
   case data_type::BOOL:
-    return collect_none_row<bool>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+    Collect = collect_none_row<bool>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
       FieldValuesRange);
+    break;
   case data_type::BYTE:
-    return collect_none_row<unsigned char>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
-      Count, FieldValuesRange);
-  case data_type::INT:
-    return collect_none_row<int>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
-      FieldValuesRange);
-  case data_type::LONG:
-    return collect_none_row<long>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
-      FieldValuesRange);
-  case data_type::LONG_LONG:
-    return collect_none_row<long long>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
-      Count, FieldValuesRange);
-  case data_type::UNSIGNED_INT:
-    return collect_none_row<unsigned int>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
-      Count, FieldValuesRange);
-  case data_type::UNSIGNED_LONG:
-    return collect_none_row<unsigned long>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
-      Count, FieldValuesRange);
-  case data_type::UNSIGNED_LONG_LONG:
-    return collect_none_row<unsigned long long>(std::move(Context), Comm, Cart, LocalRange,
+    Collect = collect_none_row<unsigned char>(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, Count, FieldValuesRange);
+    break;
+  case data_type::INT:
+    Collect = collect_none_row<int>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+      FieldValuesRange);
+    break;
+  case data_type::LONG:
+    Collect = collect_none_row<long>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+      FieldValuesRange);
+    break;
+  case data_type::LONG_LONG:
+    Collect = collect_none_row<long long>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+      Count, FieldValuesRange);
+    break;
+  case data_type::UNSIGNED_INT:
+    Collect = collect_none_row<unsigned int>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+      Count, FieldValuesRange);
+    break;
+  case data_type::UNSIGNED_LONG:
+    Collect = collect_none_row<unsigned long>(std::move(Context), Comm, Cart, LocalRange,
+      CollectMap, Count, FieldValuesRange);
+    break;
+  case data_type::UNSIGNED_LONG_LONG:
+    Collect = collect_none_row<unsigned long long>(std::move(Context), Comm, Cart, LocalRange,
+      CollectMap, Count, FieldValuesRange);
+    break;
   case data_type::FLOAT:
-    return collect_none_row<float>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+    Collect = collect_none_row<float>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
       FieldValuesRange);
+    break;
   case data_type::DOUBLE:
-    return collect_none_row<double>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
-      FieldValuesRange);
+    Collect = collect_none_row<double>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+      Count, FieldValuesRange);
+    break;
   }
 
-  return {};
+  return Collect;
 
 }
 
@@ -76,40 +88,52 @@ collect CreateCollectAnyRow(std::shared_ptr<context> &&Context, comm_view Comm, 
   const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
   range &FieldValuesRange) {
 
+  collect Collect;
+
   switch (ValueType) {
   case data_type::BOOL:
-    return collect_any_row<bool>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+    Collect = collect_any_row<bool>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
       FieldValuesRange);
+    break;
   case data_type::BYTE:
-    return collect_any_row<unsigned char>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+    Collect = collect_any_row<unsigned char>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
       Count, FieldValuesRange);
+    break;
   case data_type::INT:
-    return collect_any_row<int>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+    Collect = collect_any_row<int>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
       FieldValuesRange);
+    break;
   case data_type::LONG:
-    return collect_any_row<long>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+    Collect = collect_any_row<long>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
       FieldValuesRange);
+    break;
   case data_type::LONG_LONG:
-    return collect_any_row<long long>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
-      FieldValuesRange);
+    Collect = collect_any_row<long long>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+      Count, FieldValuesRange);
+    break;
   case data_type::UNSIGNED_INT:
-    return collect_any_row<unsigned int>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+    Collect = collect_any_row<unsigned int>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
       Count, FieldValuesRange);
+    break;
   case data_type::UNSIGNED_LONG:
-    return collect_any_row<unsigned long>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+    Collect = collect_any_row<unsigned long>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
       Count, FieldValuesRange);
+    break;
   case data_type::UNSIGNED_LONG_LONG:
-    return collect_any_row<unsigned long long>(std::move(Context), Comm, Cart, LocalRange,
+    Collect = collect_any_row<unsigned long long>(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, Count, FieldValuesRange);
+    break;
   case data_type::FLOAT:
-    return collect_any_row<float>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+    Collect = collect_any_row<float>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
       FieldValuesRange);
+    break;
   case data_type::DOUBLE:
-    return collect_any_row<double>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+    Collect = collect_any_row<double>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
       FieldValuesRange);
+    break;
   }
 
-  return {};
+  return Collect;
 
 }
 
@@ -119,40 +143,52 @@ collect CreateCollectNotAllRow(std::shared_ptr<context> &&Context, comm_view Com
   const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
   range &FieldValuesRange) {
 
+  collect Collect;
+
   switch (ValueType) {
   case data_type::BOOL:
-    return collect_not_all_row<bool>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
-      FieldValuesRange);
+    Collect = collect_not_all_row<bool>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+      Count, FieldValuesRange);
+    break;
   case data_type::BYTE:
-    return collect_not_all_row<unsigned char>(std::move(Context), Comm, Cart, LocalRange,
+    Collect = collect_not_all_row<unsigned char>(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, Count, FieldValuesRange);
+    break;
   case data_type::INT:
-    return collect_not_all_row<int>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
-      FieldValuesRange);
+    Collect = collect_not_all_row<int>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+      Count, FieldValuesRange);
+    break;
   case data_type::LONG:
-    return collect_not_all_row<long>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
-      FieldValuesRange);
+    Collect = collect_not_all_row<long>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+      Count, FieldValuesRange);
+    break;
   case data_type::LONG_LONG:
-    return collect_not_all_row<long long>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+    Collect = collect_not_all_row<long long>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
       Count, FieldValuesRange);
+    break;
   case data_type::UNSIGNED_INT:
-    return collect_not_all_row<unsigned int>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
-      Count, FieldValuesRange);
+    Collect = collect_not_all_row<unsigned int>(std::move(Context), Comm, Cart, LocalRange,
+      CollectMap, Count, FieldValuesRange);
+    break;
   case data_type::UNSIGNED_LONG:
-    return collect_not_all_row<unsigned long>(std::move(Context), Comm, Cart, LocalRange,
+    Collect = collect_not_all_row<unsigned long>(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, Count, FieldValuesRange);
+    break;
   case data_type::UNSIGNED_LONG_LONG:
-    return collect_not_all_row<unsigned long long>(std::move(Context), Comm, Cart, LocalRange,
+    Collect = collect_not_all_row<unsigned long long>(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, Count, FieldValuesRange);
+    break;
   case data_type::FLOAT:
-    return collect_not_all_row<float>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
-      FieldValuesRange);
-  case data_type::DOUBLE:
-    return collect_not_all_row<double>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+    Collect = collect_not_all_row<float>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
       Count, FieldValuesRange);
+    break;
+  case data_type::DOUBLE:
+    Collect = collect_not_all_row<double>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+      Count, FieldValuesRange);
+    break;
   }
 
-  return {};
+  return Collect;
 
 }
 
@@ -162,40 +198,52 @@ collect CreateCollectAllRow(std::shared_ptr<context> &&Context, comm_view Comm, 
   const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
   range &FieldValuesRange) {
 
+  collect Collect;
+
   switch (ValueType) {
   case data_type::BOOL:
-    return collect_all_row<bool>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+    Collect = collect_all_row<bool>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
       FieldValuesRange);
+    break;
   case data_type::BYTE:
-    return collect_all_row<unsigned char>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+    Collect = collect_all_row<unsigned char>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
       Count, FieldValuesRange);
+    break;
   case data_type::INT:
-    return collect_all_row<int>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+    Collect = collect_all_row<int>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
       FieldValuesRange);
+    break;
   case data_type::LONG:
-    return collect_all_row<long>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+    Collect = collect_all_row<long>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
       FieldValuesRange);
+    break;
   case data_type::LONG_LONG:
-    return collect_all_row<long long>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
-      FieldValuesRange);
+    Collect = collect_all_row<long long>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+      Count, FieldValuesRange);
+    break;
   case data_type::UNSIGNED_INT:
-    return collect_all_row<unsigned int>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+    Collect = collect_all_row<unsigned int>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
       Count, FieldValuesRange);
+    break;
   case data_type::UNSIGNED_LONG:
-    return collect_all_row<unsigned long>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+    Collect = collect_all_row<unsigned long>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
       Count, FieldValuesRange);
+    break;
   case data_type::UNSIGNED_LONG_LONG:
-    return collect_all_row<unsigned long long>(std::move(Context), Comm, Cart, LocalRange,
+    Collect = collect_all_row<unsigned long long>(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, Count, FieldValuesRange);
+    break;
   case data_type::FLOAT:
-    return collect_all_row<float>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+    Collect = collect_all_row<float>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
       FieldValuesRange);
+    break;
   case data_type::DOUBLE:
-    return collect_all_row<double>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+    Collect = collect_all_row<double>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
       FieldValuesRange);
+    break;
   }
 
-  return {};
+  return Collect;
 
 }
 
@@ -205,18 +253,22 @@ collect CreateCollectInterpRow(std::shared_ptr<context> &&Context, comm_view Com
   const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
   range &FieldValuesRange, array_view<const double,3> InterpCoefs) {
 
+  collect Collect;
+
   switch (ValueType) {
   case data_type::FLOAT:
-    return collect_interp_row<float>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
-      FieldValuesRange, InterpCoefs);
+    Collect = collect_interp_row<float>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+      Count, FieldValuesRange, InterpCoefs);
+    break;
   case data_type::DOUBLE:
-    return collect_interp_row<double>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
-      FieldValuesRange, InterpCoefs);
+    Collect = collect_interp_row<double>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+      Count, FieldValuesRange, InterpCoefs);
+    break;
   default:
     OVK_DEBUG_ASSERT(false, "Invalid data type for interpolation collect operation.");
   }
 
-  return {};
+  return Collect;
 
 }
 

@@ -191,30 +191,42 @@ private:
 send CreateSend(std::shared_ptr<context> Context, comm_view Comm, const send_map &SendMap, data_type
   ValueType, int Count, int Tag) {
 
+  send Send;
+
   switch (ValueType) {
   case data_type::BOOL:
-    return send_impl<bool>(std::move(Context), Comm, SendMap, Count, Tag);
+    Send = send_impl<bool>(std::move(Context), Comm, SendMap, Count, Tag);
+    break;
   case data_type::BYTE:
-    return send_impl<unsigned char>(std::move(Context), Comm, SendMap, Count, Tag);
+    Send = send_impl<unsigned char>(std::move(Context), Comm, SendMap, Count, Tag);
+    break;
   case data_type::INT:
-    return send_impl<int>(std::move(Context), Comm, SendMap, Count, Tag);
+    Send = send_impl<int>(std::move(Context), Comm, SendMap, Count, Tag);
+    break;
   case data_type::LONG:
-    return send_impl<long>(std::move(Context), Comm, SendMap, Count, Tag);
+    Send = send_impl<long>(std::move(Context), Comm, SendMap, Count, Tag);
+    break;
   case data_type::LONG_LONG:
-    return send_impl<long long>(std::move(Context), Comm, SendMap, Count, Tag);
+    Send = send_impl<long long>(std::move(Context), Comm, SendMap, Count, Tag);
+    break;
   case data_type::UNSIGNED_INT:
-    return send_impl<unsigned int>(std::move(Context), Comm, SendMap, Count, Tag);
+    Send = send_impl<unsigned int>(std::move(Context), Comm, SendMap, Count, Tag);
+    break;
   case data_type::UNSIGNED_LONG:
-    return send_impl<unsigned long>(std::move(Context), Comm, SendMap, Count, Tag);
+    Send = send_impl<unsigned long>(std::move(Context), Comm, SendMap, Count, Tag);
+    break;
   case data_type::UNSIGNED_LONG_LONG:
-    return send_impl<unsigned long long>(std::move(Context), Comm, SendMap, Count, Tag);
+    Send = send_impl<unsigned long long>(std::move(Context), Comm, SendMap, Count, Tag);
+    break;
   case data_type::FLOAT:
-    return send_impl<float>(std::move(Context), Comm, SendMap, Count, Tag);
+    Send = send_impl<float>(std::move(Context), Comm, SendMap, Count, Tag);
+    break;
   case data_type::DOUBLE:
-    return send_impl<double>(std::move(Context), Comm, SendMap, Count, Tag);
+    Send = send_impl<double>(std::move(Context), Comm, SendMap, Count, Tag);
+    break;
   }
 
-  return {};
+  return Send;
 
 }
 

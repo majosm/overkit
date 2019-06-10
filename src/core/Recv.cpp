@@ -191,30 +191,42 @@ private:
 recv CreateRecv(std::shared_ptr<context> Context, comm_view Comm, const recv_map &RecvMap, data_type
   ValueType, int Count, int Tag) {
 
+  recv Recv;
+
   switch (ValueType) {
   case data_type::BOOL:
-    return recv_impl<bool>(std::move(Context), Comm, RecvMap, Count, Tag);
+    Recv = recv_impl<bool>(std::move(Context), Comm, RecvMap, Count, Tag);
+    break;
   case data_type::BYTE:
-    return recv_impl<unsigned char>(std::move(Context), Comm, RecvMap, Count, Tag);
+    Recv = recv_impl<unsigned char>(std::move(Context), Comm, RecvMap, Count, Tag);
+    break;
   case data_type::INT:
-    return recv_impl<int>(std::move(Context), Comm, RecvMap, Count, Tag);
+    Recv = recv_impl<int>(std::move(Context), Comm, RecvMap, Count, Tag);
+    break;
   case data_type::LONG:
-    return recv_impl<long>(std::move(Context), Comm, RecvMap, Count, Tag);
+    Recv = recv_impl<long>(std::move(Context), Comm, RecvMap, Count, Tag);
+    break;
   case data_type::LONG_LONG:
-    return recv_impl<long long>(std::move(Context), Comm, RecvMap, Count, Tag);
+    Recv = recv_impl<long long>(std::move(Context), Comm, RecvMap, Count, Tag);
+    break;
   case data_type::UNSIGNED_INT:
-    return recv_impl<unsigned int>(std::move(Context), Comm, RecvMap, Count, Tag);
+    Recv = recv_impl<unsigned int>(std::move(Context), Comm, RecvMap, Count, Tag);
+    break;
   case data_type::UNSIGNED_LONG:
-    return recv_impl<unsigned long>(std::move(Context), Comm, RecvMap, Count, Tag);
+    Recv = recv_impl<unsigned long>(std::move(Context), Comm, RecvMap, Count, Tag);
+    break;
   case data_type::UNSIGNED_LONG_LONG:
-    return recv_impl<unsigned long long>(std::move(Context), Comm, RecvMap, Count, Tag);
+    Recv = recv_impl<unsigned long long>(std::move(Context), Comm, RecvMap, Count, Tag);
+    break;
   case data_type::FLOAT:
-    return recv_impl<float>(std::move(Context), Comm, RecvMap, Count, Tag);
+    Recv = recv_impl<float>(std::move(Context), Comm, RecvMap, Count, Tag);
+    break;
   case data_type::DOUBLE:
-    return recv_impl<double>(std::move(Context), Comm, RecvMap, Count, Tag);
+    Recv = recv_impl<double>(std::move(Context), Comm, RecvMap, Count, Tag);
+    break;
   }
 
-  return {};
+  return Recv;
 
 }
 
