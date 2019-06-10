@@ -29,13 +29,13 @@ template <typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<ArrayType>())> void 
 
 template <typename T, int Rank, array_layout Layout, typename IterType, OVK_FUNCTION_REQUIRES(
   !std::is_const<T>::value && IsInputIterator<IterType>() && std::is_convertible<
-  iterator_deref_type<IterType>, T>::value)> void ArrayFill(array_view<T, Rank, Layout> View,
+  iterator_reference_type<IterType>, T>::value)> void ArrayFill(array_view<T, Rank, Layout> View,
   IterType First) {
   View.Fill(First);
 }
 
 template <typename ArrayType, typename IterType, OVK_FUNCTION_REQUIRES(IsArray<ArrayType>() &&
-  IsInputIterator<IterType>() && std::is_convertible<iterator_deref_type<IterType>,
+  IsInputIterator<IterType>() && std::is_convertible<iterator_reference_type<IterType>,
   array_value_type<ArrayType>>::value)> void ArrayFill(ArrayType &Array, IterType First) {
   MakeArrayView(Array).Fill(First);
 }

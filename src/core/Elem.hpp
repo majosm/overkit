@@ -79,7 +79,7 @@ public:
   {}
 
   template <typename IterType, OVK_FUNCTION_REQUIRES(core::IsRandomAccessIterator<IterType>() &&
-    std::is_convertible<core::iterator_deref_type<IterType>, value_type>::value)> constexpr
+    std::is_convertible<core::iterator_reference_type<IterType>, value_type>::value)> constexpr
     OVK_FORCE_INLINE elem_base(IterType First):
     elem_base(core::index_sequence_of_size<Rank>(), First)
   {}

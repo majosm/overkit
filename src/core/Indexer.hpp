@@ -295,8 +295,8 @@ public:
 
   // Want to use iterator directly here instead of constructing intermediate elem type
   template <typename IterType, OVK_FUNCTION_REQUIRES(core::IsRandomAccessIterator<IterType>() &&
-    std::is_convertible<core::iterator_deref_type<IterType>, tuple_element_type>::value)> constexpr
-    OVK_FORCE_INLINE index_type ToIndex(IterType First) const {
+    std::is_convertible<core::iterator_reference_type<IterType>, tuple_element_type>::value)>
+    constexpr OVK_FORCE_INLINE index_type ToIndex(IterType First) const {
     return TupleToIndexHelper<index_type, tuple_element_type>(Begin_, Stride_, First);
   }
 

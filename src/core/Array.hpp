@@ -425,7 +425,7 @@ public:
   {}
 
   template <typename IterType, OVK_FUNCTION_REQUIRES(core::IsInputIterator<IterType>() &&
-    std::is_convertible<core::iterator_deref_type<IterType>, value_type>::value)> array(const
+    std::is_convertible<core::iterator_reference_type<IterType>, value_type>::value)> array(const
     interval_type &Extents, IterType First):
     parent_type(Extents, First)
   {}
@@ -505,7 +505,7 @@ public:
   }
 
   template <typename IterType, OVK_FUNCTION_REQUIRES(core::IsInputIterator<IterType>() &&
-    std::is_convertible<core::iterator_deref_type<IterType>, value_type>::value)> array
+    std::is_convertible<core::iterator_reference_type<IterType>, value_type>::value)> array
     &Assign(const interval_type &Extents, IterType First) {
     parent_type::Assign(Extents, First);
     return *this;
@@ -597,7 +597,7 @@ public:
   }
 
   template <typename IterType, OVK_FUNCTION_REQUIRES(core::IsInputIterator<IterType>() &&
-    std::is_convertible<core::iterator_deref_type<IterType>, value_type>::value)> array
+    std::is_convertible<core::iterator_reference_type<IterType>, value_type>::value)> array
     &Fill(IterType First) {
     View_.Fill(First);
     return *this;
@@ -640,12 +640,12 @@ public:
 
   // Want to use iterator directly here instead of constructing intermediate elem type
   template <typename IterType, OVK_FUNCTION_REQUIRES(core::IsRandomAccessIterator<IterType>() &&
-    std::is_convertible<core::iterator_deref_type<IterType>, tuple_element_type>::value)>
+    std::is_convertible<core::iterator_reference_type<IterType>, tuple_element_type>::value)>
     OVK_FORCE_INLINE const value_type &operator()(IterType First) const {
     return View_(First);
   }
   template <typename IterType, OVK_FUNCTION_REQUIRES(core::IsRandomAccessIterator<IterType>() &&
-    std::is_convertible<core::iterator_deref_type<IterType>, tuple_element_type>::value)>
+    std::is_convertible<core::iterator_reference_type<IterType>, tuple_element_type>::value)>
     OVK_FORCE_INLINE value_type &operator()(IterType First) {
     return View_(First);
   }

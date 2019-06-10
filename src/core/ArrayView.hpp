@@ -148,8 +148,8 @@ public:
   }
 
   template <typename IterType, OVK_FUNCTION_REQUIRES(core::IsInputIterator<IterType>() &&
-    std::is_convertible<core::iterator_deref_type<IterType>, value_type>::value)> const array_view_base_2
-    &Fill(IterType First) const {
+    std::is_convertible<core::iterator_reference_type<IterType>, value_type>::value)> const
+    array_view_base_2 &Fill(IterType First) const {
     IterType Iter = First;
     for (index_type i = 0; i < NumValues_; ++i) {
       Ptr_[i] = *Iter++;
@@ -308,8 +308,8 @@ public:
 
   // Want to use iterator directly here instead of constructing intermediate elem type
   template <typename IterType, OVK_FUNCTION_REQUIRES(core::IsRandomAccessIterator<IterType>() &&
-    std::is_convertible<core::iterator_deref_type<IterType>, tuple_element_type>::value)> constexpr
-    OVK_FORCE_INLINE value_type &operator()(IterType First) const {
+    std::is_convertible<core::iterator_reference_type<IterType>, tuple_element_type>::value)>
+    constexpr OVK_FORCE_INLINE value_type &operator()(IterType First) const {
     return Ptr_[Indexer_.ToIndex(First)];
   }
 

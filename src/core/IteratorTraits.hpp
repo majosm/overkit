@@ -110,18 +110,6 @@ template <typename T, OVK_FUNCTION_REQUIRES(!IsIterator<T>())> constexpr bool Is
   return false;
 }
 
-namespace iterator_traits_internal {
-template <typename T, typename=void> struct deref_type_helper;
-template <typename T> struct deref_type_helper<T, OVK_SPECIALIZATION_REQUIRES(IsIterator<T>())> {
-  using type = decltype(*std::declval<T>());
-};
-template <typename T> struct deref_type_helper<T, OVK_SPECIALIZATION_REQUIRES(!IsIterator<T>())> {
-  using type = std::false_type;
-};
-}
-template <typename T> using iterator_deref_type = typename iterator_traits_internal::
-  deref_type_helper<T>::type;
-
 namespace forwarding_iterator_internal {
 using std::begin;
 using std::end;
