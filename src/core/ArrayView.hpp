@@ -131,6 +131,7 @@ public:
 
   using parent_type::parent_type;
   using parent_type::operator();
+  using parent_type::Data;
 
   const array_view_base_2 &Fill(const value_type &Value) const {
     for (index_type i = 0; i < NumValues_; ++i) {
@@ -197,6 +198,7 @@ public:
 
   using parent_type::parent_type;
   using parent_type::operator();
+  using parent_type::Data;
 
   template <typename... Args> const array_view_base_2 &Fill(Args &&...) const {
     // Assert on Args instead of just 'false' so it doesn't trigger unless method is instantiated
@@ -327,9 +329,23 @@ public:
   constexpr OVK_FORCE_INLINE value_type &operator[](int Index) const { return Ptr_[Index]; }
 
   constexpr OVK_FORCE_INLINE value_type *Data() const { return Ptr_; }
-  // TODO: Change this to be like operator() above
-  constexpr OVK_FORCE_INLINE value_type *Data(const tuple_type &Tuple) const {
-    return Ptr_+Indexer_.ToIndex(Tuple);
+
+  // Want to use iterator directly here instead of constructing intermediate elem type
+  template <typename IterType, OVK_FUNCTION_REQUIRES(core::IsRandomAccessIterator<IterType>() &&
+    std::is_convertible<core::iterator_reference_type<IterType>, tuple_element_type>::value)>
+    constexpr OVK_FORCE_INLINE value_type *Data(IterType First) const {
+    return Ptr_+Indexer_.ToIndex(First);
+  }
+
+  // Want to use array directly here instead of constructing intermediate elem type
+  // Intel 17 didn't like using Rank instead of Rank_
+  template <typename ArrayType, OVK_FUNCTION_REQUIRES(core::IsArray<ArrayType>() &&
+    !core::IsIterator<typename std::decay<ArrayType>::type>() && std::is_convertible<
+    core::array_access_type<const ArrayType &>, tuple_element_type>::value && core::ArrayRank<
+    ArrayType>() == 1 && (core::ArrayHasRuntimeExtents<ArrayType>() || (core::StaticArrayHasBegin<
+    ArrayType,0>() && core::StaticArrayHasEnd<ArrayType,Rank_>())))> constexpr OVK_FORCE_INLINE
+    value_type *Data(const ArrayType &Array) const {
+    return Ptr_+Indexer_.ToIndex(Array);
   }
 
   constexpr OVK_FORCE_INLINE iterator LinearBegin() const { return Ptr_; }

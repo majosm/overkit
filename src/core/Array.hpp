@@ -674,12 +674,36 @@ public:
 
   OVK_FORCE_INLINE const value_type *Data() const { return View_.Data(); }
   OVK_FORCE_INLINE value_type *Data() { return View_.Data(); }
-  // TODO: Change this to be like operator() above
-  OVK_FORCE_INLINE const value_type *Data(const tuple_type &Tuple) const {
-    return View_.Data(Tuple);
+
+  // Want to use iterator directly here instead of constructing intermediate elem type
+  template <typename IterType, OVK_FUNCTION_REQUIRES(core::IsRandomAccessIterator<IterType>() &&
+    std::is_convertible<core::iterator_reference_type<IterType>, tuple_element_type>::value)>
+    OVK_FORCE_INLINE const value_type *Data(IterType First) const {
+    return View_.Data(First);
   }
-  OVK_FORCE_INLINE value_type *Data(const tuple_type &Tuple) {
-    return View_.Data(Tuple);
+  template <typename IterType, OVK_FUNCTION_REQUIRES(core::IsRandomAccessIterator<IterType>() &&
+    std::is_convertible<core::iterator_reference_type<IterType>, tuple_element_type>::value)>
+    OVK_FORCE_INLINE value_type *Data(IterType First) {
+    return View_.Data(First);
+  }
+
+  // Want to use array directly here instead of constructing intermediate elem type
+  // Intel 17 didn't like using Rank instead of Rank_
+  template <typename ArrayType, OVK_FUNCTION_REQUIRES(core::IsArray<ArrayType>() &&
+    !core::IsIterator<typename std::decay<ArrayType>::type>() && std::is_convertible<
+    core::array_access_type<const ArrayType &>, tuple_element_type>::value && core::ArrayRank<
+    ArrayType>() == 1 && (core::ArrayHasRuntimeExtents<ArrayType>() || (core::StaticArrayHasBegin<
+    ArrayType,0>() && core::StaticArrayHasEnd<ArrayType,Rank_>())))> OVK_FORCE_INLINE const
+    value_type *Data(const ArrayType &Array) const {
+    return View_.Data(Array);
+  }
+  template <typename ArrayType, OVK_FUNCTION_REQUIRES(core::IsArray<ArrayType>() &&
+    !core::IsIterator<typename std::decay<ArrayType>::type>() && std::is_convertible<
+    core::array_access_type<const ArrayType &>, tuple_element_type>::value && core::ArrayRank<
+    ArrayType>() == 1 && (core::ArrayHasRuntimeExtents<ArrayType>() || (core::StaticArrayHasBegin<
+    ArrayType,0>() && core::StaticArrayHasEnd<ArrayType,Rank_>())))> OVK_FORCE_INLINE value_type
+    *Data(const ArrayType &Array) {
+    return View_.Data(Array);
   }
 
   const_iterator LinearBegin() const { return View_.LinearBegin(); }
