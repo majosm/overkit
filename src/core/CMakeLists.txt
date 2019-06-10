@@ -49,6 +49,7 @@ set(SOURCES
 
 set(PUBLIC_HEADERS
   Array.hpp
+  ArrayOps.hpp
   ArrayTraits.hpp
   ArrayView.hpp
   AssemblyOptions.hpp
@@ -85,12 +86,12 @@ set(PUBLIC_HEADERS
   Range.hpp
   Range.inl
   Request.hpp
+  ScalarOps.hpp
   ScalarTraits.hpp
   Tuple.hpp
 )
 
 set(INTERNAL_HEADERS
-  ArrayOps.hpp
   ArrayTraitsBase.hpp
   AssemblyOptionsBase.h
   Collect.hpp
@@ -137,7 +138,6 @@ set(INTERNAL_HEADERS
   Recv.hpp
   RecvMap.hpp
   Requires.hpp
-  ScalarOps.hpp
   ScopeGuard.hpp
   ScopeGuard.inl
   Send.hpp
