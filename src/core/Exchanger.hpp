@@ -12,11 +12,11 @@
 #include <ovk/core/ConnectivityComponent.hpp>
 #include <ovk/core/ConnectivityM.hpp>
 #include <ovk/core/ConnectivityN.hpp>
-#include <ovk/core/Constants.hpp>
 #include <ovk/core/Context.hpp>
 #include <ovk/core/Disperse.hpp>
 #include <ovk/core/Domain.hpp>
 #include <ovk/core/Event.hpp>
+#include <ovk/core/ExchangerBase.h>
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Grid.hpp>
@@ -37,6 +37,27 @@
 #include <string>
 
 namespace ovk {
+
+enum class collect_op {
+  NONE = OVK_COLLECT_NONE,
+  ANY = OVK_COLLECT_ANY,
+  NOT_ALL = OVK_COLLECT_NOT_ALL,
+  ALL = OVK_COLLECT_ALL,
+  INTERPOLATE = OVK_COLLECT_INTERPOLATE
+};
+
+inline bool ValidCollectOp(collect_op CollectOp) {
+  return ovkValidCollectOp(ovk_collect_op(CollectOp));
+}
+
+enum class disperse_op {
+  OVERWRITE = OVK_DISPERSE_OVERWRITE,
+  APPEND = OVK_DISPERSE_APPEND
+};
+
+inline bool ValidDisperseOp(disperse_op DisperseOp) {
+  return ovkValidDisperseOp(ovk_disperse_op(DisperseOp));
+}
 
 class exchanger {
 

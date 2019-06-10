@@ -5,7 +5,6 @@
 
 #include <ovk/core/Cart.hpp>
 #include <ovk/core/Comm.hpp>
-#include <ovk/core/Constants.hpp>
 #include <ovk/core/Indexer.hpp>
 #include <ovk/core/Range.hpp>
 #include <ovk/core/Tuple.hpp>

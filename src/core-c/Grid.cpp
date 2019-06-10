@@ -3,10 +3,8 @@
 
 #include "ovk/core-c/Grid.h"
 
-#include "ovk/core-c/Constants.h"
 #include "ovk/core-c/Context.h"
 #include "ovk/core-c/Global.h"
-#include "ovk/core/Constants.hpp"
 #include "ovk/core/Context.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Global.hpp"

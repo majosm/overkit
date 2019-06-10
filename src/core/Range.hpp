@@ -5,7 +5,6 @@
 #define OVK_CORE_RANGE_HPP_INCLUDED
 
 #include <ovk/core/ArrayTraits.hpp>
-#include <ovk/core/Constants.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Interval.hpp>
 #include <ovk/core/ScalarOps.hpp>

@@ -5,12 +5,33 @@
 #define OVK_CORE_ASSEMBLY_OPTIONS_HPP_INCLUDED
 
 #include <ovk/core/ArrayView.hpp>
-#include <ovk/core/Constants.hpp>
+#include <ovk/core/AssemblyOptionsBase.h>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/IDMap.hpp>
 #include <ovk/core/IDSet.hpp>
 
 namespace ovk {
+
+enum class occludes {
+  NONE = OVK_OCCLUDES_NONE,
+  ALL = OVK_OCCLUDES_ALL,
+  COARSE = OVK_OCCLUDES_COARSE
+};
+
+inline bool ValidOccludes(occludes Occludes) {
+  return ovkValidOccludes(ovk_occludes(Occludes));
+}
+
+enum class connection_type {
+  NONE = OVK_CONNECTION_NONE,
+  NEAREST = OVK_CONNECTION_NEAREST,
+  LINEAR = OVK_CONNECTION_LINEAR,
+  CUBIC = OVK_CONNECTION_CUBIC
+};
+
+inline bool ValidConnectionType(connection_type ConnectionType) {
+  return ovkValidConnectionType(ovk_connection_type(ConnectionType));
+}
 
 class assembly_options {
 

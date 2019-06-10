@@ -11,7 +11,6 @@
 
 #include "ovk/core/Cart.hpp"
 #include "ovk/core/Comm.hpp"
-#include "ovk/core/Constants.hpp"
 #include "ovk/core/Context.hpp"
 #include "ovk/core/DataType.hpp"
 #include "ovk/core/Debug.hpp"

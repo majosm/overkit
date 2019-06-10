@@ -4,8 +4,8 @@
 #ifndef OVK_CORE_C_ASSEMBLY_OPTIONS_H_INCLUDED
 #define OVK_CORE_C_ASSEMBLY_OPTIONS_H_INCLUDED
 
-#include <ovk/core-c/Constants.h>
 #include <ovk/core-c/Global.h>
+#include <ovk/core/AssemblyOptionsBase.h>
 
 #ifdef __cplusplus
 extern "C" {

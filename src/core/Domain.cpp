@@ -5,7 +5,6 @@
 
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Component.hpp"
-#include "ovk/core/Constants.hpp"
 #include "ovk/core/Context.hpp"
 #include "ovk/core/DataType.hpp"
 #include "ovk/core/FloatingRef.hpp"

@@ -3,10 +3,8 @@
 
 #include "ovk/core-c/Exchanger.h"
 
-#include "ovk/core-c/Constants.h"
 #include "ovk/core-c/Domain.h"
 #include "ovk/core-c/Global.h"
-#include "ovk/core/Constants.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Domain.hpp"
 #include "ovk/core/Exchanger.hpp"

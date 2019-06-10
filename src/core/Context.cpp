@@ -4,7 +4,6 @@
 #include "ovk/core/Context.hpp"
 
 #include "ovk/core/Comm.hpp"
-#include "ovk/core/Constants.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Error.hpp"
 #include "ovk/core/FloatingRef.hpp"
@@ -25,9 +24,16 @@ namespace context_internal {
 context_base::context_base(MPI_Comm Comm, log_level LogLevel):
   Exists_(true),
   Comm_(Comm),
-  Logger_(LogLevel, Comm_.Rank())
+  Logger_(Comm_.Rank())
 {
+
+  if ((LogLevel & log_level::ERRORS) != log_level::NONE) Logger_.EnableErrorLogging();
+  if ((LogLevel & log_level::WARNINGS) != log_level::NONE) Logger_.EnableWarningLogging();
+  if ((LogLevel & log_level::STATUS) != log_level::NONE) Logger_.EnableStatusLogging();
+  if ((LogLevel & log_level::DEBUG) != log_level::NONE) Logger_.EnableDebugLogging();
+
   Logger_.LogStatus(Comm_.Rank() == 0, 0, "Creating context...");
+
 }
 
 context_base::~context_base() noexcept {
@@ -121,9 +127,41 @@ optional<context> CreateContext(context::params Params, error &Error) {
 
 }
 
+log_level context::LogLevel() const {
+
+  log_level LogLevel = log_level::NONE;
+
+  if (Logger_.LoggingErrors()) LogLevel &= log_level::ERRORS;
+  if (Logger_.LoggingWarnings()) LogLevel &= log_level::WARNINGS;
+  if (Logger_.LoggingStatus()) LogLevel &= log_level::STATUS;
+  if (Logger_.LoggingDebug()) LogLevel &= log_level::DEBUG;
+
+  return LogLevel;
+
+}
+
 void context::SetLogLevel(log_level LogLevel) {
 
-  Logger_.SetLevel(LogLevel);
+  if ((LogLevel & log_level::ERRORS) != log_level::NONE) {
+    Logger_.EnableErrorLogging();
+  } else {
+    Logger_.DisableErrorLogging();
+  }
+  if ((LogLevel & log_level::WARNINGS) != log_level::NONE) {
+    Logger_.EnableWarningLogging();
+  } else {
+    Logger_.DisableWarningLogging();
+  }
+  if ((LogLevel & log_level::STATUS) != log_level::NONE) {
+    Logger_.EnableStatusLogging();
+  } else {
+    Logger_.DisableStatusLogging();
+  }
+  if ((LogLevel & log_level::DEBUG) != log_level::NONE) {
+    Logger_.EnableDebugLogging();
+  } else {
+    Logger_.DisableDebugLogging();
+  }
 
 }
 

@@ -4,7 +4,6 @@
 #ifndef OVK_CORE_CART_HPP_INCLUDED
 #define OVK_CORE_CART_HPP_INCLUDED
 
-#include <ovk/core/Constants.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Range.hpp>
 #include <ovk/core/Tuple.hpp>

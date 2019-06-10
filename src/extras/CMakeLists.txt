@@ -25,7 +25,6 @@ list(APPEND SOURCES
 endif()
 
 set(PUBLIC_HEADERS
-  Constants.hpp
   Global.hpp
 )
 if(XPACC)
@@ -35,10 +34,13 @@ list(APPEND PUBLIC_HEADERS
 endif()
 
 set(INTERNAL_HEADERS
-  ConstantsBase.h
-  ConstantsBase.inl
   GlobalBase.h
 )
+if(XPACC)
+list(APPEND INTERNAL_HEADERS
+  XINTOUTBase.h
+)
+endif()
 
 #-----------------
 # Library targets

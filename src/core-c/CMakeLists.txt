@@ -32,7 +32,6 @@ set(PUBLIC_HEADERS
   ConnectivityComponent.h
   ConnectivityM.h
   ConnectivityN.h
-  Constants.h
   Context.h
   DataType.h
   Domain.h

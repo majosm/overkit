@@ -4,9 +4,9 @@
 #ifndef OVK_CORE_C_GRID_H_INCLUDED
 #define OVK_CORE_C_GRID_H_INCLUDED
 
-#include <ovk/core-c/Constants.h>
 #include <ovk/core-c/Context.h>
 #include <ovk/core-c/Global.h>
+#include <ovk/core/GridBase.h>
 
 #include <mpi.h>
 

@@ -5,7 +5,7 @@
 #define OVK_CORE_CONTEXT_HPP_INCLUDED
 
 #include <ovk/core/Comm.hpp>
-#include <ovk/core/Constants.hpp>
+#include <ovk/core/ContextBase.h>
 #include <ovk/core/Error.hpp>
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
@@ -19,6 +19,41 @@
 #include <memory>
 
 namespace ovk {
+
+enum class log_level {
+  NONE = OVK_LOG_NONE,
+  ERRORS = OVK_LOG_ERRORS,
+  WARNINGS = OVK_LOG_WARNINGS,
+  STATUS = OVK_LOG_STATUS,
+  DEBUG = OVK_LOG_DEBUG,
+  ALL = OVK_LOG_ALL
+};
+
+inline bool ValidLogLevel(log_level LogLevel) {
+  return ovkValidLogLevel(ovk_log_level(LogLevel));
+}
+
+constexpr inline log_level operator|(log_level Left, log_level Right) {
+  return log_level(int(Left) | int(Right));
+}
+constexpr inline log_level operator&(log_level Left, log_level Right) {
+  return log_level(int(Left) & int(Right));
+}
+constexpr inline log_level operator^(log_level Left, log_level Right) {
+  return log_level(int(Left) ^ int(Right));
+}
+constexpr inline log_level operator~(log_level LogLevel) {
+  return log_level(~int(LogLevel));
+}
+inline log_level operator|=(log_level &Left, log_level Right) {
+  return Left = Left | Right;
+}
+inline log_level operator&=(log_level &Left, log_level Right) {
+  return Left = Left & Right;
+}
+inline log_level operator^=(log_level &Left, log_level Right) {
+  return Left = Left ^ Right;
+}
 
 namespace context_internal {
 
@@ -82,7 +117,7 @@ public:
   int CommSize() const { return Comm_.Size(); }
   int CommRank() const { return Comm_.Rank(); }
 
-  log_level LogLevel() const { return Logger_.Level(); }
+  log_level LogLevel() const;
   void SetLogLevel(log_level LogLevel);
 
   bool Profiling() const { return Profiler_.Enabled(); }

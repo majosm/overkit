@@ -59,7 +59,6 @@ set(PUBLIC_HEADERS
   ConnectivityComponent.hpp
   ConnectivityM.hpp
   ConnectivityN.hpp
-  Constants.hpp
   Context.hpp
   DataType.hpp
   Domain.hpp
@@ -93,6 +92,7 @@ set(PUBLIC_HEADERS
 set(INTERNAL_HEADERS
   ArrayOps.hpp
   ArrayTraitsBase.hpp
+  AssemblyOptionsBase.h
   Collect.hpp
   CollectAll.hpp
   CollectAny.hpp
@@ -106,11 +106,8 @@ set(INTERNAL_HEADERS
   Comm.hpp
   Comm.inl
   ConnectivityComponentBase.h
-  ConnectivityComponentBase.inl
-  ConstantsBase.h
-  ConstantsBase.inl
+  ContextBase.h
   DataTypeBase.h
-  DataTypeBase.inl
   Debug.hpp
   DebugBase.h
   Disperse.hpp
@@ -119,11 +116,12 @@ set(INTERNAL_HEADERS
   DisperseOverwrite.hpp
   DomainBase.hpp
   DomainBase.h
-  DomainBase.inl
   ErrorBase.h
+  ExchangerBase.h
   FloatingRef.inl
   ForEach.hpp
   GlobalBase.h
+  GridBase.h
   Halo.hpp
   Halo.inl
   IntegerSequence.hpp

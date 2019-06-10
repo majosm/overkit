@@ -6,7 +6,6 @@
 #include <ovk/core/Array.hpp>
 #include <ovk/core/Cart.hpp>
 #include <ovk/core/Comm.hpp>
-#include <ovk/core/Constants.hpp>
 #include <ovk/core/Partition.hpp>
 #include <ovk/core/Range.hpp>
 #include <ovk/core/Tuple.hpp>

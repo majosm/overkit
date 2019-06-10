@@ -1,23 +1,16 @@
 // Copyright (c) 2018 Matthew J. Smith and Overkit contributors
 // License: MIT (http://opensource.org/licenses/MIT)
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#ifndef OVK_EXTRAS_XINTOUT_BASE_H_INCLUDED
+#define OVK_EXTRAS_XINTOUT_BASE_H_INCLUDED
 
-static inline bool ovkValidEndian(ovk_endian Endian) {
+#include <ovk/extras/GlobalBase.h>
 
-  switch (Endian) {
-  case OVK_LITTLE_ENDIAN:
-  case OVK_BIG_ENDIAN:
-    return true;
-  default:
-    return false;
-  }
+typedef enum {
+  OVK_XINTOUT_STANDARD,
+  OVK_XINTOUT_EXTENDED
+} ovk_xintout_format;
 
-}
-
-#ifdef OVK_XPACC
 static inline bool ovkValidXINTOUTFormat(ovk_xintout_format Format) {
 
   switch (Format) {
@@ -29,8 +22,5 @@ static inline bool ovkValidXINTOUTFormat(ovk_xintout_format Format) {
   }
 
 }
-#endif
 
-#ifdef __cplusplus
-}
 #endif

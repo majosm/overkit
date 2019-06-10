@@ -6,7 +6,6 @@
 
 #include <ovk/core/ArrayTraits.hpp>
 #include <ovk/core/ArrayView.hpp>
-#include <ovk/core/Constants.hpp>
 #include <ovk/core/DebugBase.h>
 #include <ovk/core/Elem.hpp>
 #include <ovk/core/ForEach.hpp>

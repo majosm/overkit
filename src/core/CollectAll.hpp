@@ -9,7 +9,6 @@
 #include <ovk/core/Cart.hpp>
 #include <ovk/core/CollectBase.hpp>
 #include <ovk/core/CollectMap.hpp>
-#include <ovk/core/Constants.hpp>
 #include <ovk/core/Context.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Profiler.hpp>

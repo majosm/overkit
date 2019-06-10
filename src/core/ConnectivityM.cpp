@@ -5,7 +5,6 @@
 
 #include "ovk/core/Array.hpp"
 #include "ovk/core/Comm.hpp"
-#include "ovk/core/Constants.hpp"
 #include "ovk/core/Context.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Editor.hpp"

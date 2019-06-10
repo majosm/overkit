@@ -9,7 +9,6 @@
 #include "gtest/gtest.h"
 
 #include <ovk/core/Comm.hpp>
-#include <ovk/core/Constants.hpp>
 
 #include <mpi.h>
 

@@ -4,7 +4,6 @@
 #ifndef OVK_CORE_TUPLE_HPP_INCLUDED
 #define OVK_CORE_TUPLE_HPP_INCLUDED
 
-#include <ovk/core/Constants.hpp>
 #include <ovk/core/Elem.hpp>
 #include <ovk/core/Global.hpp>
 

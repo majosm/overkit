@@ -4,7 +4,6 @@
 #include "ovk/core/AssemblyOptions.hpp"
 
 #include "ovk/core/ArrayView.hpp"
-#include "ovk/core/Constants.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/IDMap.hpp"

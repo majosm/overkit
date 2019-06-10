@@ -3,12 +3,9 @@
 
 #include "ovk/extras-c/XINTOUT.h"
 
-#include "ovk/extras-c/Constants.h"
 #include "ovk/extras-c/Global.h"
-#include "ovk/extras/Constants.hpp"
 #include "ovk/extras/Global.hpp"
 #include "ovk/extras/XINTOUT.hpp"
-#include "ovk/core-c/Constants.h"
 #include "ovk/core-c/Global.h"
 #include "ovk/core/Debug.hpp"
 

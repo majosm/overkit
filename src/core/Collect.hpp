@@ -8,7 +8,6 @@
 #include <ovk/core/ArrayView.hpp>
 #include <ovk/core/Cart.hpp>
 #include <ovk/core/CollectMap.hpp>
-#include <ovk/core/Constants.hpp>
 #include <ovk/core/Context.hpp>
 #include <ovk/core/DataType.hpp>
 #include <ovk/core/Global.hpp>

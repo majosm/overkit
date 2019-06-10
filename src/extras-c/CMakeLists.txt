@@ -25,7 +25,6 @@ list(APPEND SOURCES
 endif()
 
 set(PUBLIC_HEADERS
-  Constants.h
   Global.h
 )
 if(XPACC)

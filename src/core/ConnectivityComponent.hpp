@@ -10,7 +10,6 @@
 #include <ovk/core/ConnectivityComponentBase.h>
 #include <ovk/core/ConnectivityM.hpp>
 #include <ovk/core/ConnectivityN.hpp>
-#include <ovk/core/Constants.hpp>
 #include <ovk/core/Context.hpp>
 #include <ovk/core/DomainBase.hpp>
 #include <ovk/core/Event.hpp>

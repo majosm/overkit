@@ -6,7 +6,6 @@
 #include "ovk/core/DisperseOverwrite.hpp"
 #include "ovk/core/DisperseAppend.hpp"
 
-#include "ovk/core/Constants.hpp"
 #include "ovk/core/Context.hpp"
 #include "ovk/core/DataType.hpp"
 #include "ovk/core/Global.hpp"

@@ -11,7 +11,6 @@
 #include "ovk/core/ConnectivityComponent.hpp"
 #include "ovk/core/ConnectivityM.hpp"
 #include "ovk/core/ConnectivityN.hpp"
-#include "ovk/core/Constants.hpp"
 #include "ovk/core/DataType.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Disperse.hpp"

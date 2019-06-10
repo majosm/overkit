@@ -4,10 +4,9 @@
 #ifndef OVK_EXTRAS_C_XINTOUT_H_INCLUDED
 #define OVK_EXTRAS_C_XINTOUT_H_INCLUDED
 
-#include <ovk/extras-c/Constants.h>
 #include <ovk/extras-c/Global.h>
-#include <ovk/core-c/Constants.h>
 #include <ovk/core-c/Domain.h>
+#include <ovk/extras/XINTOUTBase.h>
 
 #include <mpi.h>
 

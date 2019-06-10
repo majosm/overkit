@@ -3,31 +3,64 @@
 
 #include "ovk/core/Logger.hpp"
 
-#include "ovk/core/Constants.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/TextProcessing.hpp"
 
-#include <string>
-
 namespace ovk {
 namespace core {
 
-logger::logger(log_level Level, int Rank):
-  Level_(Level),
+logger::logger(int Rank):
   Rank_(Rank)
 {
-
-  OVK_DEBUG_ASSERT(ValidLogLevel(Level_), "Invalid log level.");
   OVK_DEBUG_ASSERT(Rank_ >= 0, "Invalid log rank.");
+}
+
+void logger::EnableErrorLogging() {
+
+  LoggingErrors_ = true;
 
 }
 
-void logger::SetLevel(log_level Level) {
+void logger::DisableErrorLogging() {
 
-  OVK_DEBUG_ASSERT(ValidLogLevel(Level), "Invalid log level.");
+  LoggingErrors_ = false;
 
-  Level_ = Level;
+}
+
+void logger::EnableWarningLogging() {
+
+  LoggingWarnings_ = true;
+
+}
+
+void logger::DisableWarningLogging() {
+
+  LoggingWarnings_ = false;
+
+}
+
+void logger::EnableStatusLogging() {
+
+  LoggingStatus_ = true;
+
+}
+
+void logger::DisableStatusLogging() {
+
+  LoggingStatus_ = false;
+
+}
+
+void logger::EnableDebugLogging() {
+
+  LoggingDebug_ = true;
+
+}
+
+void logger::DisableDebugLogging() {
+
+  LoggingDebug_ = false;
 
 }
 

@@ -6,6 +6,8 @@
 
 #include <ovk/core/GlobalBase.h>
 
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -7,7 +7,6 @@
 
 #include "ovk/extras/XINTOUT.hpp"
 
-#include "ovk/extras/Constants.hpp"
 #include "ovk/extras/Global.hpp"
 #include "ovk/core/Array.hpp"
 #include "ovk/core/Cart.hpp"
@@ -15,7 +14,6 @@
 #include "ovk/core/ConnectivityComponent.hpp"
 #include "ovk/core/ConnectivityM.hpp"
 #include "ovk/core/ConnectivityN.hpp"
-#include "ovk/core/Constants.hpp"
 #include "ovk/core/Context.hpp"
 #include "ovk/core/Domain.hpp"
 #include "ovk/core/Editor.hpp"

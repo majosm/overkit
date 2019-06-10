@@ -7,10 +7,10 @@
 #include <ovk/core/Array.hpp>
 #include <ovk/core/Cart.hpp>
 #include <ovk/core/Comm.hpp>
-#include <ovk/core/Constants.hpp>
 #include <ovk/core/Context.hpp>
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
+#include <ovk/core/GridBase.h>
 #include <ovk/core/Partition.hpp>
 #include <ovk/core/PartitionHash.hpp>
 #include <ovk/core/Range.hpp>
@@ -22,6 +22,18 @@
 #include <string>
 
 namespace ovk {
+
+enum class geometry_type {
+  UNIFORM = OVK_GEOMETRY_UNIFORM,
+  ORIENTED_UNIFORM = OVK_GEOMETRY_ORIENTED_UNIFORM,
+  RECTILINEAR = OVK_GEOMETRY_RECTILINEAR,
+  ORIENTED_RECTILINEAR = OVK_GEOMETRY_ORIENTED_RECTILINEAR,
+  CURVILINEAR = OVK_GEOMETRY_CURVILINEAR
+};
+
+inline bool ValidGeometryType(geometry_type GeometryType) {
+  return ovkValidGeometryType(ovk_geometry_type(GeometryType));
+}
 
 namespace grid_internal {
 

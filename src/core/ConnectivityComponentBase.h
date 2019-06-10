@@ -46,12 +46,15 @@ typedef enum {
     OVK_CONNECTIVITY_EVENT_FLAGS_EDIT_N_SOURCES
 } ovk_connectivity_event_flags;
 
-static inline bool ovkValidConnectivityEventFlags(ovk_connectivity_event_flags EventFlags);
+static inline bool ovkValidConnectivityEventFlags(ovk_connectivity_event_flags EventFlags) {
+
+  return EventFlags >= OVK_CONNECTIVITY_EVENT_FLAGS_NONE && EventFlags <=
+    OVK_CONNECTIVITY_EVENT_FLAGS_ALL;
+
+}
 
 #ifdef __cplusplus
 }
 #endif
-
-#include <ovk/core/ConnectivityComponentBase.inl>
 
 #endif

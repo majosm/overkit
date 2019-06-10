@@ -4,7 +4,6 @@
 #ifndef OVK_CORE_LOGGER_HPP_INCLUDED
 #define OVK_CORE_LOGGER_HPP_INCLUDED
 
-#include <ovk/core/Constants.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/TextProcessing.hpp>
 
@@ -17,7 +16,7 @@ class logger {
 
 public:
 
-  logger(log_level Level, int Rank);
+  logger(int Rank);
 
   logger(const logger &Other) = delete;
   logger(logger &&Other) noexcept = default;
@@ -25,27 +24,36 @@ public:
   logger &operator=(const logger &Other) = delete;
   logger &operator=(logger &&Other) noexcept = default;
 
-  log_level Level() const { return Level_; }
-
-  void SetLevel(log_level Level);
-
-  bool LoggingErrors() const { return (Level_ & log_level::ERRORS) != log_level::NONE; }
-  bool LoggingWarnings() const { return (Level_ & log_level::WARNINGS) != log_level::NONE; }
-  bool LoggingStatus() const { return (Level_ & log_level::STATUS) != log_level::NONE; }
-  bool LoggingDebug() const { return (Level_ & log_level::DEBUG) != log_level::NONE; }
-
+  bool LoggingErrors() const { return LoggingErrors_; }
+  void EnableErrorLogging();
+  void DisableErrorLogging();
   template <typename... Ts> void LogError(bool WriteCondition, const std::string &Format, const
     Ts &... Args) const;
+
+  bool LoggingWarnings() const { return LoggingWarnings_; }
+  void EnableWarningLogging();
+  void DisableWarningLogging();
   template <typename... Ts> void LogWarning(bool WriteCondition, const std::string &Format, const
     Ts &... Args) const;
+
+  bool LoggingStatus() const { return LoggingStatus_; }
+  void EnableStatusLogging();
+  void DisableStatusLogging();
   template <typename... Ts> void LogStatus(bool WriteCondition, int IncrementLevel, const
     std::string &Format, const Ts &... Args) const;
+
+  bool LoggingDebug() const { return LoggingDebug_; }
+  void EnableDebugLogging();
+  void DisableDebugLogging();
   template <typename... Ts> void LogDebug(bool WriteCondition, int IncrementLevel, const
     std::string &Format, const Ts &... Args) const;
 
 private:
 
-  log_level Level_;
+  bool LoggingErrors_ = false;
+  bool LoggingWarnings_ = false;
+  bool LoggingStatus_ = false;
+  bool LoggingDebug_ = false;
   int Rank_;
 
 };

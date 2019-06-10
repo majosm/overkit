@@ -4,20 +4,61 @@
 #ifndef OVK_CORE_DATA_TYPE_HPP_INCLUDED
 #define OVK_CORE_DATA_TYPE_HPP_INCLUDED
 
-#include <ovk/core/Constants.hpp>
 #include <ovk/core/DataTypeBase.h>
 #include <ovk/core/Global.hpp>
 
 #include <mpi.h>
 
+#include <cstdint>
+
 namespace ovk {
 
-inline int DataTypeSize(data_type DataType) { return ovkDataTypeSize(ovk_data_type(DataType)); }
-inline bool DataTypeIsIntegral(data_type DataType) { return ovkDataTypeIsIntegral(ovk_data_type(DataType)); }
-inline bool DataTypeIsFloatingPoint(data_type DataType) { return ovkDataTypeIsFloatingPoint(ovk_data_type(DataType)); }
-inline bool DataTypeIsSigned(data_type DataType) { return ovkDataTypeIsSigned(ovk_data_type(DataType)); }
-inline bool DataTypeIsUnsigned(data_type DataType) { return ovkDataTypeIsUnsigned(ovk_data_type(DataType)); }
-inline MPI_Datatype DataTypeToMPI(data_type DataType) { return ovkDataTypeToMPI(ovk_data_type(DataType)); }
+enum class data_type {
+  BOOL = OVK_BOOL,
+  BYTE = OVK_BYTE,
+  INT = OVK_INT,
+  LONG = OVK_LONG,
+  LONG_LONG = OVK_LONG_LONG,
+#ifdef INT32_MAX
+  INT32 = OVK_INT32,
+#endif
+#ifdef INT64_MAX
+  INT64 = OVK_INT64,
+#endif
+  UNSIGNED_INT = OVK_UNSIGNED_INT,
+  UNSIGNED_LONG = OVK_UNSIGNED_LONG,
+  UNSIGNED_LONG_LONG = OVK_UNSIGNED_LONG_LONG,
+#ifdef UINT32_MAX
+  UNSIGNED_INT32 = OVK_UNSIGNED_INT32,
+#endif
+#ifdef UINT64_MAX
+  UNSIGNED_INT64 = OVK_UNSIGNED_INT64,
+#endif
+  FLOAT = OVK_FLOAT,
+  DOUBLE = OVK_DOUBLE
+};
+
+inline bool ValidDataType(data_type DataType) {
+  return ovkValidDataType(ovk_data_type(DataType));
+}
+inline int DataTypeSize(data_type DataType) {
+  return ovkDataTypeSize(ovk_data_type(DataType));
+}
+inline bool DataTypeIsIntegral(data_type DataType) {
+  return ovkDataTypeIsIntegral(ovk_data_type(DataType));
+}
+inline bool DataTypeIsFloatingPoint(data_type DataType) {
+  return ovkDataTypeIsFloatingPoint(ovk_data_type(DataType));
+}
+inline bool DataTypeIsSigned(data_type DataType) {
+  return ovkDataTypeIsSigned(ovk_data_type(DataType));
+}
+inline bool DataTypeIsUnsigned(data_type DataType) {
+  return ovkDataTypeIsUnsigned(ovk_data_type(DataType));
+}
+inline MPI_Datatype DataTypeToMPI(data_type DataType) {
+  return ovkDataTypeToMPI(ovk_data_type(DataType));
+}
 
 namespace core {
 

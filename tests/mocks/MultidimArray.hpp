@@ -5,7 +5,6 @@
 #define OVK_TESTS_MOCKS_MULTIDIM_ARRAY_HPP_LOADED
 
 #include <ovk/core/ArrayTraits.hpp>
-#include <ovk/core/Constants.hpp>
 #include <ovk/core/Interval.hpp>
 
 #include <initializer_list>

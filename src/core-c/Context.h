@@ -4,9 +4,9 @@
 #ifndef OVK_CORE_C_CONTEXT_H_INCLUDED
 #define OVK_CORE_C_CONTEXT_H_INCLUDED
 
-#include <ovk/core-c/Constants.h>
 #include <ovk/core-c/Error.h>
 #include <ovk/core-c/Global.h>
+#include <ovk/core/ContextBase.h>
 
 #include <mpi.h>
 

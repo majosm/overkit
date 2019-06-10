@@ -5,7 +5,6 @@
 #define OVK_CORE_DISPERSE_HPP_INCLUDED
 
 #include <ovk/core/Array.hpp>
-#include <ovk/core/Constants.hpp>
 #include <ovk/core/Context.hpp>
 #include <ovk/core/DataType.hpp>
 #include <ovk/core/Global.hpp>

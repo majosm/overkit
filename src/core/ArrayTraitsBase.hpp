@@ -4,7 +4,6 @@
 #ifndef OVK_CORE_ARRAY_TRAITS_BASE_HPP_INCLUDED
 #define OVK_CORE_ARRAY_TRAITS_BASE_HPP_INCLUDED
 
-#include <ovk/core/Constants.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/IntegerSequence.hpp>
 #include <ovk/core/Requires.hpp>

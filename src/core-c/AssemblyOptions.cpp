@@ -3,10 +3,8 @@
 
 #include "ovk/core-c/AssemblyOptions.h"
 
-#include "ovk/core-c/Constants.h"
 #include "ovk/core-c/Global.h"
 #include "ovk/core/AssemblyOptions.hpp"
-#include "ovk/core/Constants.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/IDSet.hpp"

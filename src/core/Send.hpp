@@ -5,7 +5,6 @@
 #define OVK_CORE_SEND_HPP_INCLUDED
 
 #include <ovk/core/Comm.hpp>
-#include <ovk/core/Constants.hpp>
 #include <ovk/core/Context.hpp>
 #include <ovk/core/DataType.hpp>
 #include <ovk/core/Global.hpp>

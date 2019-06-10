@@ -6,7 +6,6 @@
 
 #include <ovk/core/ArrayTraits.hpp>
 #include <ovk/core/ArrayView.hpp>
-#include <ovk/core/Constants.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/IteratorTraits.hpp>
 #include <ovk/core/Requires.hpp>

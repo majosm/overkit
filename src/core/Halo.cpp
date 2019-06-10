@@ -7,7 +7,6 @@
 #include <ovk/core/ArrayView.hpp>
 #include <ovk/core/Cart.hpp>
 #include <ovk/core/Comm.hpp>
-#include <ovk/core/Constants.hpp>
 #include <ovk/core/Context.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Profiler.hpp>

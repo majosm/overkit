@@ -5,7 +5,6 @@
 #define OVK_CORE_ARRAY_TRAITS_HPP_INCLUDED
 
 #include <ovk/core/ArrayTraitsBase.hpp>
-#include <ovk/core/Constants.hpp>
 #include <ovk/core/Elem.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/IntegerSequence.hpp>

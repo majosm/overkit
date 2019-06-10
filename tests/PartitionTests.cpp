@@ -13,7 +13,6 @@
 #include <ovk/core/Array.hpp>
 #include <ovk/core/Cart.hpp>
 #include <ovk/core/Comm.hpp>
-#include <ovk/core/Constants.hpp>
 #include <ovk/core/Context.hpp>
 #include <ovk/core/PartitionHash.hpp>
 #include <ovk/core/Range.hpp>
