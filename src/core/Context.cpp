@@ -49,7 +49,9 @@ context::context(params &&Params):
 
   MPI_Comm_set_errhandler(Comm_, MPI_ERRORS_RETURN);
 
-  if (OVK_TIMERS) Profiler_.Enable();
+  if (Params.Profiling_) {
+    Profiler_.Enable();
+  }
 
   MPI_Barrier(Comm_);
 
@@ -125,6 +127,18 @@ void context::SetLogLevel(log_level LogLevel) {
 
 }
 
+void context::EnableProfiling() {
+
+  Profiler_.Enable();
+
+}
+
+void context::DisableProfiling() {
+
+  Profiler_.Disable();
+
+}
+
 context::params &context::params::SetComm(MPI_Comm Comm) {
 
   OVK_DEBUG_ASSERT(Comm != MPI_COMM_NULL, "Invalid MPI communicator.");
@@ -140,6 +154,14 @@ context::params &context::params::SetLogLevel(log_level LogLevel) {
   OVK_DEBUG_ASSERT(ValidLogLevel(LogLevel), "Invalid log level.");
 
   LogLevel_ = LogLevel;
+
+  return *this;
+
+}
+
+context::params &context::params::SetProfiling(bool Profiling) {
+
+  Profiling_ = Profiling;
 
   return *this;
 

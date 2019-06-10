@@ -58,9 +58,12 @@ public:
     params &SetComm(MPI_Comm Comm);
     log_level LogLevel() const { return LogLevel_; }
     params &SetLogLevel(log_level LogLevel);
+    bool Profiling() const { return Profiling_; }
+    params &SetProfiling(bool Profiling);
   private:
     MPI_Comm Comm_ = MPI_COMM_NULL;
     log_level LogLevel_ = log_level::ERRORS | log_level::WARNINGS;
+    bool Profiling_ = false;
     friend class context;
   };
 
@@ -81,6 +84,10 @@ public:
 
   log_level LogLevel() const { return Logger_.Level(); }
   void SetLogLevel(log_level LogLevel);
+
+  bool Profiling() const { return Profiler_.Enabled(); }
+  void EnableProfiling();
+  void DisableProfiling();
 
   const core::comm &core_Comm() const { return Comm_; }
   core::logger &core_Logger() const { return Logger_; }

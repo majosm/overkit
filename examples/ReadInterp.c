@@ -91,6 +91,7 @@ int main(int argc, char **argv) {
   ovkCreateContextParams(&ContextParams);
   ovkSetContextParamComm(ContextParams, MPI_COMM_WORLD);
   ovkSetContextParamLogLevel(ContextParams, OVK_LOG_ALL);
+  ovkSetContextParamProfiling(ContextParams, true);
 
   ovk_context *Context;
   ovk_error CreateError;

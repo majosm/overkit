@@ -8,9 +8,6 @@
 #cmakedefine01 OVK_RELEASE
 #cmakedefine01 OVK_DEBUG
 
-// Enable internal timers (defined as 0 or 1 so it can be used inside if statements)
-#cmakedefine01 OVK_TIMERS
-
 // Optional components
 #cmakedefine OVK_EXAMPLES
 #cmakedefine OVK_TESTS

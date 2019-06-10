@@ -229,3 +229,22 @@ void ovkSetContextParamLogLevel(ovk_context_params *Params, ovk_log_level LogLev
   ParamsCPP.SetLogLevel(ovk::log_level(LogLevel));
 
 }
+
+void ovkGetContextParamProfiling(const ovk_context_params *Params, bool *Profiling) {
+
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
+  OVK_DEBUG_ASSERT(Profiling, "Invalid profiling pointer.");
+
+  auto &ParamsCPP = *reinterpret_cast<const ovk::context::params *>(Params);
+  *Profiling = ParamsCPP.Profiling();
+
+}
+
+void ovkSetContextParamProfiling(ovk_context_params *Params, bool Profiling) {
+
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
+
+  auto &ParamsCPP = *reinterpret_cast<ovk::context::params *>(Params);
+  ParamsCPP.SetProfiling(Profiling);
+
+}

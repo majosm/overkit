@@ -44,6 +44,8 @@ void ovkGetContextParamComm(const ovk_context_params *Params, MPI_Comm *Comm);
 void ovkSetContextParamComm(ovk_context_params *Params, MPI_Comm Comm);
 void ovkGetContextParamLogLevel(const ovk_context_params *Params, ovk_log_level *LogLevel);
 void ovkSetContextParamLogLevel(ovk_context_params *Params, ovk_log_level LogLevel);
+void ovkGetContextParamProfiling(const ovk_context_params *Params, bool *Profiling);
+void ovkSetContextParamProfiling(ovk_context_params *Params, bool Profiling);
 
 #ifdef __cplusplus
 }

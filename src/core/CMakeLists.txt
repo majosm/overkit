@@ -241,7 +241,6 @@ add_custom_command(OUTPUT ${BUILT_CONFIG_HEADER}
     -DOVK_EXAMPLES=${EXAMPLES}
     -DOVK_TESTS=${TESTS}
     -DOVK_COVERAGE=${COVERAGE}
-    -DOVK_TIMERS=${TIMERS}
     -DOVK_XPACC=${XPACC}
     -DOVK_HAVE_MPI_IBARRIER=${HAVE_MPI_IBARRIER}
     -P "${CMAKE_SOURCE_DIR}/config/scripts/configure-file.cmake"
