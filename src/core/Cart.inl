@@ -20,7 +20,7 @@ inline cart::cart(int NumDims, const range &Range, const tuple<bool> &Periodic, 
 
 inline tuple<int> cart::GetPeriod(const tuple<int> &Tuple) const {
 
-  tuple<int> Period = MakeUniformTuple<int>(0);
+  tuple<int> Period = MakeUniformTuple<int>(NumDims_, 0);
 
   switch (PeriodicStorage_) {
   case periodic_storage::UNIQUE:
@@ -94,7 +94,8 @@ inline bool operator!=(const cart &Left, const cart &Right) {
 
 inline cart MakeEmptyCart(int NumDims) {
 
-  return {NumDims, MakeEmptyRange(NumDims), MakeUniformTuple<int>(false), periodic_storage::UNIQUE};
+  return {NumDims, MakeEmptyRange(NumDims), MakeUniformTuple<int>(NumDims, false),
+    periodic_storage::UNIQUE};
 
 }
 

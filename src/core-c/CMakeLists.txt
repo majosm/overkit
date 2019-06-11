@@ -29,7 +29,6 @@ set(SOURCES
 
 set(PUBLIC_HEADERS
   AssemblyOptions.h
-  Box.h
   ConnectivityComponent.h
   ConnectivityM.h
   ConnectivityN.h

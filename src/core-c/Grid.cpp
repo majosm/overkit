@@ -305,7 +305,7 @@ void ovkSetGridParamSize(ovk_grid_params *Params, const int *Size) {
 
   auto &ParamsCPP = *reinterpret_cast<ovk::grid::params *>(Params);
 
-  ovk::tuple<int> SizeCPP = ovk::MakeUniformTuple<int>(1);
+  ovk::tuple<int> SizeCPP = ovk::MakeUniformTuple<int>(ParamsCPP.Dimension(), 1, 1);
   for (int iDim = 0; iDim < ParamsCPP.Dimension(); ++iDim) {
     SizeCPP[iDim] = Size[iDim]; 
   }
@@ -333,7 +333,7 @@ void ovkSetGridParamPeriodic(ovk_grid_params *Params, const bool *Periodic) {
 
   auto &ParamsCPP = *reinterpret_cast<ovk::grid::params *>(Params);
 
-  ovk::tuple<bool> PeriodicCPP = ovk::MakeUniformTuple<bool>(false);
+  ovk::tuple<bool> PeriodicCPP = ovk::MakeUniformTuple<bool>(ParamsCPP.Dimension(), false);
   for (int iDim = 0; iDim < ParamsCPP.Dimension(); ++iDim) {
     PeriodicCPP[iDim] = Periodic[iDim]; 
   }
@@ -381,7 +381,7 @@ void ovkSetGridParamPeriodicLength(ovk_grid_params *Params, const double *Period
 
   auto &ParamsCPP = *reinterpret_cast<ovk::grid::params *>(Params);
 
-  ovk::tuple<double> PeriodicLengthCPP = ovk::MakeUniformTuple<double>(0.);
+  ovk::tuple<double> PeriodicLengthCPP = ovk::MakeUniformTuple<double>(ParamsCPP.Dimension(), 0.);
   for (int iDim = 0; iDim < ParamsCPP.Dimension(); ++iDim) {
     PeriodicLengthCPP[iDim] = PeriodicLength[iDim]; 
   }

@@ -28,7 +28,7 @@ TEST_F(CartTests, PeriodicAdjust) {
       Range.Begin(iDim) = 1+iDim;
       Range.End(iDim) = 5+iDim;
     }
-    ovk::tuple<bool> Periodic = ovk::MakeUniformTuple<bool>(false);
+    ovk::tuple<bool> Periodic = ovk::MakeUniformTuple<bool>(NumDims, false);
     if (IsPeriodic) Periodic[NumDims-1] = true;
     ovk::periodic_storage PeriodicStorage = Duplicated ? ovk::periodic_storage::DUPLICATED :
       ovk::periodic_storage::UNIQUE;

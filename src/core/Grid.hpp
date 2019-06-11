@@ -174,7 +174,7 @@ private:
   core::string_wrapper Name_;
   int RootRank_ = -1;
   cart Cart_ = MakeEmptyCart(2);
-  tuple<double> PeriodicLength_ = MakeUniformTuple<double>(0.);
+  tuple<double> PeriodicLength_ = MakeUniformTuple<double>(2, 0.);
   geometry_type GeometryType_ = geometry_type::CURVILINEAR;
   bool IsLocal_ = false;
 

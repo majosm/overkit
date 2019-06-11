@@ -37,7 +37,7 @@ partition_hash::partition_hash(int NumDims, comm_view Comm):
   Comm_(Comm),
   GlobalRange_(MakeEmptyRange(NumDims)),
   LocalRange_(MakeEmptyRange(NumDims)),
-  BinSize_(MakeUniformTuple<int>(0)),
+  BinSize_(MakeUniformTuple<int>(NumDims, 0, 1)),
   MaxBinPartitions_(0)
 {}
 
@@ -56,7 +56,7 @@ partition_hash::partition_hash(int NumDims, comm_view Comm, const range &GlobalR
     TotalBins *= NumBins(iDim);
   }
 
-  BinRange_ = range(MakeUniformTuple<int>(0), NumBins);
+  BinRange_ = range(NumBins);
   BinIndexer_ = partition_hash::bin_indexer(BinRange_);
 
   bool RankHasBin = Comm_.Rank() < TotalBins;
@@ -73,8 +73,10 @@ partition_hash::partition_hash(int NumDims, comm_view Comm, const range &GlobalR
       LowerCorner(iDim) = LocalRange_.Begin(iDim);
       UpperCorner(iDim) = LocalRange_.End(iDim)-1;
     }
-    ExtendRange(OverlappedBinRange, MapToUniformCell(GlobalRange_.Begin(), BinSize_, LowerCorner));
-    ExtendRange(OverlappedBinRange, MapToUniformCell(GlobalRange_.Begin(), BinSize_, UpperCorner));
+    OverlappedBinRange = ExtendRange(OverlappedBinRange, MapToUniformCell(GlobalRange_.Begin(),
+      BinSize_, LowerCorner));
+    OverlappedBinRange = ExtendRange(OverlappedBinRange, MapToUniformCell(GlobalRange_.Begin(),
+      BinSize_, UpperCorner));
   }
 
   int NumOverlappedBins = OverlappedBinRange.Count<int>();
@@ -174,7 +176,7 @@ void partition_hash::MapToBins(array_view<const int,2> Points, array_view<int> B
   for (long long iPoint = 0; iPoint < NumPoints; ++iPoint) {
     tuple<int> Point = {Points(0,iPoint), Points(1,iPoint), Points(2,iPoint)};
     tuple<int> BinLoc = MapToUniformCell(GlobalRange_.Begin(), BinSize_, Point);
-    ClampToRange(BinRange_, BinLoc);
+    BinLoc = ClampToRange(BinRange_, BinLoc);
     BinIndices(iPoint) = BinIndexer_.ToIndex(BinLoc);
   }
 

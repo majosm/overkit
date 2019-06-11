@@ -63,12 +63,22 @@ TEST_F(IntervalTests, MakeEmpty) {
 
   if (TestComm().Rank() != 0) return;
 
-  using helper = ovk::core::test_helper<ovk::interval<int,3>>;
+  using helper_int = ovk::core::test_helper<ovk::interval<int,3>>;
+  using helper_double = ovk::core::test_helper<ovk::interval<double,3>>;
 
-  ovk::interval<int,3> Interval = ovk::MakeEmptyInterval<int,3>();
+  // Integral type
+  {
+    ovk::interval<int,3> Interval = ovk::MakeEmptyInterval<int,3>();
+    EXPECT_THAT(helper_int::GetBegin(Interval), ElementsAre(0,0,0));
+    EXPECT_THAT(helper_int::GetEnd(Interval), ElementsAre(0,0,0));
+  }
 
-  EXPECT_THAT(helper::GetBegin(Interval), ElementsAre(0,0,0));
-  EXPECT_THAT(helper::GetEnd(Interval), ElementsAre(0,0,0));
+  // Floating point type
+  {
+    ovk::interval<double,3> Interval = ovk::MakeEmptyInterval<double,3>();
+    EXPECT_THAT(helper_double::GetBegin(Interval), ElementsAre(0.,0.,0.));
+    EXPECT_THAT(helper_double::GetEnd(Interval), ElementsAre(-1.,-1.,-1.));
+  }
 
 }
 
@@ -249,15 +259,39 @@ TEST_F(IntervalTests, Empty) {
 
   if (TestComm().Rank() != 0) return;
 
-  // Empty
+  // Integral type, empty
   {
-    ovk::interval<int,3> Interval({1,2,3}, {4,-5,6});
+    ovk::interval<int,3> Interval({1,2,3}, {2,2,4});
     EXPECT_TRUE(Interval.Empty());
   }
 
-  // Non-empty
+  // Integral type, non-empty, single point
   {
-    ovk::interval<int,3> Interval({1,2,3}, {6,5,4});
+    ovk::interval<int,3> Interval({1,2,3}, {2,3,4});
+    EXPECT_FALSE(Interval.Empty());
+  }
+
+  // Integral type, non-empty, range
+  {
+    ovk::interval<int,3> Interval({1,2,3}, {4,5,6});
+    EXPECT_FALSE(Interval.Empty());
+  }
+
+  // Floating point type, empty
+  {
+    ovk::interval<double,3> Interval({1.,2.,3.}, {1.,2.-1.e-15,3.});
+    EXPECT_TRUE(Interval.Empty());
+  }
+
+  // Floating point type, non-empty, single point
+  {
+    ovk::interval<double,3> Interval({1.,2.,3.}, {1.,2.,3.});
+    EXPECT_FALSE(Interval.Empty());
+  }
+
+  // Floating point type, non-empty, range
+  {
+    ovk::interval<double,3> Interval({1.,2.,3.}, {4.,5.,6.});
     EXPECT_FALSE(Interval.Empty());
   }
 
@@ -267,22 +301,46 @@ TEST_F(IntervalTests, Contains) {
 
   if (TestComm().Rank() != 0) return;
 
-  // Inside
+  // Integral type, inside
   {
     ovk::interval<int,3> Interval({1,2,3}, {4,5,6});
     EXPECT_TRUE(Interval.Contains({2,3,4}));
   }
 
-  // Outside
+  // Integral type, outside
   {
     ovk::interval<int,3> Interval({1,2,3}, {4,5,6});
-    EXPECT_FALSE(Interval.Contains({0,0,0}));
+    EXPECT_FALSE(Interval.Contains({2,5,4}));
   }
 
-  // Empty
+  // Integral type, empty
   {
     ovk::interval<int,3> Interval = ovk::MakeEmptyInterval<int,3>();
     EXPECT_FALSE(Interval.Contains({0,0,0}));
+  }
+
+  // Floating point type, inside (interior)
+  {
+    ovk::interval<double,3> Interval({1.,2.,3.}, {4.,5.,6.});
+    EXPECT_TRUE(Interval.Contains({2.,3.,4.}));
+  }
+
+  // Floating point type, inside (boundary)
+  {
+    ovk::interval<double,3> Interval({1.,2.,3.}, {4.,5.,6.});
+    EXPECT_TRUE(Interval.Contains({2.,5.,4.}));
+  }
+
+  // Floating point type, outside
+  {
+    ovk::interval<double,3> Interval({1.,2.,3.}, {4.,5.,6.});
+    EXPECT_FALSE(Interval.Contains({2.,5.+1.e-15,4.}));
+  }
+
+  // Floating point type, empty
+  {
+    ovk::interval<double,3> Interval = ovk::MakeEmptyInterval<double,3>();
+    EXPECT_FALSE(Interval.Contains({0.,0.,0.}));
   }
 
 }
@@ -291,60 +349,118 @@ TEST_F(IntervalTests, Includes) {
 
   if (TestComm().Rank() != 0) return;
 
-  // Equal
+  // Integral type, equal
   {
     ovk::interval<int,3> Interval({1,2,3}, {4,5,6});
     EXPECT_TRUE(Interval.Includes({{1,2,3}, {4,5,6}}));
   }
 
-  // Inside
+  // Integral type, inside
   {
     ovk::interval<int,3> Interval({1,2,3}, {4,5,6});
     EXPECT_TRUE(Interval.Includes({{2,3,4}, {3,4,5}}));
   }
 
-  // Outside
+  // Integral type, outside
   {
     ovk::interval<int,3> Interval({1,2,3}, {4,5,6});
     EXPECT_FALSE(Interval.Includes({{6,7,8}, {9,10,11}}));
   }
 
-  // One dimension partially outside, lower
+  // Integral type, one dimension partially outside, lower
   {
     ovk::interval<int,3> Interval({1,2,3}, {4,5,6});
     EXPECT_FALSE(Interval.Includes({{1,2,1}, {4,5,4}}));
   }
 
-  // One dimension partially outside, upper
+  // Integral type, one dimension partially outside, upper
   {
     ovk::interval<int,3> Interval({1,2,3}, {4,5,6});
     EXPECT_FALSE(Interval.Includes({{1,2,5}, {4,5,8}}));
   }
 
-  // Multiple dimensions partially outside, lower
+  // Integral type, multiple dimensions partially outside, lower
   {
     ovk::interval<int,3> Interval({1,2,3}, {4,5,6});
     EXPECT_FALSE(Interval.Includes({{-1,0,1}, {2,3,4}}));
   }
 
-  // Multiple dimensions partially outside, upper
+  // Integral type, multiple dimensions partially outside, upper
   {
     ovk::interval<int,3> Interval({1,2,3}, {4,5,6});
     EXPECT_FALSE(Interval.Includes({{3,4,5}, {6,7,8}}));
   }
 
-  // Enclosing interval empty
+  // Integral type, enclosing interval empty
   {
     ovk::interval<int,3> Interval = ovk::MakeEmptyInterval<int,3>();
     EXPECT_FALSE(Interval.Includes({{1,2,3}, {4,5,6}}));
   }
 
-  // Enclosed interval empty
+  // Integral type, enclosed interval empty
   {
     ovk::interval<int,3> Interval({1,2,3}, {4,5,6});
     EXPECT_TRUE(Interval.Includes({{1,2,3}, {4,2,6}}));
   }
 
-}
+  // Floating point type, equal
+  {
+    ovk::interval<double,3> Interval({1.,2.,3.}, {4.,5.,6.});
+    EXPECT_TRUE(Interval.Includes({{1.,2.,3.}, {4.,5.,6.}}));
+  }
 
-// TODO: Add remaining tests (are there any?)
+  // Floating point type, inside (interior)
+  {
+    ovk::interval<double,3> Interval({1.,2.,3.}, {4.,5.,6.});
+    EXPECT_TRUE(Interval.Includes({{2.,3.,4.}, {3.,4.,5.}}));
+  }
+
+  // Floating point type, inside (boundary)
+  {
+    ovk::interval<double,3> Interval({1.,2.,3.}, {4.,5.,6.});
+    EXPECT_TRUE(Interval.Includes({{2.,4.,4.}, {3.,5.,5.}}));
+  }
+
+  // Floating point type, outside
+  {
+    ovk::interval<double,3> Interval({1.,2.,3.}, {4.,5.,6.});
+    EXPECT_FALSE(Interval.Includes({{2.,5.+1e-15,4.}, {3.,6.,5.}}));
+  }
+
+  // Floating point type, one dimension partially outside, lower
+  {
+    ovk::interval<double,3> Interval({1.,2.,3.}, {4.,5.,6.});
+    EXPECT_FALSE(Interval.Includes({{1.,2.,1.}, {4.,5.,4.}}));
+  }
+
+  // Floating point type, one dimension partially outside, upper
+  {
+    ovk::interval<double,3> Interval({1.,2.,3.}, {4.,5.,6.});
+    EXPECT_FALSE(Interval.Includes({{1.,2.,5.}, {4.,5.,8.}}));
+  }
+
+  // Floating point type, multiple dimensions partially outside, lower
+  {
+    ovk::interval<double,3> Interval({1.,2.,3.}, {4.,5.,6.});
+    EXPECT_FALSE(Interval.Includes({{-1.,0.,1.}, {2.,3.,4.}}));
+  }
+
+  // Floating point type, multiple dimensions partially outside, upper
+  {
+    ovk::interval<double,3> Interval({1.,2.,3.}, {4.,5.,6.});
+    EXPECT_FALSE(Interval.Includes({{3.,4.,5.}, {6.,7.,8.}}));
+  }
+
+  // Floating point type, enclosing interval empty
+  {
+    ovk::interval<double,3> Interval = ovk::MakeEmptyInterval<double,3>();
+    EXPECT_FALSE(Interval.Includes({{1.,2.,3.}, {4.,5.,6.}}));
+  }
+
+  // Floating point type, enclosed interval empty
+  {
+    ovk::interval<double,3> Interval({1.,2.,3.}, {4.,5.,6.});
+    EXPECT_TRUE(Interval.Includes({{1.,2.,3.}, {4.,2.,6.}}));
+  }
+
+}

@@ -98,7 +98,8 @@ void collect_map::CreateSendData_(const cart &Cart, const partition &Partition) 
                 for (int i = CellRange.Begin(0); i < CellRange.End(0); ++i) {
                   tuple<int> Vertex = Cart.PeriodicAdjust({i,j,k});
                   if (LocalRange.Contains(Vertex)) {
-                    ExtendRange(SendToNeighborRanges(iNeighbor), Vertex);
+                    SendToNeighborRanges(iNeighbor) = ExtendRange(SendToNeighborRanges(iNeighbor),
+                      Vertex);
                   }
                 }
               }
@@ -256,7 +257,8 @@ void collect_map::CreateRecvData_(const cart &Cart, const partition &Partition) 
               for (int i = CellRange.Begin(0); i < CellRange.End(0); ++i) {
                 tuple<int> Vertex = Cart.PeriodicAdjust({i,j,k});
                 if (Neighbors(iNeighbor).LocalRange.Contains(Vertex)) {
-                  ExtendRange(RecvFromNeighborRanges(iNeighbor), Vertex);
+                  RecvFromNeighborRanges(iNeighbor) = ExtendRange(RecvFromNeighborRanges(iNeighbor),
+                    Vertex);
                 }
               }
             }

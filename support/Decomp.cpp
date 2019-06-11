@@ -61,13 +61,13 @@ ovk::range TriangularDecomp(const ovk::cart &Cart, ovk::core::comm_view Comm) {
 
   int iProcInPlane = Comm.Rank() - CountProcs(iPlane);
 
-  ovk::tuple<int> TriangleDims = ovk::MakeUniformTuple<int>(1);
+  ovk::tuple<int> TriangleDims = ovk::MakeUniformTuple<int>(NumDims, 1, 1);
   for (int iDim = 0; iDim < NumDims-1; ++iDim) {
     TriangleDims[iDim] = iPlane+1;
   }
   TriangleDims[NumDims-1] = NumPlanes;
 
-  ovk::tuple<int> PlaneDims = ovk::MakeUniformTuple<int>(1);
+  ovk::tuple<int> PlaneDims = ovk::MakeUniformTuple<int>(NumDims, 1, 1);
   for (int iDim = 0; iDim < NumDims-1; ++iDim) {
     PlaneDims[iDim] = iPlane+1;
   }

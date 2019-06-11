@@ -29,7 +29,7 @@ public:
       ID_(0),
       Name_("Grid"),
       Cart_(ovk::MakeEmptyCart(2)),
-      PeriodicLength_(ovk::MakeUniformTuple<double>(0.)),
+      PeriodicLength_(ovk::MakeUniformTuple<double>(2, 0.)),
       LocalRange_(ovk::MakeEmptyRange(2)),
       ExtendAmount_(0),
       Layout_(ovk::array_layout::GRID)

@@ -3,106 +3,145 @@
 
 namespace ovk {
 
-inline void DefaultBox(box &Box, int NumDims) {
+inline box MakeEmptyBox(int NumDims) {
 
-  ovkDefaultBox(&Box, NumDims);
+  box Box;
 
-}
+  for (int iDim = 0; iDim < NumDims; ++iDim) {
+    Box.Begin(iDim) = 0.;
+    Box.End(iDim) = -1.;
+  }
+  for (int iDim = NumDims; iDim < MAX_DIMS; ++iDim) {
+    Box.Begin(iDim) = 0.;
+    Box.End(iDim) = 0.;
+  }
 
-template <typename DoubleArrayType1, typename DoubleArrayType2> inline void ovkSetBox(box &Box,
-  int NumDims, const DoubleArrayType1 &Begin, const DoubleArrayType2 &End) {
-
-  ovkSetBox(&Box, NumDims, &Begin[0], &End[0]);
-
-}
-
-template <typename DoubleArrayType> inline void ovkBoxSize(const box &Box, DoubleArrayType &Size) {
-
-  ovkBoxSize(&Box, &Size[0]);
+  return Box;
 
 }
 
-inline void ovkBoxVolume(const box &Box, double &Volume) {
+inline box ExtendBox(const box &Box, const tuple<double> &Point) {
 
-  ovkBoxVolume(&Box, &Volume);
+  box Result;
 
-}
+  if (!Box.Empty()) {
+    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+      Result.Begin(iDim) = Min(Box.Begin(iDim), Point(iDim));
+      Result.End(iDim) = Max(Box.End(iDim), Point(iDim));
+    }
+  } else {
+    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+      Result.Begin(iDim) = Point(iDim);
+      Result.End(iDim) = Point(iDim);
+    }
+  }
 
-inline bool ovkBoxIsEmpty(const box &Box) {
-
-  return ovkBoxIsEmpty(&Box);
-
-}
-
-template <typename DoubleArrayType> inline bool ovkBoxContains(const box &Box, const DoubleArrayType
-  &Point) {
-
-  return ovkBoxContains(&Box, &Point[0]);
-
-}
-
-inline bool ovkBoxOverlaps(const box &LeftBox, const box &RightBox) {
-
-  return ovkBoxOverlaps(&LeftBox, &RightBox);
+  return Result;
 
 }
 
-inline void ovkBoxUnion(const box &LeftBox, const box &RightBox, box &UnionBox) {
+inline bool BoxesOverlap(const box &LeftBox, const box &RightBox) {
 
-  ovkBoxUnion(&LeftBox, &RightBox, &UnionBox);
-
-}
-
-inline void ovkBoxIntersect(const box &LeftBox, const box &RightBox, box &IntersectBox) {
-
-  ovkBoxIntersect(&LeftBox, &RightBox, &IntersectBox);
+  return !LeftBox.Empty() && !RightBox.Empty() &&
+    RightBox.End(0) >= LeftBox.Begin(0) && LeftBox.End(0) >= RightBox.Begin(0) &&
+    RightBox.End(1) >= LeftBox.Begin(1) && LeftBox.End(1) >= RightBox.Begin(1) &&
+    RightBox.End(2) >= LeftBox.Begin(2) && LeftBox.End(2) >= RightBox.Begin(2);
 
 }
 
-template <typename DoubleArrayType> inline void ovkBoxClamp(const box &Box, DoubleArrayType &Point) {
+inline box UnionBoxes(const box &LeftBox, const box &RightBox) {
 
-  ovkBoxClamp(&Box, &Point[0]);
+  box Result;
 
-}
+  if (LeftBox.Empty()) {
+    Result = RightBox;
+  } else if (RightBox.Empty()) {
+    Result = LeftBox;
+  } else {
+    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+      Result.Begin(iDim) = Min(LeftBox.Begin(iDim), RightBox.Begin(iDim));
+      Result.End(iDim) = Max(LeftBox.End(iDim), RightBox.End(iDim));
+    }
+  }
 
-template <typename DoubleArrayType> inline void ovkBoxMove(const box &Box, const DoubleArrayType
-  &Amount, box &MoveBox) {
-
-  ovkBoxMove(&Box, &Amount[0], &MoveBox);
-
-}
-
-template <typename DoubleArrayType> inline void ovkBoxGrow(const box &Box, const DoubleArrayType
-  &Amount, box &GrowBox) {
-
-  ovkBoxGrow(&Box, &Amount[0], &GrowBox);
-
-}
-
-template <typename DoubleArrayType> inline void ovkBoxScale(const box &Box, const DoubleArrayType
-  &Factor, box &ScaleBox) {
-
-  ovkBoxScale(&Box, &Factor[0], &ScaleBox);
+  return Result;
 
 }
 
-template <typename DoubleArrayType> inline void ovkBoxExtend(const box &Box, const DoubleArrayType
-  &Point, box &ExtendBox) {
+inline box IntersectBoxes(const box &LeftBox, const box &RightBox) {
 
-  ovkBoxExtend(&Box, &Point[0], &ExtendBox);
+  box Result;
 
-}
+  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+    Result.Begin(iDim) = Max(LeftBox.Begin(iDim), RightBox.Begin(iDim));
+    Result.End(iDim) = Min(LeftBox.End(iDim), RightBox.End(iDim));
+  }
 
-}
-
-inline bool operator==(const ovk::box &LeftBox, const ovk::box &RightBox) {
-
-  return ovkBoxEquals(&LeftBox, &RightBox);
+  return Result;
 
 }
 
-inline bool operator!=(const ovk::box &LeftBox, const ovk::box &RightBox) {
+inline tuple<double> ClampToBox(const box &Box, const tuple<double> &Point) {
 
-  return !ovkBoxEquals(&LeftBox, &RightBox);
+  tuple<double> Result;
+
+  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+    if (Point(iDim) < Box.Begin(iDim)) {
+      Result(iDim) = Box.Begin(iDim);
+    } else if (Point(iDim) > Box.End(iDim)) {
+      Result(iDim) = Box.End(iDim);
+    } else {
+      Result(iDim) = Point(iDim);
+    }
+  }
+
+  return Result;
+
+}
+
+inline box MoveBox(const box &Box, const tuple<double> &Amount) {
+
+  box Result;
+
+  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+    Result.Begin(iDim) = Box.Begin(iDim) + Amount(iDim);
+    Result.End(iDim) = Box.End(iDim) + Amount(iDim);
+  }
+
+  return Result;
+
+}
+
+inline box GrowBox(const box &Box, const tuple<double> &Amount) {
+
+  box Result;
+
+  if (Box.Empty()) {
+    Result = Box;
+  } else {
+    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+      Result.Begin(iDim) = Box.Begin(iDim) - Amount(iDim);
+      Result.End(iDim) = Box.End(iDim) + Amount(iDim);
+    }
+  }
+
+  return Result;
+
+}
+
+inline box ScaleBox(const box &Box, const tuple<double> &Factor) {
+
+  box Result;
+
+  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+    double Center = 0.5 * (Box.Begin(iDim) + Box.End(iDim));
+    double HalfSize = 0.5 * Factor(iDim) * (Box.End(iDim) - Box.Begin(iDim));
+    Result.Begin(iDim) = Center - HalfSize;
+    Result.End(iDim) = Center + HalfSize;
+  }
+
+  return Result;
+
+}
 
 }

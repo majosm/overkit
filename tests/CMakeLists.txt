@@ -43,6 +43,7 @@ set(SOURCES
   ArrayTests.cpp
   ArrayTraitsTests.cpp
   ArrayViewTests.cpp
+  BoxTests.cpp
   CartTests.cpp
   CommTests.cpp
   ContextTests.cpp
@@ -56,6 +57,7 @@ set(SOURCES
   OptionalTests.cpp
   PartitionTests.cpp
   RangeTests.cpp
+  TupleTests.cpp
   UnitTestMain.cpp
   VectorTests.cpp
 )

@@ -93,8 +93,6 @@ set(PUBLIC_HEADERS
 set(INTERNAL_HEADERS
   ArrayOps.hpp
   ArrayTraitsBase.hpp
-  BoxBase.h
-  BoxBase.inl
   Collect.hpp
   CollectAll.hpp
   CollectAny.hpp

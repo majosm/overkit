@@ -12,8 +12,18 @@ namespace ovk {
 
 template <typename T> using tuple = elem<T,MAX_DIMS>;
 
-template <typename T> constexpr OVK_FORCE_INLINE tuple<T> MakeUniformTuple(const T &Value) {
-  return MakeUniformElem<T,MAX_DIMS>(Value);
+template <typename T> inline tuple<T> MakeUniformTuple(int NumDims, T Value, T PadValue=T()) {
+
+  tuple<T> Tuple;
+
+  for (int iDim = 0; iDim < NumDims; ++iDim) {
+    Tuple(iDim) = Value;
+  }
+  for (int iDim = NumDims; iDim < MAX_DIMS; ++iDim) {
+    Tuple(iDim) = PadValue;
+  }
+
+  return Tuple;
 }
 
 }

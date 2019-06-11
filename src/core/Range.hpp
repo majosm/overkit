@@ -16,11 +16,11 @@ namespace ovk {
 using range = interval<int,MAX_DIMS>;
 
 inline range MakeEmptyRange(int NumDims);
-inline void ExtendRange(range &Range, const tuple<int> &Tuple);
+inline range ExtendRange(const range &Range, const tuple<int> &Point);
 inline bool RangesOverlap(const range &LeftRange, const range &RightRange);
 inline range UnionRanges(const range &LeftRange, const range &RightRange);
 inline range IntersectRanges(const range &LeftRange, const range &RightRange);
-inline void ClampToRange(const range &Range, tuple<int> &Tuple);
+inline tuple<int> ClampToRange(const range &Range, const tuple<int> &Point);
 
 }
 

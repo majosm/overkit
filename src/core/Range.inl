@@ -20,19 +20,23 @@ inline range MakeEmptyRange(int NumDims) {
 
 }
 
-inline void ExtendRange(range &Range, const tuple<int> &Tuple) {
+inline range ExtendRange(const range &Range, const tuple<int> &Point) {
+
+  range Result;
 
   if (!Range.Empty()) {
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      Range.Begin(iDim) = Min(Range.Begin(iDim), Tuple(iDim));
-      Range.End(iDim) = Max(Range.End(iDim), Tuple(iDim)+1);
+      Result.Begin(iDim) = Min(Range.Begin(iDim), Point(iDim));
+      Result.End(iDim) = Max(Range.End(iDim), Point(iDim)+1);
     }
   } else {
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      Range.Begin(iDim) = Tuple(iDim);
-      Range.End(iDim) = Tuple(iDim)+1;
+      Result.Begin(iDim) = Point(iDim);
+      Result.End(iDim) = Point(iDim)+1;
     }
   }
+
+  return Result;
 
 }
 
@@ -47,45 +51,51 @@ inline bool RangesOverlap(const range &LeftRange, const range &RightRange) {
 
 inline range UnionRanges(const range &LeftRange, const range &RightRange) {
 
-  range UnionRange;
+  range Result;
 
   if (LeftRange.Empty()) {
-    UnionRange = RightRange;
+    Result = RightRange;
   } else if (RightRange.Empty()) {
-    UnionRange = LeftRange;
+    Result = LeftRange;
   } else {
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      UnionRange.Begin(iDim) = Min(LeftRange.Begin(iDim), RightRange.Begin(iDim));
-      UnionRange.End(iDim) = Max(LeftRange.End(iDim), RightRange.End(iDim));
+      Result.Begin(iDim) = Min(LeftRange.Begin(iDim), RightRange.Begin(iDim));
+      Result.End(iDim) = Max(LeftRange.End(iDim), RightRange.End(iDim));
     }
   }
 
-  return UnionRange;
+  return Result;
 
 }
 
 inline range IntersectRanges(const range &LeftRange, const range &RightRange) {
 
-  range IntersectRange;
+  range Result;
 
   for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    IntersectRange.Begin(iDim) = Max(LeftRange.Begin(iDim), RightRange.Begin(iDim));
-    IntersectRange.End(iDim) = Min(LeftRange.End(iDim), RightRange.End(iDim));
+    Result.Begin(iDim) = Max(LeftRange.Begin(iDim), RightRange.Begin(iDim));
+    Result.End(iDim) = Min(LeftRange.End(iDim), RightRange.End(iDim));
   }
 
-  return IntersectRange;
+  return Result;
 
 }
 
-inline void ClampToRange(const range &Range, tuple<int> &Tuple) {
+inline tuple<int> ClampToRange(const range &Range, const tuple<int> &Point) {
+
+  tuple<int> Result;
 
   for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    if (Tuple(iDim) < Range.Begin(iDim)) {
-      Tuple(iDim) = Range.Begin(iDim);
-    } else if (Tuple(iDim) >= Range.End(iDim)) {
-      Tuple(iDim) = Range.End(iDim)-1;
+    if (Point(iDim) < Range.Begin(iDim)) {
+      Result(iDim) = Range.Begin(iDim);
+    } else if (Point(iDim) >= Range.End(iDim)) {
+      Result(iDim) = Range.End(iDim)-1;
+    } else {
+      Result(iDim) = Point(iDim);
     }
   }
+
+  return Result;
 
 }
 

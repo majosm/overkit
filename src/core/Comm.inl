@@ -129,7 +129,7 @@ inline tuple<int> GetCartCommDims(comm_view Comm) {
 
   int NumDims = GetCartCommDimension(Comm);
 
-  tuple<int> CartDims = MakeUniformTuple<int>(1);
+  tuple<int> CartDims = MakeUniformTuple<int>(NumDims, 1, 1);
   tuple<int> PeriodicInt;
   tuple<int> CartCoords;
   MPI_Cart_get(Comm, NumDims, CartDims.Data(), PeriodicInt.Data(), CartCoords.Data());
@@ -143,7 +143,7 @@ inline tuple<bool> GetCartCommPeriodic(comm_view Comm) {
   int NumDims = GetCartCommDimension(Comm);
 
   tuple<int> CartDims;
-  tuple<int> PeriodicInt = MakeUniformTuple<int>(0);
+  tuple<int> PeriodicInt = MakeUniformTuple<int>(NumDims, 0);
   tuple<int> CartCoords;
   MPI_Cart_get(Comm, NumDims, CartDims.Data(), PeriodicInt.Data(), CartCoords.Data());
 
@@ -157,7 +157,7 @@ inline tuple<int> GetCartCommCoords(comm_view Comm) {
 
   tuple<int> CartDims;
   tuple<int> PeriodicInt;
-  tuple<int> CartCoords = MakeUniformTuple<int>(0);
+  tuple<int> CartCoords = MakeUniformTuple<int>(NumDims, 0);
   MPI_Cart_get(Comm, NumDims, CartDims.Data(), PeriodicInt.Data(), CartCoords.Data());
 
   return CartCoords;
