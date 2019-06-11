@@ -44,6 +44,15 @@ public:
 
 using not_bool = ovk::core::vector_internal::not_bool;
 
+struct multiargument {
+  int v1, v2;
+  multiargument() = default;
+  multiargument(int v1_, int v2_):
+    v1(v1_),
+    v2(v2_)
+  {}
+};
+
 TEST_F(VectorTests, Meta) {
 
   if (TestComm().Rank() != 0) return;
@@ -552,15 +561,6 @@ TEST_F(VectorTests, Append) {
 
   if (TestComm().Rank() != 0) return;
 
-  struct multiargument {
-    int v1, v2;
-    multiargument() = default;
-    multiargument(int v1_, int v2_):
-      v1(v1_),
-      v2(v2_)
-    {}
-  };
-
   using vector_nonbool = ovk::core::vector<int>;
   using vector_bool = ovk::core::vector<bool>;
   using vector_noncopyable = ovk::core::vector<noncopyable<int>>;
@@ -591,10 +591,11 @@ TEST_F(VectorTests, Append) {
     EXPECT_EQ(&NewValue, reinterpret_cast<bool *>(Values.data()+4));
   }
 
-  // Non-copyable
+  // Non-copyable, rvalue ref
   {
     vector_noncopyable Vector;
-    noncopyable<int> &NewValue = Vector.Append(1);
+    noncopyable<int> Value(1);
+    noncopyable<int> &NewValue = Vector.Append(std::move(Value));
     auto &Values = helper_noncopyable::GetValues(Vector);
     EXPECT_EQ(int(Values.size()), 1);
     int Sum = 0;
@@ -606,7 +607,7 @@ TEST_F(VectorTests, Append) {
   // Non-default-constructible
   {
     vector_nondefaultconstructible Vector;
-    nondefaultconstructible<int> &NewValue = Vector.Append(1);
+    nondefaultconstructible<int> &NewValue = Vector.Append({1});
     auto &Values = helper_nondefaultconstructible::GetValues(Vector);
     EXPECT_EQ(int(Values.size()), 1);
     int Sum = 0;
@@ -625,6 +626,140 @@ TEST_F(VectorTests, Append) {
     for (auto &Value : Values) Sum += Value.v1 + Value.v2;
     EXPECT_EQ(Sum, 3);
     EXPECT_EQ(&NewValue, Values.data());
+  }
+
+}
+
+TEST_F(VectorTests, Insert) {
+
+  if (TestComm().Rank() != 0) return;
+
+  using vector_nonbool = ovk::core::vector<int>;
+  using vector_bool = ovk::core::vector<bool>;
+  using vector_noncopyable = ovk::core::vector<noncopyable<int>>;
+  using vector_nondefaultconstructible = ovk::core::vector<nondefaultconstructible<int>>;
+  using vector_multiargument = ovk::core::vector<multiargument>;
+  using helper_nonbool = ovk::core::test_helper<vector_nonbool>;
+  using helper_bool = ovk::core::test_helper<vector_bool>;
+  using helper_noncopyable = ovk::core::test_helper<vector_noncopyable>;
+  using helper_nondefaultconstructible = ovk::core::test_helper<vector_nondefaultconstructible>;
+  using helper_multiargument = ovk::core::test_helper<vector_multiargument>;
+
+  // Non-bool
+  {
+    vector_nonbool Vector = {0,1,3,4};
+    auto Iter = Vector.Insert(Vector.Begin()+2, 2);
+    auto &Values = helper_nonbool::GetValues(Vector);
+    EXPECT_THAT(Values, ElementsAreArray({0,1,2,3,4}));
+    EXPECT_EQ(Iter, Values.data()+2);
+  }
+
+  // Bool
+  {
+    vector_bool Vector = {false,true,false,true};
+    auto Iter = Vector.Insert(Vector.Begin()+2, false);
+    auto &Values = helper_bool::GetValues(Vector);
+    EXPECT_THAT(Values, ElementsAreArray({not_bool::FALSE,not_bool::TRUE,not_bool::FALSE,
+      not_bool::FALSE,not_bool::TRUE}));
+    EXPECT_EQ(Iter, reinterpret_cast<bool *>(Values.data()+2));
+  }
+
+  // Non-copyable, rvalue ref
+  {
+    vector_noncopyable Vector;
+    Vector.Append(2);
+    noncopyable<int> Value(1);
+    auto Iter = Vector.Insert(Vector.Begin(), std::move(Value));
+    auto &Values = helper_noncopyable::GetValues(Vector);
+    EXPECT_EQ(int(Values.size()), 2);
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 3);
+    EXPECT_EQ(Iter, Values.data());
+  }
+
+  // Non-default-constructible
+  {
+    vector_nondefaultconstructible Vector = {{2}};
+    auto Iter = Vector.Insert(Vector.Begin(), {1});
+    auto &Values = helper_nondefaultconstructible::GetValues(Vector);
+    EXPECT_EQ(int(Values.size()), 2);
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 3);
+    EXPECT_EQ(Iter, Values.data());
+  }
+
+  // Multi-argument constructor
+  {
+    vector_multiargument Vector = {{3,4}};
+    auto Iter = Vector.Insert(Vector.Begin(), 1, 2);
+    auto &Values = helper_multiargument::GetValues(Vector);
+    EXPECT_EQ(int(Values.size()), 2);
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.v1 + Value.v2;
+    EXPECT_EQ(Sum, 10);
+    EXPECT_EQ(Iter, Values.data());
+  }
+
+}
+
+TEST_F(VectorTests, Erase) {
+
+  if (TestComm().Rank() != 0) return;
+
+  using vector_nonbool = ovk::core::vector<int>;
+  using vector_bool = ovk::core::vector<bool>;
+  using vector_noncopyable = ovk::core::vector<noncopyable<int>>;
+  using vector_nondefaultconstructible = ovk::core::vector<nondefaultconstructible<int>>;
+  using helper_nonbool = ovk::core::test_helper<vector_nonbool>;
+  using helper_bool = ovk::core::test_helper<vector_bool>;
+  using helper_noncopyable = ovk::core::test_helper<vector_noncopyable>;
+  using helper_nondefaultconstructible = ovk::core::test_helper<vector_nondefaultconstructible>;
+
+  // Non-bool
+  {
+    vector_nonbool Vector = {0,1,2,3,4};
+    auto Iter = Vector.Erase(Vector.Begin()+2);
+    auto &Values = helper_nonbool::GetValues(Vector);
+    EXPECT_THAT(Values, ElementsAreArray({0,1,3,4}));
+    EXPECT_EQ(Iter, Values.data()+2);
+  }
+
+  // Bool
+  {
+    vector_bool Vector = {false,true,false,false,true};
+    auto Iter = Vector.Erase(Vector.Begin()+2);
+    auto &Values = helper_bool::GetValues(Vector);
+    EXPECT_THAT(Values, ElementsAreArray({not_bool::FALSE,not_bool::TRUE,not_bool::FALSE,
+      not_bool::TRUE}));
+    EXPECT_EQ(Iter, reinterpret_cast<bool *>(Values.data()+2));
+  }
+
+  // Non-copyable
+  {
+    vector_noncopyable Vector;
+    Vector.Append(1);
+    Vector.Append(2);
+    auto Iter = Vector.Erase(Vector.Begin());
+    auto &Values = helper_noncopyable::GetValues(Vector);
+    EXPECT_EQ(int(Values.size()), 1);
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 2);
+    EXPECT_EQ(Iter, Values.data());
+  }
+
+  // Non-default-constructible
+  {
+    vector_nondefaultconstructible Vector = {{1},{2}};
+    auto Iter = Vector.Erase(Vector.Begin());
+    auto &Values = helper_nondefaultconstructible::GetValues(Vector);
+    EXPECT_EQ(int(Values.size()), 1);
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 2);
+    EXPECT_EQ(Iter, Values.data());
   }
 
 }

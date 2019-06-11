@@ -97,6 +97,9 @@ private:
   using storage_value_type = vector_internal::no_bool<value_type>;
   using storage_allocator_type = typename std::allocator_traits<Allocator>::template rebind_alloc<
     storage_value_type>;
+  using storage_type = std::vector<storage_value_type, storage_allocator_type>;
+  using storage_iterator = typename storage_type::iterator;
+  using const_storage_iterator = typename storage_type::const_iterator;
 
 public:
 
@@ -162,10 +165,48 @@ public:
     Values_.clear();
   }
 
+  value_type &Append(const value_type &Value) {
+    Values_.emplace_back(reinterpret_cast<const storage_value_type &>(Value));
+    return reinterpret_cast<value_type &>(Values_.back());
+  }
+
+  value_type &Append(value_type &&Value) {
+    Values_.emplace_back(std::move(reinterpret_cast<storage_value_type &>(Value)));
+    return reinterpret_cast<value_type &>(Values_.back());
+  }
+
   template <typename... Args> value_type &Append(Args &&... Arguments) {
     value_type Value(std::forward<Args>(Arguments)...);
     Values_.emplace_back(std::move(reinterpret_cast<storage_value_type &>(Value)));
     return reinterpret_cast<value_type &>(Values_.back());
+  }
+
+  iterator Insert(const_iterator Pos, const value_type &Value) {
+    auto StoragePos = Values_.begin() + (Pos - Begin());
+    auto StorageIter = Values_.insert(StoragePos, reinterpret_cast<const storage_value_type
+      &>(Value));
+    return Begin() + (StorageIter - Values_.begin());
+  }
+
+  iterator Insert(const_iterator Pos, value_type &&Value) {
+    auto StoragePos = Values_.begin() + (Pos - Begin());
+    auto StorageIter = Values_.insert(StoragePos, std::move(reinterpret_cast<storage_value_type
+      &>(Value)));
+    return Begin() + (StorageIter - Values_.begin());
+  }
+
+  template <typename... Args> iterator Insert(const_iterator Pos, Args &&... Arguments) {
+    value_type Value(std::forward<Args>(Arguments)...);
+    auto StoragePos = Values_.begin() + (Pos - Begin());
+    auto StorageIter = Values_.insert(StoragePos, std::move(reinterpret_cast<storage_value_type
+      &>(Value)));
+    return Begin() + (StorageIter - Values_.begin());
+  }
+
+  iterator Erase(const_iterator Pos) {
+    auto StoragePos = Values_.begin() + (Pos - Begin());
+    auto StorageIter = Values_.erase(StoragePos);
+    return Begin() + (StorageIter - Values_.begin());
   }
 
   index_type Count() const { return index_type(Values_.size()); }
@@ -222,7 +263,7 @@ public:
 
 private:
 
-  std::vector<storage_value_type, storage_allocator_type> Values_;
+  storage_type Values_;
 
   friend class test_helper<vector>;
 

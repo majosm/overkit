@@ -52,6 +52,8 @@ public:
   using tuple_type = elem<tuple_element_type,Rank>;
   using interval_type = interval<index_type,Rank>;
   using indexer_type = indexer<index_type, tuple_element_type, Rank, Layout>;
+  using iterator = value_type *;
+  using const_iterator = const value_type *;
 
   array_base_1():
     View_(Values_.Data(), MakeEmptyInterval<index_type,Rank>())
@@ -256,6 +258,8 @@ protected:
   using typename parent_type::value_type;
   using typename parent_type::index_type;
   using typename parent_type::view_type;
+  using typename parent_type::iterator;
+  using typename parent_type::const_iterator;
   using parent_type::Values_;
   using parent_type::View_;
 
@@ -269,10 +273,50 @@ public:
   using parent_type::operator();
   using parent_type::Data;
 
+  value_type &Append(const value_type &Value) {
+    Values_.Append(Value);
+    View_ = view_type(Values_.Data(), {View_.Begin(0), View_.End(0)+1});
+    return Values_.Back();
+  }
+
+  value_type &Append(value_type &&Value) {
+    Values_.Append(std::move(Value));
+    View_ = view_type(Values_.Data(), {View_.Begin(0), View_.End(0)+1});
+    return Values_.Back();
+  }
+
   template <typename... Args> value_type &Append(Args &&... Arguments) {
     Values_.Append(std::forward<Args>(Arguments)...);
-    View_ = view_type(Values_.Data(), {View_.Begin()[0], View_.End()[0]+1});
+    View_ = view_type(Values_.Data(), {View_.Begin(0), View_.End(0)+1});
     return Values_.Back();
+  }
+
+  iterator Insert(const_iterator Pos, const value_type &Value) {
+    auto ValuesPos = Values_.Begin() + (Pos - View_.LinearBegin());
+    auto ValuesIter = Values_.Insert(ValuesPos, Value);
+    View_ = view_type(Values_.Data(), {View_.Begin(0), View_.End(0)+1});
+    return View_.LinearBegin() + (ValuesIter - Values_.Begin());
+  }
+
+  iterator Insert(const_iterator Pos, value_type &&Value) {
+    auto ValuesPos = Values_.Begin() + (Pos - View_.LinearBegin());
+    auto ValuesIter = Values_.Insert(ValuesPos, std::move(Value));
+    View_ = view_type(Values_.Data(), {View_.Begin(0), View_.End(0)+1});
+    return View_.LinearBegin() + (ValuesIter - Values_.Begin());
+  }
+
+  template <typename... Args> iterator Insert(const_iterator Pos, Args &&... Arguments) {
+    auto ValuesPos = Values_.Begin() + (Pos - View_.LinearBegin());
+    auto ValuesIter = Values_.Insert(ValuesPos, std::forward<Args>(Arguments)...);
+    View_ = view_type(Values_.Data(), {View_.Begin(0), View_.End(0)+1});
+    return View_.LinearBegin() + (ValuesIter - Values_.Begin());
+  }
+
+  iterator Erase(const_iterator Pos) {
+    auto ValuesPos = Values_.Begin() + (Pos - View_.LinearBegin());
+    auto ValuesIter = Values_.Erase(ValuesPos);
+    View_ = view_type(Values_.Data(), {View_.Begin(0), View_.End(0)-1});
+    return View_.LinearBegin() + (ValuesIter - Values_.Begin());
   }
 
 };
@@ -291,6 +335,8 @@ protected:
   using typename parent_type::value_type;
   using typename parent_type::index_type;
   using typename parent_type::view_type;
+  using typename parent_type::iterator;
+  using typename parent_type::const_iterator;
   using parent_type::Values_;
   using parent_type::View_;
 
@@ -309,6 +355,20 @@ public:
     // Assert on Args instead of just 'false' so it doesn't trigger unless method is instantiated
     static_assert(int(sizeof...(Args)) < 0, "Cannot use array::Append for ranks > 1.");
     return Values_.Back();
+  }
+
+  // Don't know how to define this sensibly for ranks > 1
+  template <typename... Args> iterator Insert(Args &&...) {
+    // Assert on Args instead of just 'false' so it doesn't trigger unless method is instantiated
+    static_assert(int(sizeof...(Args)) < 0, "Cannot use array::Insert for ranks > 1.");
+    return {};
+  }
+
+  // Don't know how to define this sensibly for ranks > 1
+  template <typename... Args> iterator Erase(Args &&...) {
+    // Assert on Args instead of just 'false' so it doesn't trigger unless method is instantiated
+    static_assert(int(sizeof...(Args)) < 0, "Cannot use array::Erase for ranks > 1.");
+    return {};
   }
 
 };
@@ -343,6 +403,8 @@ public:
   using parent_type::operator();
   using parent_type::Data;
   using parent_type::Append;
+  using parent_type::Insert;
+  using parent_type::Erase;
 
   array() = default;
 
