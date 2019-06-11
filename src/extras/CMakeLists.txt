@@ -60,8 +60,8 @@ add_dependencies(overkit-extras extras-headers)
 set(BASE_CXX_FLAGS_DEBUG ${WARNING_CXX_FLAGS})
 set(BASE_CXX_FLAGS_RELEASE ${OPT_CXX_FLAGS})
 target_compile_options(overkit-extras PRIVATE
-  $<$<CONFIG:Debug>:${BASE_CXX_FLAGS_DEBUG}>
   $<$<CONFIG:SlowDebug>:${BASE_CXX_FLAGS_DEBUG}>
+  $<$<CONFIG:FastDebug>:${BASE_CXX_FLAGS_DEBUG}>
   $<$<CONFIG:Release>:${BASE_CXX_FLAGS_RELEASE}>
   $<$<CONFIG:RelWithDebInfo>:${BASE_CXX_FLAGS_RELEASE}>
   $<$<CONFIG:MinSizeRel>:${BASE_CXX_FLAGS_RELEASE}>

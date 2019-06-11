@@ -57,7 +57,7 @@ mark_as_advanced(
   CMAKE_SHARED_LINKER_FLAGS_SLOWDEBUG
 )
 
-# Use basic optimization flags in debug mode (-Og if available, -O1 otherwise)
+# Define FastDebug build type that uses some optimizations (-Og if available, -O1 otherwise)
 if(NOT DETECTED_DEBUG_OPTIM_FLAG)
   set(DEBUG_OPTIM_FLAG "" CACHE INTERNAL "")
   check_cxx_compiler_flag(-Og OG_FLAG_SUPPORTED)
@@ -68,15 +68,25 @@ if(NOT DETECTED_DEBUG_OPTIM_FLAG)
   endif()
   set(DETECTED_DEBUG_OPTIM_FLAGS TRUE CACHE INTERNAL "")
 endif()
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${DEBUG_OPTIM_FLAG}" CACHE STRING
-  "Flags used by the C++ compiler during debug builds." FORCE)
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${DEBUG_OPTIM_FLAG}" CACHE STRING
-  "Flags used by the C compiler during debug builds." FORCE)
+set(CMAKE_CXX_FLAGS_FASTDEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${DEBUG_OPTIM_FLAG}" CACHE STRING
+  "Flags used by the C++ compiler during fast debug builds." FORCE)
+set(CMAKE_C_FLAGS_FASTDEBUG "${CMAKE_C_FLAGS_DEBUG} ${DEBUG_OPTIM_FLAG}" CACHE STRING
+  "Flags used by the C compiler during fast debug builds." FORCE)
+set(CMAKE_EXE_LINKER_FLAGS_FASTDEBUG ${CMAKE_EXE_LINKER_FLAGS_DEBUG} CACHE STRING
+  "Flags used for linking binaries during fast debug builds." FORCE)
+set(CMAKE_SHARED_LINKER_FLAGS_FASTDEBUG ${CMAKE_SHARED_LINKER_FLAGS_DEBUG} CACHE STRING
+  "Flags used by the shared libraries linker during fast debug builds." FORCE)
+mark_as_advanced(
+  CMAKE_CXX_FLAGS_FASTDEBUG
+  CMAKE_C_FLAGS_FASTDEBUG
+  CMAKE_EXE_LINKER_FLAGS_FASTDEBUG
+  CMAKE_SHARED_LINKER_FLAGS_FASTDEBUG
+)
 
 # Build types
 if(NOT CMAKE_CONFIGURATION_TYPES)
   # Single-configuration generator
-  set(BUILD_TYPES None Debug SlowDebug Release RelWithDebInfo MinSizeRel)
+  set(BUILD_TYPES None SlowDebug FastDebug Release RelWithDebInfo MinSizeRel)
   if(CMAKE_BUILD_TYPE)
     set(SELECTED_BUILD_TYPE ${CMAKE_BUILD_TYPE})
   else()
@@ -392,7 +402,7 @@ include_directories(${CMAKE_BINARY_DIR}/include)
 # Extra build configuration checks that can't be done at configure time
 add_custom_target(config-check
   COMMAND "${CMAKE_COMMAND}"
-    -DDEBUG=$<OR:$<CONFIG:Debug>,$<CONFIG:SlowDebug>>
+    -DDEBUG=$<OR:$<CONFIG:SlowDebug>,$<CONFIG:FastDebug>>
     -DCOVERAGE=${COVERAGE}
     -P "${CMAKE_SOURCE_DIR}/config/scripts/check-config.cmake"
 )
