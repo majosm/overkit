@@ -29,173 +29,173 @@ template <std::size_t Index> struct index_tag {};
 template <typename IndexType, typename TupleElementType, typename ArrayOrIterType> constexpr
   OVK_FORCE_INLINE IndexType TupleToIndexHelper(const elem<TupleElementType,1> &Begin, const elem<
   IndexType,1> &, const ArrayOrIterType &Tuple) {
-  return IndexType(Tuple[0] - Begin[0]);
+  return IndexType(Tuple[0] - Begin(0));
 }
 template <typename IndexType, typename TupleElementType, typename ArrayOrIterType> constexpr
   OVK_FORCE_INLINE IndexType TupleToIndexHelper(const elem<TupleElementType,2> &Begin, const elem<
   IndexType,2> &Stride, const ArrayOrIterType &Tuple) {
   return
-    Stride[0]*IndexType(Tuple[0] - Begin[0]) +
-    Stride[1]*IndexType(Tuple[1] - Begin[1]);
+    Stride(0)*IndexType(Tuple[0] - Begin(0)) +
+    Stride(1)*IndexType(Tuple[1] - Begin(1));
 }
 template <typename IndexType, typename TupleElementType, typename ArrayOrIterType> constexpr
   OVK_FORCE_INLINE IndexType TupleToIndexHelper(const elem<TupleElementType,3> &Begin, const elem<
   IndexType,3> &Stride, const ArrayOrIterType &Tuple) {
   return
-    Stride[0]*IndexType(Tuple[0] - Begin[0]) +
-    Stride[1]*IndexType(Tuple[1] - Begin[1]) +
-    Stride[2]*IndexType(Tuple[2] - Begin[2]);
+    Stride(0)*IndexType(Tuple[0] - Begin(0)) +
+    Stride(1)*IndexType(Tuple[1] - Begin(1)) +
+    Stride(2)*IndexType(Tuple[2] - Begin(2));
 }
 template <typename IndexType, typename TupleElementType, typename ArrayOrIterType> constexpr
   OVK_FORCE_INLINE IndexType TupleToIndexHelper(const elem<TupleElementType,4> &Begin,
   const elem<IndexType,4> &Stride, const ArrayOrIterType &Tuple) {
   return
-    Stride[0]*IndexType(Tuple[0] - Begin[0]) +
-    Stride[1]*IndexType(Tuple[1] - Begin[1]) +
-    Stride[2]*IndexType(Tuple[2] - Begin[2]) +
-    Stride[3]*IndexType(Tuple[3] - Begin[3]);
+    Stride(0)*IndexType(Tuple[0] - Begin(0)) +
+    Stride(1)*IndexType(Tuple[1] - Begin(1)) +
+    Stride(2)*IndexType(Tuple[2] - Begin(2)) +
+    Stride(3)*IndexType(Tuple[3] - Begin(3));
 }
 template <typename IndexType, typename TupleElementType, typename ArrayOrIterType> constexpr
   OVK_FORCE_INLINE IndexType TupleToIndexHelper(const elem<TupleElementType,5> &Begin,
   const elem<IndexType,5> &Stride, const ArrayOrIterType &Tuple) {
   return
-    Stride[0]*IndexType(Tuple[0] - Begin[0]) +
-    Stride[1]*IndexType(Tuple[1] - Begin[1]) +
-    Stride[2]*IndexType(Tuple[2] - Begin[2]) +
-    Stride[3]*IndexType(Tuple[3] - Begin[3]) +
-    Stride[4]*IndexType(Tuple[4] - Begin[4]);
+    Stride(0)*IndexType(Tuple[0] - Begin(0)) +
+    Stride(1)*IndexType(Tuple[1] - Begin(1)) +
+    Stride(2)*IndexType(Tuple[2] - Begin(2)) +
+    Stride(3)*IndexType(Tuple[3] - Begin(3)) +
+    Stride(4)*IndexType(Tuple[4] - Begin(4));
 }
 template <typename IndexType, typename TupleElementType, typename ArrayOrIterType> constexpr
   OVK_FORCE_INLINE IndexType TupleToIndexHelper(const elem<TupleElementType,6> &Begin,
   const elem<IndexType,6> &Stride, const ArrayOrIterType &Tuple) {
   return
-    Stride[0]*IndexType(Tuple[0] - Begin[0]) +
-    Stride[1]*IndexType(Tuple[1] - Begin[1]) +
-    Stride[2]*IndexType(Tuple[2] - Begin[2]) +
-    Stride[3]*IndexType(Tuple[3] - Begin[3]) +
-    Stride[4]*IndexType(Tuple[4] - Begin[4]) +
-    Stride[5]*IndexType(Tuple[5] - Begin[5]);
+    Stride(0)*IndexType(Tuple[0] - Begin(0)) +
+    Stride(1)*IndexType(Tuple[1] - Begin(1)) +
+    Stride(2)*IndexType(Tuple[2] - Begin(2)) +
+    Stride(3)*IndexType(Tuple[3] - Begin(3)) +
+    Stride(4)*IndexType(Tuple[4] - Begin(4)) +
+    Stride(5)*IndexType(Tuple[5] - Begin(5));
 }
 template <typename IndexType, typename TupleElementType, typename ArrayOrIterType> constexpr
   OVK_FORCE_INLINE IndexType TupleToIndexHelper(const elem<TupleElementType,7> &Begin,
   const elem<IndexType,7> &Stride, const ArrayOrIterType &Tuple) {
   return
-    Stride[0]*IndexType(Tuple[0] - Begin[0]) +
-    Stride[1]*IndexType(Tuple[1] - Begin[1]) +
-    Stride[2]*IndexType(Tuple[2] - Begin[2]) +
-    Stride[3]*IndexType(Tuple[3] - Begin[3]) +
-    Stride[4]*IndexType(Tuple[4] - Begin[4]) +
-    Stride[5]*IndexType(Tuple[5] - Begin[5]) +
-    Stride[6]*IndexType(Tuple[6] - Begin[6]);
+    Stride(0)*IndexType(Tuple[0] - Begin(0)) +
+    Stride(1)*IndexType(Tuple[1] - Begin(1)) +
+    Stride(2)*IndexType(Tuple[2] - Begin(2)) +
+    Stride(3)*IndexType(Tuple[3] - Begin(3)) +
+    Stride(4)*IndexType(Tuple[4] - Begin(4)) +
+    Stride(5)*IndexType(Tuple[5] - Begin(5)) +
+    Stride(6)*IndexType(Tuple[6] - Begin(6));
 }
 template <typename IndexType, typename TupleElementType, typename ArrayOrIterType> constexpr
   OVK_FORCE_INLINE IndexType TupleToIndexHelper(const elem<TupleElementType,8> &Begin,
   const elem<IndexType,8> &Stride, const ArrayOrIterType &Tuple) {
   return
-    Stride[0]*IndexType(Tuple[0] - Begin[0]) +
-    Stride[1]*IndexType(Tuple[1] - Begin[1]) +
-    Stride[2]*IndexType(Tuple[2] - Begin[2]) +
-    Stride[3]*IndexType(Tuple[3] - Begin[3]) +
-    Stride[4]*IndexType(Tuple[4] - Begin[4]) +
-    Stride[5]*IndexType(Tuple[5] - Begin[5]) +
-    Stride[6]*IndexType(Tuple[6] - Begin[6]) +
-    Stride[7]*IndexType(Tuple[7] - Begin[7]);
+    Stride(0)*IndexType(Tuple[0] - Begin(0)) +
+    Stride(1)*IndexType(Tuple[1] - Begin(1)) +
+    Stride(2)*IndexType(Tuple[2] - Begin(2)) +
+    Stride(3)*IndexType(Tuple[3] - Begin(3)) +
+    Stride(4)*IndexType(Tuple[4] - Begin(4)) +
+    Stride(5)*IndexType(Tuple[5] - Begin(5)) +
+    Stride(6)*IndexType(Tuple[6] - Begin(6)) +
+    Stride(7)*IndexType(Tuple[7] - Begin(7));
 }
 template <typename IndexType, typename TupleElementType, typename ArrayOrIterType> constexpr
   OVK_FORCE_INLINE IndexType TupleToIndexHelper(const elem<TupleElementType,9> &Begin,
   const elem<IndexType,9> &Stride, const ArrayOrIterType &Tuple) {
   return
-    Stride[0]*IndexType(Tuple[0] - Begin[0]) +
-    Stride[1]*IndexType(Tuple[1] - Begin[1]) +
-    Stride[2]*IndexType(Tuple[2] - Begin[2]) +
-    Stride[3]*IndexType(Tuple[3] - Begin[3]) +
-    Stride[4]*IndexType(Tuple[4] - Begin[4]) +
-    Stride[5]*IndexType(Tuple[5] - Begin[5]) +
-    Stride[6]*IndexType(Tuple[6] - Begin[6]) +
-    Stride[7]*IndexType(Tuple[7] - Begin[7]) +
-    Stride[8]*IndexType(Tuple[8] - Begin[8]);
+    Stride(0)*IndexType(Tuple[0] - Begin(0)) +
+    Stride(1)*IndexType(Tuple[1] - Begin(1)) +
+    Stride(2)*IndexType(Tuple[2] - Begin(2)) +
+    Stride(3)*IndexType(Tuple[3] - Begin(3)) +
+    Stride(4)*IndexType(Tuple[4] - Begin(4)) +
+    Stride(5)*IndexType(Tuple[5] - Begin(5)) +
+    Stride(6)*IndexType(Tuple[6] - Begin(6)) +
+    Stride(7)*IndexType(Tuple[7] - Begin(7)) +
+    Stride(8)*IndexType(Tuple[8] - Begin(8));
 }
 template <typename IndexType, typename TupleElementType, typename ArrayOrIterType> constexpr
   OVK_FORCE_INLINE IndexType TupleToIndexHelper(const elem<TupleElementType,10> &Begin,
   const elem<IndexType,10> &Stride, const ArrayOrIterType &Tuple) {
   return
-    Stride[0]*IndexType(Tuple[0] - Begin[0]) +
-    Stride[1]*IndexType(Tuple[1] - Begin[1]) +
-    Stride[2]*IndexType(Tuple[2] - Begin[2]) +
-    Stride[3]*IndexType(Tuple[3] - Begin[3]) +
-    Stride[4]*IndexType(Tuple[4] - Begin[4]) +
-    Stride[5]*IndexType(Tuple[5] - Begin[5]) +
-    Stride[6]*IndexType(Tuple[6] - Begin[6]) +
-    Stride[7]*IndexType(Tuple[7] - Begin[7]) +
-    Stride[8]*IndexType(Tuple[8] - Begin[8]) +
-    Stride[9]*IndexType(Tuple[9] - Begin[9]);
+    Stride(0)*IndexType(Tuple[0] - Begin(0)) +
+    Stride(1)*IndexType(Tuple[1] - Begin(1)) +
+    Stride(2)*IndexType(Tuple[2] - Begin(2)) +
+    Stride(3)*IndexType(Tuple[3] - Begin(3)) +
+    Stride(4)*IndexType(Tuple[4] - Begin(4)) +
+    Stride(5)*IndexType(Tuple[5] - Begin(5)) +
+    Stride(6)*IndexType(Tuple[6] - Begin(6)) +
+    Stride(7)*IndexType(Tuple[7] - Begin(7)) +
+    Stride(8)*IndexType(Tuple[8] - Begin(8)) +
+    Stride(9)*IndexType(Tuple[9] - Begin(9));
 }
 
 template <typename IndexType, typename TupleElementType> constexpr OVK_FORCE_INLINE IndexType
   TupleElementsToIndexHelper(const elem<TupleElementType,1> &Begin, const elem<IndexType,1> &,
   TupleElementType Element0) {
-  return IndexType(Element0 - Begin[0]);
+  return IndexType(Element0 - Begin(0));
 }
 template <typename IndexType, typename TupleElementType> constexpr OVK_FORCE_INLINE IndexType
   TupleElementsToIndexHelper(const elem<TupleElementType,2> &Begin, const elem<IndexType,2> &Stride,
   TupleElementType Element0, TupleElementType Element1) {
   return
-    Stride[0]*IndexType(Element0 - Begin[0]) +
-    Stride[1]*IndexType(Element1 - Begin[1]);
+    Stride(0)*IndexType(Element0 - Begin(0)) +
+    Stride(1)*IndexType(Element1 - Begin(1));
 }
 template <typename IndexType, typename TupleElementType> constexpr OVK_FORCE_INLINE IndexType
   TupleElementsToIndexHelper(const elem<TupleElementType,3> &Begin, const elem<IndexType,3> &Stride,
   TupleElementType Element0, TupleElementType Element1, TupleElementType Element2) {
   return
-    Stride[0]*IndexType(Element0 - Begin[0]) +
-    Stride[1]*IndexType(Element1 - Begin[1]) +
-    Stride[2]*IndexType(Element2 - Begin[2]);
+    Stride(0)*IndexType(Element0 - Begin(0)) +
+    Stride(1)*IndexType(Element1 - Begin(1)) +
+    Stride(2)*IndexType(Element2 - Begin(2));
 }
 template <typename IndexType, typename TupleElementType> constexpr OVK_FORCE_INLINE IndexType
   TupleElementsToIndexHelper(const elem<TupleElementType,4> &Begin, const elem<IndexType,4> &Stride,
   TupleElementType Element0, TupleElementType Element1, TupleElementType Element2, TupleElementType
   Element3) {
   return
-    Stride[0]*IndexType(Element0 - Begin[0]) +
-    Stride[1]*IndexType(Element1 - Begin[1]) +
-    Stride[2]*IndexType(Element2 - Begin[2]) +
-    Stride[3]*IndexType(Element3 - Begin[3]);
+    Stride(0)*IndexType(Element0 - Begin(0)) +
+    Stride(1)*IndexType(Element1 - Begin(1)) +
+    Stride(2)*IndexType(Element2 - Begin(2)) +
+    Stride(3)*IndexType(Element3 - Begin(3));
 }
 template <typename IndexType, typename TupleElementType> constexpr OVK_FORCE_INLINE IndexType
   TupleElementsToIndexHelper(const elem<TupleElementType,5> &Begin, const elem<IndexType,5> &Stride,
   TupleElementType Element0, TupleElementType Element1, TupleElementType Element2, TupleElementType
   Element3, TupleElementType Element4) {
   return
-    Stride[0]*IndexType(Element0 - Begin[0]) +
-    Stride[1]*IndexType(Element1 - Begin[1]) +
-    Stride[2]*IndexType(Element2 - Begin[2]) +
-    Stride[3]*IndexType(Element3 - Begin[3]) +
-    Stride[4]*IndexType(Element4 - Begin[4]);
+    Stride(0)*IndexType(Element0 - Begin(0)) +
+    Stride(1)*IndexType(Element1 - Begin(1)) +
+    Stride(2)*IndexType(Element2 - Begin(2)) +
+    Stride(3)*IndexType(Element3 - Begin(3)) +
+    Stride(4)*IndexType(Element4 - Begin(4));
 }
 template <typename IndexType, typename TupleElementType> constexpr OVK_FORCE_INLINE IndexType
   TupleElementsToIndexHelper(const elem<TupleElementType,6> &Begin, const elem<IndexType,6> &Stride,
   TupleElementType Element0, TupleElementType Element1, TupleElementType Element2, TupleElementType
   Element3, TupleElementType Element4, TupleElementType Element5) {
   return
-    Stride[0]*IndexType(Element0 - Begin[0]) +
-    Stride[1]*IndexType(Element1 - Begin[1]) +
-    Stride[2]*IndexType(Element2 - Begin[2]) +
-    Stride[3]*IndexType(Element3 - Begin[3]) +
-    Stride[4]*IndexType(Element4 - Begin[4]) +
-    Stride[5]*IndexType(Element5 - Begin[5]);
+    Stride(0)*IndexType(Element0 - Begin(0)) +
+    Stride(1)*IndexType(Element1 - Begin(1)) +
+    Stride(2)*IndexType(Element2 - Begin(2)) +
+    Stride(3)*IndexType(Element3 - Begin(3)) +
+    Stride(4)*IndexType(Element4 - Begin(4)) +
+    Stride(5)*IndexType(Element5 - Begin(5));
 }
 template <typename IndexType, typename TupleElementType> constexpr OVK_FORCE_INLINE IndexType
   TupleElementsToIndexHelper(const elem<TupleElementType,7> &Begin, const elem<IndexType,7> &Stride,
   TupleElementType Element0, TupleElementType Element1, TupleElementType Element2, TupleElementType
   Element3, TupleElementType Element4, TupleElementType Element5, TupleElementType Element6) {
   return
-    Stride[0]*IndexType(Element0 - Begin[0]) +
-    Stride[1]*IndexType(Element1 - Begin[1]) +
-    Stride[2]*IndexType(Element2 - Begin[2]) +
-    Stride[3]*IndexType(Element3 - Begin[3]) +
-    Stride[4]*IndexType(Element4 - Begin[4]) +
-    Stride[5]*IndexType(Element5 - Begin[5]) +
-    Stride[6]*IndexType(Element6 - Begin[6]);
+    Stride(0)*IndexType(Element0 - Begin(0)) +
+    Stride(1)*IndexType(Element1 - Begin(1)) +
+    Stride(2)*IndexType(Element2 - Begin(2)) +
+    Stride(3)*IndexType(Element3 - Begin(3)) +
+    Stride(4)*IndexType(Element4 - Begin(4)) +
+    Stride(5)*IndexType(Element5 - Begin(5)) +
+    Stride(6)*IndexType(Element6 - Begin(6));
 }
 template <typename IndexType, typename TupleElementType> constexpr OVK_FORCE_INLINE IndexType
   TupleElementsToIndexHelper(const elem<TupleElementType,8> &Begin, const elem<IndexType,8> &Stride,
@@ -203,14 +203,14 @@ template <typename IndexType, typename TupleElementType> constexpr OVK_FORCE_INL
   Element3, TupleElementType Element4, TupleElementType Element5, TupleElementType Element6,
   TupleElementType Element7) {
   return
-    Stride[0]*IndexType(Element0 - Begin[0]) +
-    Stride[1]*IndexType(Element1 - Begin[1]) +
-    Stride[2]*IndexType(Element2 - Begin[2]) +
-    Stride[3]*IndexType(Element3 - Begin[3]) +
-    Stride[4]*IndexType(Element4 - Begin[4]) +
-    Stride[5]*IndexType(Element5 - Begin[5]) +
-    Stride[6]*IndexType(Element6 - Begin[6]) +
-    Stride[7]*IndexType(Element7 - Begin[7]);
+    Stride(0)*IndexType(Element0 - Begin(0)) +
+    Stride(1)*IndexType(Element1 - Begin(1)) +
+    Stride(2)*IndexType(Element2 - Begin(2)) +
+    Stride(3)*IndexType(Element3 - Begin(3)) +
+    Stride(4)*IndexType(Element4 - Begin(4)) +
+    Stride(5)*IndexType(Element5 - Begin(5)) +
+    Stride(6)*IndexType(Element6 - Begin(6)) +
+    Stride(7)*IndexType(Element7 - Begin(7));
 }
 template <typename IndexType, typename TupleElementType> constexpr OVK_FORCE_INLINE IndexType
   TupleElementsToIndexHelper(const elem<TupleElementType,9> &Begin, const elem<IndexType,9> &Stride,
@@ -218,15 +218,15 @@ template <typename IndexType, typename TupleElementType> constexpr OVK_FORCE_INL
   Element3, TupleElementType Element4, TupleElementType Element5, TupleElementType Element6,
   TupleElementType Element7, TupleElementType Element8) {
   return
-    Stride[0]*IndexType(Element0 - Begin[0]) +
-    Stride[1]*IndexType(Element1 - Begin[1]) +
-    Stride[2]*IndexType(Element2 - Begin[2]) +
-    Stride[3]*IndexType(Element3 - Begin[3]) +
-    Stride[4]*IndexType(Element4 - Begin[4]) +
-    Stride[5]*IndexType(Element5 - Begin[5]) +
-    Stride[6]*IndexType(Element6 - Begin[6]) +
-    Stride[7]*IndexType(Element7 - Begin[7]) +
-    Stride[8]*IndexType(Element8 - Begin[8]);
+    Stride(0)*IndexType(Element0 - Begin(0)) +
+    Stride(1)*IndexType(Element1 - Begin(1)) +
+    Stride(2)*IndexType(Element2 - Begin(2)) +
+    Stride(3)*IndexType(Element3 - Begin(3)) +
+    Stride(4)*IndexType(Element4 - Begin(4)) +
+    Stride(5)*IndexType(Element5 - Begin(5)) +
+    Stride(6)*IndexType(Element6 - Begin(6)) +
+    Stride(7)*IndexType(Element7 - Begin(7)) +
+    Stride(8)*IndexType(Element8 - Begin(8));
 }
 template <typename IndexType, typename TupleElementType> constexpr OVK_FORCE_INLINE IndexType
   TupleElementsToIndexHelper(const elem<TupleElementType,10> &Begin, const elem<IndexType,10> &Stride,
@@ -234,16 +234,16 @@ template <typename IndexType, typename TupleElementType> constexpr OVK_FORCE_INL
   Element3, TupleElementType Element4, TupleElementType Element5, TupleElementType Element6,
   TupleElementType Element7, TupleElementType Element8, TupleElementType Element9) {
   return
-    Stride[0]*IndexType(Element0 - Begin[0]) +
-    Stride[1]*IndexType(Element1 - Begin[1]) +
-    Stride[2]*IndexType(Element2 - Begin[2]) +
-    Stride[3]*IndexType(Element3 - Begin[3]) +
-    Stride[4]*IndexType(Element4 - Begin[4]) +
-    Stride[5]*IndexType(Element5 - Begin[5]) +
-    Stride[6]*IndexType(Element6 - Begin[6]) +
-    Stride[7]*IndexType(Element7 - Begin[7]) +
-    Stride[8]*IndexType(Element8 - Begin[8]) +
-    Stride[9]*IndexType(Element9 - Begin[9]);
+    Stride(0)*IndexType(Element0 - Begin(0)) +
+    Stride(1)*IndexType(Element1 - Begin(1)) +
+    Stride(2)*IndexType(Element2 - Begin(2)) +
+    Stride(3)*IndexType(Element3 - Begin(3)) +
+    Stride(4)*IndexType(Element4 - Begin(4)) +
+    Stride(5)*IndexType(Element5 - Begin(5)) +
+    Stride(6)*IndexType(Element6 - Begin(6)) +
+    Stride(7)*IndexType(Element7 - Begin(7)) +
+    Stride(8)*IndexType(Element8 - Begin(8)) +
+    Stride(9)*IndexType(Element9 - Begin(9));
 }
 
 template <typename IndexType, typename TupleElementType, int Rank, array_layout Layout,
@@ -357,9 +357,9 @@ private:
 
     index_type ReducedIndex = Index;
     for (int i = 0; i < Rank; ++i) {
-      tuple_element_type Offset = tuple_element_type(ReducedIndex/Stride_[i]);
-      Tuple[i] = Begin_[i] + Offset;
-      ReducedIndex -= Offset*Stride_[i];
+      tuple_element_type Offset = tuple_element_type(ReducedIndex/Stride_(i));
+      Tuple(i) = Begin_(i) + Offset;
+      ReducedIndex -= Offset*Stride_(i);
     }
 
     return Tuple;
@@ -372,9 +372,9 @@ private:
 
     index_type ReducedIndex = Index;
     for (int i = Rank-1; i >= 0; --i) {
-      tuple_element_type Offset = tuple_element_type(ReducedIndex/Stride_[i]);
-      Tuple[i] = Begin_[i] + Offset;
-      ReducedIndex -= Offset*Stride_[i];
+      tuple_element_type Offset = tuple_element_type(ReducedIndex/Stride_(i));
+      Tuple(i) = Begin_(i) + Offset;
+      ReducedIndex -= Offset*Stride_(i);
     }
 
     return Tuple;

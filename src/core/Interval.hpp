@@ -49,19 +49,19 @@ public:
 
   constexpr OVK_FORCE_INLINE const tuple_type &Begin() const { return Begin_; }
   OVK_FORCE_INLINE tuple_type &Begin() { return Begin_; }
-  constexpr OVK_FORCE_INLINE value_type Begin(int iDim) const { return Begin_[iDim]; }
-  OVK_FORCE_INLINE value_type &Begin(int iDim) { return Begin_[iDim]; }
+  constexpr OVK_FORCE_INLINE value_type Begin(int iDim) const { return Begin_(iDim); }
+  OVK_FORCE_INLINE value_type &Begin(int iDim) { return Begin_(iDim); }
 
   constexpr OVK_FORCE_INLINE const tuple_type &End() const { return End_; }
   OVK_FORCE_INLINE tuple_type &End() { return End_; }
-  constexpr OVK_FORCE_INLINE value_type End(int iDim) const { return End_[iDim]; }
-  OVK_FORCE_INLINE value_type &End(int iDim) { return End_[iDim]; }
+  constexpr OVK_FORCE_INLINE value_type End(int iDim) const { return End_(iDim); }
+  OVK_FORCE_INLINE value_type &End(int iDim) { return End_(iDim); }
 
   constexpr OVK_FORCE_INLINE tuple_type Size() const {
     return Max(End_ - Begin_, MakeUniformElem<value_type,N>(value_type(0)));
   }
   constexpr OVK_FORCE_INLINE value_type Size(int iDim) const {
-    return Max(End_[iDim] - Begin_[iDim], value_type(0));
+    return Max(End_(iDim) - Begin_(iDim), value_type(0));
   }
 
   constexpr OVK_FORCE_INLINE bool Empty() const {
@@ -92,34 +92,34 @@ protected:
   template <std::size_t Index1, std::size_t Index2, std::size_t... RemainingIndices>
     constexpr OVK_FORCE_INLINE bool Empty_(core::index_sequence<Index1, Index2,
     RemainingIndices...>) const {
-    return (End_[Index1] <= Begin_[Index1]) || Empty_(core::index_sequence<Index2,
+    return (End_(Index1) <= Begin_(Index1)) || Empty_(core::index_sequence<Index2,
       RemainingIndices...>());
   }
   template <std::size_t Index> constexpr OVK_FORCE_INLINE bool Empty_(core::index_sequence<Index>)
     const {
-    return End_[Index] <= Begin_[Index];
+    return End_(Index) <= Begin_(Index);
   }
 
   template <std::size_t Index1, std::size_t Index2, std::size_t... RemainingIndices>
     constexpr OVK_FORCE_INLINE bool Contains_(core::index_sequence<Index1, Index2,
     RemainingIndices...>, const tuple_type &Tuple) const {
-    return (Tuple[Index1] >= Begin_[Index1] && Tuple[Index1] < End_[Index1]) && Contains_(
+    return (Tuple(Index1) >= Begin_(Index1) && Tuple(Index1) < End_(Index1)) && Contains_(
       core::index_sequence<Index2, RemainingIndices...>(), Tuple);
   }
   template <std::size_t Index> constexpr OVK_FORCE_INLINE bool Contains_(core::index_sequence<Index>,
     const tuple_type &Tuple) const {
-    return Tuple[Index] >= Begin_[Index] && Tuple[Index] < End_[Index];
+    return Tuple(Index) >= Begin_(Index) && Tuple(Index) < End_(Index);
   }
 
   template <std::size_t Index1, std::size_t Index2, std::size_t... RemainingIndices>
     constexpr OVK_FORCE_INLINE bool IncludesHelper_(core::index_sequence<Index1, Index2,
     RemainingIndices...>, const interval_base_1 &Other) const {
-    return (Begin_[Index1] <= Other.Begin_[Index1] && End_[Index1] >= Other.End_[Index1]) &&
+    return (Begin_(Index1) <= Other.Begin_(Index1) && End_(Index1) >= Other.End_(Index1)) &&
       IncludesHelper_(core::index_sequence<Index2, RemainingIndices...>(), Other);
   }
   template <std::size_t Index> constexpr OVK_FORCE_INLINE bool IncludesHelper_(core::index_sequence<
     Index>, const interval_base_1 &Other) const {
-    return Begin_[Index] <= Other.Begin_[Index] && End_[Index] >= Other.End_[Index];
+    return Begin_(Index) <= Other.Begin_(Index) && End_(Index) >= Other.End_(Index);
   }
 
   template <typename U, int M> friend class interval_base_1;

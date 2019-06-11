@@ -206,6 +206,34 @@ TEST_F(ElemTests, Equality) {
 
 }
 
+TEST_F(ElemTests, ParenthesisOperator) {
+
+  if (TestComm().Rank() != 0) return;
+
+  using helper = ovk::core::test_helper<ovk::elem<int,3>>;
+
+  // Const
+  {
+    const ovk::elem<int,3> Elem = {1,2,3};
+    EXPECT_EQ(Elem(0), 1);
+    EXPECT_EQ(Elem(1), 2);
+    EXPECT_EQ(Elem(2), 3);
+  }
+
+  // Non-const
+  {
+    ovk::elem<int,3> Elem;
+    Elem(0) = 1;
+    Elem(1) = 2;
+    Elem(2) = 3;
+    const int *Values = helper::GetValues(Elem);
+    EXPECT_EQ(Values[0], 1);
+    EXPECT_EQ(Values[1], 2);
+    EXPECT_EQ(Values[2], 3);
+  }
+
+}
+
 TEST_F(ElemTests, BracketOperator) {
 
   if (TestComm().Rank() != 0) return;

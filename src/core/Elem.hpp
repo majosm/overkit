@@ -115,6 +115,11 @@ public:
     return *this;
   }
 
+  constexpr OVK_FORCE_INLINE const value_type &operator()(int iElement) const {
+    return Values_[iElement];
+  }
+  OVK_FORCE_INLINE value_type &operator()(int iElement) { return Values_[iElement]; }
+
   constexpr OVK_FORCE_INLINE const value_type &operator[](int iElement) const {
     return Values_[iElement];
   }
