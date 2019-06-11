@@ -75,7 +75,7 @@ public:
   constexpr OVK_FORCE_INLINE elem_base() = default;
 
   constexpr OVK_FORCE_INLINE elem_base(Ts... Values):
-    Values_{std::move(Values)...}
+    Values_{Values...}
   {}
 
   template <typename IterType, OVK_FUNCTION_REQUIRES(core::IsRandomAccessIterator<IterType>() &&
@@ -104,7 +104,6 @@ public:
   {}
 
   constexpr OVK_FORCE_INLINE elem_base(const elem_base &Other) = default;
-  constexpr OVK_FORCE_INLINE elem_base(elem_base &&Other) noexcept = default;
 
   OVK_FORCE_INLINE elem_base &operator=(const elem_base &Other) {
     Assign_(core::index_sequence_of_size<Rank>(), Other);
