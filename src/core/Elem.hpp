@@ -19,9 +19,43 @@ namespace ovk {
 
 namespace elem_internal {
 
+// Want elem<T,1> to be castable to T
+namespace cast_internal {
+struct null_type {};
+template <typename T, int N> struct scalar_cast_helper {
+  using const_ref = null_type;
+  using ref = null_type;
+};
+template <typename T> struct scalar_cast_helper<T,1> {
+  using const_ref = const T &;
+  using ref = T &;
+};
+template <typename T, int N> using scalar_cast_const_ref_type = typename scalar_cast_helper<T,N>::
+  const_ref;
+template <typename T, int N> using scalar_cast_ref_type = typename scalar_cast_helper<T,N>::ref;
+template <typename T, int N> constexpr scalar_cast_const_ref_type<T,N> ScalarCast(const T
+  (&Values)[N]) {
+  return {};
+}
+template <typename T, int N> constexpr scalar_cast_ref_type<T,N> ScalarCast(T (&Values)[N]) {
+  return {};
+}
+template <typename T> constexpr scalar_cast_const_ref_type<T,1> ScalarCast(const T (&Values)[1]) {
+  return Values[0];
+}
+template <typename T> constexpr scalar_cast_ref_type<T,1> ScalarCast(T (&Values)[1]) {
+  return Values[0];
+}
+}
+
 template <typename T, int N, typename TSequence> class elem_base;
 
 template <typename T, int N, typename... Ts> class elem_base<T, N, core::type_sequence<Ts...>> {
+
+private:
+
+  using scalar_cast_const_ref_type = cast_internal::scalar_cast_const_ref_type<T,N>;
+  using scalar_cast_ref_type = cast_internal::scalar_cast_ref_type<T,N>;
 
 public:
 
@@ -101,6 +135,13 @@ public:
   iterator begin() { return Begin(); }
   constexpr OVK_FORCE_INLINE const_iterator end() const { return End(); }
   iterator end() { return End(); }
+
+  constexpr operator scalar_cast_const_ref_type() const {
+    return cast_internal::ScalarCast(Values_);
+  }
+  operator scalar_cast_ref_type() {
+    return cast_internal::ScalarCast(Values_);
+  }
 
 private:
 

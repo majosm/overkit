@@ -123,7 +123,7 @@ std::false_type ConvertsToElemRank2(...) { return {}; }
 
 }
 
-TEST_F(ElemTests, Convert) {
+TEST_F(ElemTests, ConvertToOtherElem) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -285,6 +285,45 @@ TEST_F(ElemTests, BeginEnd) {
     EXPECT_EQ(Values[0], 1);
     EXPECT_EQ(Values[1], 1);
     EXPECT_EQ(Values[2], 1);
+  }
+
+}
+
+namespace elem_tests_internal {
+
+std::true_type ConvertsToInt(const int &) { return {}; }
+std::false_type ConvertsToInt(...) { return {}; }
+
+}
+
+TEST_F(ElemTests, ConvertToScalar) {
+
+  if (TestComm().Rank() != 0) return;
+
+  using namespace elem_tests_internal;
+
+  using helper = ovk::core::test_helper<ovk::elem<int,1>>;
+
+  // Const, rank 1
+  {
+    const ovk::elem<int,1> Elem = {1};
+    const int &Value = Elem;
+    const int *Values = helper::GetValues(Elem);
+    EXPECT_EQ(&Value, Values);
+  }
+
+  // Non-const, rank 1
+  {
+    ovk::elem<int,1> Elem = {1};
+    int &Value = Elem;
+    const int *Values = helper::GetValues(Elem);
+    EXPECT_EQ(&Value, Values);
+  }
+
+  // Rank > 1 should not convert
+  {
+    ovk::elem<int,3> Elem = {1,2,3};
+    EXPECT_FALSE(decltype(ConvertsToInt(Elem))::value);
   }
 
 }
