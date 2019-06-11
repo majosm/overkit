@@ -16,25 +16,21 @@ namespace core {
 template <typename T> using remove_cvref = typename std::remove_cv<typename std::remove_reference<T
   >::type>::type;
 
-// Apply const & reference qualifiers of one type to another type
-namespace mimicked_ref_internal {
+// Apply cv and reference qualifiers of one type to another type
+namespace mimic_cvref_internal {
 template <typename T, typename U> struct helper {
-  using type = U;
-};
-template <typename T, typename U> struct helper<T &, U> {
-  using type = typename std::add_lvalue_reference<U>::type;
-};
-template <typename T, typename U> struct helper<const T &, U> {
-  using type = typename std::add_lvalue_reference<typename std::add_const<U>::type>::type;
-};
-template <typename T, typename U> struct helper<T &&, U> {
-  using type = typename std::add_rvalue_reference<U>::type;
-};
-template <typename T, typename U> struct helper<const T &&, U> {
-  using type = typename std::add_rvalue_reference<typename std::add_const<U>::type>::type;
+  using U1 = typename std::conditional<std::is_const<typename std::remove_reference<T>::type>
+    ::value, typename std::add_const<U>::type, U>::type;
+  using U2 = typename std::conditional<std::is_volatile<typename std::remove_reference<T>::type>
+    ::value, typename std::add_volatile<U1>::type, U1>::type;
+  using U3 = typename std::conditional<std::is_lvalue_reference<T>::value, typename
+    std::add_lvalue_reference<U2>::type, U2>::type;
+  using U4 = typename std::conditional<std::is_rvalue_reference<T>::value, typename
+    std::add_rvalue_reference<U3>::type, U3>::type;
+  using type = U4;
 };
 }
-template <typename T, typename U> using mimicked_ref = typename mimicked_ref_internal::helper<T,
+template <typename T, typename U> using mimic_cvref = typename mimic_cvref_internal::helper<T,
 U>::type;
 
 // Check if a function can be called with a specified set of argument types

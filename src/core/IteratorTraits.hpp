@@ -151,14 +151,14 @@ namespace forwarding_begin_end_internal {
 using std::begin;
 using std::end;
 template <typename T> auto BeginHelper(typename std::remove_reference<T>::type &Container) ->
-  decltype(MakeForwardingIterator<mimicked_ref<T &&, decltype(*begin(Container))>>(
+  decltype(MakeForwardingIterator<mimic_cvref<T &&, decltype(*begin(Container))>>(
   begin(Container))) {
-  return MakeForwardingIterator<mimicked_ref<T &&, decltype(*begin(Container))>>(begin(Container));
+  return MakeForwardingIterator<mimic_cvref<T &&, decltype(*begin(Container))>>(begin(Container));
 }
 template <typename T> auto EndHelper(typename std::remove_reference<T>::type &Container) ->
-  decltype(MakeForwardingIterator<mimicked_ref<T &&, decltype(*begin(Container))>>(
+  decltype(MakeForwardingIterator<mimic_cvref<T &&, decltype(*begin(Container))>>(
   end(Container))) {
-  return MakeForwardingIterator<mimicked_ref<T &&, decltype(*begin(Container))>>(end(Container));
+  return MakeForwardingIterator<mimic_cvref<T &&, decltype(*begin(Container))>>(end(Container));
 }
 }
 template <typename T> auto ForwardingBegin(typename std::remove_reference<T>::type &Container) ->

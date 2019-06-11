@@ -60,7 +60,7 @@ namespace array_traits_internal {
 template <typename TRef, typename=void> struct access_type_helper;
 template <typename TRef> struct access_type_helper<TRef, OVK_SPECIALIZATION_REQUIRES(IsArray<
   remove_cvref<TRef>>())> {
-  using type = mimicked_ref<TRef, typename array_traits<remove_cvref<TRef>>::value_type>;
+  using type = mimic_cvref<TRef, typename array_traits<remove_cvref<TRef>>::value_type>;
 };
 template <typename TRef> struct access_type_helper<TRef, OVK_SPECIALIZATION_REQUIRES(!IsArray<
   remove_cvref<TRef>>())> {

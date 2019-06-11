@@ -27,7 +27,7 @@ template <typename T, int Rank, array_layout Layout> class array_view;
 
 namespace array_view_internal {
 template <typename ArrayRefType> using array_view_type = array_view<typename std::remove_reference<
-  core::mimicked_ref<ArrayRefType, core::array_value_type<core::remove_cvref<ArrayRefType>>>
+  core::mimic_cvref<ArrayRefType, core::array_value_type<core::remove_cvref<ArrayRefType>>>
   >::type, core::ArrayRank<core::remove_cvref<ArrayRefType>>(), core::ArrayLayout<
   core::remove_cvref<ArrayRefType>>()>;
 }
@@ -49,7 +49,7 @@ template <typename TRef, typename U, int Rank, array_layout Layout, OVK_FUNCTION
   IsArray<remove_cvref<TRef>>())> constexpr bool ArrayIsViewableAs() {
   using array_type = remove_cvref<TRef>;
   return ArrayHasFootprint<array_type, Rank, Layout>() && std::is_convertible<typename
-    std::remove_reference<mimicked_ref<TRef, array_value_type<array_type>>>::type *, U *>::value;
+    std::remove_reference<mimic_cvref<TRef, array_value_type<array_type>>>::type *, U *>::value;
 }
 template <typename TRef, typename U, int Rank, array_layout Layout, OVK_FUNCTION_REQUIRES(
   !core::IsArray<remove_cvref<TRef>>())> constexpr bool ArrayIsViewableAs() {
