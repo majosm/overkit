@@ -27,11 +27,10 @@ namespace core {
 
 namespace domain_internal {
 
-domain_base_1::domain_base_1(std::shared_ptr<context> &&Context, std::string &&Name, MPI_Comm
-  Comm):
+domain_base_1::domain_base_1(std::shared_ptr<context> &&Context, std::string &&Name, MPI_Comm Comm):
   Context_(std::move(Context)),
   Name_(std::move(Name)),
-  Comm_(Comm)
+  Comm_(DuplicateComm(Comm))
 {
   core::logger &Logger = Context_->core_Logger();
   Logger.LogStatus(Comm_.Rank() == 0, 0, "Creating domain %s...", *Name_);

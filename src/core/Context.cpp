@@ -23,7 +23,7 @@ namespace context_internal {
 
 context_base::context_base(MPI_Comm Comm, log_level LogLevel):
   Exists_(true),
-  Comm_(Comm),
+  Comm_(DuplicateComm(Comm)),
   Logger_(Comm_.Rank())
 {
 

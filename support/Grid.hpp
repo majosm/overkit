@@ -36,7 +36,7 @@ public:
     params &SetID(int ID) { ID_ = ID; return *this; }
     params &SetName(std::string Name) { Name_ = std::move(Name); return *this; }
     params &SetCart(const ovk::cart &Cart) { Cart_ = Cart; return *this; }
-    params &SetComm(ovk::core::comm Comm) { Comm_ = std::move(Comm); return *this; }
+    params &SetComm(ovk::comm Comm) { Comm_ = std::move(Comm); return *this; }
     params &SetPeriodicLength(const ovk::tuple<double> &PeriodicLength) {
       PeriodicLength_ = PeriodicLength;
       return *this;
@@ -52,7 +52,7 @@ public:
     int ID_;
     std::string Name_;
     ovk::cart Cart_;
-    ovk::core::comm Comm_;
+    ovk::comm Comm_;
     ovk::tuple<double> PeriodicLength_;
     ovk::range LocalRange_;
     int ExtendAmount_;
@@ -69,7 +69,7 @@ public:
 
   const ovk::cart &Cart() const { return Cart_; }
 
-  ovk::core::comm_view Comm() const { return Comm_; }
+  ovk::comm_view Comm() const { return Comm_; }
 
   const ovk::tuple<double> &PeriodicLength() const { return PeriodicLength_; }
   double PeriodicLength(int iDim) const { return PeriodicLength_[iDim]; }
@@ -115,7 +115,7 @@ private:
   int ID_;
   std::string Name_;
   ovk::cart Cart_;
-  ovk::core::comm Comm_;
+  ovk::comm Comm_;
   ovk::tuple<double> PeriodicLength_;
   ovk::range LocalRange_;
   ovk::range ExtendedRange_;

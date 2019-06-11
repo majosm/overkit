@@ -15,7 +15,6 @@
 #include <utility>
 
 namespace ovk {
-namespace core {
 
 class comm_view {
 
@@ -39,7 +38,7 @@ private:
 
   MPI_Comm Comm_;
 
-  friend class test_helper<comm_view>;
+  friend class core::test_helper<comm_view>;
 
 };
 
@@ -48,7 +47,7 @@ class comm {
 public:
 
   comm() = default;
-  explicit comm(MPI_Comm Comm, bool DuplicateComm=true);
+  explicit comm(MPI_Comm Comm);
 
   comm(const comm &Other) = delete;
   comm(comm &&Other) noexcept;
@@ -80,7 +79,7 @@ private:
   std::unique_ptr<resource> Resource_;
   comm_view View_;
 
-  friend class test_helper<comm>;
+  friend class core::test_helper<comm>;
 
 };
 
@@ -99,7 +98,7 @@ inline tuple<int> GetCartCommDims(comm_view Comm);
 inline tuple<bool> GetCartCommPeriodic(comm_view Comm);
 inline tuple<int> GetCartCommCoords(comm_view Comm);
 
-}}
+}
 
 #include <ovk/core/Comm.inl>
 

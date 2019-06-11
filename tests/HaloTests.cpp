@@ -35,8 +35,8 @@ TEST_F(HaloTests, Exchange) {
 
   ASSERT_GE(TestComm().Size(), 4);
 
-  ovk::core::comm CommOfSize1 = CreateSubsetComm(TestComm(), TestComm().Rank() < 1);
-  ovk::core::comm CommOfSize4 = CreateSubsetComm(TestComm(), TestComm().Rank() < 4);
+  ovk::comm CommOfSize1 = CreateSubsetComm(TestComm(), TestComm().Rank() < 1);
+  ovk::comm CommOfSize4 = CreateSubsetComm(TestComm(), TestComm().Rank() < 4);
 
   auto CreateCart = [](int NumDims, bool IsPeriodic) -> ovk::cart {
     ovk::range GlobalRange = ovk::MakeEmptyRange(NumDims);
@@ -48,7 +48,7 @@ TEST_F(HaloTests, Exchange) {
     return {NumDims, GlobalRange, Periodic, ovk::periodic_storage::UNIQUE};
   };
 
-  auto CreateNeighbors = [](const ovk::cart &Cart, ovk::core::comm_view Comm,
+  auto CreateNeighbors = [](const ovk::cart &Cart, ovk::comm_view Comm,
     const ovk::range &LocalRange, const ovk::range &ExtendedRange) -> ovk::array<
     ovk::core::partition_info> {
     ovk::core::partition_hash Hash(Cart.Dimension(), Comm, Cart.Range(), LocalRange);
@@ -56,7 +56,7 @@ TEST_F(HaloTests, Exchange) {
     return ovk::core::RetrievePartitionInfo(Comm, NeighborRanks, LocalRange, ExtendedRange);
   };
 
-  auto CreateBeforeDataInt = [](ovk::core::comm_view Comm, const ovk::range &LocalRange, const
+  auto CreateBeforeDataInt = [](ovk::comm_view Comm, const ovk::range &LocalRange, const
     ovk::range &ExtendedRange) -> field_data<int> {
     field_data<int> BeforeData(ExtendedRange, -1);
     for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
@@ -69,7 +69,7 @@ TEST_F(HaloTests, Exchange) {
     return BeforeData;
   };
 
-  auto CreateAfterDataInt = [](const ovk::cart &Cart, ovk::core::comm_view Comm,
+  auto CreateAfterDataInt = [](const ovk::cart &Cart, ovk::comm_view Comm,
     const ovk::range &LocalRange, const ovk::range &ExtendedRange, const ovk::array<
     ovk::core::partition_info> &Neighbors) -> field_data<int> {
     field_data<int> AfterData(ExtendedRange);
@@ -103,7 +103,7 @@ TEST_F(HaloTests, Exchange) {
     return AfterData;
   };
 
-  auto CreateBeforeDataDouble = [](ovk::core::comm_view Comm, const ovk::range &LocalRange, const
+  auto CreateBeforeDataDouble = [](ovk::comm_view Comm, const ovk::range &LocalRange, const
     ovk::range &ExtendedRange) -> field_data<double> {
     field_data<double> BeforeData(ExtendedRange, 0.);
     for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
@@ -116,7 +116,7 @@ TEST_F(HaloTests, Exchange) {
     return BeforeData;
   };
 
-  auto CreateAfterDataDouble = [](const ovk::cart &Cart, ovk::core::comm_view Comm,
+  auto CreateAfterDataDouble = [](const ovk::cart &Cart, ovk::comm_view Comm,
     const ovk::range &LocalRange, const ovk::range &ExtendedRange, const ovk::array<
     ovk::core::partition_info> &Neighbors) -> field_data<double> {
     field_data<double> AfterData(ExtendedRange);
@@ -156,7 +156,7 @@ TEST_F(HaloTests, Exchange) {
 
   // Extended range same as local range
   if (CommOfSize4) {
-    ovk::core::comm_view Comm = CommOfSize4;
+    ovk::comm_view Comm = CommOfSize4;
     ovk::cart Cart = CreateCart(2, false);
     ovk::range LocalRange = CartesianDecomp(Cart, Comm, {2,2,1});
     ovk::range ExtendedRange = LocalRange;
@@ -172,7 +172,7 @@ TEST_F(HaloTests, Exchange) {
 
   // Serial, non-periodic
   if (CommOfSize1) {
-    ovk::core::comm_view Comm = CommOfSize1;
+    ovk::comm_view Comm = CommOfSize1;
     ovk::cart Cart = CreateCart(2, false);
     ovk::range LocalRange = Cart.Range();
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
@@ -188,7 +188,7 @@ TEST_F(HaloTests, Exchange) {
 
   // Serial, periodic
   if (CommOfSize1) {
-    ovk::core::comm_view Comm = CommOfSize1;
+    ovk::comm_view Comm = CommOfSize1;
     ovk::cart Cart = CreateCart(2, true);
     ovk::range LocalRange = Cart.Range();
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
@@ -204,7 +204,7 @@ TEST_F(HaloTests, Exchange) {
 
   // Parallel, non-periodic
   if (CommOfSize4) {
-    ovk::core::comm_view Comm = CommOfSize4;
+    ovk::comm_view Comm = CommOfSize4;
     ovk::cart Cart = CreateCart(2, false);
     ovk::range LocalRange = CartesianDecomp(Cart, Comm, {2,2,1});
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
@@ -220,7 +220,7 @@ TEST_F(HaloTests, Exchange) {
 
   // Parallel, periodic
   if (CommOfSize4) {
-    ovk::core::comm &Comm = CommOfSize4;
+    ovk::comm &Comm = CommOfSize4;
     ovk::cart Cart = CreateCart(2, true);
     ovk::range LocalRange = CartesianDecomp(Cart, Comm, {2,2,1});
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
@@ -236,7 +236,7 @@ TEST_F(HaloTests, Exchange) {
 
   // Serial, multiple simultaneous exchanges
   if (CommOfSize1) {
-    ovk::core::comm_view Comm = CommOfSize1;
+    ovk::comm_view Comm = CommOfSize1;
     ovk::cart Cart = CreateCart(2, false);
     ovk::range LocalRange = Cart.Range();
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
@@ -259,7 +259,7 @@ TEST_F(HaloTests, Exchange) {
 
   // Parallel, multiple simultaneous exchanges
   if (CommOfSize4) {
-    ovk::core::comm_view Comm = CommOfSize4;
+    ovk::comm_view Comm = CommOfSize4;
     ovk::cart Cart = CreateCart(2, false);
     ovk::range LocalRange = CartesianDecomp(Cart, Comm, {2,2,1});
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);

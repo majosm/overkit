@@ -47,7 +47,7 @@ protected:
   int SourceGridID_;
   grid_info SourceGridInfo_;
 
-  core::comm_view Comm_;
+  comm_view Comm_;
 
 };
 
@@ -88,9 +88,7 @@ public:
   
   int Dimension() const { return NumDims_; }
 
-  MPI_Comm Comm() const { return Comm_.Get(); }
-  int CommSize() const { return Comm_.Size(); }
-  int CommRank() const { return Comm_.Rank(); }
+  comm_view Comm() const { return Comm_; }
 
   long long Count() const { return Count_; }
 

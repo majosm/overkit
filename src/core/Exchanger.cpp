@@ -141,7 +141,7 @@ void exchanger::Bind(const domain &Domain, bindings Bindings) {
   MPI_Barrier(Domain.Comm());
 
   core::logger &Logger = Context_->core_Logger();
-  Logger.LogStatus(Domain.CommRank() == 0, 0, "Bound exchanger %s to domain %s.", *Name_,
+  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Bound exchanger %s to domain %s.", *Name_,
     Domain.Name());
 
   for (auto &IDPair : ConnectivityComponent.ConnectivityIDs()) {
@@ -176,7 +176,7 @@ void exchanger::Unbind() {
   MPI_Barrier(Domain.Comm());
 
   core::logger &Logger = Context_->core_Logger();
-  Logger.LogStatus(Domain.CommRank() == 0, 0, "Unbound exchanger %s.", *Name_);
+  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Unbound exchanger %s.", *Name_);
 
 }
 
@@ -193,7 +193,7 @@ void exchanger::OnConnectivityEvent_() {
   const domain &Domain = *Domain_;
   core::logger &Logger = Context_->core_Logger();
 
-  Logger.LogStatus(Domain.CommRank() == 0, 0, "Updating exchanger %s...", *Name_);
+  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Updating exchanger %s...", *Name_);
 
   DestroyExchangesForDyingConnectivities_();
   CreateExchangesForNewConnectivities_();
@@ -201,7 +201,7 @@ void exchanger::OnConnectivityEvent_() {
 
   ConnectivityEventFlags_.Clear();
 
-  Logger.LogStatus(Domain.CommRank() == 0, 0, "Done updating exchanger %s.", *Name_);
+  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Done updating exchanger %s.", *Name_);
 
 }
 
@@ -254,7 +254,7 @@ void exchanger::UpdateSourceDestRanks_() {
   using range_indexer = indexer<long long, int, 3, ovk::array_layout::GRID>;
 
   const domain &Domain = *Domain_;
-  const core::comm &Comm = Domain.core_Comm();
+  const comm &Comm = Domain.Comm();
 
   MPI_Barrier(Comm);
   
@@ -893,7 +893,7 @@ void exchanger::CreateCollect(int MGridID, int NGridID, int CollectID, collect_o
     Domain.GridInfo(MGridID).Name());
 
   const grid &MGrid = Domain.Grid(MGridID);
-  const core::comm &GridComm = MGrid.core_Comm();
+  const comm &GridComm = MGrid.Comm();
 
   OVK_DEBUG_ASSERT(GridValuesRange.Includes(MGrid.LocalRange()), "Invalid grid values range.");
 
@@ -959,7 +959,7 @@ void exchanger::DestroyCollect(int MGridID, int NGridID, int CollectID) {
     Domain.GridInfo(MGridID).Name());
 
   const grid &MGrid = Domain.Grid(MGridID);
-  const core::comm &GridComm = MGrid.core_Comm();
+  const comm &GridComm = MGrid.Comm();
 
   MPI_Barrier(GridComm);
 
@@ -993,7 +993,7 @@ void exchanger::Collect(int MGridID, int NGridID, int CollectID, const void * co
     Domain.GridInfo(MGridID).Name());
 
   const grid &MGrid = Domain.Grid(MGridID);
-  const core::comm &GridComm = MGrid.core_Comm();
+  const comm &GridComm = MGrid.Comm();
 
   MPI_Barrier(GridComm);
 
@@ -1095,8 +1095,7 @@ void exchanger::CreateSend(int MGridID, int NGridID, int SendID, data_type Value
   int GlobalTagOffset = ConnectivityIDs.Find(MGridID,NGridID) - ConnectivityIDs.Begin();
   int GlobalTag = GlobalTagMultiplier*Tag + GlobalTagOffset;
 
-  core::send Send = core::CreateSend(Context_, Domain.core_Comm(), SendMap, ValueType, Count,
-    GlobalTag);
+  core::send Send = core::CreateSend(Context_, Domain.Comm(), SendMap, ValueType, Count, GlobalTag);
 
   Sends.Insert(SendID, std::move(Send));
 
@@ -1243,8 +1242,7 @@ void exchanger::CreateReceive(int MGridID, int NGridID, int RecvID, data_type Va
   int GlobalTagOffset = ConnectivityIDs.Find(MGridID,NGridID) - ConnectivityIDs.Begin();
   int GlobalTag = GlobalTagMultiplier*Tag + GlobalTagOffset;
 
-  core::recv Recv = core::CreateRecv(Context_, Domain.core_Comm(), RecvMap, ValueType, Count,
-    GlobalTag);
+  core::recv Recv = core::CreateRecv(Context_, Domain.Comm(), RecvMap, ValueType, Count, GlobalTag);
 
   Recvs.Insert(RecvID, std::move(Recv));
 

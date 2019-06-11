@@ -28,23 +28,23 @@ public:
 
 TEST(CommViewTests, Create) {
 
-  using helper = ovk::core::test_helper<ovk::core::comm_view>;
+  using helper = ovk::core::test_helper<ovk::comm_view>;
 
   // Default
   {
-    ovk::core::comm_view Comm;
+    ovk::comm_view Comm;
     EXPECT_EQ(helper::GetMPIComm(Comm), MPI_COMM_NULL);
   }
 
   // Null
   {
-    ovk::core::comm_view Comm(MPI_COMM_NULL);
+    ovk::comm_view Comm(MPI_COMM_NULL);
     EXPECT_EQ(helper::GetMPIComm(Comm), MPI_COMM_NULL);
   }
 
   // Not null
   {
-    ovk::core::comm_view Comm(MPI_COMM_WORLD);
+    ovk::comm_view Comm(MPI_COMM_WORLD);
     EXPECT_EQ(helper::GetMPIComm(Comm), MPI_COMM_WORLD);
   }
 
@@ -52,19 +52,19 @@ TEST(CommViewTests, Create) {
 
 TEST(CommViewTests, Copy) {
 
-  using helper = ovk::core::test_helper<ovk::core::comm_view>;
+  using helper = ovk::core::test_helper<ovk::comm_view>;
 
   // Copy construct
   {
-    ovk::core::comm_view Comm1(MPI_COMM_WORLD);
-    ovk::core::comm_view Comm2(Comm1);
+    ovk::comm_view Comm1(MPI_COMM_WORLD);
+    ovk::comm_view Comm2(Comm1);
     EXPECT_EQ(helper::GetMPIComm(Comm2), MPI_COMM_WORLD);
   }
 
   // Copy assign
   {
-    ovk::core::comm_view Comm1(MPI_COMM_WORLD);
-    ovk::core::comm_view Comm2;
+    ovk::comm_view Comm1(MPI_COMM_WORLD);
+    ovk::comm_view Comm2;
     Comm2 = Comm1;
     EXPECT_EQ(helper::GetMPIComm(Comm2), MPI_COMM_WORLD);
   }
@@ -73,18 +73,18 @@ TEST(CommViewTests, Copy) {
 
 TEST(CommViewTests, Reset) {
 
-  using helper = ovk::core::test_helper<ovk::core::comm_view>;
+  using helper = ovk::core::test_helper<ovk::comm_view>;
 
   // Initially null
   {
-    ovk::core::comm_view Comm;
+    ovk::comm_view Comm;
     Comm.Reset();
     EXPECT_EQ(helper::GetMPIComm(Comm), MPI_COMM_NULL);
   }
 
   // Initially not null
   {
-    ovk::core::comm_view Comm(MPI_COMM_WORLD);
+    ovk::comm_view Comm(MPI_COMM_WORLD);
     Comm.Reset();
     EXPECT_EQ(helper::GetMPIComm(Comm), MPI_COMM_NULL);
   }
@@ -99,9 +99,9 @@ TEST(CommViewTests, Equality) {
   MPI_Comm SplitComm;
   MPI_Comm_split(MPI_COMM_WORLD, WorldRank % 2, WorldRank, &SplitComm);
 
-  ovk::core::comm_view Comm1(MPI_COMM_WORLD);
-  ovk::core::comm_view Comm2(MPI_COMM_WORLD);
-  ovk::core::comm_view Comm3(SplitComm);
+  ovk::comm_view Comm1(MPI_COMM_WORLD);
+  ovk::comm_view Comm2(MPI_COMM_WORLD);
+  ovk::comm_view Comm3(SplitComm);
 
   // Self
   EXPECT_EQ(Comm1 == Comm1, true);
@@ -121,13 +121,13 @@ TEST(CommViewTests, ConvertToBool) {
 
   // Null
   {
-    ovk::core::comm_view Comm;
+    ovk::comm_view Comm;
     EXPECT_EQ(static_cast<bool>(Comm), false);
   }
 
   // Not null
   {
-    ovk::core::comm_view Comm(MPI_COMM_WORLD);
+    ovk::comm_view Comm(MPI_COMM_WORLD);
     EXPECT_EQ(static_cast<bool>(Comm), true);
   }
 
@@ -135,7 +135,7 @@ TEST(CommViewTests, ConvertToBool) {
 
 TEST(CommViewTests, Get) {
 
-  ovk::core::comm_view Comm(MPI_COMM_WORLD);
+  ovk::comm_view Comm(MPI_COMM_WORLD);
   EXPECT_EQ(Comm.Get(), MPI_COMM_WORLD);
 
 }
@@ -144,7 +144,7 @@ TEST(CommViewTests, ConvertToMPIComm) {
 
   auto ImplicitConvertFunc = [](MPI_Comm Comm) -> MPI_Comm { return Comm; };
 
-  ovk::core::comm_view Comm(MPI_COMM_WORLD);
+  ovk::comm_view Comm(MPI_COMM_WORLD);
   EXPECT_EQ(ImplicitConvertFunc(Comm), MPI_COMM_WORLD);
 
 }
@@ -154,7 +154,7 @@ TEST(CommViewTests, Size) {
   int WorldSize;
   MPI_Comm_size(MPI_COMM_WORLD, &WorldSize);
 
-  ovk::core::comm_view Comm(MPI_COMM_WORLD);
+  ovk::comm_view Comm(MPI_COMM_WORLD);
   EXPECT_EQ(Comm.Size(), WorldSize);
 
 }
@@ -164,14 +164,14 @@ TEST(CommViewTests, Rank) {
   int WorldRank;
   MPI_Comm_rank(MPI_COMM_WORLD, &WorldRank);
 
-  ovk::core::comm_view Comm(MPI_COMM_WORLD);
+  ovk::comm_view Comm(MPI_COMM_WORLD);
   EXPECT_EQ(Comm.Rank(), WorldRank);
 
 }
 
 TEST(CommTests, CreateDestroy) {
 
-  using helper = ovk::core::test_helper<ovk::core::comm>;
+  using helper = ovk::core::test_helper<ovk::comm>;
 
 //   // Duplicate MPI_COMM_WORLD so we can modify error handler
 //   MPI_Comm ErrorComm;
@@ -180,35 +180,17 @@ TEST(CommTests, CreateDestroy) {
 
   // Null
   {
-    ovk::core::comm Comm(MPI_COMM_NULL);
+    ovk::comm Comm(MPI_COMM_NULL);
     EXPECT_EQ(helper::GetMPIComm(Comm), MPI_COMM_NULL);
   }
 
-  // Duplicate comm internally
-  {
-//     MPI_Comm CommRaw;
-    {
-      ovk::core::comm Comm(MPI_COMM_WORLD);
-//       CommRaw = helper::GetMPIComm(Comm);
-      int Compare;
-      MPI_Comm_compare(Comm, MPI_COMM_WORLD, &Compare);
-      EXPECT_EQ(Compare, MPI_CONGRUENT);
-    }
-//     // Make sure communicator was cleaned up
-//     int Compare;
-//     int Error = MPI_Comm_compare(ErrorComm, CommRaw, &Compare);
-//     EXPECT_NE(Error, MPI_SUCCESS);
-  }
-
-  // Don't duplicate comm internally
+  // Not null
   {
     MPI_Comm CommRaw;
     MPI_Comm_dup(MPI_COMM_WORLD, &CommRaw);
     {
-      ovk::core::comm Comm(CommRaw, false);
-      int Compare;
-      MPI_Comm_compare(Comm, CommRaw, &Compare);
-      EXPECT_EQ(Compare, MPI_IDENT);
+      ovk::comm Comm(CommRaw);
+      EXPECT_EQ(helper::GetMPIComm(Comm), CommRaw);
     }
 //     // Make sure communicator was cleaned up
 //     int Compare;
@@ -222,49 +204,40 @@ TEST(CommTests, CreateDestroy) {
 
 TEST(CommTests, Move) {
 
+  using helper = ovk::core::test_helper<ovk::comm>;
+
 //   // Duplicate MPI_COMM_WORLD so we can modify error handler
 //   MPI_Comm ErrorComm;
 //   MPI_Comm_dup(MPI_COMM_WORLD, &ErrorComm);
 //   MPI_Comm_set_errhandler(ErrorComm, MPI_ERRORS_RETURN);
 
-  int WorldRank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &WorldRank);
-
-  MPI_Comm SplitComm;
-  MPI_Comm_split(MPI_COMM_WORLD, WorldRank % 2, WorldRank, &SplitComm);
-
   // Move construction
   {
-    ovk::core::comm Comm1(MPI_COMM_WORLD);
-    ovk::core::comm Comm2(std::move(Comm1));
-    // Comm2 should be congruent to MPI_COMM_WORLD
-    int Compare;
-    MPI_Comm_compare(Comm2, MPI_COMM_WORLD, &Compare);
-    EXPECT_EQ(Compare, MPI_CONGRUENT);
-    // Comm1 should be empty
-    MPI_Comm Comm1Raw = Comm1.Get();
-    EXPECT_EQ(Comm1Raw, MPI_COMM_NULL);
+    MPI_Comm CommRaw;
+    MPI_Comm_dup(MPI_COMM_WORLD, &CommRaw);
+    ovk::comm Comm1(CommRaw);
+    ovk::comm Comm2(std::move(Comm1));
+    EXPECT_EQ(helper::GetMPIComm(Comm2), CommRaw);
+    EXPECT_EQ(helper::GetMPIComm(Comm1), MPI_COMM_NULL);
   }
 
   // Move assignment
   {
-    ovk::core::comm Comm1(MPI_COMM_WORLD);
-    ovk::core::comm Comm2(SplitComm);
-//     MPI_Comm OldComm2Raw = Comm2.Get();
+    MPI_Comm Comm1Raw;
+    MPI_Comm_dup(MPI_COMM_WORLD, &Comm1Raw);
+    int WorldRank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &WorldRank);
+    MPI_Comm Comm2Raw;
+    MPI_Comm_split(MPI_COMM_WORLD, WorldRank % 2, WorldRank, &Comm2Raw);
+    ovk::comm Comm1(Comm1Raw);
+    ovk::comm Comm2(Comm2Raw);
     Comm2 = std::move(Comm1);
-    // Comm2 should be congruent to MPI_COMM_WORLD
-    int Compare;
-    MPI_Comm_compare(Comm2, MPI_COMM_WORLD, &Compare);
-    EXPECT_EQ(Compare, MPI_CONGRUENT);
-    // Comm1 should be empty
-    MPI_Comm Comm1Raw = Comm1.Get();
-    EXPECT_EQ(Comm1Raw, MPI_COMM_NULL);
+    EXPECT_EQ(helper::GetMPIComm(Comm2), Comm1Raw);
+    EXPECT_EQ(helper::GetMPIComm(Comm1), MPI_COMM_NULL);
 //     // Make sure original communicator in Comm2 was cleaned up
-//     int Error = MPI_Comm_compare(ErrorComm, OldComm2Raw, &Compare);
+//     int Error = MPI_Comm_compare(ErrorComm, Comm2Raw, &Compare);
 //     EXPECT_NE(Error, MPI_SUCCESS);
   }
-
-  MPI_Comm_free(&SplitComm);
 
 //   MPI_Comm_free(&ErrorComm);
 
@@ -272,7 +245,7 @@ TEST(CommTests, Move) {
 
 TEST(CommTests, Reset) {
 
-//   using helper = ovk::core::test_helper<ovk::core::comm>;
+  using helper = ovk::core::test_helper<ovk::comm>;
 
 //   // Duplicate MPI_COMM_WORLD so we can modify error handler
 //   MPI_Comm ErrorComm;
@@ -280,9 +253,12 @@ TEST(CommTests, Reset) {
 //   MPI_Comm_set_errhandler(ErrorComm, MPI_ERRORS_RETURN);
 
   {
-    ovk::core::comm Comm(MPI_COMM_WORLD);
+    MPI_Comm CommRaw;
+    MPI_Comm_dup(MPI_COMM_WORLD, &CommRaw);
+    ovk::comm Comm(CommRaw);
 //     MPI_Comm CommRaw = helper::GetMPIComm(Comm);
     Comm.Reset();
+    EXPECT_EQ(helper::GetMPIComm(Comm), MPI_COMM_NULL);
 //     // Make sure communicator was cleaned up
 //     int Compare;
 //     int Error = MPI_Comm_compare(ErrorComm, CommRaw, &Compare);
@@ -297,13 +273,15 @@ TEST(CommTests, ConvertToBool) {
 
   // Null
   {
-    ovk::core::comm Comm;
+    ovk::comm Comm;
     EXPECT_EQ(static_cast<bool>(Comm), false);
   }
 
   // Not null
   {
-    ovk::core::comm Comm(MPI_COMM_WORLD);
+    MPI_Comm CommRaw;
+    MPI_Comm_dup(MPI_COMM_WORLD, &CommRaw);
+    ovk::comm Comm(CommRaw);
     EXPECT_EQ(static_cast<bool>(Comm), true);
   }
 
@@ -314,7 +292,7 @@ TEST(CommTests, Get) {
   MPI_Comm CommRaw;
   MPI_Comm_dup(MPI_COMM_WORLD, &CommRaw);
 
-  ovk::core::comm Comm(CommRaw, false);
+  ovk::comm Comm(CommRaw);
   EXPECT_EQ(Comm.Get(), CommRaw);
 
 }
@@ -326,7 +304,7 @@ TEST(CommTests, ConvertToMPIComm) {
   MPI_Comm CommRaw;
   MPI_Comm_dup(MPI_COMM_WORLD, &CommRaw);
 
-  ovk::core::comm Comm(CommRaw, false);
+  ovk::comm Comm(CommRaw);
   EXPECT_EQ(ImplicitConvertFunc(Comm), CommRaw);
 
 }
@@ -336,7 +314,10 @@ TEST(CommTests, Size) {
   int WorldSize;
   MPI_Comm_size(MPI_COMM_WORLD, &WorldSize);
 
-  ovk::core::comm Comm(MPI_COMM_WORLD);
+  MPI_Comm CommRaw;
+  MPI_Comm_dup(MPI_COMM_WORLD, &CommRaw);
+
+  ovk::comm Comm(CommRaw);
   EXPECT_EQ(Comm.Size(), WorldSize);
 
 }
@@ -346,18 +327,24 @@ TEST(CommTests, Rank) {
   int WorldRank;
   MPI_Comm_rank(MPI_COMM_WORLD, &WorldRank);
 
-  ovk::core::comm Comm(MPI_COMM_WORLD);
+  MPI_Comm CommRaw;
+  MPI_Comm_dup(MPI_COMM_WORLD, &CommRaw);
+
+  ovk::comm Comm(CommRaw);
   EXPECT_EQ(Comm.Rank(), WorldRank);
 
 }
 
 TEST(CommTests, Duplicate) {
 
-  ovk::core::comm WorldComm(MPI_COMM_WORLD);
-  ovk::core::comm DuplicatedComm = ovk::core::DuplicateComm(WorldComm);
+  MPI_Comm CommRaw;
+  MPI_Comm_dup(MPI_COMM_WORLD, &CommRaw);
+
+  ovk::comm Comm(CommRaw);
+  ovk::comm DuplicatedComm = ovk::DuplicateComm(Comm);
 
   int Compare;
-  MPI_Comm_compare(WorldComm, DuplicatedComm, &Compare);
+  MPI_Comm_compare(Comm, DuplicatedComm, &Compare);
 
   EXPECT_EQ(Compare, MPI_CONGRUENT);
 
@@ -365,11 +352,14 @@ TEST(CommTests, Duplicate) {
 
 TEST(CommTests, Subset) {
 
-  ovk::core::comm TestComm(MPI_COMM_WORLD);
-  ASSERT_GE(TestComm.Size(), 2);
+  MPI_Comm CommRaw;
+  MPI_Comm_dup(MPI_COMM_WORLD, &CommRaw);
 
-  bool InSubset = TestComm.Rank() % 2 == 0;
-  ovk::core::comm SubsetComm = ovk::core::CreateSubsetComm(TestComm, InSubset);
+  ovk::comm Comm(CommRaw);
+  ASSERT_GE(Comm.Size(), 2);
+
+  bool InSubset = Comm.Rank() % 2 == 0;
+  ovk::comm SubsetComm = ovk::CreateSubsetComm(Comm, InSubset);
 
   if (InSubset) {
     EXPECT_TRUE(static_cast<bool>(SubsetComm));
@@ -381,33 +371,36 @@ TEST(CommTests, Subset) {
 
 TEST(CommTests, Cartesian) {
 
-  ovk::core::comm TestComm(MPI_COMM_WORLD);
-  ASSERT_GE(TestComm.Size(), 6);
+  MPI_Comm CommRaw;
+  MPI_Comm_dup(MPI_COMM_WORLD, &CommRaw);
 
-  ovk::core::comm SubsetComm = ovk::core::CreateSubsetComm(TestComm, TestComm.Rank() < 6);
+  ovk::comm Comm(CommRaw);
+  ASSERT_GE(Comm.Size(), 6);
+
+  ovk::comm SubsetComm = ovk::CreateSubsetComm(Comm, Comm.Rank() < 6);
 
   if (SubsetComm) {
 
     ovk::tuple<int> Dims = {2,3,1};
     ovk::tuple<bool> Periodic = {false,true,false};
-    ovk::core::comm CartComm = ovk::core::CreateCartComm(SubsetComm, 2, Dims, Periodic);
+    ovk::comm CartComm = ovk::CreateCartComm(SubsetComm, 2, Dims, Periodic);
 
-    EXPECT_TRUE(ovk::core::IsCartComm(CartComm));
-    EXPECT_EQ(ovk::core::GetCartCommDimension(CartComm), 2);
-    EXPECT_THAT(ovk::core::GetCartCommDims(CartComm), ElementsAre(2,3,1));
-    EXPECT_THAT(ovk::core::GetCartCommPeriodic(CartComm), ElementsAre(false,true,false));
+    EXPECT_TRUE(ovk::IsCartComm(CartComm));
+    EXPECT_EQ(ovk::GetCartCommDimension(CartComm), 2);
+    EXPECT_THAT(ovk::GetCartCommDims(CartComm), ElementsAre(2,3,1));
+    EXPECT_THAT(ovk::GetCartCommPeriodic(CartComm), ElementsAre(false,true,false));
     switch (CartComm.Rank()) {
     // Lower corner
     case 0:
-      EXPECT_THAT(ovk::core::GetCartCommCoords(CartComm), ElementsAre(0,0,0));
+      EXPECT_THAT(ovk::GetCartCommCoords(CartComm), ElementsAre(0,0,0));
       break;
     // Middle
     case 1:
-      EXPECT_THAT(ovk::core::GetCartCommCoords(CartComm), ElementsAre(0,1,0));
+      EXPECT_THAT(ovk::GetCartCommCoords(CartComm), ElementsAre(0,1,0));
       break;
     // Upper corner
     case 5:
-      EXPECT_THAT(ovk::core::GetCartCommCoords(CartComm), ElementsAre(1,2,0));
+      EXPECT_THAT(ovk::GetCartCommCoords(CartComm), ElementsAre(1,2,0));
       break;
     default:
       break;

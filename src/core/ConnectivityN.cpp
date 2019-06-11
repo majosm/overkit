@@ -29,7 +29,7 @@ connectivity_n_base::connectivity_n_base(std::shared_ptr<context> &&Context, int
   Grid_(&Grid),
   SourceGridID_(SourceGridID),
   SourceGridInfo_(std::move(SourceGridInfo)),
-  Comm_(Grid_->core_Comm())
+  Comm_(Grid_->Comm())
 {
   MPI_Barrier(Comm_);
 }

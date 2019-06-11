@@ -128,7 +128,7 @@ void ovkGetDomainCommSize(const ovk_domain *Domain, int *CommSize) {
   OVK_DEBUG_ASSERT(CommSize, "Invalid comm size pointer.");
 
   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  *CommSize = DomainCPP.CommSize();
+  *CommSize = DomainCPP.Comm().Size();
 
 }
 
@@ -138,7 +138,7 @@ void ovkGetDomainCommRank(const ovk_domain *Domain, int *CommRank) {
   OVK_DEBUG_ASSERT(CommRank, "Invalid comm rank pointer.");
 
   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  *CommRank = DomainCPP.CommRank();
+  *CommRank = DomainCPP.Comm().Rank();
 
 }
 

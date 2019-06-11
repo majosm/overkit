@@ -110,7 +110,7 @@ private:
     timer_entry() {}
   };
 
-  core::comm_view Comm_ = MPI_COMM_SELF;
+  comm_view Comm_ = MPI_COMM_SELF;
   bool Enabled_ = false;
   id_map<1,timer_entry> Timers_;
 

@@ -56,7 +56,7 @@ protected:
 
   core::string_wrapper Name_;
 
-  core::comm Comm_;
+  comm Comm_;
 
 };
 
@@ -117,9 +117,8 @@ public:
 
   const std::string &Name() const { return *Name_; }
   int Dimension() const { return NumDims_; }
-  MPI_Comm Comm() const { return Comm_.Get(); }
-  int CommSize() const { return Comm_.Size(); }
-  int CommRank() const { return Comm_.Rank(); }
+
+  const comm &Comm() const { return Comm_; }
 
   const cart &Cart() const { return Cart_; }
   tuple<int> Size() const { return Cart_.Range().Size(); }
@@ -134,8 +133,6 @@ public:
 
   const range &GlobalRange() const { return Cart_.Range(); }
   const range &LocalRange() const { return Partition_->LocalRange(); }
-
-  const core::comm &core_Comm() const { return Comm_; }
 
   const core::partition_hash &core_PartitionHash() const { return PartitionHash_; }
   const std::shared_ptr<core::partition> &core_PartitionShared() const { return Partition_; }
@@ -179,7 +176,7 @@ public:
   const range &GlobalRange() const { return Cart_.Range(); }
   bool IsLocal() const { return IsLocal_; }
 
-  static grid_info internal_Create(grid *MaybeGrid, core::comm_view Comm);
+  static grid_info internal_Create(grid *MaybeGrid, comm_view Comm);
 
 private:
 
@@ -190,12 +187,12 @@ private:
   geometry_type GeometryType_ = geometry_type::CURVILINEAR;
   bool IsLocal_ = false;
 
-  grid_info(grid *MaybeGrid, core::comm_view Comm);
+  grid_info(grid *MaybeGrid, comm_view Comm);
 
 };
 
 namespace core {
-grid_info CreateGridInfo(grid *MaybeGrid, core::comm_view Comm);
+grid_info CreateGridInfo(grid *MaybeGrid, comm_view Comm);
 }
 
 }

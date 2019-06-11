@@ -100,7 +100,7 @@ struct xintout_grid {
   int ID;
   std::string Name;
   int NumDims;
-  core::comm_view Comm;
+  comm_view Comm;
   tuple<int> GlobalSize;
   xintout_donors Donors;
   xintout_receivers Receivers;
@@ -122,7 +122,7 @@ struct xintout_connections {
 struct xintout {
   context *Context;
   int NumDims;
-  core::comm_view Comm;
+  comm_view Comm;
   int NumGrids;
   int NumLocalGrids;
   array<xintout_grid> Grids;
@@ -150,12 +150,12 @@ constexpr int IMPORT_DISTRIBUTE_HANDSHAKE_TIME = core::profiler::XINTOUT_IMPORT_
 constexpr int IMPORT_DISTRIBUTE_SEND_DATA_TIME = core::profiler::XINTOUT_IMPORT_DISTRIBUTE_SEND_DATA_TIME;
 constexpr int IMPORT_SET_CONNECTIVITIES_TIME = core::profiler::XINTOUT_IMPORT_SET_CONNECTIVITIES_TIME;
 
-xintout CreateXINTOUT(context &Context, int NumDims, core::comm_view Comm, int NumGrids, int
+xintout CreateXINTOUT(context &Context, int NumDims, comm_view Comm, int NumGrids, int
   NumLocalGrids, const array<int> &LocalGridIDs, const array<std::string> &LocalGridNames, const
-  array<core::comm_view> &LocalGridComms, const array<tuple<int>> &LocalGridGlobalSizes);
+  array<comm_view> &LocalGridComms, const array<tuple<int>> &LocalGridGlobalSizes);
 
 xintout_grid CreateXINTOUTGrid(context &Context, int ID, const std::string &Name, int NumDims,
-  core::comm_view Comm, const tuple<int> &GlobalSize);
+  comm_view Comm, const tuple<int> &GlobalSize);
 
 void ReadXINTOUT(xintout &XINTOUT, const std::string &HOPath, const std::string &XPath,
   int ReadGranularityAdjust, MPI_Info MPIInfo);
@@ -193,10 +193,10 @@ void ImportConnectivityData(int NumGrids, int NumLocalGrids, const array<int> &L
   const array<donor_data> &LocalDonorData, const array<receiver_data> &LocalReceiverData, domain
   &Domain, int ConnectivityComponentID);
 
-void ImportDonors(const donor_data &GridDonors, core::comm_view Comm, const array<edit_handle<
+void ImportDonors(const donor_data &GridDonors, comm_view Comm, const array<edit_handle<
   connectivity_m>> &ConnectivityMs);
-void ImportReceivers(const receiver_data &GridReceivers, core::comm_view Comm, const array<
-  edit_handle<connectivity_n>> &ConnectivityNs);
+void ImportReceivers(const receiver_data &GridReceivers, comm_view Comm, const array<edit_handle<
+  connectivity_n>> &ConnectivityNs);
 
 void CreateDonorData(donor_data &Data, long long Count, int MaxSize);
 void CreateReceiverData(receiver_data &Data, long long Count);
@@ -207,7 +207,7 @@ void Chunkify(long long Count, int MaxChunks, long long TargetChunkSize, int Adj
   int &ChunkRankInterval, int &NumChunks, long long &ChunkSize);
 
 int File_read_all_endian(MPI_File File, void *Buffer, int Count, MPI_Datatype DataType,
-  endian Endian, MPI_Status *Status, core::profiler &Profiler, core::comm_view Comm);
+  endian Endian, MPI_Status *Status, core::profiler &Profiler, comm_view Comm);
 int File_read_at_endian(MPI_File File, MPI_Offset Offset, void *Buffer, int Count,
   MPI_Datatype DataType, endian Endian, MPI_Status *Status, core::profiler &Profiler);
 
@@ -225,7 +225,7 @@ void ImportXINTOUT(domain &Domain, int ConnectivityComponentID, const std::strin
   int NumDims = Domain.Dimension();
   int NumGrids = Domain.GridCount();
 
-  core::comm_view Comm = Domain.core_Comm();
+  const comm &Comm = Domain.Comm();
 
   MPI_Barrier(Comm);
 
@@ -236,7 +236,7 @@ void ImportXINTOUT(domain &Domain, int ConnectivityComponentID, const std::strin
     array<const grid *> LocalGrids({NumLocalGrids});
     array<int> LocalGridIDs({NumLocalGrids});
     array<std::string> LocalGridNames({NumLocalGrids});
-    array<core::comm_view> LocalGridComms({NumLocalGrids});
+    array<comm_view> LocalGridComms({NumLocalGrids});
     array<tuple<int>> LocalGridGlobalSizes({NumLocalGrids});
     int iLocalGrid = 0;
     for (int iGrid = 0; iGrid < NumGrids; ++iGrid) {
@@ -246,7 +246,7 @@ void ImportXINTOUT(domain &Domain, int ConnectivityComponentID, const std::strin
         LocalGrids(iLocalGrid) = &Grid;
         LocalGridIDs(iLocalGrid) = GridID;
         LocalGridNames(iLocalGrid) = Grid.Name();
-        LocalGridComms(iLocalGrid) = Grid.core_Comm();
+        LocalGridComms(iLocalGrid) = Grid.Comm();
         LocalGridGlobalSizes(iLocalGrid) = Grid.Size();
         ++iLocalGrid;
       }
@@ -329,10 +329,9 @@ void ExportXINTOUT(const domain &Domain, int ConnectivityComponentID, const std:
 
 namespace {
 
-xintout CreateXINTOUT(context &Context, int NumDims, core::comm_view Comm, int NumGrids, int
+xintout CreateXINTOUT(context &Context, int NumDims, comm_view Comm, int NumGrids, int
   NumLocalGrids, const array<int> &LocalGridIDs, const array<std::string> &LocalGridNames, const
-  array<core::comm_view> &LocalGridComms, const array<tuple<int>>
-  &LocalGridGlobalSizes) {
+  array<comm_view> &LocalGridComms, const array<tuple<int>> &LocalGridGlobalSizes) {
 
   xintout XINTOUT;
 
@@ -365,7 +364,7 @@ xintout CreateXINTOUT(context &Context, int NumDims, core::comm_view Comm, int N
 }
 
 xintout_grid CreateXINTOUTGrid(context &Context, int ID, const std::string &Name, int NumDims,
-  core::comm_view Comm, const tuple<int> &GlobalSize) {
+  comm_view Comm, const tuple<int> &GlobalSize) {
 
   xintout_grid XINTOUTGrid;
 
@@ -397,7 +396,7 @@ xintout_grid CreateXINTOUTGrid(context &Context, int ID, const std::string &Name
 void ReadXINTOUT(xintout &XINTOUT, const std::string &HOPath, const std::string &XPath,
   int ReadGranularityAdjust, MPI_Info MPIInfo) {
 
-  core::comm_view Comm = XINTOUT.Comm;
+  const comm_view &Comm = XINTOUT.Comm;
 
   MPI_Barrier(Comm);
 
@@ -457,7 +456,7 @@ void ReadXINTOUT(xintout &XINTOUT, const std::string &HOPath, const std::string 
 void ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath, endian &Endian,
   xintout_format &Format, bool &WithIBlank) {
 
-  core::comm_view Comm = XINTOUT.Comm;
+  const comm_view &Comm = XINTOUT.Comm;
 
   int NumGrids = XINTOUT.NumGrids;
 
@@ -680,7 +679,7 @@ void ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath, co
   int GridID = XINTOUTGrid.ID;
   int iGrid = GridID-1;
 
-  core::comm_view Comm = XINTOUTGrid.Comm;
+  comm_view Comm = XINTOUTGrid.Comm;
 
   core::logger &Logger = XINTOUTGrid.Context->core_Logger();
   core::profiler &Profiler = XINTOUTGrid.Context->core_Profiler();
@@ -968,7 +967,7 @@ void ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std:
 
   int GridID = XINTOUTGrid.ID;
 
-  core::comm_view Comm = XINTOUTGrid.Comm;
+  comm_view Comm = XINTOUTGrid.Comm;
 
   core::logger &Logger = XINTOUTGrid.Context->core_Logger();
   core::profiler &Profiler = XINTOUTGrid.Context->core_Profiler();
@@ -1001,7 +1000,7 @@ void ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std:
   XINTOUTDonors.ChunkSize = ChunkSize;
   XINTOUTDonors.HasChunk = HasChunk;
 
-  core::comm ChunkComm = core::CreateSubsetComm(Comm, HasChunk);
+  comm ChunkComm = CreateSubsetComm(Comm, HasChunk);
 
   error ReadDonorsError = error::NONE;
 
@@ -1292,7 +1291,7 @@ void ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath, long lo
 
   int GridID = XINTOUTGrid.ID;
 
-  core::comm_view Comm = XINTOUTGrid.Comm;
+  comm_view Comm = XINTOUTGrid.Comm;
 
   core::logger &Logger = XINTOUTGrid.Context->core_Logger();
   core::profiler &Profiler = XINTOUTGrid.Context->core_Profiler();
@@ -1325,7 +1324,7 @@ void ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath, long lo
   XINTOUTReceivers.ChunkSize = ChunkSize;
   XINTOUTReceivers.HasChunk = HasChunk;
 
-  core::comm ChunkComm = core::CreateSubsetComm(Comm, HasChunk);
+  comm ChunkComm = CreateSubsetComm(Comm, HasChunk);
 
   error ReadReceiversError = error::NONE;
 
@@ -1485,7 +1484,7 @@ void ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath, long lo
 
 void MatchDonorsAndReceivers(xintout &XINTOUT) {
 
-  core::comm_view Comm = XINTOUT.Comm;
+  const comm_view &Comm = XINTOUT.Comm;
 
   MPI_Barrier(Comm);
 
@@ -1907,7 +1906,7 @@ void MatchDonorsAndReceivers(xintout &XINTOUT) {
 void DistributeConnectivityData(const xintout &XINTOUT, const array<const grid *> &LocalGrids,
   array<donor_data> &LocalDonorData, array<receiver_data> &LocalReceiverData) {
 
-  core::comm_view Comm = XINTOUT.Comm;
+  const comm_view &Comm = XINTOUT.Comm;
 
   MPI_Barrier(Comm);
 
@@ -1932,7 +1931,7 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
   donor_data &DonorData, receiver_data &ReceiverData) {
 
   int NumDims = XINTOUTGrid.NumDims;
-  core::comm_view Comm = XINTOUTGrid.Comm;
+  comm_view Comm = XINTOUTGrid.Comm;
   core::profiler &Profiler = XINTOUTGrid.Context->core_Profiler();
 
   const xintout_donors &XINTOUTDonors = XINTOUTGrid.Donors;
@@ -2410,7 +2409,7 @@ void ImportConnectivityData(int NumGrids, int NumLocalGrids, const array<int> &L
   const array<donor_data> &LocalDonorData, const array<receiver_data> &LocalReceiverData, domain
   &Domain, int ConnectivityComponentID) {
 
-  core::comm_view Comm = Domain.core_Comm();
+  comm_view Comm = Domain.Comm();
 
   MPI_Barrier(Comm);
 
@@ -2455,7 +2454,7 @@ void ImportConnectivityData(int NumGrids, int NumLocalGrids, const array<int> &L
     int iGrid = LocalGridID-1;
 
     const grid &Grid = Domain.Grid(LocalGridID);
-    core::comm_view GridComm = Grid.core_Comm();
+    comm_view GridComm = Grid.Comm();
 
     int NumConnectivityMs = 0;
     int NumConnectivityNs = 0;
@@ -2500,7 +2499,7 @@ void ImportConnectivityData(int NumGrids, int NumLocalGrids, const array<int> &L
 
 }
 
-void ImportDonors(const donor_data &GridDonors, core::comm_view Comm, const array<edit_handle<
+void ImportDonors(const donor_data &GridDonors, comm_view Comm, const array<edit_handle<
     connectivity_m>> &ConnectivityMs) {
 
   int NumDestinationGrids = ConnectivityMs.Count();
@@ -2579,8 +2578,8 @@ void ImportDonors(const donor_data &GridDonors, core::comm_view Comm, const arra
 
 }
 
-void ImportReceivers(const receiver_data &GridReceivers, core::comm_view Comm, const array<
-  edit_handle<connectivity_n>> &ConnectivityNs) {
+void ImportReceivers(const receiver_data &GridReceivers, comm_view Comm, const array<edit_handle<
+  connectivity_n>> &ConnectivityNs) {
 
   int NumSourceGrids = ConnectivityNs.Count();
 
@@ -2712,7 +2711,7 @@ void Chunkify(long long Count, int MaxChunks, long long TargetChunkSize, int Adj
 }
 
 int File_read_all_endian(MPI_File File, void *Buffer, int Count, MPI_Datatype DataType,
-  endian Endian, MPI_Status *Status, core::profiler &Profiler, core::comm_view Comm) {
+  endian Endian, MPI_Status *Status, core::profiler &Profiler, comm_view Comm) {
 
   Profiler.StartSync(IMPORT_READ_MPI_IO_READ_TIME, Comm);
   int MPIError = MPI_File_read_all(File, Buffer, Count, DataType, Status);

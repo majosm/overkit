@@ -32,7 +32,7 @@ namespace grid_internal {
 grid_base::grid_base(std::shared_ptr<context> &&Context, std::string &&Name, MPI_Comm Comm):
   Context_(std::move(Context)),
   Name_(std::move(Name)),
-  Comm_(Comm)
+  Comm_(DuplicateComm(Comm))
 {} 
 
 grid_base::~grid_base() noexcept {
@@ -269,12 +269,12 @@ grid::params &grid::params::SetLocalRange(const range &LocalRange) {
 
 }
 
-grid_info::grid_info(grid *MaybeGrid, core::comm_view Comm) {
+grid_info::grid_info(grid *MaybeGrid, comm_view Comm) {
 
   IsLocal_ = MaybeGrid != nullptr;
   bool IsRoot = false;
   if (IsLocal_) {
-    IsRoot = MaybeGrid->CommRank() == 0;
+    IsRoot = MaybeGrid->Comm().Rank() == 0;
   }
 
   if (IsRoot) RootRank_ = Comm.Rank();
@@ -325,7 +325,7 @@ grid_info::grid_info(grid *MaybeGrid, core::comm_view Comm) {
 
 }
 
-grid_info grid_info::internal_Create(grid *MaybeGrid, core::comm_view Comm) {
+grid_info grid_info::internal_Create(grid *MaybeGrid, comm_view Comm) {
 
   return {MaybeGrid, Comm};
 

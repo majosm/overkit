@@ -122,7 +122,7 @@ void ovkGetConnectivityMCommSize(const ovk_connectivity_m *ConnectivityM, int *C
   OVK_DEBUG_ASSERT(CommSize, "Invalid comm size pointer.");
 
   auto &ConnectivityMCPP = *reinterpret_cast<const ovk::connectivity_m *>(ConnectivityM);
-  *CommSize = ConnectivityMCPP.CommSize();
+  *CommSize = ConnectivityMCPP.Comm().Size();
 
 }
 
@@ -132,7 +132,7 @@ void ovkGetConnectivityMCommRank(const ovk_connectivity_m *ConnectivityM, int *C
   OVK_DEBUG_ASSERT(CommRank, "Invalid comm rank pointer.");
 
   auto &ConnectivityMCPP = *reinterpret_cast<const ovk::connectivity_m *>(ConnectivityM);
-  *CommRank = ConnectivityMCPP.CommRank();
+  *CommRank = ConnectivityMCPP.Comm().Rank();
 
 }
 

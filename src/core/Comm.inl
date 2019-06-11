@@ -2,7 +2,6 @@
 // License: MIT (http://opensource.org/licenses/MIT)
 
 namespace ovk {
-namespace core {
 
 inline comm_view::comm_view():
   Comm_(MPI_COMM_NULL)
@@ -31,18 +30,11 @@ inline int comm_view::Rank() const {
 
 }
 
-inline comm::comm(MPI_Comm Comm, bool DuplicateComm) {
+inline comm::comm(MPI_Comm Comm) {
 
   if (Comm != MPI_COMM_NULL) {
-    if (DuplicateComm) {
-      MPI_Comm DuplicatedComm;
-      MPI_Comm_dup(Comm, &DuplicatedComm);
-      Resource_.reset(new resource(DuplicatedComm));
-      View_ = DuplicatedComm;
-    } else {
-      Resource_.reset(new resource(Comm));
-      View_ = Comm;
-    }
+    Resource_.reset(new resource(Comm));
+    View_ = Comm;
   }
 
 }
@@ -81,7 +73,10 @@ inline bool operator!=(const comm_view &Left, const comm_view &Right) {
 
 inline comm DuplicateComm(comm_view Comm) {
 
-  return comm(Comm.Get());
+  MPI_Comm DuplicatedCommRaw;
+  MPI_Comm_dup(Comm.Get(), &DuplicatedCommRaw);
+
+  return comm(DuplicatedCommRaw);
 
 }
 
@@ -92,7 +87,7 @@ inline comm CreateSubsetComm(comm_view Comm, bool InSubset) {
   MPI_Comm SubsetCommRaw;
   MPI_Comm_split(CommRaw, InSubset ? 0 : MPI_UNDEFINED, Comm.Rank(), &SubsetCommRaw);
 
-  return comm(SubsetCommRaw, false);
+  return comm(SubsetCommRaw);
 
 }
 
@@ -103,7 +98,7 @@ inline comm CreateCartComm(comm_view Comm, int NumDims, const tuple<int> &Dims, 
   MPI_Comm CartCommRaw;
   MPI_Cart_create(Comm, NumDims, Dims.Data(), PeriodicInt.Data(), AllowReorder, &CartCommRaw);
 
-  return comm(CartCommRaw, false);
+  return comm(CartCommRaw);
 
 }
 
@@ -164,4 +159,4 @@ inline tuple<int> GetCartCommCoords(comm_view Comm) {
 
 }
 
-}}
+}

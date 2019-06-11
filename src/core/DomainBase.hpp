@@ -81,7 +81,7 @@ protected:
 
   core::string_wrapper Name_;
 
-  core::comm Comm_;
+  comm Comm_;
 
 };
 
@@ -110,11 +110,8 @@ public:
 
   const std::string &Name() const { return *Name_; }
   int Dimension() const { return NumDims_; }
-  MPI_Comm Comm() const { return Comm_; }
-  int CommSize() const { return Comm_.Size(); }
-  int CommRank() const { return Comm_.Rank(); }
 
-  const core::comm &core_Comm() const { return Comm_; }
+  const comm &Comm() const { return Comm_; }
 
   int GridCount() const { return GridRecords_.Count(); }
 

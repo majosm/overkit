@@ -11,7 +11,7 @@
 
 namespace support {
 
-ovk::range CartesianDecomp(const ovk::cart &Cart, ovk::core::comm_view Comm, const ovk::tuple<int>
+ovk::range CartesianDecomp(const ovk::cart &Cart, ovk::comm_view Comm, const ovk::tuple<int>
   &CartDims) {
 
   int NumDims = Cart.Dimension();
@@ -34,7 +34,7 @@ ovk::range CartesianDecomp(const ovk::cart &Cart, ovk::core::comm_view Comm, con
 
 }
 
-ovk::range TriangularDecomp(const ovk::cart &Cart, ovk::core::comm_view Comm) {
+ovk::range TriangularDecomp(const ovk::cart &Cart, ovk::comm_view Comm) {
 
   int NumDims = Cart.Dimension();
 

@@ -55,6 +55,7 @@ set(PUBLIC_HEADERS
   AssemblyOptions.hpp
   Box.hpp
   Cart.hpp
+  Comm.hpp
   ConnectivityComponent.hpp
   ConnectivityM.hpp
   ConnectivityN.hpp
@@ -95,10 +96,9 @@ set(INTERNAL_HEADERS
   CollectMap.hpp
   CollectNone.hpp
   CollectNotAll.hpp
+  Comm.inl
   Component.hpp
   Component.inl
-  Comm.hpp
-  Comm.inl
   ConnectivityComponentBase.h
   ContextBase.h
   DataTypeBase.h

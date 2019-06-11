@@ -88,7 +88,7 @@ void ovkGetGridCommSize(const ovk_grid *Grid, int *CommSize) {
   OVK_DEBUG_ASSERT(CommSize, "Invalid comm size pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-  *CommSize = GridCPP.CommSize();
+  *CommSize = GridCPP.Comm().Size();
 
 }
 
@@ -98,7 +98,7 @@ void ovkGetGridCommRank(const ovk_grid *Grid, int *CommRank) {
   OVK_DEBUG_ASSERT(CommRank, "Invalid comm rank pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-  *CommRank = GridCPP.CommRank();
+  *CommRank = GridCPP.Comm().Rank();
 
 }
 

@@ -74,7 +74,7 @@ protected:
 
   core::moveabool Exists_;
 
-  core::comm Comm_;
+  comm Comm_;
   // TODO: Maybe mutability should be encapsulated inside?
   mutable core::logger Logger_;
 
@@ -113,9 +113,7 @@ public:
   floating_ref<const context> GetFloatingRef() const { return FloatingRefGenerator_.Generate(); }
   floating_ref<context> GetFloatingRef() { return FloatingRefGenerator_.Generate(); }
 
-  MPI_Comm Comm() const { return Comm_; }
-  int CommSize() const { return Comm_.Size(); }
-  int CommRank() const { return Comm_.Rank(); }
+  const comm &Comm() const { return Comm_; }
 
   log_level LogLevel() const;
   void SetLogLevel(log_level LogLevel);
@@ -124,7 +122,6 @@ public:
   void EnableProfiling();
   void DisableProfiling();
 
-  const core::comm &core_Comm() const { return Comm_; }
   core::logger &core_Logger() const { return Logger_; }
   core::profiler &core_Profiler() const { return Profiler_; }
 

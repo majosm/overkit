@@ -133,7 +133,7 @@ void ovkGetContextCommSize(const ovk_context *Context, int *CommSize) {
   OVK_DEBUG_ASSERT(CommSize, "Invalid comm size pointer.");
 
   auto &ContextCPP = *reinterpret_cast<const ovk::context *>(Context);
-  *CommSize = ContextCPP.CommSize();
+  *CommSize = ContextCPP.Comm().Size();
 
 }
 
@@ -143,7 +143,7 @@ void ovkGetContextCommRank(const ovk_context *Context, int *CommRank) {
   OVK_DEBUG_ASSERT(CommRank, "Invalid comm rank pointer.");
 
   auto &ContextCPP = *reinterpret_cast<const ovk::context *>(Context);
-  *CommRank = ContextCPP.CommRank();
+  *CommRank = ContextCPP.Comm().Rank();
 
 }
 

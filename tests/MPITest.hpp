@@ -19,18 +19,18 @@ public:
   mpi_test() = default;
 
   virtual void SetUp() override {
-    Comm_ = ovk::core::comm(MPI_COMM_WORLD);
+    Comm_ = MPI_COMM_WORLD;
   }
 
   virtual void TearDown() override {
     Comm_.Reset();
   }
 
-  const ovk::core::comm &TestComm() { return Comm_; }
+  const ovk::comm_view &TestComm() { return Comm_; }
 
 private:
 
-  ovk::core::comm Comm_;
+  ovk::comm_view Comm_;
 
 };
 
