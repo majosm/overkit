@@ -7,11 +7,11 @@
 #include "ovk/core/ArrayView.hpp"
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Constants.hpp"
-#include "ovk/core/Elem.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Indexer.hpp"
 #include "ovk/core/Misc.hpp"
 #include "ovk/core/Range.hpp"
+#include "ovk/core/Tuple.hpp"
 
 #include <mpi.h>
 
@@ -25,9 +25,9 @@ namespace core {
 
 namespace {
 
-elem<int,MAX_DIMS> BinDecomp(int NumDims, const elem<int,MAX_DIMS> &GlobalSize, int MaxBins);
-elem<int,MAX_DIMS> MapToUniformCell(const elem<int,MAX_DIMS> &Origin, const elem<int,MAX_DIMS>
-  &CellSize, const elem<int,MAX_DIMS> &Point);
+tuple<int> BinDecomp(int NumDims, const tuple<int> &GlobalSize, int MaxBins);
+tuple<int> MapToUniformCell(const tuple<int> &Origin, const tuple<int> &CellSize, const tuple<int>
+  &Point);
 
 }
 
@@ -59,29 +59,29 @@ partition_hash::partition_hash(int NumDims, comm_view Comm, const range &GlobalR
   LocalRange_(LocalRange)
 {
 
-  elem<int,MAX_DIMS> NumBins = BinDecomp(NumDims_, GlobalRange_.Size(), Comm_.Size());
+  tuple<int> NumBins = BinDecomp(NumDims_, GlobalRange_.Size(), Comm_.Size());
 
   int TotalBins = 1;
   for (int iDim = 0; iDim < NumDims_; ++iDim) {
-    TotalBins *= NumBins[iDim];
+    TotalBins *= NumBins(iDim);
   }
 
-  BinRange_ = range(MakeUniformElem<int,MAX_DIMS>(0), NumBins);
+  BinRange_ = range(MakeUniformTuple<int>(0), NumBins);
   BinIndexer_ = partition_hash::bin_indexer(BinRange_);
 
   RankHasBin_ = Comm_.Rank() < TotalBins;
 
   for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    BinSize_[iDim] = (GlobalRange_.Size(iDim)+NumBins[iDim]-1)/NumBins[iDim];
+    BinSize_(iDim) = (GlobalRange_.Size(iDim)+NumBins(iDim)-1)/NumBins(iDim);
   }
 
   // Figure out which bins the local partition overlaps with
   range OverlappedBinRange = MakeEmptyRange(NumDims_);
   if (!LocalRange_.Empty()) {
-    elem<int,MAX_DIMS> LowerCorner, UpperCorner;
+    tuple<int> LowerCorner, UpperCorner;
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      LowerCorner[iDim] = LocalRange_.Begin(iDim);
-      UpperCorner[iDim] = LocalRange_.End(iDim)-1;
+      LowerCorner(iDim) = LocalRange_.Begin(iDim);
+      UpperCorner(iDim) = LocalRange_.End(iDim)-1;
     }
     ExtendRange(OverlappedBinRange, MapToUniformCell(GlobalRange_.Begin(), BinSize_, LowerCorner));
     ExtendRange(OverlappedBinRange, MapToUniformCell(GlobalRange_.Begin(), BinSize_, UpperCorner));
@@ -151,12 +151,12 @@ partition_hash::partition_hash(int NumDims, comm_view Comm, const range &GlobalR
 
     int BinIndex = Comm_.Rank();
 
-    elem<int,MAX_DIMS> BinLoc = BinIndexer_.ToTuple(BinIndex);
+    tuple<int> BinLoc = BinIndexer_.ToTuple(BinIndex);
 
     range Range = MakeEmptyRange(NumDims_);
     for (int iDim = 0; iDim < NumDims_; ++iDim) {
-      Range.Begin(iDim) = GlobalRange_.Begin(iDim)+BinSize_[iDim]*BinLoc[iDim];
-      Range.End(iDim) = GlobalRange_.Begin(iDim)+BinSize_[iDim]*(BinLoc[iDim]+1);
+      Range.Begin(iDim) = GlobalRange_.Begin(iDim)+BinSize_(iDim)*BinLoc(iDim);
+      Range.End(iDim) = GlobalRange_.Begin(iDim)+BinSize_(iDim)*(BinLoc(iDim)+1);
     }
     Range = IntersectRanges(Range, GlobalRange_);
 
@@ -185,8 +185,8 @@ void partition_hash::MapToBins(array_view<const int,2> Points, array_view<int> B
   long long NumPoints = (long long)(Points.Size(1));
 
   for (long long iPoint = 0; iPoint < NumPoints; ++iPoint) {
-    elem<int,MAX_DIMS> Point = {Points(0,iPoint), Points(1,iPoint), Points(2,iPoint)};
-    elem<int,MAX_DIMS> BinLoc = MapToUniformCell(GlobalRange_.Begin(), BinSize_, Point);
+    tuple<int> Point = {Points(0,iPoint), Points(1,iPoint), Points(2,iPoint)};
+    tuple<int> BinLoc = MapToUniformCell(GlobalRange_.Begin(), BinSize_, Point);
     ClampToRange(BinRange_, BinLoc);
     BinIndices(iPoint) = BinIndexer_.ToIndex(BinLoc);
   }
@@ -265,7 +265,7 @@ void partition_hash::RetrieveBins(std::map<int, bin> &Bins) const {
 
   for (int iBin = 0; iBin < NumUnretrievedBins; ++iBin) {
     int BinIndex = UnretrievedBinIndices(iBin);
-    elem<int,MAX_DIMS> BinLoc = BinIndexer_.ToTuple(BinIndex);
+    tuple<int> BinLoc = BinIndexer_.ToTuple(BinIndex);
     range Range = MakeEmptyRange(NumDims_);
     for (int iDim = 0; iDim < NumDims_; ++iDim) {
       Range.Begin(iDim) = GlobalRange_.Begin(iDim)+BinSize_[iDim]*BinLoc[iDim];
@@ -288,7 +288,7 @@ void partition_hash::FindPartitions(const std::map<int, bin> &Bins, array_view<c
   long long NumPoints = (long long)(Points.Size(1));
 
   for (long long iPoint = 0; iPoint < NumPoints; ++iPoint) {
-    elem<int,MAX_DIMS> Point = {Points(0,iPoint), Points(1,iPoint), Points(2,iPoint)};
+    tuple<int> Point = {Points(0,iPoint), Points(1,iPoint), Points(2,iPoint)};
     PartitionRanks(iPoint) = -1;
     auto BinIter = Bins.find(BinIndices(iPoint));
     if (BinIter != Bins.end()) {
@@ -306,9 +306,9 @@ void partition_hash::FindPartitions(const std::map<int, bin> &Bins, array_view<c
 
 namespace {
 
-elem<int,MAX_DIMS> BinDecomp(int NumDims, const elem<int,MAX_DIMS> &GlobalSize, int MaxBins) {
+tuple<int> BinDecomp(int NumDims, const tuple<int> &GlobalSize, int MaxBins) {
 
-  elem<int,MAX_DIMS> NumBins = {1,1,1};
+  tuple<int> NumBins = {1,1,1};
 
   if (NumDims == 1) {
 
@@ -316,7 +316,7 @@ elem<int,MAX_DIMS> BinDecomp(int NumDims, const elem<int,MAX_DIMS> &GlobalSize, 
 
   } else {
 
-    elem<double,MAX_DIMS> Length;
+    tuple<double> Length;
     for (int iDim = 0; iDim < NumDims; ++iDim) {
       Length[iDim] = (double)(GlobalSize[iDim]-1);
     }
@@ -339,7 +339,7 @@ elem<int,MAX_DIMS> BinDecomp(int NumDims, const elem<int,MAX_DIMS> &GlobalSize, 
 
     NumBins[iMinLengthDim] = std::max((int)(Length[iMinLengthDim]*Base),1);
 
-    elem<int,MAX_DIMS> GlobalSizeReduced;
+    tuple<int> GlobalSizeReduced;
 
     int iReducedDim;
 
@@ -353,7 +353,7 @@ elem<int,MAX_DIMS> BinDecomp(int NumDims, const elem<int,MAX_DIMS> &GlobalSize, 
 
     int MaxBinsReduced = MaxBins/NumBins[iMinLengthDim];
 
-    elem<int,MAX_DIMS> NumBinsReduced = BinDecomp(NumDims-1, GlobalSizeReduced, MaxBinsReduced);
+    tuple<int> NumBinsReduced = BinDecomp(NumDims-1, GlobalSizeReduced, MaxBinsReduced);
 
     iReducedDim = 0;
     for (int iDim = 0; iDim < NumDims; ++iDim) {
@@ -369,10 +369,10 @@ elem<int,MAX_DIMS> BinDecomp(int NumDims, const elem<int,MAX_DIMS> &GlobalSize, 
 
 }
 
-elem<int,MAX_DIMS> MapToUniformCell(const elem<int,MAX_DIMS> &Origin, const elem<int,MAX_DIMS>
-  &CellSize, const elem<int,MAX_DIMS> &Point) {
+tuple<int> MapToUniformCell(const tuple<int> &Origin, const tuple<int> &CellSize, const tuple<int>
+  &Point) {
 
-  elem<int,MAX_DIMS> Cell;
+  tuple<int> Cell;
 
   for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
     int Offset = Point[iDim] - Origin[iDim];
