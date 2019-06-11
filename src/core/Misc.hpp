@@ -14,13 +14,17 @@
 #include <mpi.h>
 
 #include <algorithm>
+#include <string>
 
 namespace ovk {
 namespace core {
 
+void BroadcastString(std::string &String, int Root, comm_view Comm);
+
 // Like MPI_Bcast, but can be used when source rank is not known globally
 void BroadcastAnySource(void *Data, int Count, MPI_Datatype DataType, bool IsSource, comm_view
   Comm);
+void BroadcastStringAnySource(std::string &String, bool IsSource, comm_view Comm);
 
 // Wrapper around MPI_Ibarrier (or crappy alternative if MPI_Ibarrier is not supported) 
 // representing a global flag that gets set only after all processes call a function

@@ -11,14 +11,32 @@
 #include <mpi.h>
 
 #include <set>
+#include <string>
 
 namespace ovk {
 namespace core {
 
+void BroadcastString(std::string &String, int Root, comm_view Comm) {
+
+  bool IsRoot = Comm.Rank() == Root;
+
+  int StringLength;
+  if (IsRoot) StringLength = String.length();
+  MPI_Bcast(&StringLength, 1, MPI_INT, Root, Comm);
+
+  array<char> StringChars({StringLength});
+  if (IsRoot) StringChars.Fill(String.begin());
+
+  MPI_Bcast(StringChars.Data(), StringLength, MPI_CHAR, Root, Comm);
+
+  String.assign(StringChars.LinearBegin(), StringChars.LinearEnd());
+
+}
+
 void BroadcastAnySource(void *Data, int Count, MPI_Datatype DataType, bool IsSource, comm_view Comm)
   {
 
-  // Send to the root rank first if necessary
+  // Send to rank 0 first if necessary
   if (Comm.Rank() == 0 && !IsSource) {
     MPI_Recv(Data, Count, DataType, MPI_ANY_SOURCE, 0, Comm, MPI_STATUS_IGNORE);
   } else if (Comm.Rank() != 0 && IsSource) {
@@ -26,6 +44,27 @@ void BroadcastAnySource(void *Data, int Count, MPI_Datatype DataType, bool IsSou
   }
 
   MPI_Bcast(Data, Count, DataType, 0, Comm);
+
+}
+
+void BroadcastStringAnySource(std::string &String, bool IsSource, comm_view Comm) {
+
+  // Send to rank 0 first if necessary
+  if (Comm.Rank() == 0 && !IsSource) {
+    int StringLength;
+    MPI_Recv(&StringLength, 1, MPI_INT, MPI_ANY_SOURCE, 0, Comm, MPI_STATUS_IGNORE);
+    array<char> StringChars({StringLength});
+    MPI_Recv(StringChars.Data(), StringLength, MPI_CHAR, MPI_ANY_SOURCE, 0, Comm,
+      MPI_STATUS_IGNORE);
+    String.assign(StringChars.LinearBegin(), StringChars.LinearEnd());
+  } else if (Comm.Rank() != 0 && IsSource) {
+    int StringLength = String.length();
+    MPI_Send(&StringLength, 1, MPI_INT, 0, 0, Comm);
+    array<char> StringChars({StringLength}, String.begin());
+    MPI_Send(StringChars.Data(), StringLength, MPI_CHAR, 0, 0, Comm);
+  }
+
+  BroadcastString(String, 0, Comm);
 
 }
 
