@@ -3,28 +3,44 @@
 
 #include "ovk/core/Debug.hpp"
 
+#include "ovk/core/Array.hpp"
 #include "ovk/core/Global.hpp"
 
 #include <mpi.h>
 
 #include <cstdarg>
 #include <cstdio>
+#include <string>
 
 extern "C" {
 
-void ovk_core_DebugAssert(const char *File, int Line, const char *Format, ...) {
+#if OVK_DEBUG
 
-  va_list ArgList;
+// Wrapper around ovk::core::DebugExit that can be called from C code
+void ovk_core_DebugExit(const char *File, int Line, const char *Format, ...) {
 
-  fprintf(stderr, "DEBUG ERROR (line %i of file '%s'): ", Line, File);
-  va_start(ArgList, Format);
-  vfprintf(stderr, Format, ArgList);
-  fprintf(stderr, "\n");
-  va_end(ArgList);
-  fflush(stderr);
+  va_list ArgList1;
+  va_start(ArgList1, Format);
 
-  MPI_Abort(MPI_COMM_WORLD, 1);
+  va_list ArgList2;
+  va_copy(ArgList2, ArgList1);
+
+  int NumChars = vsnprintf(nullptr, 0, Format, ArgList1);
+
+  ovk::array<char> MessageChars({NumChars+1});
+
+  va_end(ArgList1);
+
+  vsnprintf(MessageChars.Data(), MessageChars.Count(), Format, ArgList2);
+
+  va_end(ArgList2);
+
+  std::string Message(MessageChars.LinearBegin(), MessageChars.LinearEnd());
+
+  ovk::core::DebugExit(File, Line, Message);
 
 }
+
+#endif
 
 }

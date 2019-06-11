@@ -22,6 +22,9 @@ inline std::string FormatNumber(int N);
 template <typename IntegerType> std::string FormatNumber(IntegerType N,
   const std::string &PluralLabel, const std::string &SingularLabel);
 
+std::string StringReplace(const std::string &String, const std::string &Substring, const std::string
+  &Replacement);
+
 template <typename... Ts> std::string StringPrint(const std::string &Format, const Ts &... Args);
 
 }}

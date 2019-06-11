@@ -11,7 +11,7 @@ template <typename... Ts> void logger::LogStatus(bool WriteCondition, int Increm
     std::string Message = "ovk :: ";
     for (int iIncrement = 0; iIncrement+1 < IncrementLevel; ++iIncrement) Message += "  ";
     Message += StringPrint(Format, Args...);
-    ReplaceRank_(Message);
+    Message = StringReplace(Message, "@rank@", FormatNumber(Rank_));
     fprintf(stdout, "%s\n", Message.c_str());
     fflush(stdout);
   }
@@ -23,7 +23,7 @@ template <typename... Ts> void logger::LogWarning(bool WriteCondition, const std
 
   if (LoggingWarnings() && WriteCondition) {
     std::string Message = "ovk :: WARNING: " + StringPrint(Format, Args...);
-    ReplaceRank_(Message);
+    Message = StringReplace(Message, "@rank@", FormatNumber(Rank_));
     fprintf(stderr, "%s\n", Message.c_str());
     fflush(stderr);
   }
@@ -35,7 +35,7 @@ template <typename... Ts> void logger::LogError(bool WriteCondition, const std::
 
   if (LoggingErrors() && WriteCondition) {
     std::string Message = "ovk :: ERROR: " + StringPrint(Format, Args...);
-    ReplaceRank_(Message);
+    Message = StringReplace(Message, "@rank@", FormatNumber(Rank_));
     fprintf(stderr, "%s\n", Message.c_str());
     fflush(stderr);
   }

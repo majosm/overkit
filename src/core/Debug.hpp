@@ -18,14 +18,18 @@
 namespace ovk {
 namespace core {
 
-template <typename... Ts> void DebugAssert(const char *File, int Line, const std::string &Format,
+template <typename... Ts> void DebugExit(const char *File, int Line, const std::string &Format,
   const Ts &... Args) {
 
-  std::string Message;
-  Message += StringPrint("DEBUG ERROR (line %i of file '%s'): ", Line, File);
-  Message += StringPrint(Format, Args...);
+  std::string Prefix = StringPrint("DEBUG ERROR (line %i of file '%s'): ", Line, File);
 
-  fprintf(stderr, "%s\n", Message.c_str());
+  int Rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &Rank);
+
+  std::string Message = StringPrint(Format, Args...);
+  Message = StringReplace(Message, "@rank@", FormatNumber(Rank));
+
+  fprintf(stderr, "%s%s\n", Prefix.c_str(), Message.c_str());
   fflush(stderr);
 
   MPI_Abort(MPI_COMM_WORLD, 1);
@@ -33,7 +37,7 @@ template <typename... Ts> void DebugAssert(const char *File, int Line, const std
 }
 
 #define OVK_DEBUG_ASSERT_CPP(Condition, ...) \
-  if (!(Condition)) ovk::core::DebugAssert(__FILE__, __LINE__, __VA_ARGS__)
+  if (!(Condition)) ovk::core::DebugExit(__FILE__, __LINE__, __VA_ARGS__)
 
 #undef OVK_DEBUG_ASSERT
 #define OVK_DEBUG_ASSERT OVK_DEBUG_ASSERT_CPP

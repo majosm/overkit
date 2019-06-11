@@ -48,8 +48,6 @@ private:
   log_level Level_;
   int Rank_;
 
-  void ReplaceRank_(std::string &Message) const;
-
 };
 
 }}

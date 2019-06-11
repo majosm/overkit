@@ -44,6 +44,7 @@ set(SOURCES
   Request.cpp
   Send.cpp
   SendMap.cpp
+  TextProcessing.cpp
 )
 
 set(PUBLIC_HEADERS

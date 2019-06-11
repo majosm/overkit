@@ -11,9 +11,9 @@ extern "C" {
 #endif
 
 #if OVK_DEBUG
-void ovk_core_DebugAssert(const char *File, int Line, const char *Format, ...);
+void ovk_core_DebugExit(const char *File, int Line, const char *Format, ...);
 #define OVK_DEBUG_ASSERT_C(Condition, ...) \
-  if (!(Condition)) ovk_core_DebugAssert(__FILE__, __LINE__, __VA_ARGS__)
+  if (!(Condition)) ovk_core_DebugExit(__FILE__, __LINE__, __VA_ARGS__)
 #define OVK_DEBUG_ASSERT OVK_DEBUG_ASSERT_C
 #else
 #define OVK_DEBUG_ASSERT_C(...)

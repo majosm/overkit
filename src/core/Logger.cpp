@@ -36,27 +36,4 @@ void logger::SetLevel(log_level Level) {
 
 }
 
-void logger::ReplaceRank_(std::string &Message) const {
-
-  size_t RankPos = Message.find("@rank@");
-
-  if (RankPos == std::string::npos) return;
-
-  std::string RankString = FormatNumber(Rank_);
-
-  std::string NewMessage;
-
-  size_t Pos = 0;
-  while (RankPos != std::string::npos) {
-    NewMessage.append(Message, Pos, RankPos-Pos);
-    NewMessage += RankString;
-    Pos = RankPos + 6;
-    RankPos = Message.find("@rank@", Pos);
-  }
-  NewMessage.append(Message, Pos, std::string::npos);
-
-  Message = NewMessage;
-
-}
-
 }}
