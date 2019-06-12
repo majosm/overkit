@@ -63,6 +63,8 @@ set(PUBLIC_HEADERS
   Context.hpp
   DataType.hpp
   Domain.hpp
+  Editor.hpp
+  Editor.inl
   Elem.hpp
   Elem.inl
   Exchange.hpp
