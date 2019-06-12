@@ -43,6 +43,34 @@ template <typename FRef, typename... Args> constexpr bool IsCallableWith() {
   return decltype(is_callable_with_internal::Test<FRef, Args...>(nullptr))::value;
 }
 
+// Check if a list of arguments to be forwarded to a type's constructor is an lvalue reference to
+// an object of the same type
+namespace is_copy_argument_internal {
+template <typename T, typename... Args> struct helper : std::false_type {};
+template <typename T, typename Arg> struct helper<T, Arg> : std::integral_constant<bool,
+  std::is_same<remove_cvref<Arg>, T>::value && std::is_lvalue_reference<Arg>::value> {};
+}
+template <typename T, typename... Args> constexpr bool IsCopyArgument() {
+  return is_copy_argument_internal::helper<T, Args...>::value;
+}
+
+// Check if a list of arguments to be forwarded to a type's constructor is an rvalue reference to
+// an object of the same type
+namespace is_move_argument_internal {
+template <typename T, typename... Args> struct helper : std::false_type {};
+template <typename T, typename Arg> struct helper<T, Arg> : std::integral_constant<bool,
+  std::is_same<remove_cvref<Arg>, T>::value && std::is_rvalue_reference<Arg>::value> {};
+}
+template <typename T, typename... Args> constexpr bool IsMoveArgument() {
+  return is_move_argument_internal::helper<T, Args...>::value;
+}
+
+// Check if a list of arguments to be forwarded to a type's constructor is a reference to an object
+// of the same type
+template <typename T, typename... Args> constexpr bool IsCopyOrMoveArgument() {
+  return IsCopyArgument<T, Args...>() || IsMoveArgument<T, Args...>();
+}
+
 // Unique integer value for every type
 using type_id_type = std::uintptr_t;
 namespace type_id_internal {
