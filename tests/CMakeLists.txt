@@ -48,6 +48,7 @@ set(SOURCES
   ElemTests.cpp
   ForEachTests.cpp
   HaloTests.cpp
+  IDSetTests.cpp
   IndexerTests.cpp
   IntervalTests.cpp
   OptionalTests.cpp

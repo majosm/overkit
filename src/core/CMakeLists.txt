@@ -68,6 +68,7 @@ set(PUBLIC_HEADERS
   Exchange.hpp
   Global.hpp
   Grid.hpp
+  IDSet.hpp
   Indexer.hpp
   Interval.hpp
   Misc.hpp
