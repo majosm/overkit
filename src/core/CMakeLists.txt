@@ -66,6 +66,8 @@ set(PUBLIC_HEADERS
   Elem.hpp
   Elem.inl
   Exchange.hpp
+  Event.hpp
+  Event.inl
   FloatingRef.hpp
   Global.hpp
   Grid.hpp
