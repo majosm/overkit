@@ -285,7 +285,9 @@ public:
     return Values_.Back();
   }
 
-  template <typename... Args> value_type &Append(Args &&... Arguments) {
+  template <typename... Args, OVK_FUNCTION_REQUIRES(std::is_constructible<value_type, Args &&...
+    >::value && !core::IsCopyOrMoveArgument<value_type, Args &&...>())> value_type &Append(Args
+    &&... Arguments) {
     Values_.Append(std::forward<Args>(Arguments)...);
     View_ = view_type(Values_.Data(), {View_.Begin(0), View_.End(0)+1});
     return Values_.Back();
@@ -305,7 +307,9 @@ public:
     return View_.LinearBegin() + (ValuesIter - Values_.Begin());
   }
 
-  template <typename... Args> iterator Insert(const_iterator Pos, Args &&... Arguments) {
+  template <typename... Args, OVK_FUNCTION_REQUIRES(std::is_constructible<value_type, Args &&...
+    >::value && !core::IsCopyOrMoveArgument<value_type, Args &&...>())> iterator Insert(
+    const_iterator Pos, Args &&... Arguments) {
     auto ValuesPos = Values_.Begin() + (Pos - View_.LinearBegin());
     auto ValuesIter = Values_.Insert(ValuesPos, std::forward<Args>(Arguments)...);
     View_ = view_type(Values_.Data(), {View_.Begin(0), View_.End(0)+1});

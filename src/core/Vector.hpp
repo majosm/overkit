@@ -6,11 +6,14 @@
 
 #include <ovk/core/ArrayTraits.hpp>
 #include <ovk/core/Global.hpp>
+#include <ovk/core/Requires.hpp>
+#include <ovk/core/TypeTraits.hpp>
 
 #include <initializer_list>
 #include <iterator>
 #include <memory>
 #include <utility>
+#include <type_traits>
 #include <vector>
 
 namespace ovk {
@@ -175,7 +178,9 @@ public:
     return reinterpret_cast<value_type &>(Values_.back());
   }
 
-  template <typename... Args> value_type &Append(Args &&... Arguments) {
+  template <typename... Args, OVK_FUNCTION_REQUIRES(std::is_constructible<value_type, Args &&...
+    >::value && !core::IsCopyOrMoveArgument<value_type, Args &&...>())> value_type &Append(Args
+    &&... Arguments) {
     value_type Value(std::forward<Args>(Arguments)...);
     Values_.emplace_back(std::move(reinterpret_cast<storage_value_type &>(Value)));
     return reinterpret_cast<value_type &>(Values_.back());
@@ -195,7 +200,9 @@ public:
     return Begin() + (StorageIter - Values_.begin());
   }
 
-  template <typename... Args> iterator Insert(const_iterator Pos, Args &&... Arguments) {
+  template <typename... Args, OVK_FUNCTION_REQUIRES(std::is_constructible<value_type, Args &&...
+    >::value && !core::IsCopyOrMoveArgument<value_type, Args &&...>())> iterator Insert(
+    const_iterator Pos, Args &&... Arguments) {
     value_type Value(std::forward<Args>(Arguments)...);
     auto StoragePos = Values_.begin() + (Pos - Begin());
     auto StorageIter = Values_.insert(StoragePos, std::move(reinterpret_cast<storage_value_type
