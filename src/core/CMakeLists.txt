@@ -72,6 +72,8 @@ set(PUBLIC_HEADERS
   Interval.hpp
   Misc.hpp
   Misc.inl
+  Optional.hpp
+  Optional.inl
   Range.hpp
   Range.inl
   Request.hpp

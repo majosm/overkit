@@ -50,6 +50,7 @@ set(SOURCES
   HaloTests.cpp
   IndexerTests.cpp
   IntervalTests.cpp
+  OptionalTests.cpp
   PartitionTests.cpp
   RangeTests.cpp
   UnitTestMain.cpp
