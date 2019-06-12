@@ -14,6 +14,7 @@
 
 #include <mpi.h>
 
+#include <iterator>
 #include <utility>
 #include <vector>
 
@@ -195,130 +196,6 @@ TEST_F(VectorTests, Create) {
 
 }
 
-TEST_F(VectorTests, Assign) {
-
-  if (TestComm().Rank() != 0) return;
-
-  using vector_nonbool = ovk::core::vector<int>;
-  using vector_bool = ovk::core::vector<bool>;
-  using vector_noncopyable = ovk::core::vector<noncopyable<int>>;
-  using vector_nondefaultconstructible = ovk::core::vector<nondefaultconstructible<int>>;
-  using helper_nonbool = ovk::core::test_helper<vector_nonbool>;
-  using helper_bool = ovk::core::test_helper<vector_bool>;
-  using helper_noncopyable = ovk::core::test_helper<vector_noncopyable>;
-  using helper_nondefaultconstructible = ovk::core::test_helper<vector_nondefaultconstructible>;
-
-  // Non-bool, size and value
-  {
-    vector_nonbool Vector(1, 0);
-    Vector.Assign(5, 1);
-    auto &Values = helper_nonbool::GetValues(Vector);
-    EXPECT_THAT(Values, ElementsAreArray({1,1,1,1,1}));
-  }
-
-  // Non-bool, initializer list, operator=
-  {
-    vector_nonbool Vector(1, 0);
-    Vector = {0,1,2,3,4};
-    auto &Values = helper_nonbool::GetValues(Vector);
-    EXPECT_THAT(Values, ElementsAreArray({0,1,2,3,4}));
-  }
-
-  // Non-bool, initializer list, Assign
-  {
-    vector_nonbool Vector(1, 0);
-    Vector.Assign({0,1,2,3,4});
-    auto &Values = helper_nonbool::GetValues(Vector);
-    EXPECT_THAT(Values, ElementsAreArray({0,1,2,3,4}));
-  }
-
-  // Bool, size and value
-  {
-    vector_bool Vector(1, false);
-    Vector.Assign(5, true);
-    auto &Values = helper_bool::GetValues(Vector);
-    EXPECT_THAT(Values, ElementsAreArray({not_bool::TRUE,not_bool::TRUE,not_bool::TRUE,
-      not_bool::TRUE,not_bool::TRUE}));
-  }
-
-  // Bool, initializer list, operator=
-  {
-    vector_bool Vector(1, false);
-    Vector = {false,true,false,false,true};
-    auto &Values = helper_bool::GetValues(Vector);
-    EXPECT_THAT(Values, ElementsAreArray({not_bool::FALSE,not_bool::TRUE,not_bool::FALSE,
-      not_bool::FALSE,not_bool::TRUE}));
-  }
-
-  // Bool, initializer list, Assign
-  {
-    vector_bool Vector(1, false);
-    Vector.Assign({false,true,false,false,true});
-    auto &Values = helper_bool::GetValues(Vector);
-    EXPECT_THAT(Values, ElementsAreArray({not_bool::FALSE,not_bool::TRUE,not_bool::FALSE,
-      not_bool::FALSE,not_bool::TRUE}));
-  }
-
-  // Non-copyable, iterators
-  {
-    vector_noncopyable Vector(1);
-    std::array<noncopyable<int>,2> SourceValues = {{{1}, {2}}};
-    Vector.Assign(std::make_move_iterator(SourceValues.begin()), std::make_move_iterator(
-      SourceValues.end()));
-    auto &Values = helper_noncopyable::GetValues(Vector);
-    EXPECT_EQ(int(Values.size()), 2);
-    int Sum = 0;
-    for (auto &Value : Values) Sum += Value.Value();
-    EXPECT_EQ(Sum, 3);
-  }
-
-  // Non-default-constructible, size and value
-  {
-    vector_nondefaultconstructible Vector(1, {0});
-    Vector.Assign(5, {1});
-    auto &Values = helper_nondefaultconstructible::GetValues(Vector);
-    EXPECT_EQ(int(Values.size()), 5);
-    int Sum = 0;
-    for (auto &Value : Values) Sum += Value.Value();
-    EXPECT_EQ(Sum, 5);
-  }
-
-  // Non-default-constructible, initializer list, operator=
-  {
-    vector_nondefaultconstructible Vector(1, {0});
-    Vector = {{1}, {2}};
-    auto &Values = helper_nondefaultconstructible::GetValues(Vector);
-    EXPECT_EQ(int(Values.size()), 2);
-    int Sum = 0;
-    for (auto &Value : Values) Sum += Value.Value();
-    EXPECT_EQ(Sum, 3);
-  }
-
-  // Non-default-constructible, initializer list, Assign
-  {
-    vector_nondefaultconstructible Vector(1, {0});
-    Vector.Assign({{1}, {2}});
-    auto &Values = helper_nondefaultconstructible::GetValues(Vector);
-    EXPECT_EQ(int(Values.size()), 2);
-    int Sum = 0;
-    for (auto &Value : Values) Sum += Value.Value();
-    EXPECT_EQ(Sum, 3);
-  }
-
-  // Non-default-constructible, iterators
-  {
-    vector_nondefaultconstructible Vector(1, {0});
-    std::array<nondefaultconstructible<int>,2> SourceArray = {{{1}, {2}}};
-    Vector.Assign(SourceArray.begin(), SourceArray.end());
-    auto &Values = helper_nondefaultconstructible::GetValues(Vector);
-    EXPECT_EQ(int(Values.size()), 2);
-    int Sum = 0;
-    for (auto &Value : Values) Sum += Value.Value();
-    EXPECT_EQ(Sum, 3);
-  }
-
-}
-
 TEST_F(VectorTests, Copy) {
 
   if (TestComm().Rank() != 0) return;
@@ -462,6 +339,130 @@ TEST_F(VectorTests, Move) {
     int Sum = 0;
     for (auto &Value : Values2) Sum += Value.Value();
     EXPECT_EQ(Sum, 10);
+  }
+
+}
+
+TEST_F(VectorTests, Assign) {
+
+  if (TestComm().Rank() != 0) return;
+
+  using vector_nonbool = ovk::core::vector<int>;
+  using vector_bool = ovk::core::vector<bool>;
+  using vector_noncopyable = ovk::core::vector<noncopyable<int>>;
+  using vector_nondefaultconstructible = ovk::core::vector<nondefaultconstructible<int>>;
+  using helper_nonbool = ovk::core::test_helper<vector_nonbool>;
+  using helper_bool = ovk::core::test_helper<vector_bool>;
+  using helper_noncopyable = ovk::core::test_helper<vector_noncopyable>;
+  using helper_nondefaultconstructible = ovk::core::test_helper<vector_nondefaultconstructible>;
+
+  // Non-bool, size and value
+  {
+    vector_nonbool Vector(1, 0);
+    Vector.Assign(5, 1);
+    auto &Values = helper_nonbool::GetValues(Vector);
+    EXPECT_THAT(Values, ElementsAreArray({1,1,1,1,1}));
+  }
+
+  // Non-bool, initializer list, operator=
+  {
+    vector_nonbool Vector(1, 0);
+    Vector = {0,1,2,3,4};
+    auto &Values = helper_nonbool::GetValues(Vector);
+    EXPECT_THAT(Values, ElementsAreArray({0,1,2,3,4}));
+  }
+
+  // Non-bool, initializer list, Assign
+  {
+    vector_nonbool Vector(1, 0);
+    Vector.Assign({0,1,2,3,4});
+    auto &Values = helper_nonbool::GetValues(Vector);
+    EXPECT_THAT(Values, ElementsAreArray({0,1,2,3,4}));
+  }
+
+  // Bool, size and value
+  {
+    vector_bool Vector(1, false);
+    Vector.Assign(5, true);
+    auto &Values = helper_bool::GetValues(Vector);
+    EXPECT_THAT(Values, ElementsAreArray({not_bool::TRUE,not_bool::TRUE,not_bool::TRUE,
+      not_bool::TRUE,not_bool::TRUE}));
+  }
+
+  // Bool, initializer list, operator=
+  {
+    vector_bool Vector(1, false);
+    Vector = {false,true,false,false,true};
+    auto &Values = helper_bool::GetValues(Vector);
+    EXPECT_THAT(Values, ElementsAreArray({not_bool::FALSE,not_bool::TRUE,not_bool::FALSE,
+      not_bool::FALSE,not_bool::TRUE}));
+  }
+
+  // Bool, initializer list, Assign
+  {
+    vector_bool Vector(1, false);
+    Vector.Assign({false,true,false,false,true});
+    auto &Values = helper_bool::GetValues(Vector);
+    EXPECT_THAT(Values, ElementsAreArray({not_bool::FALSE,not_bool::TRUE,not_bool::FALSE,
+      not_bool::FALSE,not_bool::TRUE}));
+  }
+
+  // Non-copyable, iterators
+  {
+    vector_noncopyable Vector(1);
+    std::array<noncopyable<int>,2> SourceValues = {{{1}, {2}}};
+    Vector.Assign(std::make_move_iterator(SourceValues.begin()), std::make_move_iterator(
+      SourceValues.end()));
+    auto &Values = helper_noncopyable::GetValues(Vector);
+    EXPECT_EQ(int(Values.size()), 2);
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 3);
+  }
+
+  // Non-default-constructible, size and value
+  {
+    vector_nondefaultconstructible Vector(1, {0});
+    Vector.Assign(5, {1});
+    auto &Values = helper_nondefaultconstructible::GetValues(Vector);
+    EXPECT_EQ(int(Values.size()), 5);
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 5);
+  }
+
+  // Non-default-constructible, initializer list, operator=
+  {
+    vector_nondefaultconstructible Vector(1, {0});
+    Vector = {{1}, {2}};
+    auto &Values = helper_nondefaultconstructible::GetValues(Vector);
+    EXPECT_EQ(int(Values.size()), 2);
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 3);
+  }
+
+  // Non-default-constructible, initializer list, Assign
+  {
+    vector_nondefaultconstructible Vector(1, {0});
+    Vector.Assign({{1}, {2}});
+    auto &Values = helper_nondefaultconstructible::GetValues(Vector);
+    EXPECT_EQ(int(Values.size()), 2);
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 3);
+  }
+
+  // Non-default-constructible, iterators
+  {
+    vector_nondefaultconstructible Vector(1, {0});
+    std::array<nondefaultconstructible<int>,2> SourceArray = {{{1}, {2}}};
+    Vector.Assign(SourceArray.begin(), SourceArray.end());
+    auto &Values = helper_nondefaultconstructible::GetValues(Vector);
+    EXPECT_EQ(int(Values.size()), 2);
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 3);
   }
 
 }
