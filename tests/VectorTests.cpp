@@ -42,6 +42,8 @@ public:
 };
 }}
 
+namespace {
+
 using not_bool = ovk::core::vector_internal::not_bool;
 
 struct multiargument {
@@ -52,6 +54,8 @@ struct multiargument {
     v2(v2_)
   {}
 };
+
+}
 
 TEST_F(VectorTests, Meta) {
 

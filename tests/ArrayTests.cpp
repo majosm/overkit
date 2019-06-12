@@ -49,6 +49,8 @@ public:
 };
 }}
 
+namespace {
+
 struct multiargument {
   int v1, v2;
   multiargument() = default;
@@ -57,6 +59,8 @@ struct multiargument {
     v2(v2_)
   {}
 };
+
+}
 
 TEST_F(ArrayTests, Meta) {
 
