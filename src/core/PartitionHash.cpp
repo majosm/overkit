@@ -10,6 +10,7 @@
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Indexer.hpp"
 #include "ovk/core/Misc.hpp"
+#include "ovk/core/Optional.hpp"
 #include "ovk/core/Range.hpp"
 #include "ovk/core/Tuple.hpp"
 
@@ -37,8 +38,7 @@ partition_hash::partition_hash():
   GlobalRange_(MakeEmptyRange(2)),
   LocalRange_(MakeEmptyRange(2)),
   BinSize_(MakeUniformTuple<int>(0)),
-  MaxBinPartitions_(0),
-  RankHasBin_(false)
+  MaxBinPartitions_(0)
 {}
 
 partition_hash::partition_hash(int NumDims, comm_view Comm):
@@ -47,8 +47,7 @@ partition_hash::partition_hash(int NumDims, comm_view Comm):
   GlobalRange_(MakeEmptyRange(NumDims)),
   LocalRange_(MakeEmptyRange(NumDims)),
   BinSize_(MakeUniformTuple<int>(0)),
-  MaxBinPartitions_(0),
-  RankHasBin_(false)
+  MaxBinPartitions_(0)
 {}
 
 partition_hash::partition_hash(int NumDims, comm_view Comm, const range &GlobalRange, const range
@@ -69,7 +68,7 @@ partition_hash::partition_hash(int NumDims, comm_view Comm, const range &GlobalR
   BinRange_ = range(MakeUniformTuple<int>(0), NumBins);
   BinIndexer_ = partition_hash::bin_indexer(BinRange_);
 
-  RankHasBin_ = Comm_.Rank() < TotalBins;
+  bool RankHasBin = Comm_.Rank() < TotalBins;
 
   for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
     BinSize_(iDim) = (GlobalRange_.Size(iDim)+NumBins(iDim)-1)/NumBins(iDim);
@@ -112,8 +111,8 @@ partition_hash::partition_hash(int NumDims, comm_view Comm, const range &GlobalR
 
   Requests.Reserve(NumOverlappedBins + NumPartitions);
 
-  auto Isend = [&Requests](void *Buffer, int Count, MPI_Datatype DataType, int DestRank, int Tag,
-    MPI_Comm Comm) {
+  auto Isend = [&Requests](const void *Buffer, int Count, MPI_Datatype DataType, int DestRank, int
+    Tag, MPI_Comm Comm) {
     MPI_Request &Request = Requests.Append();
     MPI_Isend(Buffer, Count, DataType, DestRank, Tag, Comm, &Request);
 
@@ -124,7 +123,7 @@ partition_hash::partition_hash(int NumDims, comm_view Comm, const range &GlobalR
     MPI_Irecv(Buffer, Count, DataType, SourceRank, Tag, Comm, &Request);
   };
 
-  if (RankHasBin_) {
+  if (RankHasBin) {
     for (int iPartition = 0; iPartition < NumPartitions; ++iPartition) {
       Irecv(PartitionRangeValues.Data(iPartition,0,0), 2*MAX_DIMS, MPI_INT,
         PartitionRanks(iPartition), 0, Comm_);
@@ -147,7 +146,7 @@ partition_hash::partition_hash(int NumDims, comm_view Comm, const range &GlobalR
   Requests.Clear();
   OverlappedBinIndices.Clear();
 
-  if (RankHasBin_) {
+  if (RankHasBin) {
 
     int BinIndex = Comm_.Rank();
 
@@ -160,11 +159,8 @@ partition_hash::partition_hash(int NumDims, comm_view Comm, const range &GlobalR
     }
     Range = IntersectRanges(Range, GlobalRange_);
 
-    Bin_.reset(new bin());
-
+    Bin_ = bin(BinIndex, Range, NumPartitions);
     bin &Bin = *Bin_;
-
-    Bin = bin(BinIndex, Range, NumPartitions);
 
     int iPartition = 0;
     for (int Rank : PartitionRanks) {
@@ -218,8 +214,8 @@ void partition_hash::RetrieveBins(std::map<int, bin> &Bins) const {
 
   Requests.Reserve(3*NumUnretrievedBins + 3*NumRetrieves);
 
-  auto Isend = [&Requests](void *Buffer, int Count, MPI_Datatype DataType, int DestRank, int Tag,
-    MPI_Comm Comm) {
+  auto Isend = [&Requests](const void *Buffer, int Count, MPI_Datatype DataType, int DestRank, int
+    Tag, MPI_Comm Comm) {
     MPI_Request &Request = Requests.Append();
     MPI_Isend(Buffer, Count, DataType, DestRank, Tag, Comm, &Request);
 
@@ -238,8 +234,8 @@ void partition_hash::RetrieveBins(std::map<int, bin> &Bins) const {
       0, Comm_);
   }
 
-  if (RankHasBin_) {
-    bin &Bin = *Bin_;
+  if (Bin_.Present()) {
+    const bin &Bin = *Bin_;
     array<int,3> BinPartitionRangeValues({{Bin.NumPartitions_,2,MAX_DIMS}});
     for (int iPartition = 0; iPartition < Bin.NumPartitions_; ++iPartition) {
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {

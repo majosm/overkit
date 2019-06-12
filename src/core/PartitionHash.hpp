@@ -10,6 +10,7 @@
 #include <ovk/core/Constants.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Indexer.hpp>
+#include <ovk/core/Optional.hpp>
 #include <ovk/core/Range.hpp>
 #include <ovk/core/Tuple.hpp>
 
@@ -79,9 +80,7 @@ private:
   bin_indexer BinIndexer_;
   tuple<int> BinSize_;
   int MaxBinPartitions_;
-  bool RankHasBin_;
-  std::unique_ptr<bin> Bin_;
-//   optional<partition_bin> Bin_;
+  optional<bin> Bin_;
 
 };
 
