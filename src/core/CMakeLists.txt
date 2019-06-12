@@ -66,6 +66,7 @@ set(PUBLIC_HEADERS
   Elem.hpp
   Elem.inl
   Exchange.hpp
+  FloatingRef.hpp
   Global.hpp
   Grid.hpp
   IDMap.hpp
@@ -109,6 +110,7 @@ set(INTERNAL_HEADERS
   DisperseBase.hpp
   DisperseOverwrite.hpp
   ErrorHandler.hpp
+  FloatingRef.inl
   ForEach.hpp
   GlobalBase.h
   Halo.hpp
