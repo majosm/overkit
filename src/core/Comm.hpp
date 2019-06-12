@@ -72,7 +72,7 @@ private:
     resource(MPI_Comm Comm):
       Comm_(Comm)
     {}
-    ~resource() {
+    ~resource() noexcept {
       MPI_Comm_free(&Comm_);
     }
   };

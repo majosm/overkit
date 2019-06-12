@@ -8,71 +8,75 @@ namespace core {
 // template <typename ArrayType, OVK_FUNCDEF_REQUIRES(IsArray<ArrayType>() && ArrayHasFootprint<
 //   ArrayType, MAX_DIMS, array_layout::GRID>())> request halo::Exchange(ArrayType &Array) const {
 template <typename ArrayType, OVK_FUNCDEF_REQUIRES(IsArray<ArrayType>() && ArrayRank<ArrayType>()
-  == MAX_DIMS && ArrayLayout<ArrayType>() == array_layout::GRID)> request halo::Exchange(ArrayType &Array) const {
+  == MAX_DIMS && ArrayLayout<ArrayType>() == array_layout::GRID)> request halo::Exchange(ArrayType
+  &Array) const {
 
-  StartProfile(*Profiler_, TotalTime_);
+  using value_type = array_value_type<ArrayType>;
 
-  array<exchanger> &ExchangersForType = Exchangers_[GetTypeID<array_value_type<ArrayType>>()];
+  core::profiler &Profiler = Context_->core_Profiler();
 
-  int iExchanger = 0;
-  while (iExchanger < ExchangersForType.Count() && ExchangersForType(iExchanger).Active()) {
-    ++iExchanger;
+  Profiler.StartSync(TOTAL_TIME, Comm_);
+  Profiler.Start(EXCHANGE_TIME);
+
+  array<halo_exchanger> &HaloExchangersForType = HaloExchangers_[GetTypeID<value_type>()];
+
+  int iHaloExchanger = 0;
+  while (iHaloExchanger < HaloExchangersForType.Count() && HaloExchangersForType(iHaloExchanger).
+    Active()) {
+    ++iHaloExchanger;
   }
-  if (iExchanger == ExchangersForType.Count()) {
-    StartProfile(*Profiler_, SetupTime_);
-    ExchangersForType.Append(halo_internal::exchanger_for_type<array_value_type<ArrayType>>(
-      Comm_, NeighborRanks_, NeighborSendIndices_, NeighborRecvIndices_, LocalToLocalSourceIndices_,
-      LocalToLocalDestIndices_, *Profiler_));
-    EndProfile(*Profiler_, SetupTime_);
+  if (iHaloExchanger == HaloExchangersForType.Count()) {
+    Profiler.Stop(EXCHANGE_TIME);
+    Profiler.Start(SETUP_TIME);
+    HaloExchangersForType.Append(halo_internal::halo_exchanger_for_type<value_type>(*Context_,
+      Comm_, HaloMap_));
+    Profiler.Stop(SETUP_TIME);
+    Profiler.Start(EXCHANGE_TIME);
   }
-  exchanger &Exchanger = ExchangersForType(iExchanger);
-
-  StartProfile(*Profiler_, ExchangeTime_);
+  halo_exchanger &HaloExchanger = HaloExchangersForType(iHaloExchanger);
 
   auto EndProfiles = OnScopeExit([&] {
-    EndProfile(*Profiler_, ExchangeTime_);
-    EndProfile(*Profiler_, TotalTime_);
+    Profiler.Stop(EXCHANGE_TIME);
+    Profiler.Stop(TOTAL_TIME);
   });
 
-  return Exchanger.Exchange(ArrayData(Array));
+  return HaloExchanger.Exchange(ArrayData(Array));
 
 }
 
 namespace halo_internal {
 
-template <typename T> exchanger_for_type<T>::exchanger_for_type(comm_view Comm, const array<int>
-  &NeighborRanks, const array<array<long long>> &NeighborSendIndices, const array<array<long long>>
-  &NeighborRecvIndices, const array<long long> &LocalToLocalSourceIndices, const array<long long>
-  &LocalToLocalDestIndices, profiler &Profiler):
+template <typename T> halo_exchanger_for_type<T>::halo_exchanger_for_type(context &Context,
+  comm_view Comm, const halo_map &HaloMap):
+  FloatingRefGenerator_(*this),
+  Context_(Context.GetFloatingRef()),
   Comm_(Comm),
-  NeighborRanks_(NeighborRanks),
-  NeighborSendIndices_(NeighborSendIndices),
-  NeighborRecvIndices_(NeighborRecvIndices),
-  LocalToLocalSourceIndices_(LocalToLocalSourceIndices),
-  LocalToLocalDestIndices_(LocalToLocalDestIndices),
-  Active_(new bool(false)),
-  Profiler_(&Profiler),
-  PackTime_(GetProfilerTimerID(Profiler, "Halo::Exchange::Pack")),
-  UnpackTime_(GetProfilerTimerID(Profiler, "Halo::Exchange::Unpack")),
-  MPITime_(GetProfilerTimerID(Profiler, "Halo::Exchange::MPI"))
+  HaloMap_(HaloMap.GetFloatingRef())
 {
 
-  int NumNeighbors = NeighborRanks.Count();
+  int NumNeighbors = HaloMap.NeighborRanks().Count();
 
   SendBuffers_.Resize({NumNeighbors});
   RecvBuffers_.Resize({NumNeighbors});
   for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
-    SendBuffers_(iNeighbor).Resize({NeighborSendIndices_(iNeighbor).Count()});
-    RecvBuffers_(iNeighbor).Resize({NeighborRecvIndices_(iNeighbor).Count()});
+    SendBuffers_(iNeighbor).Resize({HaloMap.NeighborSendIndices(iNeighbor).Count()});
+    RecvBuffers_(iNeighbor).Resize({HaloMap.NeighborRecvIndices(iNeighbor).Count()});
   }
 
   MPIRequests_.Reserve(2*NumNeighbors);
 
 }
 
-template <typename T> request exchanger_for_type<T>::Exchange(value_type *ArrayData) {
+template <typename T> request halo_exchanger_for_type<T>::Exchange(value_type *ArrayData) {
 
-  int NumNeighbors = NeighborRanks_.Count();
+  const halo_map &HaloMap = *HaloMap_;
+  const array<int> &NeighborRanks = HaloMap.NeighborRanks();
+  const array<long long> &LocalToLocalSourceIndices = HaloMap.LocalToLocalSourceIndices();
+  const array<long long> &LocalToLocalDestIndices = HaloMap.LocalToLocalDestIndices();
+
+  core::profiler &Profiler = Context_->core_Profiler();
+
+  int NumNeighbors = HaloMap.NeighborRanks().Count();
 
   MPI_Datatype DataType = GetMPIDataType<mpi_value_type>();
 
@@ -80,93 +84,99 @@ template <typename T> request exchanger_for_type<T>::Exchange(value_type *ArrayD
 
   for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
     MPI_Request &Request = MPIRequests_.Append();
-    StartProfile(*Profiler_, MPITime_);
+    Profiler.Start(MPI_TIME);
     MPI_Irecv(RecvBuffers_(iNeighbor).Data(), RecvBuffers_(iNeighbor).Count(), DataType,
-      NeighborRanks_(iNeighbor), 0, Comm_, &Request);
-    EndProfile(*Profiler_, MPITime_);
+      NeighborRanks(iNeighbor), 0, Comm_, &Request);
+    Profiler.Stop(MPI_TIME);
   }
 
   for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
-    StartProfile(*Profiler_, PackTime_);
-    const array<long long> &SendIndices = NeighborSendIndices_(iNeighbor);
+    Profiler.Start(PACK_TIME);
+    const array<long long> &SendIndices = HaloMap.NeighborSendIndices(iNeighbor);
     for (long long iSendPoint = 0; iSendPoint < SendIndices.Count(); ++iSendPoint) {
       long long iPoint = SendIndices(iSendPoint);
       SendBuffers_(iNeighbor)(iSendPoint) = mpi_value_type(ArrayData[iPoint]);
     }
-    EndProfile(*Profiler_, PackTime_);
+    Profiler.Stop(PACK_TIME);
     MPI_Request &Request = MPIRequests_.Append();
-    StartProfile(*Profiler_, MPITime_);
+    Profiler.Start(MPI_TIME);
     MPI_Isend(SendBuffers_(iNeighbor).Data(), SendBuffers_(iNeighbor).Count(), DataType,
-      NeighborRanks_(iNeighbor), 0, Comm_, &Request);
-    EndProfile(*Profiler_, MPITime_);
+      NeighborRanks(iNeighbor), 0, Comm_, &Request);
+    Profiler.Stop(MPI_TIME);
   }
 
-  StartProfile(*Profiler_, PackTime_);
-  StartProfile(*Profiler_, UnpackTime_);
+  Profiler.Start(PACK_TIME);
+  Profiler.Start(UNPACK_TIME);
 
-  long long NumLocalToLocal = LocalToLocalSourceIndices_.Count();
+  long long NumLocalToLocal = LocalToLocalSourceIndices.Count();
   for (long long iLocalToLocal = 0; iLocalToLocal < NumLocalToLocal; ++iLocalToLocal) {
-    long long iSource = LocalToLocalSourceIndices_(iLocalToLocal);
-    long long iDest = LocalToLocalDestIndices_(iLocalToLocal);
+    long long iSource = LocalToLocalSourceIndices(iLocalToLocal);
+    long long iDest = LocalToLocalDestIndices(iLocalToLocal);
     ArrayData[iDest] = ArrayData[iSource];
   }
 
-  EndProfile(*Profiler_, PackTime_);
-  EndProfile(*Profiler_, UnpackTime_);
+  Profiler.Stop(PACK_TIME);
+  Profiler.Stop(UNPACK_TIME);
 
-  *Active_ = true;
+  Active_ = true;
 
-  return exchanger_request<value_type>(ArrayData, NeighborRecvIndices_, RecvBuffers_, MPIRequests_,
-    *Active_, *Profiler_);
+  return exchange_request(*this, ArrayData);
 
 }
 
-template <typename T> exchanger_request<T>::exchanger_request(value_type *ArrayData, array_view<
-  const array<long long>> NeighborRecvIndices, array_view<array<mpi_value_type>> RecvBuffers,
-  array_view<MPI_Request> MPIRequests, bool &Active, profiler &Profiler):
-  ArrayData_(ArrayData),
-  NeighborRecvIndices_(NeighborRecvIndices),
-  RecvBuffers_(RecvBuffers),
-  MPIRequests_(MPIRequests),
-  Active_(&Active),
-  Profiler_(&Profiler),
-  UnpackTime_(GetProfilerTimerID(Profiler, "Halo::Exchange::Unpack")),
-  MPITime_(GetProfilerTimerID(Profiler, "Halo::Exchange::MPI"))
+template <typename T> halo_exchanger_for_type<T>::exchange_request::exchange_request(
+  halo_exchanger_for_type &HaloExchanger, value_type *ArrayData):
+  HaloExchanger_(HaloExchanger.FloatingRefGenerator_.Generate()),
+  ArrayData_(ArrayData)
 {}
 
-template <typename T> void exchanger_request<T>::Finish(int iMPIRequest) {
+template <typename T> void halo_exchanger_for_type<T>::exchange_request::Finish(int iMPIRequest) {
 
-  if (iMPIRequest < RecvBuffers_.Count()) {
+  halo_exchanger_for_type &HaloExchanger = *HaloExchanger_;
+  const halo_map &HaloMap = *HaloExchanger.HaloMap_;
 
-    StartProfile(*Profiler_, UnpackTime_);
+  profiler &Profiler = HaloExchanger.Context_->core_Profiler();
+
+  if (iMPIRequest < HaloExchanger.RecvBuffers_.Count()) {
+
+    Profiler.Start(UNPACK_TIME);
 
     int iNeighbor = iMPIRequest;
-    const array<long long> &RecvIndices = NeighborRecvIndices_(iNeighbor);
+    const array<long long> &RecvIndices = HaloMap.NeighborRecvIndices(iNeighbor);
     for (long long iRecvPoint = 0; iRecvPoint < RecvIndices.Count(); ++iRecvPoint) {
       long long iPoint = RecvIndices(iRecvPoint);
-      ArrayData_[iPoint] = value_type(RecvBuffers_(iNeighbor)(iRecvPoint));
+      ArrayData_[iPoint] = value_type(HaloExchanger.RecvBuffers_(iNeighbor)(iRecvPoint));
     }
 
-    EndProfile(*Profiler_, UnpackTime_);
+    Profiler.Stop(UNPACK_TIME);
 
   }
 
 }
 
-template <typename T> void exchanger_request<T>::Wait() {
+template <typename T> void halo_exchanger_for_type<T>::exchange_request::Wait() {
+
+  halo_exchanger_for_type &HaloExchanger = *HaloExchanger_;
+
+  profiler &Profiler = HaloExchanger.Context_->core_Profiler();
+
+  Profiler.Start(WAIT_TIME);
 
   while (true) {
     int iMPIRequest;
-    StartProfile(*Profiler_, MPITime_);
-    MPI_Waitany(MPIRequests_.Count(), MPIRequests_.Data(), &iMPIRequest, MPI_STATUSES_IGNORE);
-    EndProfile(*Profiler_, MPITime_);
+    Profiler.Start(MPI_TIME);
+    MPI_Waitany(HaloExchanger.MPIRequests_.Count(), HaloExchanger.MPIRequests_.Data(), &iMPIRequest,
+      MPI_STATUSES_IGNORE);
+    Profiler.Stop(MPI_TIME);
     if (iMPIRequest == MPI_UNDEFINED) {
       break;
     }
     Finish(iMPIRequest);
   }
 
-  *Active_ = false;
+  HaloExchanger.Active_ = false;
+
+  Profiler.Stop(WAIT_TIME);
 
 }
 

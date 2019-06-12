@@ -16,39 +16,36 @@
 
 extern "C" {
 
-ovk_error ovkImportXINTOUT(ovk_domain *Domain, const char *HOPath, const char *XPath,
-  int ReadGranularityAdjust, MPI_Info MPIInfo) {
+void ovkImportXINTOUT(ovk_domain *Domain, int ConnectivityComponentID, const char *HOPath, const
+  char *XPath, int ReadGranularityAdjust, MPI_Info MPIInfo, ovk_error *Error) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid exchange pointer.");
-  OVK_DEBUG_ASSERT(HOPath, "Invalid ho path pointer.");
-  OVK_DEBUG_ASSERT(XPath, "Invalid x path pointer.");
+  OVK_DEBUG_ASSERT(HOPath, "Invalid HO path pointer.");
+  OVK_DEBUG_ASSERT(XPath, "Invalid X path pointer.");
 
   auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
-  std::string HOPathCPP = HOPath;
-  std::string XPathCPP = XPath;
+  ovk::error ErrorCPP;
+  ovk::ImportXINTOUT(DomainCPP, ConnectivityComponentID, HOPath, XPath, ReadGranularityAdjust,
+    MPIInfo, ErrorCPP);
 
-  ovk::error Error = ovk::ImportXINTOUT(DomainCPP, HOPathCPP, XPathCPP, ReadGranularityAdjust,
-    MPIInfo);
-
-  return ovk_error(Error);
+  *Error = ovk_error(ErrorCPP);
 
 }
 
-ovk_error ovkExportXINTOUT(const ovk_domain *Domain, const char *HOPath, const char *XPath,
-  ovk_xintout_format Format, ovk_endian Endian, int WriteGranularityAdjust, MPI_Info MPIInfo) {
+void ovkExportXINTOUT(const ovk_domain *Domain, int ConnectivityComponentID, const char *HOPath,
+  const char *XPath, ovk_xintout_format Format, ovk_endian Endian, int WriteGranularityAdjust,
+  MPI_Info MPIInfo, ovk_error *Error) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid exchange pointer.");
-  OVK_DEBUG_ASSERT(HOPath, "Invalid ho path pointer.");
-  OVK_DEBUG_ASSERT(XPath, "Invalid x path pointer.");
+  OVK_DEBUG_ASSERT(HOPath, "Invalid HO path pointer.");
+  OVK_DEBUG_ASSERT(XPath, "Invalid X path pointer.");
 
   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  std::string HOPathCPP = HOPath;
-  std::string XPathCPP = XPath;
+  ovk::error ErrorCPP;
+  ovk::ExportXINTOUT(DomainCPP, ConnectivityComponentID, HOPath, XPath, ovk::xintout_format(Format),
+    ovk::endian(Endian), WriteGranularityAdjust, MPIInfo, ErrorCPP);
 
-  ovk::error Error = ovk::ExportXINTOUT(DomainCPP, HOPathCPP, XPathCPP, ovk::xintout_format(Format),
-    ovk::endian(Endian), WriteGranularityAdjust, MPIInfo);
-
-  return ovk_error(Error);
+  *Error = ovk_error(ErrorCPP);
 
 }
 

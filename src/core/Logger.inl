@@ -4,16 +4,15 @@
 namespace ovk {
 namespace core {
 
-template <typename... Ts> void logger::LogStatus(bool WriteCondition, int IncrementLevel, const
-  std::string &Format, const Ts &... Args) const {
+template <typename... Ts> void logger::LogError(bool WriteCondition, const std::string &Format,
+  const Ts &... Args) const {
 
-  if (LoggingStatus() && WriteCondition) {
-    std::string Message = "ovk :: ";
-    for (int iIncrement = 0; iIncrement+1 < IncrementLevel; ++iIncrement) Message += "  ";
-    Message += StringPrint(Format, Args...);
+  if (LoggingErrors() && WriteCondition) {
+    std::string Prefix = "ovk :: [!] ERROR: ";
+    std::string Message = StringPrint(Format, Args...);
     Message = StringReplace(Message, "@rank@", FormatNumber(Rank_));
-    fprintf(stdout, "%s\n", Message.c_str());
-    fflush(stdout);
+    fprintf(stderr, "%s%s\n", Prefix.c_str(), Message.c_str());
+    fflush(stderr);
   }
 
 }
@@ -22,22 +21,43 @@ template <typename... Ts> void logger::LogWarning(bool WriteCondition, const std
   const Ts &... Args) const {
 
   if (LoggingWarnings() && WriteCondition) {
-    std::string Message = "ovk :: WARNING: " + StringPrint(Format, Args...);
+    std::string Prefix = "ovk :: [!] WARNING: ";
+    std::string Message = StringPrint(Format, Args...);
     Message = StringReplace(Message, "@rank@", FormatNumber(Rank_));
-    fprintf(stderr, "%s\n", Message.c_str());
+    fprintf(stderr, "%s%s\n", Prefix.c_str(), Message.c_str());
     fflush(stderr);
   }
 
 }
 
-template <typename... Ts> void logger::LogError(bool WriteCondition, const std::string &Format,
-  const Ts &... Args) const {
+template <typename... Ts> void logger::LogStatus(bool WriteCondition, int IncrementLevel, const
+  std::string &Format, const Ts &... Args) const {
 
-  if (LoggingErrors() && WriteCondition) {
-    std::string Message = "ovk :: ERROR: " + StringPrint(Format, Args...);
+  if (LoggingStatus() && WriteCondition) {
+    std::string Prefix = "ovk :: [-] ";
+//     for (int iIncrement = 0; iIncrement < IncrementLevel; ++iIncrement) Prefix += ": ";
+    for (int iIncrement = 0; iIncrement+1 < IncrementLevel; ++iIncrement) Prefix += "  ";
+    if (IncrementLevel > 0) Prefix += "* ";
+    std::string Message = StringPrint(Format, Args...);
     Message = StringReplace(Message, "@rank@", FormatNumber(Rank_));
-    fprintf(stderr, "%s\n", Message.c_str());
-    fflush(stderr);
+    fprintf(stdout, "%s%s\n", Prefix.c_str(), Message.c_str());
+    fflush(stdout);
+  }
+
+}
+
+template <typename... Ts> void logger::LogDebug(bool WriteCondition, int IncrementLevel, const
+  std::string &Format, const Ts &... Args) const {
+
+  if (LoggingDebug() && WriteCondition) {
+    std::string Prefix = "ovk :: [ ] ";
+//     for (int iIncrement = 0; iIncrement < IncrementLevel; ++iIncrement) Prefix += ": ";
+    for (int iIncrement = 0; iIncrement+1 < IncrementLevel; ++iIncrement) Prefix += "  ";
+    if (IncrementLevel > 0) Prefix += "* ";
+    std::string Message = StringPrint(Format, Args...);
+    Message = StringReplace(Message, "@rank@", FormatNumber(Rank_));
+    fprintf(stdout, "%s%s\n", Prefix.c_str(), Message.c_str());
+    fflush(stdout);
   }
 
 }

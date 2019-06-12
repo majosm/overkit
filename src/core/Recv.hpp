@@ -4,14 +4,11 @@
 #ifndef OVK_CORE_RECV_HPP_INCLUDED
 #define OVK_CORE_RECV_HPP_INCLUDED
 
-#include <ovk/core/Array.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Constants.hpp>
-#include <ovk/core/Connectivity.hpp>
+#include <ovk/core/Context.hpp>
 #include <ovk/core/DataType.hpp>
-#include <ovk/core/Exchange.hpp>
 #include <ovk/core/Global.hpp>
-#include <ovk/core/Profiler.hpp>
 #include <ovk/core/RecvMap.hpp>
 #include <ovk/core/Request.hpp>
 #include <ovk/core/TypeTraits.hpp>
@@ -56,11 +53,11 @@ private:
 
   class concept {
   public:
-    virtual ~concept() {}
+    virtual ~concept() noexcept {}
     virtual request Recv(void **ReceiverValues) = 0;
   };
 
-  template <typename T> class model : public concept {
+  template <typename T> class model final : public concept {
   public:
     explicit model(T Recv):
       Recv_(std::move(Recv))
@@ -76,8 +73,8 @@ private:
 
 };
 
-recv MakeRecv(comm_view Comm, const recv_map &RecvMap, data_type ValueType, int Count, int Tag,
-  profiler &Profiler);
+recv CreateRecv(std::shared_ptr<context> Context, comm_view Comm, const recv_map &RecvMap, data_type
+  ValueType, int Count, int Tag);
 
 }}
 

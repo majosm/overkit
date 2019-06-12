@@ -25,19 +25,19 @@ inline tuple<int> cart::GetPeriod(const tuple<int> &Tuple) const {
   switch (PeriodicStorage_) {
   case periodic_storage::UNIQUE:
     for (int iDim = 0; iDim < OVK_MAX_DIMS; ++iDim) {
-      if (Periodic_[iDim]) {
+      if (Periodic_(iDim)) {
         int PeriodSize = Range_.Size(iDim);
-        int Offset = Tuple[iDim] - Range_.Begin(iDim);
-        Period[iDim] = Offset/PeriodSize - int(Offset % PeriodSize < 0);
+        int Offset = Tuple(iDim) - Range_.Begin(iDim);
+        Period(iDim) = Offset/PeriodSize - int(Offset % PeriodSize < 0);
       }
     }
     break;
   case periodic_storage::DUPLICATED:
     for (int iDim = 0; iDim < OVK_MAX_DIMS; ++iDim) {
-      if (Periodic_[iDim]) {
+      if (Periodic_(iDim)) {
         int PeriodSize = Range_.Size(iDim)-1;
-        int Offset = Tuple[iDim] - Range_.Begin(iDim);
-        Period[iDim] = Offset/PeriodSize - int(Offset % PeriodSize < 0);
+        int Offset = Tuple(iDim) - Range_.Begin(iDim);
+        Period(iDim) = Offset/PeriodSize - int(Offset % PeriodSize < 0);
       }
     }
     break;
@@ -54,19 +54,19 @@ inline tuple<int> cart::PeriodicAdjust(const tuple<int> &Tuple) const {
   switch (PeriodicStorage_) {
   case periodic_storage::UNIQUE:
     for (int iDim = 0; iDim < OVK_MAX_DIMS; ++iDim) {
-      if (Periodic_[iDim]) {
+      if (Periodic_(iDim)) {
         int PeriodSize = Range_.Size(iDim);
-        int Mod = (Tuple[iDim] - Range_.Begin(iDim)) % PeriodSize;
-        AdjustedTuple[iDim] = Range_.Begin(iDim) + Mod + PeriodSize * (Mod < 0);
+        int Mod = (Tuple(iDim) - Range_.Begin(iDim)) % PeriodSize;
+        AdjustedTuple(iDim) = Range_.Begin(iDim) + Mod + PeriodSize * (Mod < 0);
       }
     }
     break;
   case periodic_storage::DUPLICATED:
     for (int iDim = 0; iDim < OVK_MAX_DIMS; ++iDim) {
-      if (Periodic_[iDim]) {
+      if (Periodic_(iDim)) {
         int PeriodSize = Range_.Size(iDim)-1;
-        int Mod = (Tuple[iDim] - Range_.Begin(iDim)) % PeriodSize;
-        AdjustedTuple[iDim] = Range_.Begin(iDim) + Mod + PeriodSize * (Mod < 0);
+        int Mod = (Tuple(iDim) - Range_.Begin(iDim)) % PeriodSize;
+        AdjustedTuple(iDim) = Range_.Begin(iDim) + Mod + PeriodSize * (Mod < 0);
       }
     }
     break;

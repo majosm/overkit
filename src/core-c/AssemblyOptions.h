@@ -21,63 +21,64 @@ void ovkDestroyAssemblyOptions(ovk_assembly_options **Options);
 void ovkGetAssemblyOptionsDimension(const ovk_assembly_options *Options, int *NumDims);
 void ovkGetAssemblyOptionsGridCount(const ovk_assembly_options *Options, int *NumGrids);
 
-void ovkGetAssemblyOptionOverlappable(const ovk_assembly_options *Options, int OverlappingGridID,
-  int OverlappedGridID, bool *Overlappable);
-void ovkSetAssemblyOptionOverlappable(ovk_assembly_options *Options, int OverlappingGridID,
-  int OverlappedGridID, bool Overlappable);
+void ovkGetAssemblyOptionOverlappable(const ovk_assembly_options *Options, int MGridID, int NGridID,
+  bool *Overlappable);
+void ovkSetAssemblyOptionOverlappable(ovk_assembly_options *Options, int MGridID, int NGridID, bool
+  Overlappable);
 
-void ovkGetAssemblyOptionOverlapTolerance(const ovk_assembly_options *Options, int OverlappingGridID,
-  int OverlappedGridID, double *OverlapTolerance);
-void ovkSetAssemblyOptionOverlapTolerance(ovk_assembly_options *Options, int OverlappingGridID,
-  int OverlappedGridID, double OverlapTolerance);
+void ovkGetAssemblyOptionOverlapTolerance(const ovk_assembly_options *Options, int MGridID, int
+  NGridID, double *OverlapTolerance);
+void ovkSetAssemblyOptionOverlapTolerance(ovk_assembly_options *Options, int MGridID, int NGridID,
+  double OverlapTolerance);
 
-void ovkGetAssemblyOptionOverlapAccelDepthAdjust(const ovk_assembly_options *Options,
-  int OverlappingGridID, double *OverlapAccelDepthAdjust);
-void ovkSetAssemblyOptionOverlapAccelDepthAdjust(ovk_assembly_options *Options,
-  int OverlappingGridID, double OverlapAccelDepthAdjust);
+void ovkGetAssemblyOptionOverlapAccelDepthAdjust(const ovk_assembly_options *Options, int MGridID,
+  double *OverlapAccelDepthAdjust);
+void ovkSetAssemblyOptionOverlapAccelDepthAdjust(ovk_assembly_options *Options, int MGridID, double
+  OverlapAccelDepthAdjust);
 
-void ovkGetAssemblyOptionOverlapAccelResolutionAdjust(const ovk_assembly_options *Options,
-  int OverlappingGridID, double *OverlapAccelResolutionAdjust);
-void ovkSetAssemblyOptionOverlapAccelResolutionAdjust(ovk_assembly_options *Options,
-  int OverlappingGridID, double OverlapAccelResolutionAdjust);
+void ovkGetAssemblyOptionOverlapAccelResolutionAdjust(const ovk_assembly_options *Options, int
+  MGridID, double *OverlapAccelResolutionAdjust);
+void ovkSetAssemblyOptionOverlapAccelResolutionAdjust(ovk_assembly_options *Options, int MGridID,
+  double OverlapAccelResolutionAdjust);
 
-void ovkGetAssemblyOptionInferBoundaries(const ovk_assembly_options *Options, int GridID,
-  bool *InferBoundaries);
-void ovkSetAssemblyOptionInferBoundaries(ovk_assembly_options *Options, int GridID,
-  bool InferBoundaries);
+void ovkGetAssemblyOptionInferBoundaries(const ovk_assembly_options *Options, int GridID, bool
+  *InferBoundaries);
+void ovkSetAssemblyOptionInferBoundaries(ovk_assembly_options *Options, int GridID, bool
+  InferBoundaries);
 
-void ovkGetAssemblyOptionCutBoundaryHoles(const ovk_assembly_options *Options, int CuttingGridID,
-  int CutGridID, bool *CutBoundaryHoles);
-void ovkSetAssemblyOptionCutBoundaryHoles(ovk_assembly_options *Options, int CuttingGridID,
-  int CutGridID, bool CutBoundaryHoles);
+void ovkGetAssemblyOptionCutBoundaryHoles(const ovk_assembly_options *Options, int MGridID, int
+  NGridID, bool *CutBoundaryHoles);
+void ovkSetAssemblyOptionCutBoundaryHoles(ovk_assembly_options *Options, int MGridID, int NGridID,
+  bool CutBoundaryHoles);
 
-void ovkGetAssemblyOptionOccludes(const ovk_assembly_options *Options, int OccludingGridID,
-  int OccludedGridID, ovk_occludes *Occludes);
-void ovkSetAssemblyOptionOccludes(ovk_assembly_options *Options, int OccludingGridID,
-  int OccludedGridID, ovk_occludes Occludes);
+void ovkGetAssemblyOptionOccludes(const ovk_assembly_options *Options, int MGridID, int NGridID,
+  ovk_occludes *Occludes);
+void ovkSetAssemblyOptionOccludes(ovk_assembly_options *Options, int MGridID, int NGridID,
+  ovk_occludes Occludes);
 
-void ovkGetAssemblyOptionEdgePadding(const ovk_assembly_options *Options, int OccludingGridID,
-  int OccludedGridID, int *EdgePadding);
-void ovkSetAssemblyOptionEdgePadding(ovk_assembly_options *Options, int OccludingGridID,
-  int OccludedGridID, int EdgePadding);
+void ovkGetAssemblyOptionEdgePadding(const ovk_assembly_options *Options, int MGridID, int NGridID,
+  int *EdgePadding);
+void ovkSetAssemblyOptionEdgePadding(ovk_assembly_options *Options, int MGridID, int NGridID, int
+  EdgePadding);
 
-void ovkGetAssemblyOptionEdgeSmoothing(const ovk_assembly_options *Options, int OccludedGridID,
-  int *EdgeSmoothing);
-void ovkSetAssemblyOptionEdgeSmoothing(ovk_assembly_options *Options, int OccludedGridID,
-  int EdgeSmoothing);
+void ovkGetAssemblyOptionEdgeSmoothing(const ovk_assembly_options *Options, int NGridID, int
+  *EdgeSmoothing);
+void ovkSetAssemblyOptionEdgeSmoothing(ovk_assembly_options *Options, int NGridID, int
+  EdgeSmoothing);
 
-void ovkGetAssemblyOptionConnectionType(const ovk_assembly_options *Options, int DonorGridID,
-  int ReceiverGridID, ovk_connection_type *ConnectionType);
-void ovkSetAssemblyOptionConnectionType(ovk_assembly_options *Options, int DonorGridID,
-  int ReceiverGridID, ovk_connection_type ConnectionType);
+void ovkGetAssemblyOptionConnectionType(const ovk_assembly_options *Options, int MGridID, int
+  NGridID, ovk_connection_type *ConnectionType);
+void ovkSetAssemblyOptionConnectionType(ovk_assembly_options *Options, int MGridID, int NGridID,
+  ovk_connection_type ConnectionType);
 
-void ovkGetAssemblyOptionFringeSize(const ovk_assembly_options *Options, int GridID, int *FringeSize);
-void ovkSetAssemblyOptionFringeSize(ovk_assembly_options *Options, int GridID, int FringeSize);
+void ovkGetAssemblyOptionFringeSize(const ovk_assembly_options *Options, int NGridID, int
+  *FringeSize);
+void ovkSetAssemblyOptionFringeSize(ovk_assembly_options *Options, int NGridID, int FringeSize);
 
-void ovkGetAssemblyOptionMinimizeOverlap(const ovk_assembly_options *Options, int DonorGridID,
-  int ReceiverGridID, bool *MinimizeOverlap);
-void ovkSetAssemblyOptionMinimizeOverlap(ovk_assembly_options *Options, int DonorGridID,
-  int ReceiverGridID, bool MinimizeOverlap);
+void ovkGetAssemblyOptionMinimizeOverlap(const ovk_assembly_options *Options, int MGridID, int
+  NGridID, bool *MinimizeOverlap);
+void ovkSetAssemblyOptionMinimizeOverlap(ovk_assembly_options *Options, int MGridID, int NGridID,
+  bool MinimizeOverlap);
 
 #ifdef __cplusplus
 }

@@ -32,15 +32,6 @@ tuple<int> MapToUniformCell(const tuple<int> &Origin, const tuple<int> &CellSize
 
 }
 
-partition_hash::partition_hash():
-  NumDims_(2),
-  Comm_(MPI_COMM_NULL),
-  GlobalRange_(MakeEmptyRange(2)),
-  LocalRange_(MakeEmptyRange(2)),
-  BinSize_(MakeUniformTuple<int>(0)),
-  MaxBinPartitions_(0)
-{}
-
 partition_hash::partition_hash(int NumDims, comm_view Comm):
   NumDims_(NumDims),
   Comm_(Comm),
@@ -112,15 +103,15 @@ partition_hash::partition_hash(int NumDims, comm_view Comm, const range &GlobalR
   Requests.Reserve(NumOverlappedBins + NumPartitions);
 
   auto Isend = [&Requests](const void *Buffer, int Count, MPI_Datatype DataType, int DestRank, int
-    Tag, MPI_Comm Comm) {
+    Tag, MPI_Comm SendComm) {
     MPI_Request &Request = Requests.Append();
-    MPI_Isend(Buffer, Count, DataType, DestRank, Tag, Comm, &Request);
+    MPI_Isend(Buffer, Count, DataType, DestRank, Tag, SendComm, &Request);
 
   };
   auto Irecv = [&Requests](void *Buffer, int Count, MPI_Datatype DataType, int SourceRank, int Tag,
-    MPI_Comm Comm) {
+    MPI_Comm RecvComm) {
     MPI_Request &Request = Requests.Append();
-    MPI_Irecv(Buffer, Count, DataType, SourceRank, Tag, Comm, &Request);
+    MPI_Irecv(Buffer, Count, DataType, SourceRank, Tag, RecvComm, &Request);
   };
 
   if (RankHasBin) {

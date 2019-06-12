@@ -24,13 +24,13 @@ inline void ExtendRange(range &Range, const tuple<int> &Tuple) {
 
   if (!Range.Empty()) {
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      Range.Begin(iDim) = Min(Range.Begin(iDim), Tuple[iDim]);
-      Range.End(iDim) = Max(Range.End(iDim), Tuple[iDim]+1);
+      Range.Begin(iDim) = Min(Range.Begin(iDim), Tuple(iDim));
+      Range.End(iDim) = Max(Range.End(iDim), Tuple(iDim)+1);
     }
   } else {
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      Range.Begin(iDim) = Tuple[iDim];
-      Range.End(iDim) = Tuple[iDim]+1;
+      Range.Begin(iDim) = Tuple(iDim);
+      Range.End(iDim) = Tuple(iDim)+1;
     }
   }
 
@@ -80,10 +80,10 @@ inline range IntersectRanges(const range &LeftRange, const range &RightRange) {
 inline void ClampToRange(const range &Range, tuple<int> &Tuple) {
 
   for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    if (Tuple[iDim] < Range.Begin(iDim)) {
-      Tuple[iDim] = Range.Begin(iDim);
-    } else if (Tuple[iDim] >= Range.End(iDim)) {
-      Tuple[iDim] = Range.End(iDim)-1;
+    if (Tuple(iDim) < Range.Begin(iDim)) {
+      Tuple(iDim) = Range.Begin(iDim);
+    } else if (Tuple(iDim) >= Range.End(iDim)) {
+      Tuple(iDim) = Range.End(iDim)-1;
     }
   }
 

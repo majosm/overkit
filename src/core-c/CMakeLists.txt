@@ -17,12 +17,12 @@ set(LOCAL_TARGETS)
 
 set(SOURCES
   AssemblyOptions.cpp
-  Connectivity.cpp
-  ConnectivityD.cpp
-  ConnectivityR.cpp
+  ConnectivityComponent.cpp
+  ConnectivityM.cpp
+  ConnectivityN.cpp
   Context.cpp
   Domain.cpp
-  Exchange.cpp
+  Exchanger.cpp
   Grid.cpp
   Request.cpp
 )
@@ -30,14 +30,15 @@ set(SOURCES
 set(PUBLIC_HEADERS
   AssemblyOptions.h
   Box.h
-  Connectivity.h
-  ConnectivityD.h
-  ConnectivityR.h
+  ConnectivityComponent.h
+  ConnectivityM.h
+  ConnectivityN.h
   Constants.h
   Context.h
   DataType.h
   Domain.h
-  Exchange.h
+  Error.h
+  Exchanger.h
   Global.h
   Grid.h
   Request.h

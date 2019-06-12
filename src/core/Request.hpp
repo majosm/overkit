@@ -28,7 +28,7 @@ public:
     Request_(new model<T>(std::forward<T>(Request)))
   {}
 
-  ~request() {
+  ~request() noexcept {
     if (Request_) Request_->Wait();
   }
 
@@ -61,17 +61,17 @@ private:
 
   class concept {
   public:
-    virtual ~concept() {}
+    virtual ~concept() noexcept {}
     virtual array_view<MPI_Request> MPIRequests() = 0;
     virtual void Finish(int iMPIRequest) = 0;
     virtual void Wait() = 0;
-    virtual void StartProfileMemAlloc() const = 0;
-    virtual void EndProfileMemAlloc() const = 0;
-    virtual void StartProfileMPI() const = 0;
-    virtual void EndProfileMPI() const = 0;
+    virtual void StartWaitTime() const = 0;
+    virtual void StopWaitTime() const = 0;
+    virtual void StartMPITime() const = 0;
+    virtual void StopMPITime() const = 0;
   };
 
-  template <typename T> class model : public concept {
+  template <typename T> class model final : public concept {
   public:
     explicit model(T Request):
       Request_(std::move(Request))
@@ -85,17 +85,17 @@ private:
     virtual void Wait() override {
       Request_.Wait();
     }
-    virtual void StartProfileMemAlloc() const override {
-      Request_.StartProfileMemAlloc();
+    virtual void StartWaitTime() const override {
+      Request_.StartWaitTime();
     }
-    virtual void EndProfileMemAlloc() const override {
-      Request_.EndProfileMemAlloc();
+    virtual void StopWaitTime() const override {
+      Request_.StopWaitTime();
     }
-    virtual void StartProfileMPI() const override {
-      Request_.StartProfileMPI();
+    virtual void StartMPITime() const override {
+      Request_.StartMPITime();
     }
-    virtual void EndProfileMPI() const override {
-      Request_.EndProfileMPI();
+    virtual void StopMPITime() const override {
+      Request_.StopMPITime();
     }
   private:
     T Request_;
@@ -103,28 +103,28 @@ private:
 
   std::unique_ptr<concept> Request_;
 
-  array_view<MPI_Request> MPIRequests() {
+  array_view<MPI_Request> MPIRequests_() {
     return Request_->MPIRequests();
   }
 
-  void Finish(int iMPIRequest) {
+  void Finish_(int iMPIRequest) {
     Request_->Finish(iMPIRequest);
   }
 
-  void StartProfileMemAlloc() {
-    Request_->StartProfileMemAlloc();
+  void StartWaitTime_() {
+    Request_->StartWaitTime();
   }
 
-  void EndProfileMemAlloc() {
-    Request_->EndProfileMemAlloc();
+  void StopWaitTime_() {
+    Request_->StopWaitTime();
   }
 
-  void StartProfileMPI() {
-    Request_->StartProfileMPI();
+  void StartMPITime_() {
+    Request_->StartMPITime();
   }
 
-  void EndProfileMPI() {
-    Request_->EndProfileMPI();
+  void StopMPITime_() {
+    Request_->StopMPITime();
   }
 
 };

@@ -9,8 +9,7 @@
 #include <ovk/core/Cart.hpp>
 #include <ovk/core/CollectMap.hpp>
 #include <ovk/core/Constants.hpp>
-#include <ovk/core/Connectivity.hpp>
-#include <ovk/core/ConnectivityD.hpp>
+#include <ovk/core/Context.hpp>
 #include <ovk/core/DataType.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Profiler.hpp>
@@ -57,11 +56,11 @@ private:
 
   class concept {
   public:
-    virtual ~concept() {}
+    virtual ~concept() noexcept {}
     virtual void Collect(const void * const *FieldValues, void **PackedValues) = 0;
   };
 
-  template <typename T> class model : public concept {
+  template <typename T> class model final : public concept {
   public:
     model(T Collect):
       Collect_(std::move(Collect))
@@ -78,111 +77,112 @@ private:
 };
 
 namespace collect_internal {
-collect MakeCollectNoneRow(comm_view Comm, const cart &Cart, const range &LocalRange, const
-  collect_map &CollectMap, data_type ValueType, int Count, const range &FieldValuesRange,
-  profiler &Profiler);
-collect MakeCollectNoneCol(comm_view Comm, const cart &Cart, const range &LocalRange, const
-  collect_map &CollectMap, data_type ValueType, int Count, const range &FieldValuesRange,
-  profiler &Profiler);
+collect CreateCollectNoneRow(std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart,
+  const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
+  range &FieldValuesRange);
+collect CreateCollectNoneCol(std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart,
+  const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
+  range &FieldValuesRange);
 }
-inline collect MakeCollectNone(comm_view Comm, const cart &Cart, const range &LocalRange, const
-  collect_map &CollectMap, data_type ValueType, int Count, const range &FieldValuesRange,
-  array_layout FieldValuesLayout, profiler &Profiler) {
+inline collect CreateCollectNone(std::shared_ptr<context> Context, comm_view Comm, const cart &Cart,
+  const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
+  range &FieldValuesRange, array_layout FieldValuesLayout) {
   switch (FieldValuesLayout) {
   case array_layout::ROW_MAJOR:
-    return collect_internal::MakeCollectNoneRow(Comm, Cart, LocalRange, CollectMap, ValueType,
-      Count, FieldValuesRange, Profiler);
+    return collect_internal::CreateCollectNoneRow(std::move(Context), Comm, Cart, LocalRange,
+      CollectMap, ValueType, Count, FieldValuesRange);
   case array_layout::COLUMN_MAJOR:
-    return collect_internal::MakeCollectNoneCol(Comm, Cart, LocalRange, CollectMap, ValueType,
-      Count, FieldValuesRange, Profiler);
+    return collect_internal::CreateCollectNoneCol(std::move(Context), Comm, Cart, LocalRange,
+      CollectMap, ValueType, Count, FieldValuesRange);
   }
   return {};
 }
 
 namespace collect_internal {
-collect MakeCollectAnyRow(comm_view Comm, const cart &Cart, const range &LocalRange, const
-  collect_map &CollectMap, data_type ValueType, int Count, const range &FieldValuesRange,
-  profiler &Profiler);
-collect MakeCollectAnyCol(comm_view Comm, const cart &Cart, const range &LocalRange, const
-  collect_map &CollectMap, data_type ValueType, int Count, const range &FieldValuesRange,
-  profiler &Profiler);
+collect CreateCollectAnyRow(std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart,
+  const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
+  range &FieldValuesRange);
+collect CreateCollectAnyCol(std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart,
+  const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
+  range &FieldValuesRange);
 }
-inline collect MakeCollectAny(comm_view Comm, const cart &Cart, const range &LocalRange, const
-  collect_map &CollectMap, data_type ValueType, int Count, const range &FieldValuesRange,
-  array_layout FieldValuesLayout, profiler &Profiler) {
+inline collect CreateCollectAny(std::shared_ptr<context> Context, comm_view Comm, const cart &Cart,
+  const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
+  range &FieldValuesRange, array_layout FieldValuesLayout) {
   switch (FieldValuesLayout) {
   case array_layout::ROW_MAJOR:
-    return collect_internal::MakeCollectAnyRow(Comm, Cart, LocalRange, CollectMap, ValueType,
-      Count, FieldValuesRange, Profiler);
+    return collect_internal::CreateCollectAnyRow(std::move(Context), Comm, Cart, LocalRange,
+      CollectMap, ValueType, Count, FieldValuesRange);
   case array_layout::COLUMN_MAJOR:
-    return collect_internal::MakeCollectAnyCol(Comm, Cart, LocalRange, CollectMap, ValueType,
-      Count, FieldValuesRange, Profiler);
+    return collect_internal::CreateCollectAnyCol(std::move(Context), Comm, Cart, LocalRange,
+      CollectMap, ValueType, Count, FieldValuesRange);
   }
   return {};
 }
 
 namespace collect_internal {
-collect MakeCollectNotAllRow(comm_view Comm, const cart &Cart, const range &LocalRange, const
-  collect_map &CollectMap, data_type ValueType, int Count, const range &FieldValuesRange,
-  profiler &Profiler);
-collect MakeCollectNotAllCol(comm_view Comm, const cart &Cart, const range &LocalRange, const
-  collect_map &CollectMap, data_type ValueType, int Count, const range &FieldValuesRange,
-  profiler &Profiler);
+collect CreateCollectNotAllRow(std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart,
+  const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
+  range &FieldValuesRange);
+collect CreateCollectNotAllCol(std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart,
+  const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
+  range &FieldValuesRange);
 }
-inline collect MakeCollectNotAll(comm_view Comm, const cart &Cart, const range &LocalRange, const
-  collect_map &CollectMap, data_type ValueType, int Count, const range &FieldValuesRange,
-  array_layout FieldValuesLayout, profiler &Profiler) {
+inline collect CreateCollectNotAll(std::shared_ptr<context> Context, comm_view Comm, const cart
+  &Cart, const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count,
+  const range &FieldValuesRange, array_layout FieldValuesLayout) {
   switch (FieldValuesLayout) {
   case array_layout::ROW_MAJOR:
-    return collect_internal::MakeCollectNotAllRow(Comm, Cart, LocalRange, CollectMap, ValueType,
-      Count, FieldValuesRange, Profiler);
+    return collect_internal::CreateCollectNotAllRow(std::move(Context), Comm, Cart, LocalRange,
+      CollectMap, ValueType, Count, FieldValuesRange);
   case array_layout::COLUMN_MAJOR:
-    return collect_internal::MakeCollectNotAllCol(Comm, Cart, LocalRange, CollectMap, ValueType,
-      Count, FieldValuesRange, Profiler);
+    return collect_internal::CreateCollectNotAllCol(std::move(Context), Comm, Cart, LocalRange,
+      CollectMap, ValueType, Count, FieldValuesRange);
   }
   return {};
 }
 
 namespace collect_internal {
-collect MakeCollectAllRow(comm_view Comm, const cart &Cart, const range &LocalRange, const
-  collect_map &CollectMap, data_type ValueType, int Count, const range &FieldValuesRange,
-  profiler &Profiler);
-collect MakeCollectAllCol(comm_view Comm, const cart &Cart, const range &LocalRange, const
-  collect_map &CollectMap, data_type ValueType, int Count, const range &FieldValuesRange,
-  profiler &Profiler);
+collect CreateCollectAllRow(std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart,
+  const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
+  range &FieldValuesRange);
+collect CreateCollectAllCol(std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart,
+  const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
+  range &FieldValuesRange);
 }
-inline collect MakeCollectAll(comm_view Comm, const cart &Cart, const range &LocalRange, const
-  collect_map &CollectMap, data_type ValueType, int Count, const range &FieldValuesRange,
-  array_layout FieldValuesLayout, profiler &Profiler) {
+inline collect CreateCollectAll(std::shared_ptr<context> Context, comm_view Comm, const cart &Cart,
+  const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
+  range &FieldValuesRange, array_layout FieldValuesLayout) {
   switch (FieldValuesLayout) {
   case array_layout::ROW_MAJOR:
-    return collect_internal::MakeCollectAllRow(Comm, Cart, LocalRange, CollectMap, ValueType,
-      Count, FieldValuesRange, Profiler);
+    return collect_internal::CreateCollectAllRow(std::move(Context), Comm, Cart, LocalRange,
+      CollectMap, ValueType, Count, FieldValuesRange);
   case array_layout::COLUMN_MAJOR:
-    return collect_internal::MakeCollectAllCol(Comm, Cart, LocalRange, CollectMap, ValueType,
-      Count, FieldValuesRange, Profiler);
+    return collect_internal::CreateCollectAllCol(std::move(Context), Comm, Cart, LocalRange,
+      CollectMap, ValueType, Count, FieldValuesRange);
   }
   return {};
 }
 
 namespace collect_internal {
-collect MakeCollectInterpRow(comm_view Comm, const cart &Cart, const range &LocalRange, const
-  collect_map &CollectMap, data_type ValueType, int Count, const range &FieldValuesRange,
-  profiler &Profiler, array_view<const double,3> InterpCoefs);
-collect MakeCollectInterpCol(comm_view Comm, const cart &Cart, const range &LocalRange, const
-  collect_map &CollectMap, data_type ValueType, int Count, const range &FieldValuesRange,
-  profiler &Profiler, array_view<const double,3> InterpCoefs);
+collect CreateCollectInterpRow(std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart,
+  const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
+  range &FieldValuesRange, array_view<const double,3> InterpCoefs);
+collect CreateCollectInterpCol(std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart,
+  const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
+  range &FieldValuesRange, array_view<const double,3> InterpCoefs);
 }
-inline collect MakeCollectInterp(comm_view Comm, const cart &Cart, const range &LocalRange, const
-  collect_map &CollectMap, data_type ValueType, int Count, const range &FieldValuesRange,
-  array_layout FieldValuesLayout, profiler &Profiler, array_view<const double,3> InterpCoefs) {
+inline collect CreateCollectInterp(std::shared_ptr<context> Context, comm_view Comm, const cart
+  &Cart, const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count,
+  const range &FieldValuesRange, array_layout FieldValuesLayout, array_view<const double,3>
+  InterpCoefs) {
   switch (FieldValuesLayout) {
   case array_layout::ROW_MAJOR:
-    return collect_internal::MakeCollectInterpRow(Comm, Cart, LocalRange, CollectMap, ValueType,
-      Count, FieldValuesRange, Profiler, InterpCoefs);
+    return collect_internal::CreateCollectInterpRow(std::move(Context), Comm, Cart, LocalRange,
+      CollectMap, ValueType, Count, FieldValuesRange, InterpCoefs);
   case array_layout::COLUMN_MAJOR:
-    return collect_internal::MakeCollectInterpCol(Comm, Cart, LocalRange, CollectMap, ValueType,
-      Count, FieldValuesRange, Profiler, InterpCoefs);
+    return collect_internal::CreateCollectInterpCol(std::move(Context), Comm, Cart, LocalRange,
+      CollectMap, ValueType, Count, FieldValuesRange, InterpCoefs);
   }
   return {};
 }

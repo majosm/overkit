@@ -16,22 +16,22 @@ set(LOCAL_TARGETS)
 #--------------
 
 set(SOURCES
-  Assembly.cpp
   AssemblyOptions.cpp
   CollectBase.cpp
   CollectCol.cpp
   CollectMap.cpp
   CollectRow.cpp
-  Connectivity.cpp
-  ConnectivityD.cpp
-  ConnectivityR.cpp
+  ConnectivityComponent.cpp
+  ConnectivityM.cpp
+  ConnectivityN.cpp
   Context.cpp
   Debug.cpp
   Disperse.cpp
   DisperseBase.cpp
   Domain.cpp
-  ErrorHandler.cpp
-  Exchange.cpp
+  DomainBase.cpp
+  Error.cpp
+  Exchanger.cpp
   Grid.cpp
   Halo.cpp
   Logger.cpp
@@ -56,20 +56,22 @@ set(PUBLIC_HEADERS
   Box.inl
   Cart.hpp
   Cart.inl
-  Connectivity.hpp
-  ConnectivityD.hpp
-  ConnectivityR.hpp
+  ConnectivityComponent.hpp
+  ConnectivityM.hpp
+  ConnectivityN.hpp
   Constants.hpp
   Context.hpp
   DataType.hpp
   Domain.hpp
+  Domain.inl
   Editor.hpp
   Editor.inl
   Elem.hpp
   Elem.inl
-  Exchange.hpp
+  Error.hpp
   Event.hpp
   Event.inl
+  Exchanger.hpp
   FloatingRef.hpp
   Global.hpp
   Grid.hpp
@@ -101,8 +103,12 @@ set(INTERNAL_HEADERS
   CollectMap.hpp
   CollectNone.hpp
   CollectNotAll.hpp
+  Component.hpp
+  Component.inl
   Comm.hpp
   Comm.inl
+  ConnectivityComponentBase.h
+  ConnectivityComponentBase.inl
   ConstantsBase.h
   ConstantsBase.inl
   DataTypeBase.h
@@ -113,7 +119,10 @@ set(INTERNAL_HEADERS
   DisperseAppend.hpp
   DisperseBase.hpp
   DisperseOverwrite.hpp
-  ErrorHandler.hpp
+  DomainBase.hpp
+  DomainBase.h
+  DomainBase.inl
+  ErrorBase.h
   FloatingRef.inl
   ForEach.hpp
   GlobalBase.h
@@ -137,6 +146,7 @@ set(INTERNAL_HEADERS
   ScopeGuard.inl
   Send.hpp
   SendMap.hpp
+  StringWrapper.hpp
   TextProcessing.hpp
   TextProcessing.inl
   TypeSequence.hpp

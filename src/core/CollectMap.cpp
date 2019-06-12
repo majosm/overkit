@@ -8,6 +8,7 @@
 #include "ovk/core/Cart.hpp"
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Debug.hpp"
+#include "ovk/core/FloatingRef.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Indexer.hpp"
 #include "ovk/core/Partition.hpp"
@@ -24,10 +25,11 @@ namespace ovk {
 namespace core {
 
 collect_map::collect_map():
-  MaxVertices_(0)
+  FloatingRefGenerator_(*this)
 {}
 
 collect_map::collect_map(const cart &Cart, const partition &Partition, array<int,3> CellExtents):
+  FloatingRefGenerator_(*this),
   CellExtents_(std::move(CellExtents))
 {
 
@@ -209,7 +211,7 @@ void collect_map::CreateSendData_(const cart &Cart, const partition &Partition) 
         if (SendMasks(iSend)(iPoint)) {
           tuple<int> Point = Indexer.ToTuple(iPoint);
           for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-            Send.Points(iDim,iSendPoint) = Point[iDim];
+            Send.Points(iDim,iSendPoint) = Point(iDim);
           }
           ++iSendPoint;
         }

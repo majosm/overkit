@@ -15,9 +15,6 @@ class cart {
 
 public:
 
-  // Remove this eventually?
-  cart() = default;
-
   cart(int NumDims);
   cart(int NumDims, const range &Range, const tuple<bool> &Periodic, periodic_storage
     PeriodicStorage);
@@ -29,8 +26,8 @@ public:
 
   const tuple<bool> &Periodic() const { return Periodic_; }
   tuple<bool> &Periodic() { return Periodic_; }
-  const bool &Periodic(int iDim) const { return Periodic_[iDim]; }
-  bool &Periodic(int iDim) { return Periodic_[iDim]; }
+  const bool &Periodic(int iDim) const { return Periodic_(iDim); }
+  bool &Periodic(int iDim) { return Periodic_(iDim); }
 
   const periodic_storage &PeriodicStorage() const { return PeriodicStorage_; }
   periodic_storage &PeriodicStorage() { return PeriodicStorage_; }

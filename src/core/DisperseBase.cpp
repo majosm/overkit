@@ -6,18 +6,18 @@
 #include "ovk/core/Array.hpp"
 #include "ovk/core/ArrayView.hpp"
 #include "ovk/core/Constants.hpp"
+#include "ovk/core/Context.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Indexer.hpp"
-#include "ovk/core/Profiler.hpp"
 #include "ovk/core/Range.hpp"
 
 namespace ovk {
 namespace core {
 
-template <array_layout Layout> disperse_base<Layout>::disperse_base(const array<int,2> &Points,
-  int Count, const range &FieldValuesRange, profiler &Profiler):
+template <array_layout Layout> disperse_base<Layout>::disperse_base(std::shared_ptr<context>
+  &&Context, const array<int,2> &Points, int Count, const range &FieldValuesRange):
+  Context_(std::move(Context)),
   Points_(Points),
-  Profiler_(&Profiler),
   Count_(Count),
   FieldValuesRange_(FieldValuesRange),
   FieldValuesIndexer_(FieldValuesRange)
@@ -27,9 +27,9 @@ template class disperse_base<array_layout::ROW_MAJOR>;
 template class disperse_base<array_layout::COLUMN_MAJOR>;
 
 template <typename T, array_layout Layout> disperse_base_for_type<T, Layout>::
-  disperse_base_for_type(const array<int,2> &Points, int Count, const range &FieldValuesRange,
-  profiler &Profiler):
-  parent_type(Points, Count, FieldValuesRange, Profiler)
+  disperse_base_for_type(std::shared_ptr<context> &&Context, const array<int,2> &Points, int Count,
+  const range &FieldValuesRange):
+  parent_type(std::move(Context), Points, Count, FieldValuesRange)
 {
   PackedValues_.Resize({Count_});
   FieldValues_.Resize({Count_});

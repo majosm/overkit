@@ -240,7 +240,7 @@ TEST_F(VectorTests, Copy) {
     EXPECT_EQ(Sum, 10);
   }
 
-  // Non-default-contructible, copy construct
+  // Non-default-contructible, copy assign
   {
     vector_nondefaultconstructible Vector1 = {{0},{1},{2},{3},{4}};
     vector_nondefaultconstructible Vector2;

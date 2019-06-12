@@ -11,30 +11,6 @@ static inline bool ovkValidLogLevel(ovk_log_level LogLevel) {
 
 }
 
-static inline bool ovkValidErrorHandlerType(ovk_error_handler_type ErrorHandlerType) {
-
-  switch (ErrorHandlerType) {
-  case OVK_ERROR_HANDLER_ABORT:
-  case OVK_ERROR_HANDLER_RETURN:
-    return true;
-  default:
-    return false;
-  }
-
-}
-
-static inline bool ovkValidError(ovk_error Error) {
-
-  return Error >= OVK_NO_ERROR && Error < OVK_MAX_ERROR;
-
-}
-
-static inline bool ovkValidDomainConfig(ovk_domain_config DomainConfig) {
-
-  return DomainConfig >= OVK_DOMAIN_CONFIG_NONE && DomainConfig <= OVK_DOMAIN_CONFIG_ALL;
-
-}
-
 static inline bool ovkValidPeriodicStorage(ovk_periodic_storage PeriodicStorage) {
 
   switch (PeriodicStorage) {

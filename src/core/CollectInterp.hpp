@@ -10,11 +10,15 @@
 #include <ovk/core/CollectBase.hpp>
 #include <ovk/core/CollectMap.hpp>
 #include <ovk/core/Constants.hpp>
+#include <ovk/core/Context.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Profiler.hpp>
 #include <ovk/core/Range.hpp>
 
 #include <mpi.h>
+
+#include <memory>
+#include <utility>
 
 namespace ovk {
 namespace core {
@@ -28,33 +32,28 @@ protected:
   using parent_type = collect_base_for_type<T, Layout>;
 
   using typename parent_type::cell_indexer;
+  using parent_type::Context_;
   using parent_type::CollectMap_;
-  using parent_type::Profiler_;
   using parent_type::Count_;
   using parent_type::FieldValues_;
   using parent_type::PackedValues_;
+  using parent_type::REDUCE_TIME;
 
 public:
 
   using typename parent_type::value_type;
 
-  collect_interp(comm_view Comm, const cart &Cart, const range &LocalRange, const collect_map
-    &CollectMap, int Count, const range &FieldValuesRange, profiler &Profiler,
+  collect_interp(std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart, const range
+    &LocalRange, const collect_map &CollectMap, int Count, const range &FieldValuesRange,
     array_view<const double,3> InterpCoefs):
-    parent_type(Comm, Cart, LocalRange, CollectMap, Count, FieldValuesRange, Profiler),
-    InterpCoefs_(InterpCoefs),
-    MemAllocTime_(GetProfilerTimerID(*Profiler_, "Collect::MemAlloc")),
-    ReduceTime_(GetProfilerTimerID(*Profiler_, "Collect::Reduce"))
+    parent_type(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count, FieldValuesRange),
+    InterpCoefs_(InterpCoefs)
   {
-
-    StartProfile(*Profiler_, MemAllocTime_);
 
     parent_type::AllocateRemoteValues_(RemoteValues_);
 
     VertexValues_.Resize({{Count_,CollectMap_->MaxVertices()}});
     VertexCoefs_.Resize({CollectMap_->MaxVertices()});
-
-    EndProfile(*Profiler_, MemAllocTime_);
 
   }
 
@@ -66,10 +65,12 @@ public:
 
   void Collect(const void * const *FieldValuesVoid, void **PackedValuesVoid) {
 
+    profiler &Profiler = Context_->core_Profiler();
+
     parent_type::SetBufferViews_(FieldValuesVoid, PackedValuesVoid);
     parent_type::RetrieveRemoteValues_(FieldValues_, RemoteValues_);
 
-    StartProfile(*Profiler_, ReduceTime_);
+    Profiler.Start(REDUCE_TIME);
 
     for (long long iCell = 0; iCell < CollectMap_->Count(); ++iCell) {
 
@@ -101,15 +102,13 @@ public:
 
     }
 
-    EndProfile(*Profiler_, ReduceTime_);
+    Profiler.Stop(REDUCE_TIME);
 
   }
 
 private:
 
   array_view<const double,3> InterpCoefs_;
-  int MemAllocTime_;
-  int ReduceTime_;
   array<array<value_type,2>> RemoteValues_;
   array<value_type,2> VertexValues_;
   array<double> VertexCoefs_;

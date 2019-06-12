@@ -3,8 +3,6 @@
 
 #include <overkit.h>
 
-// #include "ovk/core/ProfileUtils.h"
-
 #include <mpi.h>
 #include <math.h>
 #include <stdio.h>
@@ -84,22 +82,6 @@ int main(int argc, char **argv) {
   const char *HOPath = "../../data/small/XINTOUT.HO.2D";
   const char *XPath = "../../data/small/XINTOUT.X.2D";
 
-//   t_profiler *Profiler;
-//   CreateProfiler(&Profiler, MPI_COMM_WORLD);
-//   if (OVK_TIMERS) EnableProfiler(Profiler);
-//   int OverallTime = AddProfilerTimer(Profiler, "ReadInterp");
-//   int CreateTime = AddProfilerTimer(Profiler, "ReadInterp::Create");
-//   int DestroyTime = AddProfilerTimer(Profiler, "ReadInterp::Destroy");
-//   int ImportTime = AddProfilerTimer(Profiler, "ReadInterp::Import");
-//   int AssembleTime = AddProfilerTimer(Profiler, "ReadInterp::Assemble");
-//   int ExchangeTime = AddProfilerTimer(Profiler, "ReadInterp::Exchange");
-//   int CollectTime = AddProfilerTimer(Profiler, "ReadInterp::Exchange::Collect");
-//   int SendRecvTime = AddProfilerTimer(Profiler, "ReadInterp::Exchange::SendRecv");
-//   int DisperseTime = AddProfilerTimer(Profiler, "ReadInterp::Exchange::Disperse");
-
-//   StartProfileSync(Profiler, OverallTime, MPI_COMM_WORLD);
-//   StartProfileSync(Profiler, CreateTime, MPI_COMM_WORLD);
-
   int NumLocalGrids;
   input_grid *InputGrids;
   input_state *InputStates;
@@ -109,63 +91,70 @@ int main(int argc, char **argv) {
   ovkCreateContextParams(&ContextParams);
   ovkSetContextParamComm(ContextParams, MPI_COMM_WORLD);
   ovkSetContextParamLogLevel(ContextParams, OVK_LOG_ALL);
-  ovkSetContextParamErrorHandlerType(ContextParams, OVK_ERROR_HANDLER_ABORT);
 
   ovk_context *Context;
-  ovkCreateContext(&Context, ContextParams);
+  ovk_error CreateError;
+  ovkCreateContext(&Context, &ContextParams, &CreateError);
+  if (CreateError != OVK_ERROR_NONE) {
+    MPI_Abort(MPI_COMM_WORLD, 1);
+  }
 
-  ovkDestroyContextParams(&ContextParams);
+  ovk_shared_context *SharedContext;
+  ovkShareContext(&Context, &SharedContext);
 
   ovk_domain_params *DomainParams;
-  ovkCreateDomainParams(&DomainParams, 2);
+  ovkCreateDomainParams(&DomainParams);
   ovkSetDomainParamName(DomainParams, "Domain");
+  ovkSetDomainParamDimension(DomainParams, 2);
   ovkSetDomainParamComm(DomainParams, MPI_COMM_WORLD);
 
   ovk_domain *Domain;
-  ovkCreateDomain(Context, &Domain, DomainParams);
+  ovkCreateDomain(&Domain, SharedContext, &DomainParams);
 
-  ovkDestroyDomainParams(&DomainParams);
+  ovk_shared_domain *SharedDomain;
+  ovkShareDomain(&Domain, &SharedDomain);
 
-  ovkConfigureDomain(Domain, OVK_DOMAIN_CONFIG_CONNECTIVITY | OVK_DOMAIN_CONFIG_EXCHANGE);
+  const int CONNECTIVITY_ID = 1;
+  ovkCreateComponent(Domain, CONNECTIVITY_ID, OVK_COMPONENT_TYPE_CONNECTIVITY, NULL);
+
+  int GridIDs[] = {1, 2};
+  ovk_grid_params *MaybeGridParams[] = {NULL, NULL};
 
   for (iGrid = 0; iGrid < 2; ++iGrid) {
     int GridID = iGrid+1;
     input_grid *InputGrid = FindLocalGrid(NumLocalGrids, InputGrids, GridID);
     if (InputGrid) {
-      ovk_grid_params *GridParams;
-      ovkCreateGridParams(&GridParams, 2);
+      ovkCreateGridParams(MaybeGridParams+iGrid);
+      ovk_grid_params *GridParams = MaybeGridParams[iGrid];
       ovkSetGridParamName(GridParams, InputGrid->name);
+      ovkSetGridParamDimension(GridParams, 2);
       ovkSetGridParamComm(GridParams, InputGrid->comm);
       ovkSetGridParamSize(GridParams, InputGrid->global_size);
       ovkSetGridParamPeriodic(GridParams, InputGrid->periodic);
       ovkSetGridParamPeriodicStorage(GridParams, OVK_PERIODIC_STORAGE_UNIQUE);
       ovkSetGridParamPeriodicLength(GridParams, InputGrid->periodic_length);
       ovkSetGridParamLocalRange(GridParams, InputGrid->is, InputGrid->ie);
-      ovkCreateGridLocal(Domain, GridID, GridParams);
-      ovkDestroyGridParams(&GridParams);
-    } else {
-      ovkCreateGridRemote(Domain, GridID);
     }
   }
 
-//   EndProfile(Profiler, CreateTime);
-//   StartProfileSync(Profiler, ImportTime, MPI_COMM_WORLD);
+  ovkCreateGrids(Domain, 2, GridIDs, MaybeGridParams);
 
-  ovkImportXINTOUT(Domain, HOPath, XPath, 0, MPI_INFO_NULL);
+  ovk_error ImportError;
+  ovkImportXINTOUT(Domain, CONNECTIVITY_ID, HOPath, XPath, 0, MPI_INFO_NULL, &ImportError);
+  if (ImportError != OVK_ERROR_NONE) {
+    MPI_Abort(MPI_COMM_WORLD, 1);
+  }
 
-//   EndProfile(Profiler, ImportTime);
-//   StartProfileSync(Profiler, AssembleTime, MPI_COMM_WORLD);
+  ovk_exchanger *Exchanger;
+  ovkCreateExchanger(&Exchanger, SharedContext, NULL);
 
-  ovk_assembly_options *Options;
-  int GridIDs[2] = {1, 2};
-  ovkCreateAssemblyOptions(&Options, 2, 2, GridIDs);
+  ovk_exchanger_bindings *ExchangerBindings;
+  ovkCreateExchangerBindings(&ExchangerBindings);
+  ovkSetExchangerBindingsConnectivityComponentID(ExchangerBindings, 1);
+  ovkBindExchanger(Exchanger, SharedDomain, &ExchangerBindings);
 
-  ovkAssemble(Domain, Options);
-
-  ovkDestroyAssemblyOptions(&Options);
-
-//   EndProfile(Profiler, AssembleTime);
-// //   StartProfileSync(Profiler, ExchangeTime, MPI_COMM_WORLD);
+  ovk_connectivity_component *ConnectivityComponent;
+  ovkGetComponent(Domain, CONNECTIVITY_ID, OVK_COMPONENT_TYPE_CONNECTIVITY, &ConnectivityComponent);
 
   int NumSends = 0;
   int NumReceives = 0;
@@ -173,8 +162,8 @@ int main(int argc, char **argv) {
     int LocalGridID = InputGrids[iLocalGrid].id;
     for (iGrid = 0; iGrid < 2; ++iGrid) {
       int OtherGridID = iGrid+1;
-      if (ovkConnectivityExists(Domain, LocalGridID, OtherGridID)) ++NumSends;
-      if (ovkConnectivityExists(Domain, OtherGridID, LocalGridID)) ++NumReceives;
+      if (ovkConnectivityExists(ConnectivityComponent, LocalGridID, OtherGridID)) ++NumSends;
+      if (ovkConnectivityExists(ConnectivityComponent, OtherGridID, LocalGridID)) ++NumReceives;
     }
   }
 
@@ -183,10 +172,10 @@ int main(int argc, char **argv) {
     int LocalGridID = InputGrid->id;
     for (iGrid = 0; iGrid < 2; ++iGrid) {
       int OtherGridID = iGrid+1;
-      if (ovkConnectivityExists(Domain, LocalGridID, OtherGridID)) {
-        ovkCreateCollect(Domain, LocalGridID, OtherGridID, 1, OVK_COLLECT_INTERPOLATE, OVK_DOUBLE,
-          1, InputGrid->is, InputGrid->ie, OVK_COLUMN_MAJOR);
-        ovkCreateSend(Domain, LocalGridID, OtherGridID, 1, OVK_DOUBLE, 1, 1);
+      if (ovkConnectivityExists(ConnectivityComponent, LocalGridID, OtherGridID)) {
+        ovkCreateExchangerCollect(Exchanger, LocalGridID, OtherGridID, 1, OVK_COLLECT_INTERPOLATE,
+          OVK_DOUBLE, 1, InputGrid->is, InputGrid->ie, OVK_COLUMN_MAJOR);
+        ovkCreateExchangerSend(Exchanger, LocalGridID, OtherGridID, 1, OVK_DOUBLE, 1, 1);
       }
     }
   }
@@ -196,10 +185,10 @@ int main(int argc, char **argv) {
     int LocalGridID = InputGrid->id;
     for (iGrid = 0; iGrid < 2; ++iGrid) {
       int OtherGridID = iGrid+1;
-      if (ovkConnectivityExists(Domain, OtherGridID, LocalGridID)) {
-        ovkCreateReceive(Domain, OtherGridID, LocalGridID, 1, OVK_DOUBLE, 1, 1);
-        ovkCreateDisperse(Domain, OtherGridID, LocalGridID, 1, OVK_DISPERSE_OVERWRITE, OVK_DOUBLE,
-          1, InputGrid->is, InputGrid->ie, OVK_COLUMN_MAJOR);
+      if (ovkConnectivityExists(ConnectivityComponent, OtherGridID, LocalGridID)) {
+        ovkCreateExchangerReceive(Exchanger, OtherGridID, LocalGridID, 1, OVK_DOUBLE, 1, 1);
+        ovkCreateExchangerDisperse(Exchanger, OtherGridID, LocalGridID, 1, OVK_DISPERSE_OVERWRITE,
+          OVK_DOUBLE, 1, InputGrid->is, InputGrid->ie, OVK_COLUMN_MAJOR);
       }
     }
   }
@@ -212,15 +201,19 @@ int main(int argc, char **argv) {
     int LocalGridID = InputGrids[iLocalGrid].id;
     for (iGrid = 0; iGrid < 2; ++iGrid) {
       int OtherGridID = iGrid+1;
-      if (ovkConnectivityExists(Domain, LocalGridID, OtherGridID)) {
+      if (ovkConnectivityExists(ConnectivityComponent, LocalGridID, OtherGridID)) {
+        const ovk_connectivity_m *ConnectivityM;
+        ovkGetConnectivityM(ConnectivityComponent, LocalGridID, OtherGridID, &ConnectivityM);
         long long NumDonors;
-        ovkGetLocalDonorCount(Domain, LocalGridID, OtherGridID, &NumDonors);
+        ovkGetConnectivityMCount(ConnectivityM, &NumDonors);
         SendBuffers[iSend] = malloc(NumDonors*sizeof(double));
         ++iSend;
       }
-      if (ovkConnectivityExists(Domain, OtherGridID, LocalGridID)) {
+      if (ovkConnectivityExists(ConnectivityComponent, OtherGridID, LocalGridID)) {
+        const ovk_connectivity_n *ConnectivityN;
+        ovkGetConnectivityN(ConnectivityComponent, OtherGridID, LocalGridID, &ConnectivityN);
         long long NumReceivers;
-        ovkGetLocalReceiverCount(Domain, OtherGridID, LocalGridID, &NumReceivers);
+        ovkGetConnectivityNCount(ConnectivityN, &NumReceivers);
         ReceiveBuffers[iReceive] = malloc(NumReceivers*sizeof(double));
         ++iReceive;
       }
@@ -233,8 +226,6 @@ int main(int argc, char **argv) {
 
   for (iExchange = 0; iExchange < NumExchanges; ++iExchange) {
 
-//     StartProfileSync(Profiler, CollectTime, MPI_COMM_WORLD);
-
     iSend = 0;
     for (iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
       input_grid *InputGrid = InputGrids+iLocalGrid;
@@ -242,17 +233,14 @@ int main(int argc, char **argv) {
       int LocalGridID = InputGrid->id;
       for (iGrid = 0; iGrid < 2; ++iGrid) {
         int OtherGridID = iGrid+1;
-        if (ovkConnectivityExists(Domain, LocalGridID, OtherGridID)) {
+        if (ovkConnectivityExists(ConnectivityComponent, LocalGridID, OtherGridID)) {
           const void *GridData = InputState->values;
           void *DonorData = SendBuffers[iSend];
-          ovkCollect(Domain, LocalGridID, OtherGridID, 1, &GridData, &DonorData);
+          ovkExchangerCollect(Exchanger, LocalGridID, OtherGridID, 1, &GridData, &DonorData);
           ++iSend;
         }
       }
     }
-
-//     EndProfile(Profiler, CollectTime);
-//     StartProfileSync(Profiler, SendRecvTime, MPI_COMM_WORLD);
 
     ovk_request **Requests = malloc((NumSends+NumReceives)*sizeof(ovk_request *));
 
@@ -261,9 +249,10 @@ int main(int argc, char **argv) {
       int LocalGridID = InputGrids[iLocalGrid].id;
       for (iGrid = 0; iGrid < 2; ++iGrid) {
         int OtherGridID = iGrid+1;
-        if (ovkConnectivityExists(Domain, OtherGridID, LocalGridID)) {
+        if (ovkConnectivityExists(ConnectivityComponent, OtherGridID, LocalGridID)) {
           void *ReceiverData = ReceiveBuffers[iReceive];
-          ovkReceive(Domain, OtherGridID, LocalGridID, 1, &ReceiverData, &Requests[iReceive]);
+          ovkExchangerReceive(Exchanger, OtherGridID, LocalGridID, 1, &ReceiverData,
+            &Requests[iReceive]);
           ++iReceive;
         }
       }
@@ -274,20 +263,18 @@ int main(int argc, char **argv) {
       int LocalGridID = InputGrids[iLocalGrid].id;
       for (iGrid = 0; iGrid < 2; ++iGrid) {
         int OtherGridID = iGrid+1;
-        if (ovkConnectivityExists(Domain, LocalGridID, OtherGridID)) {
+        if (ovkConnectivityExists(ConnectivityComponent, LocalGridID, OtherGridID)) {
           const void *DonorData = SendBuffers[iSend];
-          ovkSend(Domain, LocalGridID, OtherGridID, 1, &DonorData, &Requests[NumReceives+iSend]);
+          ovkExchangerSend(Exchanger, LocalGridID, OtherGridID, 1, &DonorData,
+            &Requests[NumReceives+iSend]);
           ++iSend;
         }
       }
     }
 
-    ovkWaitAll(Domain, NumSends+NumReceives, Requests);
+    ovkExchangerWaitAll(Exchanger, NumSends+NumReceives, Requests);
 
     free(Requests);
-
-//     EndProfile(Profiler, SendRecvTime);
-//     StartProfileSync(Profiler, DisperseTime, MPI_COMM_WORLD);
 
     iReceive = 0;
     for (iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
@@ -296,16 +283,14 @@ int main(int argc, char **argv) {
       int LocalGridID = InputGrid->id;
       for (iGrid = 0; iGrid < 2; ++iGrid) {
         int OtherGridID = iGrid+1;
-        if (ovkConnectivityExists(Domain, OtherGridID, LocalGridID)) {
+        if (ovkConnectivityExists(ConnectivityComponent, OtherGridID, LocalGridID)) {
           const void *ReceiverData = ReceiveBuffers[iReceive];
           void *GridData = InputState->values;
-          ovkDisperse(Domain, OtherGridID, LocalGridID, 1, &ReceiverData, &GridData);
+          ovkExchangerDisperse(Exchanger, OtherGridID, LocalGridID, 1, &ReceiverData, &GridData);
           ++iReceive;
         }
       }
     }
-
-//     EndProfile(Profiler, DisperseTime);
 
   }
 
@@ -318,8 +303,6 @@ int main(int argc, char **argv) {
     free(ReceiveBuffers[iReceive]);
   }
   free(ReceiveBuffers);
-
-//   EndProfile(Profiler, ExchangeTime);
 
   for (OtherRank = 0; OtherRank < NumProcs; ++OtherRank) {
     if (OtherRank == Rank) {
@@ -351,17 +334,12 @@ int main(int argc, char **argv) {
     MPI_Barrier(MPI_COMM_WORLD);
   }
 
-//   StartProfileSync(Profiler, DestroyTime, MPI_COMM_WORLD);
+  ovkDestroyExchanger(&Exchanger);
 
-  ovkDestroyContext(&Context);
+  ovkResetSharedDomain(&SharedDomain);
+  ovkResetSharedContext(&SharedContext);
 
   DestroyInputs(NumLocalGrids, &InputGrids, &InputStates);
-
-//   EndProfile(Profiler, DestroyTime);
-//   EndProfile(Profiler, OverallTime);
-
-//   WriteProfileTimes(Profiler, stdout);
-//   DestroyProfiler(&Profiler);
 
   MPI_Finalize();
 
@@ -561,12 +539,15 @@ input_grid *FindLocalGrid(int NumLocalGrids, input_grid *Grids, int GridID) {
 
 double StateFuncOne(double u, double v) {
 
-  return cos(2.*M_PI*v);
+//   return cos(2.*M_PI*v);
+//   return (1.-v)*(-1.) + v*(1.);
+  return v < 0.5 ? -1. : 0;
 
 }
 
 double StateFuncTwo(double u, double v) {
 
-  return sin(2.*M_PI*v);
+//   return sin(2.*M_PI*v);
+  return v < 0.5 ? 0. : 1;
 
 }

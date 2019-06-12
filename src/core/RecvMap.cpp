@@ -4,6 +4,7 @@
 #include "ovk/core/RecvMap.hpp"
 
 #include "ovk/core/Array.hpp"
+#include "ovk/core/FloatingRef.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Profiler.hpp"
 
@@ -15,7 +16,12 @@
 namespace ovk {
 namespace core {
 
+recv_map::recv_map():
+  FloatingRefGenerator_(*this)
+{}
+
 recv_map::recv_map(long long NumValues, array<long long> RecvOrder, const array<int> &SourceRanks):
+  FloatingRefGenerator_(*this),
   RecvOrder_(std::move(RecvOrder))
 {
 
@@ -24,8 +30,8 @@ recv_map::recv_map(long long NumValues, array<long long> RecvOrder, const array<
   std::map<int, long long> RecvCounts;
 
   for (long long iValue = 0; iValue < NumValues; ++iValue) {
-    if (RecvOrder_(iValue) >= 0) {
-      int Rank = SourceRanks(iValue);
+    int Rank = SourceRanks(iValue);
+    if (Rank >= 0) {
       auto Iter = RecvCounts.lower_bound(Rank);
       if (Iter != RecvCounts.end() && Iter->first == Rank) {
         ++Iter->second;
@@ -54,8 +60,8 @@ recv_map::recv_map(long long NumValues, array<long long> RecvOrder, const array<
   RecvIndices_.Resize({NumValues}, -1);
 
   for (long long iValue = 0; iValue < NumValues; ++iValue) {
-    if (RecvOrder_(iValue) >= 0) {
-      int Rank = SourceRanks(iValue);
+    int Rank = SourceRanks(iValue);
+    if (Rank >= 0) {
       RecvIndices_(iValue) = RankToRecvIndex[Rank];
     }
   }

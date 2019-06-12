@@ -5,6 +5,7 @@
 #define OVK_CORE_RECV_MAP_HPP_INCLUDED
 
 #include <ovk/core/Array.hpp>
+#include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
 
 namespace ovk {
@@ -19,8 +20,11 @@ public:
     long long NumValues;
   };
 
-  recv_map() = default;
+  recv_map();
   recv_map(long long NumValues, array<long long> RecvOrder, const array<int> &SourceRanks);
+
+  floating_ref<const recv_map> GetFloatingRef() const { return FloatingRefGenerator_.Generate(); }
+  floating_ref<recv_map> GetFloatingRef() { return FloatingRefGenerator_.Generate(); }
 
   long long Count() const { return RecvOrder_.Count(); }
 
@@ -30,6 +34,8 @@ public:
   const array<int> &RecvIndices() const { return RecvIndices_; }
 
 private:
+
+  floating_ref_generator<recv_map> FloatingRefGenerator_;
 
   array<recv> Recvs_;
   array<long long> RecvOrder_;

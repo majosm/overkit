@@ -14,6 +14,7 @@
 #include <ovk/core/Cart.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Constants.hpp>
+#include <ovk/core/Context.hpp>
 #include <ovk/core/PartitionHash.hpp>
 #include <ovk/core/Range.hpp>
 #include <ovk/core/Tuple.hpp>
@@ -526,6 +527,10 @@ TEST_F(PartitionTests, ConstructPartition) {
 
   ASSERT_GE(TestComm().Size(), 9);
 
+  auto Context = std::make_shared<ovk::context>(ovk::CreateContext(ovk::context::params()
+    .SetComm(TestComm())
+  ));
+
   ovk::core::comm Comm = CreateSubsetComm(TestComm(), TestComm().Rank() < 9);
 
   if (Comm) {
@@ -536,10 +541,7 @@ TEST_F(PartitionTests, ConstructPartition) {
     ovk::core::partition_hash Hash(Cart.Dimension(), Comm, Cart.Range(), LocalRange);
     ovk::array<int> NeighborRanks = ovk::core::DetectNeighbors(Cart, Comm, LocalRange, Hash);
 
-    ovk::core::profiler Profiler;
-    ovk::core::CreateProfiler(Profiler, Comm);
-
-    ovk::core::partition Partition(Cart, Comm, LocalRange, 1, 2, NeighborRanks, Profiler);
+    ovk::core::partition Partition(Context, Cart, Comm, LocalRange, 1, 2, NeighborRanks);
 
     EXPECT_EQ(Partition.Cart().Dimension(), 2);
     EXPECT_THAT(Partition.Cart().Range().Begin(), ElementsAre(-1,0,0));

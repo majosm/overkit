@@ -10,6 +10,8 @@
 #include <ovk/core/CollectMap.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Constants.hpp>
+#include <ovk/core/Context.hpp>
+#include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Indexer.hpp>
 #include <ovk/core/Profiler.hpp>
@@ -17,7 +19,7 @@
 
 #include <mpi.h>
 
-#include <type_traits>
+#include <memory>
 #include <utility>
 
 namespace ovk {
@@ -29,8 +31,8 @@ template <array_layout Layout> class collect_base {
 
 protected:
 
-  collect_base(comm_view Comm, const cart &Cart, const range &LocalRange, const collect_map
-    &CollectMap, int Count, const range &FieldValuesRange, profiler &Profiler);
+  collect_base(std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart, const range
+    &LocalRange, const collect_map &CollectMap, int Count, const range &FieldValuesRange);
 
   // Can't define these here due to issues with GCC < 6.3 and Intel < 17
   // implementations of extern template
@@ -43,15 +45,21 @@ protected:
   using field_indexer = indexer<long long, int, MAX_DIMS, Layout>;
   using cell_indexer = indexer<int, int, MAX_DIMS, Layout>;
 
+  std::shared_ptr<context> Context_;
+
   comm_view Comm_;
+
   cart Cart_;
   range LocalRange_;
-  const collect_map *CollectMap_;
-  mutable profiler *Profiler_;
+
+  floating_ref<const collect_map> CollectMap_;
+
   int Count_;
   int MaxPointsInCell_;
+
   range FieldValuesRange_;
   field_indexer FieldValuesIndexer_;
+
   array<MPI_Request> Requests_;
   array<int> LocalVertexCellIndices_;
   array<long long> LocalVertexFieldValuesIndices_;
@@ -61,6 +69,10 @@ protected:
   void GetLocalCellInfo_(const range &CellRange, const cell_indexer &CellIndexer, int
     &NumLocalVertices, array_view<int> LocalCellIndices, array_view<long long>
     LocalFieldValuesIndices) const;
+
+  static constexpr int PACK_TIME = profiler::EXCHANGER_COLLECT_PACK_TIME;
+  static constexpr int MPI_TIME = profiler::EXCHANGER_COLLECT_MPI_TIME;
+  static constexpr int REDUCE_TIME = profiler::EXCHANGER_COLLECT_REDUCE_TIME;
 
 };
 
@@ -80,21 +92,24 @@ public:
 
   using value_type = T;
 
-  collect_base_for_type(comm_view Comm, const cart &Cart, const range &LocalRange, const collect_map
-    &CollectMap, int Count, const range &FieldValuesRange, profiler &Profiler);
+  collect_base_for_type(std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart, const
+    range &LocalRange, const collect_map &CollectMap, int Count, const range &FieldValuesRange);
 
 protected:
 
   using typename parent_type::field_indexer;
   using typename parent_type::cell_indexer;
+  using parent_type::Context_;
   using parent_type::Comm_;
   using parent_type::Cart_;
   using parent_type::LocalRange_;
   using parent_type::CollectMap_;
-  using parent_type::Profiler_;
   using parent_type::Count_;
   using parent_type::FieldValuesRange_;
   using parent_type::FieldValuesIndexer_;
+  using parent_type::PACK_TIME;
+  using parent_type::MPI_TIME;
+  using parent_type::REDUCE_TIME;
 
   array<array_view<const value_type>> FieldValues_;
   array<array_view<value_type>> PackedValues_;

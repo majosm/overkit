@@ -19,6 +19,7 @@ enum class log_level {
   ERRORS = OVK_LOG_ERRORS,
   WARNINGS = OVK_LOG_WARNINGS,
   STATUS = OVK_LOG_STATUS,
+  DEBUG = OVK_LOG_DEBUG,
   ALL = OVK_LOG_ALL
 };
 
@@ -41,51 +42,6 @@ inline log_level operator&=(log_level &Left, log_level Right) {
   return Left = Left & Right;
 }
 inline log_level operator^=(log_level &Left, log_level Right) {
-  return Left = Left ^ Right;
-}
-
-enum class error_handler_type {
-  ABORT = OVK_ERROR_HANDLER_ABORT,
-  RETURN = OVK_ERROR_HANDLER_RETURN
-};
-
-enum class error {
-  NONE = OVK_NO_ERROR,
-  MPI = OVK_ERROR_MPI,
-  FILE_OPEN = OVK_ERROR_FILE_OPEN,
-  FILE_READ = OVK_ERROR_FILE_READ,
-  FILE_WRITE = OVK_ERROR_FILE_WRITE,
-  MAX = OVK_MAX_ERROR
-};
-
-enum class domain_config {
-  NONE = OVK_DOMAIN_CONFIG_NONE,
-  GEOMETRY = OVK_DOMAIN_CONFIG_GEOMETRY,
-  OVERLAP = OVK_DOMAIN_CONFIG_OVERLAP,
-  CONNECTIVITY = OVK_DOMAIN_CONFIG_CONNECTIVITY,
-  EXCHANGE = OVK_DOMAIN_CONFIG_EXCHANGE,
-  ALL = OVK_DOMAIN_CONFIG_ALL
-};
-
-constexpr inline domain_config operator|(domain_config Left, domain_config Right) {
-  return domain_config(int(Left) | int(Right));
-}
-constexpr inline domain_config operator&(domain_config Left, domain_config Right) {
-  return domain_config(int(Left) & int(Right));
-}
-constexpr inline domain_config operator^(domain_config Left, domain_config Right) {
-  return domain_config(int(Left) ^ int(Right));
-}
-constexpr inline domain_config operator~(domain_config Config) {
-  return domain_config(~int(Config));
-}
-inline domain_config operator|=(domain_config &Left, domain_config Right) {
-  return Left = Left | Right;
-}
-inline domain_config operator&=(domain_config &Left, domain_config Right) {
-  return Left = Left & Right;
-}
-inline domain_config operator^=(domain_config &Left, domain_config Right) {
   return Left = Left ^ Right;
 }
 
@@ -160,9 +116,6 @@ enum class disperse_op {
 };
 
 inline bool ValidLogLevel(log_level LogLevel) { return ovkValidLogLevel(ovk_log_level(LogLevel)); }
-inline bool ValidErrorHandlerType(error_handler_type ErrorHandlerType) { return ovkValidErrorHandlerType(ovk_error_handler_type(ErrorHandlerType)); }
-inline bool ValidError(error Error) { return ovkValidError(ovk_error(Error)); }
-inline bool ValidDomainConfig(domain_config DomainConfig) { return ovkValidDomainConfig(ovk_domain_config(DomainConfig)); }
 inline bool ValidPeriodicStorage(periodic_storage PeriodicStorage) { return ovkValidPeriodicStorage(ovk_periodic_storage(PeriodicStorage)); }
 inline bool ValidGeometryType(geometry_type GeometryType) { return ovkValidGeometryType(ovk_geometry_type(GeometryType)); }
 inline bool ValidOccludes(occludes Occludes) { return ovkValidOccludes(ovk_occludes(Occludes)); }

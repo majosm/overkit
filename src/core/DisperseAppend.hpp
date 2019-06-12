@@ -6,14 +6,17 @@
 
 #include "ovk/core/Array.hpp"
 #include "ovk/core/ArrayView.hpp"
-#include "ovk/core/DisperseBase.hpp"
 #include "ovk/core/Constants.hpp"
+#include "ovk/core/Context.hpp"
+#include "ovk/core/DisperseBase.hpp"
 #include "ovk/core/Global.hpp"
-#include "ovk/core/Profiler.hpp"
 #include "ovk/core/Range.hpp"
 #include "ovk/core/Tuple.hpp"
 
 #include <mpi.h>
+
+#include <memory>
+#include <utility>
 
 namespace ovk {
 namespace core {
@@ -26,8 +29,8 @@ protected:
 
   using parent_type = disperse_base_for_type<T, Layout>;
 
+  using parent_type::Context_;
   using parent_type::Points_;
-  using parent_type::Profiler_;
   using parent_type::Count_;
   using parent_type::FieldValuesRange_;
   using parent_type::FieldValuesIndexer_;
@@ -38,9 +41,9 @@ public:
 
   using value_type = T;
 
-  disperse_append(const array<int,2> &Points, int Count, const range &FieldValuesRange, profiler
-    &Profiler):
-    parent_type(Points, Count, FieldValuesRange, Profiler)
+  disperse_append(std::shared_ptr<context> &&Context, const array<int,2> &Points, int Count, const
+    range &FieldValuesRange):
+    parent_type(std::move(Context), Points, Count, FieldValuesRange)
   {}
 
   disperse_append(const disperse_append &Other) = delete;

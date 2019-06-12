@@ -6,9 +6,9 @@
 
 #include <ovk/core/Array.hpp>
 #include <ovk/core/Constants.hpp>
+#include <ovk/core/Context.hpp>
 #include <ovk/core/DataType.hpp>
 #include <ovk/core/Global.hpp>
-#include <ovk/core/Profiler.hpp>
 #include <ovk/core/Range.hpp>
 #include <ovk/core/TypeTraits.hpp>
 
@@ -52,11 +52,11 @@ private:
 
   class concept {
   public:
-    virtual ~concept() {}
+    virtual ~concept() noexcept {}
     virtual void Disperse(const void * const *PackedValues, void **FieldValues) = 0;
   };
 
-  template <typename T> class model : public concept {
+  template <typename T> class model final : public concept {
   public:
     explicit model(T Disperse):
       Disperse_(std::move(Disperse))
@@ -72,10 +72,10 @@ private:
 
 };
 
-disperse MakeDisperseOverwrite(const array<int,2> &Points, data_type ValueType, int Count,
-  const range &FieldValuesRange, array_layout FieldValuesLayout, profiler &Profiler);
-disperse MakeDisperseAppend(const array<int,2> &Points, data_type ValueType, int Count,
-  const range &FieldValuesRange, array_layout FieldValuesLayout, profiler &Profiler);
+disperse CreateDisperseOverwrite(std::shared_ptr<context> Context, const array<int,2> &Points,
+  data_type ValueType, int Count, const range &FieldValuesRange, array_layout FieldValuesLayout);
+disperse CreateDisperseAppend(std::shared_ptr<context> Context, const array<int,2> &Points,
+  data_type ValueType, int Count, const range &FieldValuesRange, array_layout FieldValuesLayout);
 
 }}
 

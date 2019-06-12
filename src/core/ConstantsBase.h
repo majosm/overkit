@@ -23,32 +23,13 @@ typedef enum {
   OVK_LOG_ERRORS = 1 << 0,
   OVK_LOG_WARNINGS = 1 << 1,
   OVK_LOG_STATUS = 1 << 2,
-  OVK_LOG_ALL = OVK_LOG_ERRORS | OVK_LOG_WARNINGS | OVK_LOG_STATUS
+  OVK_LOG_DEBUG = 1 << 3,
+  OVK_LOG_ALL =
+    OVK_LOG_ERRORS |
+    OVK_LOG_WARNINGS |
+    OVK_LOG_STATUS |
+    OVK_LOG_DEBUG
 } ovk_log_level;
-
-typedef enum {
-  OVK_ERROR_HANDLER_ABORT,
-  OVK_ERROR_HANDLER_RETURN
-} ovk_error_handler_type;
-
-typedef enum {
-  OVK_NO_ERROR = 0,
-  OVK_ERROR_MPI,
-  OVK_ERROR_FILE_OPEN,
-  OVK_ERROR_FILE_READ,
-  OVK_ERROR_FILE_WRITE,
-  OVK_MAX_ERROR
-} ovk_error;
-
-typedef enum {
-  OVK_DOMAIN_CONFIG_NONE = 0,
-  OVK_DOMAIN_CONFIG_GEOMETRY = 1 << 0,
-  OVK_DOMAIN_CONFIG_OVERLAP = 1 << 1,
-  OVK_DOMAIN_CONFIG_CONNECTIVITY = 1 << 2,
-  OVK_DOMAIN_CONFIG_EXCHANGE = 1 << 3,
-  OVK_DOMAIN_CONFIG_ALL = OVK_DOMAIN_CONFIG_GEOMETRY | OVK_DOMAIN_CONFIG_OVERLAP |
-    OVK_DOMAIN_CONFIG_CONNECTIVITY | OVK_DOMAIN_CONFIG_EXCHANGE
-} ovk_domain_config;
 
 typedef enum {
   OVK_PERIODIC_STORAGE_UNIQUE,
@@ -127,9 +108,6 @@ typedef enum {
 } ovk_disperse_op;
 
 static inline bool ovkValidLogLevel(ovk_log_level LogLevel);
-static inline bool ovkValidErrorHandlerType(ovk_error_handler_type ErrorHandlerType);
-static inline bool ovkValidError(ovk_error Error);
-static inline bool ovkValidDomainConfig(ovk_domain_config DomainConfig);
 static inline bool ovkValidPeriodicStorage(ovk_periodic_storage PeriodicStorage);
 static inline bool ovkValidGeometryType(ovk_geometry_type GeometryType);
 static inline bool ovkValidOccludes(ovk_occludes Occludes);

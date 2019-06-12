@@ -12,18 +12,25 @@
 #include "ovk/core/Array.hpp"
 #include "ovk/core/Cart.hpp"
 #include "ovk/core/Comm.hpp"
-#include "ovk/core/Connectivity.hpp"
+#include "ovk/core/ConnectivityComponent.hpp"
+#include "ovk/core/ConnectivityM.hpp"
+#include "ovk/core/ConnectivityN.hpp"
 #include "ovk/core/Constants.hpp"
+#include "ovk/core/Context.hpp"
 #include "ovk/core/Domain.hpp"
-#include "ovk/core/Elem.hpp"
-#include "ovk/core/ErrorHandler.hpp"
+#include "ovk/core/Editor.hpp"
+#include "ovk/core/Error.hpp"
+#include "ovk/core/IDMap.hpp"
+#include "ovk/core/IDSet.hpp"
 #include "ovk/core/Logger.hpp"
 #include "ovk/core/Misc.hpp"
+#include "ovk/core/Optional.hpp"
 #include "ovk/core/PartitionHash.hpp"
 #include "ovk/core/Profiler.hpp"
 #include "ovk/core/Range.hpp"
 #include "ovk/core/ScopeGuard.hpp"
 #include "ovk/core/TextProcessing.hpp"
+#include "ovk/core/Tuple.hpp"
 
 #include <mpi.h>
 
@@ -31,7 +38,6 @@
 #include <limits>
 #include <string>
 #include <utility>
-#include <vector>
 
 namespace ovk {
 
@@ -92,13 +98,12 @@ struct xintout_receivers {
 };
 
 struct xintout_grid {
-  mutable core::logger *Logger;
-  mutable core::error_handler *ErrorHandler;
+  context *Context;
   int ID;
   std::string Name;
   int NumDims;
   core::comm_view Comm;
-  elem<int,MAX_DIMS> GlobalSize;
+  tuple<int> GlobalSize;
   xintout_donors Donors;
   xintout_receivers Receivers;
 };
@@ -117,67 +122,83 @@ struct xintout_connections {
 };
 
 struct xintout {
-  mutable core::logger *Logger;
-  mutable core::error_handler *ErrorHandler;
+  context *Context;
   int NumDims;
   core::comm_view Comm;
   int NumGrids;
   int NumLocalGrids;
-  std::vector<xintout_grid> Grids;
+  array<xintout_grid> Grids;
   xintout_connections Connections;
 };
 
-void CreateXINTOUT(xintout &XINTOUT, int NumDims, core::comm_view Comm, int NumGrids, int
-  NumLocalGrids, const std::vector<int> &LocalGridIDs, const std::vector<std::string>
-  &LocalGridNames, const std::vector<core::comm_view> &LocalGridComms, const std::vector<elem<int,
-  MAX_DIMS>> &LocalGridGlobalSizes, core::logger &Logger, core::error_handler &ErrorHandler);
+constexpr int IMPORT_TIME = core::profiler::XINTOUT_IMPORT_TIME;
+constexpr int IMPORT_READ_TIME = core::profiler::XINTOUT_IMPORT_READ_TIME;
+constexpr int IMPORT_READ_MPI_IO_OPEN_TIME = core::profiler::XINTOUT_IMPORT_READ_MPI_IO_OPEN_TIME;
+constexpr int IMPORT_READ_MPI_IO_CLOSE_TIME = core::profiler::XINTOUT_IMPORT_READ_MPI_IO_CLOSE_TIME;
+constexpr int IMPORT_READ_MPI_IO_READ_TIME = core::profiler::XINTOUT_IMPORT_READ_MPI_IO_READ_TIME;
+constexpr int IMPORT_READ_MPI_IO_OTHER_TIME = core::profiler::XINTOUT_IMPORT_READ_MPI_IO_OTHER_TIME;
+constexpr int IMPORT_MATCH_TIME = core::profiler::XINTOUT_IMPORT_MATCH_TIME;
+constexpr int IMPORT_MATCH_MAP_TO_BINS_TIME = core::profiler::XINTOUT_IMPORT_MATCH_MAP_TO_BINS_TIME;
+constexpr int IMPORT_MATCH_HANDSHAKE_TIME = core::profiler::XINTOUT_IMPORT_MATCH_HANDSHAKE_TIME;
+constexpr int IMPORT_MATCH_SEND_TO_BINS_TIME = core::profiler::XINTOUT_IMPORT_MATCH_SEND_TO_BINS_TIME;
+constexpr int IMPORT_MATCH_FILL_CONNECTION_DATA_TIME = core::profiler::XINTOUT_IMPORT_MATCH_FILL_CONNECTION_DATA_TIME;
+constexpr int IMPORT_MATCH_RECV_FROM_BINS_TIME = core::profiler::XINTOUT_IMPORT_MATCH_RECV_FROM_BINS_TIME;
+constexpr int IMPORT_MATCH_UNPACK_TIME = core::profiler::XINTOUT_IMPORT_MATCH_UNPACK_TIME;
+constexpr int IMPORT_DISTRIBUTE_TIME = core::profiler::XINTOUT_IMPORT_DISTRIBUTE_TIME;
+constexpr int IMPORT_DISTRIBUTE_MAP_TO_BINS_TIME = core::profiler::XINTOUT_IMPORT_DISTRIBUTE_MAP_TO_BINS_TIME;
+constexpr int IMPORT_DISTRIBUTE_RETRIEVE_BINS_TIME = core::profiler::XINTOUT_IMPORT_DISTRIBUTE_RETRIEVE_BINS_TIME;
+constexpr int IMPORT_DISTRIBUTE_FIND_RANKS_TIME = core::profiler::XINTOUT_IMPORT_DISTRIBUTE_FIND_RANKS_TIME;
+constexpr int IMPORT_DISTRIBUTE_HANDSHAKE_TIME = core::profiler::XINTOUT_IMPORT_DISTRIBUTE_HANDSHAKE_TIME;
+constexpr int IMPORT_DISTRIBUTE_SEND_DATA_TIME = core::profiler::XINTOUT_IMPORT_DISTRIBUTE_SEND_DATA_TIME;
+constexpr int IMPORT_SET_CONNECTIVITIES_TIME = core::profiler::XINTOUT_IMPORT_SET_CONNECTIVITIES_TIME;
 
-void CreateXINTOUTGrid(xintout_grid &XINTOUTGrid, int ID, const std::string &Name, int NumDims,
-  core::comm_view Comm, const elem<int,MAX_DIMS> &GlobalSize, core::logger &Logger,
-  core::error_handler &ErrorHandler);
+xintout CreateXINTOUT(context &Context, int NumDims, core::comm_view Comm, int NumGrids, int
+  NumLocalGrids, const array<int> &LocalGridIDs, const array<std::string> &LocalGridNames, const
+  array<core::comm_view> &LocalGridComms, const array<tuple<int>> &LocalGridGlobalSizes);
 
-error ReadXINTOUT(xintout &XINTOUT, const std::string &HOPath, const std::string &XPath,
-  int ReadGranularityAdjust, MPI_Info MPIInfo, core::profiler &Profiler);
+xintout_grid CreateXINTOUTGrid(context &Context, int ID, const std::string &Name, int NumDims,
+  core::comm_view Comm, const tuple<int> &GlobalSize);
 
-error ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath,
-  endian &Endian, xintout_format &Format, bool &WithIBlank, core::profiler &Profiler);
+void ReadXINTOUT(xintout &XINTOUT, const std::string &HOPath, const std::string &XPath,
+  int ReadGranularityAdjust, MPI_Info MPIInfo);
+
+void ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath, endian &Endian,
+  xintout_format &Format, bool &WithIBlank);
 
 bool DetectFormat(MPI_File HOFile, endian &Endian, xintout_format &Format, core::profiler
   &Profiler);
 
-error ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath,
-  const std::string &XPath, long long &NumDonors, long long &NumReceivers, long long
-  &StartingConnectionID, MPI_Offset &HODonorCellsOffset, MPI_Offset &HODonorCoordsOffset,
-  MPI_Offset &HOReceiverPointsOffset, MPI_Offset &HOReceiverConnectionIDsOffset,
-  MPI_Offset &XDonorSizesOffset, MPI_Offset &XDonorInterpCoefsOffset, endian Endian,
-  xintout_format Format, bool WithIBlank, core::profiler &Profiler);
+void ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath, const std::string
+  &XPath, long long &NumDonors, long long &NumReceivers, long long &StartingConnectionID, MPI_Offset
+  &HODonorCellsOffset, MPI_Offset &HODonorCoordsOffset, MPI_Offset &HOReceiverPointsOffset,
+  MPI_Offset &HOReceiverConnectionIDsOffset, MPI_Offset &XDonorSizesOffset, MPI_Offset
+  &XDonorInterpCoefsOffset, endian Endian, xintout_format Format, bool WithIBlank);
 
-error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std::string &XPath,
+void ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std::string &XPath,
   long long NumDonors, long long StartingConnectionID, MPI_Offset HOCellsOffset,
   MPI_Offset HOCoordsOffset, MPI_Offset XSizesOffset, MPI_Offset XInterpCoefsOffset,
-  endian Endian, int ReadGranularityAdjust, MPI_Info MPIInfo, core::profiler &Profiler);
+  endian Endian, int ReadGranularityAdjust, MPI_Info MPIInfo);
 
-error ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath, long long NumReceivers,
+void ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath, long long NumReceivers,
   MPI_Offset HOPointsOffset, MPI_Offset HOConnectionIDsOffset, endian Endian, xintout_format Format,
-  int ReadGranularityAdjust, MPI_Info MPIInfo, core::profiler &Profiler);
+  int ReadGranularityAdjust, MPI_Info MPIInfo);
 
-void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler);
+void MatchDonorsAndReceivers(xintout &XINTOUT);
 
-void DistributeConnectivityData(const xintout &XINTOUT, const std::vector<const grid *> &LocalGrids,
-  std::vector<donor_data> &LocalDonorData, std::vector<receiver_data> &LocalReceiverData,
-  core::profiler &Profiler);
+void DistributeConnectivityData(const xintout &XINTOUT, const array<const grid *> &LocalGrids,
+  array<donor_data> &LocalDonorData, array<receiver_data> &LocalReceiverData);
 
 void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid &Grid,
-  donor_data &DonorData, receiver_data &ReceiverData, core::profiler &Profiler);
+  donor_data &DonorData, receiver_data &ReceiverData);
 
-void ImportConnectivityData(int NumGrids, int NumLocalGrids, const std::vector<int> &LocalGridIDs,
-  const std::vector<donor_data> &LocalDonorData, const std::vector<receiver_data>
-  &LocalReceiverData, domain &Domain);
+void ImportConnectivityData(int NumGrids, int NumLocalGrids, const array<int> &LocalGridIDs,
+  const array<donor_data> &LocalDonorData, const array<receiver_data> &LocalReceiverData, domain
+  &Domain, int ConnectivityComponentID);
 
-void ImportDonors(const donor_data &GridDonors, core::comm_view Comm, int NumReceiverGrids, const
-  std::vector<connectivity_d *> &OverkitDonors);
-void ImportReceivers(const receiver_data &GridReceivers, core::comm_view Comm, int NumDonorGrids,
-  const std::vector<connectivity_r *> &OverkitReceivers);
+void ImportDonors(const donor_data &GridDonors, core::comm_view Comm, const array<edit_handle<
+  connectivity_m>> &ConnectivityMs);
+void ImportReceivers(const receiver_data &GridReceivers, core::comm_view Comm, const array<
+  edit_handle<connectivity_n>> &ConnectivityNs);
 
 void CreateDonorData(donor_data &Data, long long Count, int MaxSize);
 void CreateReceiverData(receiver_data &Data, long long Count);
@@ -197,129 +218,125 @@ void SwapEndian(void *Data, int ElementSize, int NumElements);
 
 }
 
-error ImportXINTOUT(domain &Domain, const std::string &HOPath, const std::string &XPath,
-  int ReadGranularityAdjust, MPI_Info MPIInfo) {
+void ImportXINTOUT(domain &Domain, int ConnectivityComponentID, const std::string &HOPath, const
+  std::string &XPath, int ReadGranularityAdjust, MPI_Info MPIInfo) {
 
-  core::logger &Logger = core::GetDomainLogger(Domain);
-  core::error_handler &ErrorHandler = core::GetDomainErrorHandler(Domain);
+  context &Context = Domain.Context();
+  core::profiler &Profiler = Context.core_Profiler();
 
-  int NumDims;
-  int NumGrids;
-  GetDomainDimension(Domain, NumDims);
-  GetDomainGridCount(Domain, NumGrids);
+  int NumDims = Domain.Dimension();
+  int NumGrids = Domain.GridCount();
 
-  core::comm_view Comm = core::GetDomainComm(Domain);
-
-  core::profiler &Profiler = core::GetDomainProfiler(Domain);
-  core::AddProfilerTimer(Profiler, "XINTOUT::Import");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Read");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Read::MPI-IO::Open");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Read::MPI-IO::Close");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Read::MPI-IO::Read");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Read::MPI-IO::Other");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Match");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Match::MapToBins");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Match::Handshake");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Match::SendToBins");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Match::FillConnectionData");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Match::RecvFromBins");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Match::Unpack");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Distribute");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Distribute::MapToBins");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Distribute::RetrieveBins");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Distribute::FindRanks");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Distribute::Handshake");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Import::Distribute::SendData");
-  core::AddProfilerTimer(Profiler, "XINTOUT::Import::SetConnectivities");
+  core::comm_view Comm = Domain.core_Comm();
 
   MPI_Barrier(Comm);
 
   if (NumGrids > 0) {
 
-    int NumLocalGrids = 0;
-    for (int iGrid = 0; iGrid < NumGrids; ++iGrid) {
-      int GridID = iGrid+1;
-      if (RankHasGrid(Domain, GridID)) {
-        ++NumLocalGrids;
-      }
-    }
+    int NumLocalGrids = Domain.LocalGridCount();
 
-    std::vector<const grid *> LocalGrids(NumLocalGrids);
-    std::vector<int> LocalGridIDs(NumLocalGrids);
-    std::vector<std::string> LocalGridNames(NumLocalGrids);
-    std::vector<core::comm_view> LocalGridComms(NumLocalGrids);
-    std::vector<elem<int,MAX_DIMS>> LocalGridGlobalSizes(NumLocalGrids);
+    array<const grid *> LocalGrids({NumLocalGrids});
+    array<int> LocalGridIDs({NumLocalGrids});
+    array<std::string> LocalGridNames({NumLocalGrids});
+    array<core::comm_view> LocalGridComms({NumLocalGrids});
+    array<tuple<int>> LocalGridGlobalSizes({NumLocalGrids});
     int iLocalGrid = 0;
     for (int iGrid = 0; iGrid < NumGrids; ++iGrid) {
       int GridID = iGrid+1;
-      if (RankHasGrid(Domain, GridID)) {
-        const grid *GridPtr;
-        GetGrid(Domain, GridID, GridPtr);
-        const grid &Grid = *GridPtr;
-        LocalGrids[iLocalGrid] = GridPtr;
-        LocalGridIDs[iLocalGrid] = Grid.ID();
-        LocalGridNames[iLocalGrid] = Grid.Name();
-        LocalGridComms[iLocalGrid] = Grid.core_Comm();
-        LocalGridGlobalSizes[iLocalGrid] = Grid.Size();
+      if (Domain.GridIsLocal(GridID)) {
+        const grid &Grid = Domain.Grid(GridID);
+        LocalGrids(iLocalGrid) = &Grid;
+        LocalGridIDs(iLocalGrid) = GridID;
+        LocalGridNames(iLocalGrid) = Grid.Name();
+        LocalGridComms(iLocalGrid) = Grid.core_Comm();
+        LocalGridGlobalSizes(iLocalGrid) = Grid.Size();
         ++iLocalGrid;
       }
     }
 
-    int ImportTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import");
-    int ReadTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read");
-    int MatchTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Match");
-    int DistributeTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Distribute");
-    int SetConnectivitiesTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::SetConnectivities");
+    Profiler.StartSync(IMPORT_TIME, Comm);
+    // ReadXINTOUT might throw
+    auto StopImportTimer = core::OnScopeExit([&] { Profiler.Stop(IMPORT_TIME); });
 
-    core::StartProfileSync(Profiler, ImportTime, Comm);
+    xintout XINTOUT = CreateXINTOUT(Context, NumDims, Comm, NumGrids, NumLocalGrids, LocalGridIDs,
+      LocalGridNames, LocalGridComms, LocalGridGlobalSizes);
 
-    xintout XINTOUT;
-    CreateXINTOUT(XINTOUT, NumDims, Comm, NumGrids, NumLocalGrids, LocalGridIDs,
-      LocalGridNames, LocalGridComms, LocalGridGlobalSizes, Logger, ErrorHandler);
+    Profiler.StartSync(IMPORT_READ_TIME, Comm);
+    // ReadXINTOUT might throw
+    auto StopReadTimer = core::OnScopeExit([&] { Profiler.Stop(IMPORT_READ_TIME); });
 
-    core::StartProfileSync(Profiler, ReadTime, Comm);
-    error Error = ReadXINTOUT(XINTOUT, HOPath, XPath, ReadGranularityAdjust, MPIInfo, Profiler);
-    core::EndProfile(Profiler, ReadTime);
-    OVK_EH_CHECK(ErrorHandler, Error);
+    ReadXINTOUT(XINTOUT, HOPath, XPath, ReadGranularityAdjust, MPIInfo);
 
-    core::StartProfileSync(Profiler, MatchTime, Comm);
-    MatchDonorsAndReceivers(XINTOUT, Profiler);
-    core::EndProfile(Profiler, MatchTime);
+    Profiler.Stop(IMPORT_READ_TIME);
 
-    core::StartProfileSync(Profiler, DistributeTime, Comm);
-    std::vector<donor_data> LocalDonors(NumLocalGrids);
-    std::vector<receiver_data> LocalReceivers(NumLocalGrids);
-    DistributeConnectivityData(XINTOUT, LocalGrids, LocalDonors, LocalReceivers, Profiler);
-    core::EndProfile(Profiler, DistributeTime);
+    StopImportTimer.Dismiss();
+    StopReadTimer.Dismiss();
 
-    core::StartProfileSync(Profiler, SetConnectivitiesTime, Comm);
+    Profiler.StartSync(IMPORT_MATCH_TIME, Comm);
+    MatchDonorsAndReceivers(XINTOUT);
+    Profiler.Stop(IMPORT_MATCH_TIME);
+
+    Profiler.StartSync(IMPORT_DISTRIBUTE_TIME, Comm);
+    array<donor_data> LocalDonors({NumLocalGrids});
+    array<receiver_data> LocalReceivers({NumLocalGrids});
+    DistributeConnectivityData(XINTOUT, LocalGrids, LocalDonors, LocalReceivers);
+    Profiler.Stop(IMPORT_DISTRIBUTE_TIME);
+
+    Profiler.StartSync(IMPORT_SET_CONNECTIVITIES_TIME, Comm);
     ImportConnectivityData(NumGrids, NumLocalGrids, LocalGridIDs, LocalDonors, LocalReceivers,
-      Domain);
-    core::EndProfile(Profiler, SetConnectivitiesTime);
+      Domain, ConnectivityComponentID);
+    Profiler.Stop(IMPORT_SET_CONNECTIVITIES_TIME);
 
-    core::EndProfile(Profiler, ImportTime);
+    Profiler.Stop(IMPORT_TIME);
 
   }
 
-  return error::NONE;
+}
+
+void ImportXINTOUT(domain &Domain, int ConnectivityComponentID, const std::string &HOPath, const
+  std::string &XPath, int ReadGranularityAdjust, MPI_Info MPIInfo, error &Error) {
+
+  Error = error::NONE;
+
+  try {
+    ImportXINTOUT(Domain, ConnectivityComponentID, HOPath, XPath, ReadGranularityAdjust, MPIInfo);
+  } catch (const exception &Exception) {
+    Error = Exception.Error();
+  }
 
 }
 
-error ExportXINTOUT(const domain &Domain, const std::string &HOPath, const std::string &XPath,
-  xintout_format Format, endian Endian, int WriteGranularityAdjust, MPI_Info MPIInfo) {
+void ExportXINTOUT(const domain &Domain, int ConnectivityComponentID, const std::string &HOPath,
+  const std::string &XPath, xintout_format Format, endian Endian, int WriteGranularityAdjust,
+  MPI_Info MPIInfo) {
 
   OVK_DEBUG_ASSERT(false, "ExportXINTOUT is not yet implemented.");
 
-  return error::NONE;
+}
+
+void ExportXINTOUT(const domain &Domain, int ConnectivityComponentID, const std::string &HOPath,
+  const std::string &XPath, xintout_format Format, endian Endian, int WriteGranularityAdjust,
+  MPI_Info MPIInfo, error &Error) {
+
+  Error = error::NONE;
+
+  try {
+    ExportXINTOUT(Domain, ConnectivityComponentID, HOPath, XPath, Format, Endian,
+      WriteGranularityAdjust, MPIInfo);
+  } catch (const exception &Exception) {
+    Error = Exception.Error();
+  }
 
 }
 
 namespace {
 
-void CreateXINTOUT(xintout &XINTOUT, int NumDims, core::comm_view Comm, int NumGrids, int
-  NumLocalGrids, const std::vector<int> &LocalGridIDs, const std::vector<std::string>
-  &LocalGridNames, const std::vector<core::comm_view> &LocalGridComms, const std::vector<elem<int,
-  MAX_DIMS>> &LocalGridGlobalSizes, core::logger &Logger, core::error_handler &ErrorHandler) {
+xintout CreateXINTOUT(context &Context, int NumDims, core::comm_view Comm, int NumGrids, int
+  NumLocalGrids, const array<int> &LocalGridIDs, const array<std::string> &LocalGridNames, const
+  array<core::comm_view> &LocalGridComms, const array<tuple<int>>
+  &LocalGridGlobalSizes) {
+
+  xintout XINTOUT;
 
   XINTOUT.Comm = Comm;
 
@@ -327,17 +344,16 @@ void CreateXINTOUT(xintout &XINTOUT, int NumDims, core::comm_view Comm, int NumG
 
   XINTOUT.NumDims = NumDims;
 
-  XINTOUT.Logger = &Logger;
-  XINTOUT.ErrorHandler = &ErrorHandler;
+  XINTOUT.Context = &Context;
 
   XINTOUT.NumGrids = NumGrids;
   XINTOUT.NumLocalGrids = NumLocalGrids;
 
-  XINTOUT.Grids.resize(NumLocalGrids);
+  XINTOUT.Grids.Resize({NumLocalGrids});
   for (int iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
-    CreateXINTOUTGrid(XINTOUT.Grids[iLocalGrid], LocalGridIDs[iLocalGrid],
-      LocalGridNames[iLocalGrid], NumDims, LocalGridComms[iLocalGrid],
-      LocalGridGlobalSizes[iLocalGrid], Logger, ErrorHandler);
+    XINTOUT.Grids(iLocalGrid) = CreateXINTOUTGrid(Context, LocalGridIDs(iLocalGrid),
+      LocalGridNames(iLocalGrid), NumDims, LocalGridComms(iLocalGrid),
+      LocalGridGlobalSizes(iLocalGrid));
   }
 
   XINTOUT.Connections.Count = 0;
@@ -346,18 +362,20 @@ void CreateXINTOUT(xintout &XINTOUT, int NumDims, core::comm_view Comm, int NumG
 
   MPI_Barrier(XINTOUT.Comm);
 
+  return XINTOUT;
+
 }
 
-void CreateXINTOUTGrid(xintout_grid &XINTOUTGrid, int ID, const std::string &Name, int NumDims,
-  core::comm_view Comm, const elem<int,MAX_DIMS> &GlobalSize, core::logger &Logger,
-  core::error_handler &ErrorHandler) {
+xintout_grid CreateXINTOUTGrid(context &Context, int ID, const std::string &Name, int NumDims,
+  core::comm_view Comm, const tuple<int> &GlobalSize) {
+
+  xintout_grid XINTOUTGrid;
 
   XINTOUTGrid.Comm = Comm;
 
   MPI_Barrier(XINTOUTGrid.Comm);
 
-  XINTOUTGrid.Logger = &Logger;
-  XINTOUTGrid.ErrorHandler = &ErrorHandler;
+  XINTOUTGrid.Context = &Context;
 
   XINTOUTGrid.ID = ID;
   XINTOUTGrid.Name = Name;
@@ -374,234 +392,234 @@ void CreateXINTOUTGrid(xintout_grid &XINTOUTGrid, int ID, const std::string &Nam
 
   MPI_Barrier(XINTOUTGrid.Comm);
 
+  return XINTOUTGrid;
+
 }
 
-error ReadXINTOUT(xintout &XINTOUT, const std::string &HOPath, const std::string &XPath,
-  int ReadGranularityAdjust, MPI_Info MPIInfo, core::profiler &Profiler) {
+void ReadXINTOUT(xintout &XINTOUT, const std::string &HOPath, const std::string &XPath,
+  int ReadGranularityAdjust, MPI_Info MPIInfo) {
 
   core::comm_view Comm = XINTOUT.Comm;
 
   MPI_Barrier(Comm);
 
-  core::error_handler &ErrorHandler = *XINTOUT.ErrorHandler;
-  core::logger &Logger = *XINTOUT.Logger;
+  core::logger &Logger = XINTOUT.Context->core_Logger();
 
   int NumLocalGrids = XINTOUT.NumLocalGrids;
 
   Logger.LogStatus(Comm.Rank() == 0, 0, "Reading XINTOUT files '%s' and '%s'...", HOPath, XPath);
 
-  error Error = error::NONE;
-
   endian Endian;
   xintout_format Format;
   bool WithIBlank;
-  Error = ReadGlobalInfo(XINTOUT, HOPath, Endian, Format, WithIBlank, Profiler);
-  OVK_EH_CHECK(ErrorHandler, Error);
+  ReadGlobalInfo(XINTOUT, HOPath, Endian, Format, WithIBlank);
 
-  for (int iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
+  error ReadError = error::NONE;
 
-    xintout_grid &XINTOUTGrid = XINTOUT.Grids[iLocalGrid];
+  try {
 
-    long long NumDonors, NumReceivers;
-    long long DonorStartingConnectionID;
-    MPI_Offset HODonorCellsOffset, HODonorCoordsOffset, XDonorSizesOffset, XDonorInterpCoefsOffset;
-    MPI_Offset HOReceiverPointsOffset, HOReceiverConnectionIDsOffset;
-    Error = ReadGridInfo(XINTOUTGrid, HOPath, XPath, NumDonors, NumReceivers,
-      DonorStartingConnectionID, HODonorCellsOffset, HODonorCoordsOffset, HOReceiverPointsOffset,
-      HOReceiverConnectionIDsOffset, XDonorSizesOffset, XDonorInterpCoefsOffset, Endian,
-      Format, WithIBlank, Profiler);
-    OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
+    for (int iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
 
-    Error = ReadDonors(XINTOUTGrid, HOPath, XPath, NumDonors, DonorStartingConnectionID,
-      HODonorCellsOffset, HODonorCoordsOffset, XDonorSizesOffset, XDonorInterpCoefsOffset, Endian,
-      ReadGranularityAdjust, MPIInfo, Profiler);
-    OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
+      xintout_grid &XINTOUTGrid = XINTOUT.Grids(iLocalGrid);
 
-    Error = ReadReceivers(XINTOUTGrid, HOPath, NumReceivers, HOReceiverPointsOffset,
-      HOReceiverConnectionIDsOffset, Endian, Format, ReadGranularityAdjust, MPIInfo, Profiler);
-    OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
+      long long NumDonors, NumReceivers;
+      long long DonorStartingConnectionID;
+      MPI_Offset HODonorCellsOffset, HODonorCoordsOffset;
+      MPI_Offset XDonorSizesOffset, XDonorInterpCoefsOffset;
+      MPI_Offset HOReceiverPointsOffset, HOReceiverConnectionIDsOffset;
+      ReadGridInfo(XINTOUTGrid, HOPath, XPath, NumDonors, NumReceivers, DonorStartingConnectionID,
+        HODonorCellsOffset, HODonorCoordsOffset, HOReceiverPointsOffset,
+        HOReceiverConnectionIDsOffset, XDonorSizesOffset, XDonorInterpCoefsOffset, Endian,
+        Format, WithIBlank);
+
+      ReadDonors(XINTOUTGrid, HOPath, XPath, NumDonors, DonorStartingConnectionID,
+        HODonorCellsOffset, HODonorCoordsOffset, XDonorSizesOffset, XDonorInterpCoefsOffset, Endian,
+        ReadGranularityAdjust, MPIInfo);
+
+      ReadReceivers(XINTOUTGrid, HOPath, NumReceivers, HOReceiverPointsOffset,
+        HOReceiverConnectionIDsOffset, Endian, Format, ReadGranularityAdjust, MPIInfo);
+
+    }
+
+  } catch (exception &Exception) {
+
+    ReadError = Exception.Error();
 
   }
 
-  done_reading:
-    OVK_EH_SYNC(ErrorHandler, Error, Comm);
-    OVK_EH_CHECK(ErrorHandler, Error);
+  core::SyncError(ReadError, Comm);
+  core::CheckError(ReadError);
 
   MPI_Barrier(Comm);
 
-  Logger.LogStatus(Comm.Rank() == 0, 0, "Finished reading XINTOUT files.");
-
-  return error::NONE;
+  Logger.LogStatus(Comm.Rank() == 0, 0, "Done reading XINTOUT files.");
 
 }
 
-error ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath, endian &Endian,
-  xintout_format &Format, bool &WithIBlank, core::profiler &Profiler) {
+void ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath, endian &Endian,
+  xintout_format &Format, bool &WithIBlank) {
 
   core::comm_view Comm = XINTOUT.Comm;
 
   int NumGrids = XINTOUT.NumGrids;
 
-  core::logger &Logger = *XINTOUT.Logger;
-  core::error_handler &ErrorHandler = *XINTOUT.ErrorHandler;
+  core::logger &Logger = XINTOUT.Context->core_Logger();
+  core::profiler &Profiler = XINTOUT.Context->core_Profiler();
 
-  int MPIIOOpenTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Open");
-  int MPIIOCloseTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Close");
+  error ReadGlobalInfoError = error::NONE;
 
-  error Error = error::NONE;
+  try {
 
-  if (Comm.Rank() == 0) {
+    if (Comm.Rank() == 0) {
 
-    MPI_File HOFile;
-    MPI_Status Status;
-    int MPIError;
-    int ReadSize;
+      MPI_File HOFile;
+      MPI_Status Status;
+      int MPIError;
+      int ReadSize;
 
-    core::StartProfile(Profiler, MPIIOOpenTime);
-    // MPI_File_open missing const qualifier for path string on some platforms
-    MPIError = MPI_File_open(MPI_COMM_SELF, const_cast<char *>(HOPath.c_str()), MPI_MODE_RDONLY,
-      MPI_INFO_NULL, &HOFile);
-    core::EndProfile(Profiler, MPIIOOpenTime);
-    if (MPIError != MPI_SUCCESS) {
-      Error = error::FILE_OPEN;
-      Logger.LogError(true, "Unable to open file '%s'.", HOPath);
-      OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-    }
-    auto CloseHO = core::OnScopeExit([&]() {
-      core::StartProfile(Profiler, MPIIOCloseTime);
-      MPI_File_close(&HOFile);
-      core::EndProfile(Profiler, MPIIOCloseTime);
-    });
-
-    bool Success = DetectFormat(HOFile, Endian, Format, Profiler);
-    if (!Success) {
-      Error = error::FILE_READ;
-      Logger.LogError(true, "Unable to detect format of XINTOUT file '%s'.", HOPath);
-      OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-    }
-
-    int RecordWrapperSize = Format == xintout_format::STANDARD ? sizeof(int) : 0;
-
-    // Both formats have a record wrapper at the beginning
-    MPI_Offset HOHeaderOffset = sizeof(int);
-    int NumGridsInFile;
-    File_read_at_endian(HOFile, HOHeaderOffset, &NumGridsInFile, 1, MPI_INT, Endian, &Status,
-      Profiler);
-    MPI_Get_count(&Status, MPI_INT, &ReadSize);
-    if (ReadSize < 1) {
-      Error = error::FILE_READ;
-      Logger.LogError(true, "Unable to read header of XINTOUT file '%s'.", HOPath);
-      OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-    }
-    if (NumGridsInFile != NumGrids) {
-      Error = error::FILE_READ;
-      Logger.LogError(Comm.Rank() == 0, "XINTOUT file '%s' has incorrect number of grids.", HOPath);
-      OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-    }
-
-    MPI_Offset HOGridOffset = 0;
-
-    HOGridOffset += RecordWrapperSize;
-    if (Format == xintout_format::STANDARD) {
-      HOGridOffset += 5*sizeof(int);
-    } else {
-      HOGridOffset += sizeof(int) + 4*sizeof(long long);
-    }
-    HOGridOffset += RecordWrapperSize;
-
-    HOGridOffset += RecordWrapperSize;
-    long long NumDonors;
-    long long NumReceivers;
-    elem<int,MAX_DIMS> GridSize;
-    if (Format == xintout_format::STANDARD) {
-      int Data[7];
-      File_read_at_endian(HOFile, HOGridOffset, Data, 7, MPI_INT, Endian, &Status, Profiler);
-      MPI_Get_count(&Status, MPI_INT, &ReadSize);
-      if (ReadSize < 7) {
-        Error = error::FILE_READ;
-        Logger.LogError(true, "Unable to read grid 1 header of XINTOUT file '%s'.", HOPath);
-        OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
+      Profiler.Start(IMPORT_READ_MPI_IO_OPEN_TIME);
+      // MPI_File_open missing const qualifier for path string on some platforms
+      MPIError = MPI_File_open(MPI_COMM_SELF, const_cast<char *>(HOPath.c_str()), MPI_MODE_RDONLY,
+        MPI_INFO_NULL, &HOFile);
+      Profiler.Stop(IMPORT_READ_MPI_IO_OPEN_TIME);
+      if (MPIError != MPI_SUCCESS) {
+        Logger.LogError(true, "Unable to open file '%s'.", HOPath);
+        throw file_open_error();
       }
-      NumDonors = Data[1];
-      NumReceivers = Data[0];
-      for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        GridSize[iDim] = Data[4+iDim];
-      }
-      HOGridOffset += 7*sizeof(int);
-    } else {
-      long long LongLongData[4];
-      int IntData[3];
-      File_read_at_endian(HOFile, HOGridOffset, LongLongData, 4, MPI_LONG_LONG, Endian, &Status,
-        Profiler);
-      MPI_Get_count(&Status, MPI_LONG_LONG, &ReadSize);
-      if (ReadSize < 4) {
-        Logger.LogError(true, "Unable to read grid 1 header of XINTOUT file '%s'.", HOPath);
-        Error = error::FILE_READ;
-        OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-      }
-      HOGridOffset += 4*sizeof(long long);
-      File_read_at_endian(HOFile, HOGridOffset, IntData, 3, MPI_INT, Endian, &Status, Profiler);
-      MPI_Get_count(&Status, MPI_INT, &ReadSize);
-      if (ReadSize < 3) {
-        Error = error::FILE_READ;
-        Logger.LogError(true, "Unable to read grid 1 header of XINTOUT file '%s'.", HOPath);
-        OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-      }
-      HOGridOffset += 3*sizeof(int);
-      NumDonors = LongLongData[1];
-      NumReceivers = LongLongData[0];
-      for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        GridSize[iDim] = IntData[iDim];
-      }
-      HOGridOffset += sizeof(long long);
-    }
-    HOGridOffset += RecordWrapperSize;
+      auto CloseHO = core::OnScopeExit([&]() {
+        Profiler.Start(IMPORT_READ_MPI_IO_CLOSE_TIME);
+        MPI_File_close(&HOFile);
+        Profiler.Stop(IMPORT_READ_MPI_IO_CLOSE_TIME);
+      });
 
-    HOGridOffset += RecordWrapperSize;
-    HOGridOffset += MAX_DIMS*NumDonors*sizeof(int);
-    HOGridOffset += MAX_DIMS*NumDonors*sizeof(double);
-    HOGridOffset += RecordWrapperSize;
+      bool Success = DetectFormat(HOFile, Endian, Format, Profiler);
+      if (!Success) {
+        Logger.LogError(true, "Unable to detect format of XINTOUT file '%s'.", HOPath);
+        throw file_read_error();
+      }
 
-    int ConnectionIDSize = Format == xintout_format::STANDARD ? sizeof(int) : sizeof(long long);
-    HOGridOffset += RecordWrapperSize;
-    HOGridOffset += MAX_DIMS*NumReceivers*sizeof(int);
-    HOGridOffset += NumReceivers*ConnectionIDSize;
-    HOGridOffset += RecordWrapperSize;
+      int RecordWrapperSize = Format == xintout_format::STANDARD ? sizeof(int) : 0;
 
-    if (Format == xintout_format::STANDARD) {
-      int RecordWrapper;
-      File_read_at_endian(HOFile, HOGridOffset, &RecordWrapper, 1, MPI_INT, Endian, &Status,
+      // Both formats have a record wrapper at the beginning
+      MPI_Offset HOHeaderOffset = sizeof(int);
+      int NumGridsInFile;
+      File_read_at_endian(HOFile, HOHeaderOffset, &NumGridsInFile, 1, MPI_INT, Endian, &Status,
         Profiler);
       MPI_Get_count(&Status, MPI_INT, &ReadSize);
-      if (ReadSize == 1) {
-        long long NumPoints =
-          (long long)(GridSize[0])*
-          (long long)(GridSize[1])*
-          (long long)(GridSize[2]);
-        if ((long long)(RecordWrapper) == NumPoints*int(sizeof(int))) {
-          WithIBlank = true;
+      if (ReadSize < 1) {
+        Logger.LogError(true, "Unable to read header of XINTOUT file '%s'.", HOPath);
+        throw file_read_error();
+      }
+      if (NumGridsInFile != NumGrids) {
+        Logger.LogError(Comm.Rank() == 0, "XINTOUT file '%s' has incorrect number of grids.",
+          HOPath);
+        throw file_read_error();
+      }
+
+      MPI_Offset HOGridOffset = 0;
+
+      HOGridOffset += RecordWrapperSize;
+      if (Format == xintout_format::STANDARD) {
+        HOGridOffset += 5*sizeof(int);
+      } else {
+        HOGridOffset += sizeof(int) + 4*sizeof(long long);
+      }
+      HOGridOffset += RecordWrapperSize;
+
+      HOGridOffset += RecordWrapperSize;
+      long long NumDonors;
+      long long NumReceivers;
+      tuple<int> GridSize;
+      if (Format == xintout_format::STANDARD) {
+        int Data[7];
+        File_read_at_endian(HOFile, HOGridOffset, Data, 7, MPI_INT, Endian, &Status, Profiler);
+        MPI_Get_count(&Status, MPI_INT, &ReadSize);
+        if (ReadSize < 7) {
+          Logger.LogError(true, "Unable to read grid 1 header of XINTOUT file '%s'.", HOPath);
+          throw file_read_error();
+        }
+        NumDonors = Data[1];
+        NumReceivers = Data[0];
+        for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+          GridSize[iDim] = Data[4+iDim];
+        }
+        HOGridOffset += 7*sizeof(int);
+      } else {
+        long long LongLongData[4];
+        int IntData[3];
+        File_read_at_endian(HOFile, HOGridOffset, LongLongData, 4, MPI_LONG_LONG, Endian, &Status,
+          Profiler);
+        MPI_Get_count(&Status, MPI_LONG_LONG, &ReadSize);
+        if (ReadSize < 4) {
+          Logger.LogError(true, "Unable to read grid 1 header of XINTOUT file '%s'.", HOPath);
+          throw file_read_error();
+        }
+        HOGridOffset += 4*sizeof(long long);
+        File_read_at_endian(HOFile, HOGridOffset, IntData, 3, MPI_INT, Endian, &Status, Profiler);
+        MPI_Get_count(&Status, MPI_INT, &ReadSize);
+        if (ReadSize < 3) {
+          Logger.LogError(true, "Unable to read grid 1 header of XINTOUT file '%s'.", HOPath);
+          throw file_read_error();
+        }
+        HOGridOffset += 3*sizeof(int);
+        NumDonors = LongLongData[1];
+        NumReceivers = LongLongData[0];
+        for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+          GridSize[iDim] = IntData[iDim];
+        }
+        HOGridOffset += sizeof(long long);
+      }
+      HOGridOffset += RecordWrapperSize;
+
+      HOGridOffset += RecordWrapperSize;
+      HOGridOffset += MAX_DIMS*NumDonors*sizeof(int);
+      HOGridOffset += MAX_DIMS*NumDonors*sizeof(double);
+      HOGridOffset += RecordWrapperSize;
+
+      int ConnectionIDSize = Format == xintout_format::STANDARD ? sizeof(int) : sizeof(long long);
+      HOGridOffset += RecordWrapperSize;
+      HOGridOffset += MAX_DIMS*NumReceivers*sizeof(int);
+      HOGridOffset += NumReceivers*ConnectionIDSize;
+      HOGridOffset += RecordWrapperSize;
+
+      if (Format == xintout_format::STANDARD) {
+        int RecordWrapper;
+        File_read_at_endian(HOFile, HOGridOffset, &RecordWrapper, 1, MPI_INT, Endian, &Status,
+          Profiler);
+        MPI_Get_count(&Status, MPI_INT, &ReadSize);
+        if (ReadSize == 1) {
+          long long NumPoints =
+            (long long)(GridSize[0])*
+            (long long)(GridSize[1])*
+            (long long)(GridSize[2]);
+          if ((long long)(RecordWrapper) == NumPoints*int(sizeof(int))) {
+            WithIBlank = true;
+          } else {
+            WithIBlank = false;
+          }
         } else {
-          WithIBlank = false;
+          if (NumGrids == 1) {
+            WithIBlank = false;
+          } else {
+            Logger.LogError(true, "Unable to detect whether XINTOUT file '%s' contains IBlank.",
+              HOPath);
+            throw file_read_error();
+          }
         }
       } else {
-        if (NumGrids == 1) {
-          WithIBlank = false;
-        } else {
-          Error = error::FILE_READ;
-          Logger.LogError(true, "Unable to detect whether XINTOUT file '%s' contains IBlank.",
-            HOPath);
-          OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-        }
+        WithIBlank = false;
       }
-    } else {
-      WithIBlank = false;
+
     }
+
+  } catch (const exception &Exception) {
+
+    ReadGlobalInfoError = Exception.Error();
 
   }
 
-  done_reading:
-    OVK_EH_SYNC(ErrorHandler, Error, Comm);
-    OVK_EH_CHECK(ErrorHandler, Error);
+  core::SyncError(ReadGlobalInfoError, Comm);
+  core::CheckError(ReadGlobalInfoError);
 
   int EndianInt;
   if (Comm.Rank() == 0) EndianInt = Endian == endian::BIG ? 1 : 0;
@@ -618,19 +636,16 @@ error ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath, endian &
   MPI_Bcast(&WithIBlankInt, 1, MPI_INT, 0, Comm);
   WithIBlank = WithIBlankInt != 0;
 
-  return error::NONE;
-
 }
 
-bool DetectFormat(MPI_File HOFile, endian &Endian, xintout_format &Format, core::profiler &Profiler) {
-
-  int MPIIOReadTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Read");
+bool DetectFormat(MPI_File HOFile, endian &Endian, xintout_format &Format, core::profiler &Profiler)
+  {
 
   unsigned char InitialBytes[sizeof(int)];
   MPI_Status Status;
-  core::StartProfile(Profiler, MPIIOReadTime);
+  Profiler.Start(IMPORT_READ_MPI_IO_READ_TIME);
   int MPIError = MPI_File_read_at(HOFile, 0, InitialBytes, sizeof(int), MPI_BYTE, &Status);
-  core::EndProfile(Profiler, MPIIOReadTime);
+  Profiler.Stop(IMPORT_READ_MPI_IO_READ_TIME);
   if (MPIError != MPI_SUCCESS) return false;
 
   // If little endian, the first byte will be the size of the file header data
@@ -658,90 +673,189 @@ bool DetectFormat(MPI_File HOFile, endian &Endian, xintout_format &Format, core:
 
 }
 
-error ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath,
-  const std::string &XPath, long long &NumDonors, long long &NumReceivers, long long
-  &StartingConnectionID, MPI_Offset &HODonorCellsOffset, MPI_Offset &HODonorCoordsOffset,
-  MPI_Offset &HOReceiverPointsOffset, MPI_Offset &HOReceiverConnectionIDsOffset,
-  MPI_Offset &XDonorSizesOffset, MPI_Offset &XDonorInterpCoefsOffset, endian Endian,
-  xintout_format Format, bool WithIBlank, core::profiler &Profiler) {
+void ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath, const std::string
+  &XPath, long long &NumDonors, long long &NumReceivers, long long &StartingConnectionID, MPI_Offset
+  &HODonorCellsOffset, MPI_Offset &HODonorCoordsOffset, MPI_Offset &HOReceiverPointsOffset,
+  MPI_Offset &HOReceiverConnectionIDsOffset, MPI_Offset &XDonorSizesOffset, MPI_Offset
+  &XDonorInterpCoefsOffset, endian Endian, xintout_format Format, bool WithIBlank) {
 
   int GridID = XINTOUTGrid.ID;
   int iGrid = GridID-1;
 
   core::comm_view Comm = XINTOUTGrid.Comm;
 
-  core::logger &Logger = *XINTOUTGrid.Logger;
-  core::error_handler &ErrorHandler = *XINTOUTGrid.ErrorHandler;
+  core::logger &Logger = XINTOUTGrid.Context->core_Logger();
+  core::profiler &Profiler = XINTOUTGrid.Context->core_Profiler();
 
-  int MPIIOOpenTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Open");
-  int MPIIOCloseTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Close");
+  error ReadGridInfoError = error::NONE;
 
-  error Error = error::NONE;
+  try {
 
-  if (Comm.Rank() == 0) {
+    if (Comm.Rank() == 0) {
 
-    MPI_File HOFile, XFile;
-    MPI_Status Status;
-    int MPIError;
-    int ReadSize;
-    elem<int,MAX_DIMS> GridSize;
-    long long NumInterpCoefs = 0;
+      MPI_File HOFile, XFile;
+      MPI_Status Status;
+      int MPIError;
+      int ReadSize;
+      tuple<int> GridSize;
+      long long NumInterpCoefs = 0;
 
-    core::StartProfile(Profiler, MPIIOOpenTime);
-    // MPI_File_open missing const qualifier for path string on some platforms
-    MPIError = MPI_File_open(MPI_COMM_SELF, const_cast<char *>(HOPath.c_str()), MPI_MODE_RDONLY,
-      MPI_INFO_NULL, &HOFile);
-    core::EndProfile(Profiler, MPIIOOpenTime);
-    if (MPIError != MPI_SUCCESS) {
-      Error = error::FILE_OPEN;
-      Logger.LogError(true, "Unable to open file '%s'.", HOPath);
-      OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-    }
-    auto CloseHO = core::OnScopeExit([&]() {
-      core::StartProfile(Profiler, MPIIOCloseTime);
-      MPI_File_close(&HOFile);
-      core::EndProfile(Profiler, MPIIOCloseTime);
-    });
+      Profiler.Start(IMPORT_READ_MPI_IO_OPEN_TIME);
+      // MPI_File_open missing const qualifier for path string on some platforms
+      MPIError = MPI_File_open(MPI_COMM_SELF, const_cast<char *>(HOPath.c_str()), MPI_MODE_RDONLY,
+        MPI_INFO_NULL, &HOFile);
+      Profiler.Stop(IMPORT_READ_MPI_IO_OPEN_TIME);
+      if (MPIError != MPI_SUCCESS) {
+        Logger.LogError(true, "Unable to open file '%s'.", HOPath);
+        throw file_open_error();
+      }
+      auto CloseHO = core::OnScopeExit([&]() {
+        Profiler.Start(IMPORT_READ_MPI_IO_CLOSE_TIME);
+        MPI_File_close(&HOFile);
+        Profiler.Stop(IMPORT_READ_MPI_IO_CLOSE_TIME);
+      });
 
-    core::StartProfile(Profiler, MPIIOOpenTime);
-    // MPI_File_open missing const qualifier for path string on some platforms
-    MPIError = MPI_File_open(MPI_COMM_SELF, const_cast<char *>(XPath.c_str()), MPI_MODE_RDONLY,
-      MPI_INFO_NULL, &XFile);
-    core::EndProfile(Profiler, MPIIOOpenTime);
-    if (MPIError != MPI_SUCCESS) {
-      Error = error::FILE_OPEN;
-      Logger.LogError(true, "Unable to open file '%s'.", XPath);
-      OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-    }
-    auto CloseX = core::OnScopeExit([&]() {
-      core::StartProfile(Profiler, MPIIOCloseTime);
-      MPI_File_close(&XFile);
-      core::EndProfile(Profiler, MPIIOCloseTime);
-    });
+      Profiler.Start(IMPORT_READ_MPI_IO_OPEN_TIME);
+      // MPI_File_open missing const qualifier for path string on some platforms
+      MPIError = MPI_File_open(MPI_COMM_SELF, const_cast<char *>(XPath.c_str()), MPI_MODE_RDONLY,
+        MPI_INFO_NULL, &XFile);
+      Profiler.Stop(IMPORT_READ_MPI_IO_OPEN_TIME);
+      if (MPIError != MPI_SUCCESS) {
+        Logger.LogError(true, "Unable to open file '%s'.", XPath);
+        throw file_open_error();
+      }
+      auto CloseX = core::OnScopeExit([&]() {
+        Profiler.Start(IMPORT_READ_MPI_IO_CLOSE_TIME);
+        MPI_File_close(&XFile);
+        Profiler.Stop(IMPORT_READ_MPI_IO_CLOSE_TIME);
+      });
 
-    int RecordWrapperSize = Format == xintout_format::STANDARD ? sizeof(int) : 0;
+      int RecordWrapperSize = Format == xintout_format::STANDARD ? sizeof(int) : 0;
 
-    MPI_Offset HOGridOffset = 0;
-    MPI_Offset XGridOffset = 0;
+      MPI_Offset HOGridOffset = 0;
+      MPI_Offset XGridOffset = 0;
 
-    int HeaderSize;
-    if (Format == xintout_format::STANDARD) {
-      HeaderSize = 5*sizeof(int);
-    } else {
-      HeaderSize = sizeof(int) + 4*sizeof(long long);
-    }
-    // Both formats have a record wrapper at the beginning
-    HOGridOffset += sizeof(int);
-    HOGridOffset += HeaderSize;
-    HOGridOffset += RecordWrapperSize;
-    // Both formats have a record wrapper at the beginning
-    XGridOffset += sizeof(int);
-    XGridOffset += HeaderSize;
-    XGridOffset += RecordWrapperSize;
+      int HeaderSize;
+      if (Format == xintout_format::STANDARD) {
+        HeaderSize = 5*sizeof(int);
+      } else {
+        HeaderSize = sizeof(int) + 4*sizeof(long long);
+      }
+      // Both formats have a record wrapper at the beginning
+      HOGridOffset += sizeof(int);
+      HOGridOffset += HeaderSize;
+      HOGridOffset += RecordWrapperSize;
+      // Both formats have a record wrapper at the beginning
+      XGridOffset += sizeof(int);
+      XGridOffset += HeaderSize;
+      XGridOffset += RecordWrapperSize;
 
-    for (int iOtherGrid = 0; iOtherGrid < iGrid; ++iOtherGrid) {
+      for (int iOtherGrid = 0; iOtherGrid < iGrid; ++iOtherGrid) {
 
-      int OtherGridID = iOtherGrid+1;
+        int OtherGridID = iOtherGrid+1;
+
+        HOGridOffset += RecordWrapperSize;
+        if (Format == xintout_format::STANDARD) {
+          int Data[7];
+          File_read_at_endian(HOFile, HOGridOffset, Data, 7, MPI_INT, Endian, &Status, Profiler);
+          MPI_Get_count(&Status, MPI_INT, &ReadSize);
+          if (ReadSize < 7) {
+            Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", OtherGridID,
+              HOPath);
+            throw file_read_error();
+          }
+          NumDonors = Data[1];
+          NumReceivers = Data[0];
+          for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+            GridSize[iDim] = Data[4+iDim];
+          }
+          HOGridOffset += 7*sizeof(int);
+        } else {
+          long long LongLongData[5];
+          int IntData[3];
+          File_read_at_endian(HOFile, HOGridOffset, LongLongData, 4, MPI_LONG_LONG, Endian, &Status,
+            Profiler);
+          MPI_Get_count(&Status, MPI_LONG_LONG, &ReadSize);
+          if (ReadSize < 4) {
+            Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", OtherGridID,
+              HOPath);
+            throw file_read_error();
+          }
+          HOGridOffset += 4*sizeof(long long);
+          File_read_at_endian(HOFile, HOGridOffset, IntData, 3, MPI_INT, Endian, &Status, Profiler);
+          MPI_Get_count(&Status, MPI_INT, &ReadSize);
+          if (ReadSize < 3) {
+            Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", OtherGridID,
+              HOPath);
+            throw file_read_error();
+          }
+          HOGridOffset += 3*sizeof(int);
+          File_read_at_endian(HOFile, HOGridOffset, LongLongData+4, 1, MPI_LONG_LONG, Endian, &Status,
+            Profiler);
+          MPI_Get_count(&Status, MPI_LONG_LONG, &ReadSize);
+          if (ReadSize < 1) {
+            Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", OtherGridID,
+              HOPath);
+            throw file_read_error();
+          }
+          HOGridOffset += sizeof(long long);
+          NumDonors = LongLongData[1];
+          NumReceivers = LongLongData[0];
+          NumInterpCoefs = LongLongData[4];
+          for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+            GridSize[iDim] = IntData[iDim];
+          }
+        }
+        HOGridOffset += RecordWrapperSize;
+
+        HOGridOffset += RecordWrapperSize;
+        HOGridOffset += MAX_DIMS*NumDonors*sizeof(int);
+        HOGridOffset += MAX_DIMS*NumDonors*sizeof(double);
+        HOGridOffset += RecordWrapperSize;
+
+        int ConnectionIDSize = Format == xintout_format::STANDARD ? sizeof(int) : sizeof(long long);
+        HOGridOffset += RecordWrapperSize;
+        HOGridOffset += MAX_DIMS*NumReceivers*sizeof(int);
+        HOGridOffset += NumReceivers*ConnectionIDSize;
+        HOGridOffset += RecordWrapperSize;
+
+        if (WithIBlank) {
+          HOGridOffset += RecordWrapperSize;
+          HOGridOffset +=
+            (long long)(GridSize[0])*
+            (long long)(GridSize[1])*
+            (long long)(GridSize[2])*
+            sizeof(int);
+          HOGridOffset += RecordWrapperSize;
+        }
+
+        XGridOffset += RecordWrapperSize;
+        XGridOffset += MAX_DIMS*NumDonors*sizeof(int);
+        XGridOffset += RecordWrapperSize;
+
+        if (Format == xintout_format::STANDARD) {
+          // Figure out size of interp coef data
+          int RecordWrapper;
+          File_read_at_endian(XFile, XGridOffset, &RecordWrapper, 1, MPI_INT, Endian, &Status,
+            Profiler);
+          MPI_Get_count(&Status, MPI_INT, &ReadSize);
+          if (ReadSize < 1) {
+            Logger.LogError(true, "Unable to read grid %i data from XINTOUT file '%s'.", OtherGridID,
+              XPath);
+            throw file_read_error();
+          }
+          NumInterpCoefs = RecordWrapper/sizeof(double);
+        }
+
+        XGridOffset += RecordWrapperSize;
+        XGridOffset += NumInterpCoefs*sizeof(double);
+        XGridOffset += RecordWrapperSize;
+
+        XGridOffset += RecordWrapperSize;
+        XGridOffset += 3*sizeof(int);
+        XGridOffset += RecordWrapperSize;
+
+      }
 
       HOGridOffset += RecordWrapperSize;
       if (Format == xintout_format::STANDARD) {
@@ -749,13 +863,14 @@ error ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath,
         File_read_at_endian(HOFile, HOGridOffset, Data, 7, MPI_INT, Endian, &Status, Profiler);
         MPI_Get_count(&Status, MPI_INT, &ReadSize);
         if (ReadSize < 7) {
-          Error = error::FILE_READ;
-          Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", OtherGridID,
+          Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", GridID,
             HOPath);
-          OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
+          throw file_read_error();
         }
         NumDonors = Data[1];
         NumReceivers = Data[0];
+        // Convert to zero-based indexing
+        StartingConnectionID = Data[3]-1;
         for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
           GridSize[iDim] = Data[4+iDim];
         }
@@ -767,33 +882,32 @@ error ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath,
           Profiler);
         MPI_Get_count(&Status, MPI_LONG_LONG, &ReadSize);
         if (ReadSize < 4) {
-          Error = error::FILE_READ;
-          Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", OtherGridID,
+          Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", GridID,
             HOPath);
-          OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
+          throw file_read_error();
         }
         HOGridOffset += 4*sizeof(long long);
         File_read_at_endian(HOFile, HOGridOffset, IntData, 3, MPI_INT, Endian, &Status, Profiler);
         MPI_Get_count(&Status, MPI_INT, &ReadSize);
         if (ReadSize < 3) {
-          Error = error::FILE_READ;
-          Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", OtherGridID,
+          Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", GridID,
             HOPath);
-          OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
+          throw file_read_error();
         }
         HOGridOffset += 3*sizeof(int);
         File_read_at_endian(HOFile, HOGridOffset, LongLongData+4, 1, MPI_LONG_LONG, Endian, &Status,
           Profiler);
         MPI_Get_count(&Status, MPI_LONG_LONG, &ReadSize);
         if (ReadSize < 1) {
-          Error = error::FILE_READ;
-          Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", OtherGridID,
+          Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", GridID,
             HOPath);
-          OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
+          throw file_read_error();
         }
         HOGridOffset += sizeof(long long);
         NumDonors = LongLongData[1];
         NumReceivers = LongLongData[0];
+        // Convert to zero-based indexing
+        StartingConnectionID = LongLongData[3]-1;
         NumInterpCoefs = LongLongData[4];
         for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
           GridSize[iDim] = IntData[iDim];
@@ -801,149 +915,41 @@ error ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath,
       }
       HOGridOffset += RecordWrapperSize;
 
+      if (GridSize[0] != XINTOUTGrid.GlobalSize[0] || GridSize[1] != XINTOUTGrid.GlobalSize[1] ||
+        GridSize[2] != XINTOUTGrid.GlobalSize[2]) {
+        Logger.LogError(true, "Grid %i of XINTOUT file '%s' has incorrect size.", GridID, HOPath);
+        throw file_read_error();
+      }
+
       HOGridOffset += RecordWrapperSize;
+      HODonorCellsOffset = HOGridOffset;
       HOGridOffset += MAX_DIMS*NumDonors*sizeof(int);
+      HODonorCoordsOffset = HOGridOffset;
       HOGridOffset += MAX_DIMS*NumDonors*sizeof(double);
       HOGridOffset += RecordWrapperSize;
 
-      int ConnectionIDSize = Format == xintout_format::STANDARD ? sizeof(int) : sizeof(long long);
       HOGridOffset += RecordWrapperSize;
+      HOReceiverPointsOffset = HOGridOffset;
       HOGridOffset += MAX_DIMS*NumReceivers*sizeof(int);
-      HOGridOffset += NumReceivers*ConnectionIDSize;
-      HOGridOffset += RecordWrapperSize;
-
-      if (WithIBlank) {
-        HOGridOffset += RecordWrapperSize;
-        HOGridOffset +=
-          (long long)(GridSize[0])*
-          (long long)(GridSize[1])*
-          (long long)(GridSize[2])*
-          sizeof(int);
-        HOGridOffset += RecordWrapperSize;
-      }
+      HOReceiverConnectionIDsOffset = HOGridOffset;
 
       XGridOffset += RecordWrapperSize;
+      XDonorSizesOffset = XGridOffset;
       XGridOffset += MAX_DIMS*NumDonors*sizeof(int);
       XGridOffset += RecordWrapperSize;
-
-      if (Format == xintout_format::STANDARD) {
-        // Figure out size of interp coef data
-        int RecordWrapper;
-        File_read_at_endian(XFile, XGridOffset, &RecordWrapper, 1, MPI_INT, Endian, &Status,
-          Profiler);
-        MPI_Get_count(&Status, MPI_INT, &ReadSize);
-        if (ReadSize < 1) {
-          Error = error::FILE_READ;
-          Logger.LogError(true, "Unable to read grid %i data from XINTOUT file '%s'.", OtherGridID,
-            XPath);
-          OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-        }
-        NumInterpCoefs = RecordWrapper/sizeof(double);
-      }
-
       XGridOffset += RecordWrapperSize;
-      XGridOffset += NumInterpCoefs*sizeof(double);
-      XGridOffset += RecordWrapperSize;
-
-      XGridOffset += RecordWrapperSize;
-      XGridOffset += 3*sizeof(int);
-      XGridOffset += RecordWrapperSize;
+      XDonorInterpCoefsOffset = XGridOffset;
 
     }
 
-    HOGridOffset += RecordWrapperSize;
-    if (Format == xintout_format::STANDARD) {
-      int Data[7];
-      File_read_at_endian(HOFile, HOGridOffset, Data, 7, MPI_INT, Endian, &Status, Profiler);
-      MPI_Get_count(&Status, MPI_INT, &ReadSize);
-      if (ReadSize < 7) {
-        Error = error::FILE_READ;
-        Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", GridID,
-          HOPath);
-        OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-      }
-      NumDonors = Data[1];
-      NumReceivers = Data[0];
-      // Convert to zero-based indexing
-      StartingConnectionID = Data[3]-1;
-      for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        GridSize[iDim] = Data[4+iDim];
-      }
-      HOGridOffset += 7*sizeof(int);
-    } else {
-      long long LongLongData[5];
-      int IntData[3];
-      File_read_at_endian(HOFile, HOGridOffset, LongLongData, 4, MPI_LONG_LONG, Endian, &Status,
-        Profiler);
-      MPI_Get_count(&Status, MPI_LONG_LONG, &ReadSize);
-      if (ReadSize < 4) {
-        Error = error::FILE_READ;
-        Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", GridID,
-          HOPath);
-        OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-      }
-      HOGridOffset += 4*sizeof(long long);
-      File_read_at_endian(HOFile, HOGridOffset, IntData, 3, MPI_INT, Endian, &Status, Profiler);
-      MPI_Get_count(&Status, MPI_INT, &ReadSize);
-      if (ReadSize < 3) {
-        Error = error::FILE_READ;
-        Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", GridID,
-          HOPath);
-        OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-      }
-      HOGridOffset += 3*sizeof(int);
-      File_read_at_endian(HOFile, HOGridOffset, LongLongData+4, 1, MPI_LONG_LONG, Endian, &Status,
-        Profiler);
-      MPI_Get_count(&Status, MPI_LONG_LONG, &ReadSize);
-      if (ReadSize < 1) {
-        Error = error::FILE_READ;
-        Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", GridID,
-          HOPath);
-        OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-      }
-      HOGridOffset += sizeof(long long);
-      NumDonors = LongLongData[1];
-      NumReceivers = LongLongData[0];
-      // Convert to zero-based indexing
-      StartingConnectionID = LongLongData[3]-1;
-      NumInterpCoefs = LongLongData[4];
-      for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        GridSize[iDim] = IntData[iDim];
-      }
-    }
-    HOGridOffset += RecordWrapperSize;
+  } catch (const exception &Exception) {
 
-    if (GridSize[0] != XINTOUTGrid.GlobalSize[0] || GridSize[1] != XINTOUTGrid.GlobalSize[1] ||
-      GridSize[2] != XINTOUTGrid.GlobalSize[2]) {
-      Error = error::FILE_READ;
-      Logger.LogError(true, "Grid %i of XINTOUT file '%s' has incorrect size.", GridID, HOPath);
-      OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-    }
-
-    HOGridOffset += RecordWrapperSize;
-    HODonorCellsOffset = HOGridOffset;
-    HOGridOffset += MAX_DIMS*NumDonors*sizeof(int);
-    HODonorCoordsOffset = HOGridOffset;
-    HOGridOffset += MAX_DIMS*NumDonors*sizeof(double);
-    HOGridOffset += RecordWrapperSize;
-
-    HOGridOffset += RecordWrapperSize;
-    HOReceiverPointsOffset = HOGridOffset;
-    HOGridOffset += MAX_DIMS*NumReceivers*sizeof(int);
-    HOReceiverConnectionIDsOffset = HOGridOffset;
-
-    XGridOffset += RecordWrapperSize;
-    XDonorSizesOffset = XGridOffset;
-    XGridOffset += MAX_DIMS*NumDonors*sizeof(int);
-    XGridOffset += RecordWrapperSize;
-    XGridOffset += RecordWrapperSize;
-    XDonorInterpCoefsOffset = XGridOffset;
+    ReadGridInfoError = Exception.Error();
 
   }
 
-  done_reading:
-    OVK_EH_SYNC(ErrorHandler, Error, Comm);
-    OVK_EH_CHECK(ErrorHandler, Error);
+  core::SyncError(ReadGridInfoError, Comm);
+  core::CheckError(ReadGridInfoError);
 
   MPI_Bcast(&NumDonors, 1, MPI_LONG_LONG, 0, Comm);
   MPI_Bcast(&NumReceivers, 1, MPI_LONG_LONG, 0, Comm);
@@ -955,21 +961,19 @@ error ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath,
   MPI_Bcast(&XDonorSizesOffset, 1, MPI_OFFSET, 0, Comm);
   MPI_Bcast(&XDonorInterpCoefsOffset, 1, MPI_OFFSET, 0, Comm);
 
-  return error::NONE;
-
 }
 
-error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std::string &XPath,
+void ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std::string &XPath,
   long long NumDonors, long long StartingConnectionID, MPI_Offset HOCellsOffset,
   MPI_Offset HOCoordsOffset, MPI_Offset XSizesOffset, MPI_Offset XInterpCoefsOffset,
-  endian Endian, int ReadGranularityAdjust, MPI_Info MPIInfo, core::profiler &Profiler) {
+  endian Endian, int ReadGranularityAdjust, MPI_Info MPIInfo) {
 
   int GridID = XINTOUTGrid.ID;
 
   core::comm_view Comm = XINTOUTGrid.Comm;
 
-  core::logger &Logger = *XINTOUTGrid.Logger;
-  core::error_handler &ErrorHandler = *XINTOUTGrid.ErrorHandler;
+  core::logger &Logger = XINTOUTGrid.Context->core_Logger();
+  core::profiler &Profiler = XINTOUTGrid.Context->core_Profiler();
 
   xintout_donors &XINTOUTDonors = XINTOUTGrid.Donors;
 
@@ -989,10 +993,10 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
     NumChunks, ChunkSize);
   bool HasChunk = Comm.Rank() % ChunkRankInterval == 0;
 
-  if (Logger.LoggingStatus()) {
+  if (Logger.LoggingDebug()) {
     std::string NumDonorsString = core::FormatNumber(NumDonors, "donors", "donor");
     std::string NumRanksString = core::FormatNumber(NumChunks, "I/O ranks", "I/O rank");
-    Logger.LogStatus(Comm.Rank() == 0, 1, "Grid %s has %s; using %s.", XINTOUTGrid.Name,
+    Logger.LogDebug(Comm.Rank() == 0, 0, "Grid %s has %s; using %s.", XINTOUTGrid.Name,
       NumDonorsString, NumRanksString);
   }
 
@@ -1001,295 +1005,299 @@ error ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std
 
   core::comm ChunkComm = core::CreateSubsetComm(Comm, HasChunk);
 
-  error Error = error::NONE;
+  error ReadDonorsError = error::NONE;
 
-  if (HasChunk) {
+  try {
 
-    xintout_donor_chunk &Chunk = XINTOUTDonors.Chunk;
+    if (HasChunk) {
 
-    long long LocalBegin = ChunkSize*ChunkComm.Rank();
-    long long LocalEnd = std::min(ChunkSize*(ChunkComm.Rank()+1), NumDonors);
-    long long NumLocalDonors = LocalEnd - LocalBegin;
+      xintout_donor_chunk &Chunk = XINTOUTDonors.Chunk;
 
-    if (NumLocalDonors*sizeof(double) > std::numeric_limits<int>::max()) {
-      Error = error::FILE_READ;
-    }
-    OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
-    if (Error != error::NONE) {
-      Logger.LogError(ChunkComm.Rank() == 0, "Donor chunk size too big; increase number of "
-        "processes or read granularity.");
-      OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-    }
+      long long LocalBegin = ChunkSize*ChunkComm.Rank();
+      long long LocalEnd = std::min(ChunkSize*(ChunkComm.Rank()+1), NumDonors);
+      long long NumLocalDonors = LocalEnd - LocalBegin;
 
-    Chunk.Begin = LocalBegin;
-    Chunk.End = LocalEnd;
-    Chunk.StartingConnectionID = StartingConnectionID + LocalBegin;
-
-    MPI_File HOFile, XFile;
-    MPI_Status Status;
-    int MPIError;
-    MPI_Offset DatasetOffset, ReadOffset;
-    int ReadSize;
-
-    int MPIIOOpenTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Open");
-    int MPIIOCloseTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Close");
-    int MPIIOOtherTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Other");
-
-    core::StartProfileSync(Profiler, MPIIOOpenTime, ChunkComm);
-    // MPI_File_open missing const qualifier for path string on some platforms
-    MPIError = MPI_File_open(ChunkComm, const_cast<char *>(HOPath.c_str()), MPI_MODE_RDONLY,
-      MPIInfo, &HOFile);
-    core::EndProfile(Profiler, MPIIOOpenTime);
-    if (MPIError != MPI_SUCCESS) {
-      Error = error::FILE_OPEN;
-      Logger.LogError(true, "Unable to open file '%s'.", HOPath);
-      OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-    }
-    auto CloseHO = core::OnScopeExit([&]() {
-      core::StartProfileSync(Profiler, MPIIOCloseTime, ChunkComm);
-      MPI_File_close(&HOFile);
-      core::EndProfile(Profiler, MPIIOCloseTime);
-    });
-
-    core::StartProfileSync(Profiler, MPIIOOpenTime, ChunkComm);
-    // MPI_File_open missing const qualifier for path string on some platforms
-    MPIError = MPI_File_open(ChunkComm, const_cast<char *>(XPath.c_str()), MPI_MODE_RDONLY,
-      MPIInfo, &XFile);
-    core::EndProfile(Profiler, MPIIOOpenTime);
-    if (MPIError != MPI_SUCCESS) {
-      Error = error::FILE_OPEN;
-      Logger.LogError(true, "Unable to open file '%s'.", XPath);
-      OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-    }
-    auto CloseX = core::OnScopeExit([&]() {
-      core::StartProfileSync(Profiler, MPIIOCloseTime, ChunkComm);
-      MPI_File_close(&XFile);
-      core::EndProfile(Profiler, MPIIOCloseTime);
-    });
-
-    array<int,2> Sizes({{MAX_DIMS,NumLocalDonors}});
-
-//     MPI_Datatype XDonorSizeType;
-//     MPI_Type_vector(MAX_DIMS, NumLocalDonors, NumDonors, MPI_INT, &XDonorSizeType);
-//     MPI_Type_commit(&XDonorSizeType);
-//     MPI_File_set_view(XFile, XSizesOffset+LocalBegin*sizeof(int), MPI_INT, XDonorSizeType, "native",
-//       MPIInfo);
-//     int DataSize = MAX_DIMS*NumLocalDonors;
-//     File_read_all_endian(XFile, Sizes.Data(), DataSize, MPI_INT, Endian, &Status);
-//     MPI_Type_free(&XDonorSizeType);
-//     MPI_Get_count(&Status, MPI_INT, &ReadSize);
-//     if (ReadSize < DataSize) Error = error::FILE_READ;
-//     OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
-//     if (Error != error::NONE) {
-//       Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i donor sizes from "
-//         "XINTOUT file '%s'.", GridID, XPath);
-//       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-//     }
-
-    // The above version causes "Conditional jump or move depends on uninitialized value(s)"
-    // errors in valgrind with MPICH 3.2... not sure why
-    DatasetOffset = XSizesOffset;
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      ReadOffset = DatasetOffset + LocalBegin*sizeof(int);
-      core::StartProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
-      MPI_File_set_view(XFile, ReadOffset, MPI_INT, MPI_INT, "native", MPIInfo);
-      core::EndProfile(Profiler, MPIIOOtherTime);
-      File_read_all_endian(XFile, Sizes.Data(iDim,0), int(NumLocalDonors), MPI_INT, Endian,
-        &Status, Profiler, ChunkComm);
-      MPI_Get_count(&Status, MPI_INT, &ReadSize);
-      if (ReadSize < NumLocalDonors) Error = error::FILE_READ;
-      OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
-      if (Error != error::NONE) {
-        Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i donor sizes from XINTOUT "
-          "file '%s'.", GridID, XPath);
-        OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
+      error ChunkSizeError = error::NONE;
+      if (NumLocalDonors*sizeof(double) > std::numeric_limits<int>::max()) {
+        ChunkSizeError = error::FILE_READ;
       }
-      DatasetOffset += NumDonors*sizeof(int);
-    }
-
-    int MaxSize = 0;
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      for (long long iDonor = 0; iDonor < NumLocalDonors; ++iDonor) {
-        MaxSize = std::max(MaxSize, Sizes(iDim,iDonor));
+      core::SyncError(ChunkSizeError, ChunkComm);
+      if (ChunkSizeError != error::NONE) {
+        Logger.LogError(ChunkComm.Rank() == 0, "Donor chunk size too big; increase number of "
+          "processes or read granularity.");
+        core::ThrowError(ChunkSizeError);
       }
-    }
+        
+      Chunk.Begin = LocalBegin;
+      Chunk.End = LocalEnd;
+      Chunk.StartingConnectionID = StartingConnectionID + LocalBegin;
 
-    CreateDonorData(Chunk.Data, NumLocalDonors, MaxSize);
-    donor_data &Data = Chunk.Data;
+      MPI_File HOFile, XFile;
+      MPI_Status Status;
+      int MPIError;
+      MPI_Offset DatasetOffset, ReadOffset;
+      int ReadSize;
 
-//     MPI_Datatype HODonorCellType;
-//     MPI_Type_vector(MAX_DIMS, NumLocalDonors, NumDonors, MPI_INT, &HODonorCellType);
-//     MPI_Type_commit(&HODonorCellType);
-//     MPI_File_set_view(HOFile, HOCellsOffset+LocalBegin*sizeof(int), MPI_INT, HODonorCellType,
-//       "native", MPIInfo);
-//     DataSize = MAX_DIMS*NumLocalDonors;
-//     File_read_all_endian(HOFile, Data.Extents.Data(), DataSize, MPI_INT, Endian, &Status);
-//     MPI_Type_free(&HODonorCellType);
-//     MPI_Get_count(&Status, MPI_INT, &ReadSize);
-//     if (ReadSize < DataSize) Error = error::FILE_READ;
-//     OVK_EH_SYNC(ErrorHandler, Error, ChunkComm); 
-//     if (Error != error::NONE) {
-//       Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i donor cells from "
-//         XINTOUT file '%s'.", GridID, HOPath);
-//       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-//     }
-
-    // The above version causes "Conditional jump or move depends on uninitialized value(s)"
-    // errors in valgrind with MPICH 3.2... not sure why
-    DatasetOffset = HOCellsOffset;
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      ReadOffset = DatasetOffset + LocalBegin*sizeof(int);
-      core::StartProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
-      MPI_File_set_view(HOFile, ReadOffset, MPI_INT, MPI_INT, "native", MPIInfo);
-      core::EndProfile(Profiler, MPIIOOtherTime);
-      File_read_all_endian(HOFile, Data.Extents.Data(0,iDim,0), int(NumLocalDonors), MPI_INT,
-        Endian, &Status, Profiler, ChunkComm);
-      MPI_Get_count(&Status, MPI_INT, &ReadSize);
-      if (ReadSize < NumLocalDonors) Error = error::FILE_READ;
-      OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
-      if (Error != error::NONE) {
-        Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i donor cells from XINTOUT "
-          "file '%s'.", GridID, HOPath);
-        OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
+      Profiler.StartSync(IMPORT_READ_MPI_IO_OPEN_TIME, ChunkComm);
+      // MPI_File_open missing const qualifier for path string on some platforms
+      MPIError = MPI_File_open(ChunkComm, const_cast<char *>(HOPath.c_str()), MPI_MODE_RDONLY,
+        MPIInfo, &HOFile);
+      Profiler.Stop(IMPORT_READ_MPI_IO_OPEN_TIME);
+      if (MPIError != MPI_SUCCESS) {
+        Logger.LogError(true, "Unable to open file '%s'.", HOPath);
+        throw file_open_error();
       }
-      DatasetOffset += NumDonors*sizeof(int);
-    }
+      auto CloseHO = core::OnScopeExit([&]() {
+        Profiler.StartSync(IMPORT_READ_MPI_IO_CLOSE_TIME, ChunkComm);
+        MPI_File_close(&HOFile);
+        Profiler.Stop(IMPORT_READ_MPI_IO_CLOSE_TIME);
+      });
 
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      for (long long iDonor = 0; iDonor < NumLocalDonors; ++iDonor) {
-        // Convert to zero-based indexing
-        --Data.Extents(0,iDim,iDonor);
-        Data.Extents(1,iDim,iDonor) = Data.Extents(0,iDim,iDonor) + Sizes(iDim,iDonor);
+      Profiler.StartSync(IMPORT_READ_MPI_IO_OPEN_TIME, ChunkComm);
+      // MPI_File_open missing const qualifier for path string on some platforms
+      MPIError = MPI_File_open(ChunkComm, const_cast<char *>(XPath.c_str()), MPI_MODE_RDONLY,
+        MPIInfo, &XFile);
+      Profiler.Stop(IMPORT_READ_MPI_IO_OPEN_TIME);
+      if (MPIError != MPI_SUCCESS) {
+        Logger.LogError(true, "Unable to open file '%s'.", XPath);
+        throw file_open_error();
       }
-    }
+      auto CloseX = core::OnScopeExit([&]() {
+        Profiler.StartSync(IMPORT_READ_MPI_IO_CLOSE_TIME, ChunkComm);
+        MPI_File_close(&XFile);
+        Profiler.Stop(IMPORT_READ_MPI_IO_CLOSE_TIME);
+      });
 
-//     MPI_Datatype HODonorCoordsType;
-//     MPI_Type_vector(MAX_DIMS, NumLocalDonors, NumDonors, MPI_DOUBLE, &HODonorCoordsType);
-//     MPI_Type_commit(&HODonorCoordsType);
-//     MPI_File_set_view(HOFile, HOCoordsOffset+LocalBegin*sizeof(double), MPI_DOUBLE,
-//       HODonorCoordsType, "native", MPIInfo);
-//     DataSize = MAX_DIMS*NumLocalDonors;
-//     File_read_all_endian(HOFile, Data.Coords.Data(), DataSize, MPI_DOUBLE, Endian, &Status);
-//     MPI_Type_free(&HODonorCoordsType);
-//     MPI_Get_count(&Status, MPI_DOUBLE, &ReadSize);
-//     if (ReadSize < DataSize) Error = error::FILE_READ;
-//     OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
-//     if (Error != error::NONE) {
-//       Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i donor Coords from "
-//         "XINTOUT file '%s'.", GridID, HOPath);
-//       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-//     }
+      array<int,2> Sizes({{MAX_DIMS,NumLocalDonors}});
 
-    // The above version causes "Conditional jump or move depends on uninitialized value(s)"
-    // errors in valgrind with MPICH 3.2... not sure why
-    DatasetOffset = HOCoordsOffset;
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      ReadOffset = DatasetOffset + LocalBegin*sizeof(double);
-      core::StartProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
-      MPI_File_set_view(HOFile, ReadOffset, MPI_DOUBLE, MPI_DOUBLE, "native", MPIInfo);
-      core::EndProfile(Profiler, MPIIOOtherTime);
-      File_read_all_endian(HOFile, Data.Coords.Data(iDim,0), int(NumLocalDonors), MPI_DOUBLE,
-        Endian, &Status, Profiler, ChunkComm);
-      MPI_Get_count(&Status, MPI_DOUBLE, &ReadSize);
-      if (ReadSize < NumLocalDonors) Error = error::FILE_READ;
-      OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
-      if (Error != error::NONE) {
-        Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i donor Coords from XINTOUT "
-          "file '%s'.", GridID, HOPath);
-        OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-      }
-      DatasetOffset += NumDonors*sizeof(double);
-    }
+  //     MPI_Datatype XDonorSizeType;
+  //     MPI_Type_vector(MAX_DIMS, NumLocalDonors, NumDonors, MPI_INT, &XDonorSizeType);
+  //     MPI_Type_commit(&XDonorSizeType);
+  //     MPI_File_set_view(XFile, XSizesOffset+LocalBegin*sizeof(int), MPI_INT, XDonorSizeType, "native",
+  //       MPIInfo);
+  //     int DataSize = MAX_DIMS*NumLocalDonors;
+  //     File_read_all_endian(XFile, Sizes.Data(), DataSize, MPI_INT, Endian, &Status);
+  //     MPI_Type_free(&XDonorSizeType);
+  //     MPI_Get_count(&Status, MPI_INT, &ReadSize);
+  //     if (ReadSize < DataSize) Error = error::FILE_READ;
+  //     OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
+  //     if (Error != error::NONE) {
+  //       Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i donor sizes from "
+  //         "XINTOUT file '%s'.", GridID, XPath);
+  //       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
+  //     }
 
-    elem<long long,MAX_DIMS> NumLocalInterpCoefs = {0,0,0};
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      for (long long iDonor = 0; iDonor < NumLocalDonors; ++iDonor) {
-        int Size = Data.Extents(1,iDim,iDonor) - Data.Extents(0,iDim,iDonor);
-        NumLocalInterpCoefs[iDim] += Size;
-      }
-    }
-
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      if (NumLocalInterpCoefs[iDim]*sizeof(double) > std::numeric_limits<int>::max()) {
-        Error = error::FILE_READ;
-        break;
-      }
-    }
-    OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
-    if (Error != error::NONE) {
-      Logger.LogError(ChunkComm.Rank() == 0, "Donor chunk size too big; increase number of "
-        "processes or read granularity.");
-      OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-    }
-
-    elem<long long,MAX_DIMS> NumInterpCoefs;
-    elem<long long,MAX_DIMS> NumInterpCoefsBeforeChunk;
-    MPI_Allreduce(&NumLocalInterpCoefs, &NumInterpCoefs, MAX_DIMS, MPI_LONG_LONG, MPI_SUM,
-      ChunkComm);
-    MPI_Scan(&NumLocalInterpCoefs, &NumInterpCoefsBeforeChunk, MAX_DIMS, MPI_LONG_LONG, MPI_SUM,
-      ChunkComm);
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      NumInterpCoefsBeforeChunk[iDim] -= NumLocalInterpCoefs[iDim];
-    }
-
-    std::vector<double> InterpCoefs(NumLocalInterpCoefs[0]+NumLocalInterpCoefs[1]+
-      NumLocalInterpCoefs[2]);
-    double *Buffer = InterpCoefs.data();
-    DatasetOffset = XInterpCoefsOffset;
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      ReadOffset = DatasetOffset + NumInterpCoefsBeforeChunk[iDim]*sizeof(double);
-      core::StartProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
-      MPI_File_set_view(XFile, ReadOffset, MPI_DOUBLE, MPI_DOUBLE, "native", MPIInfo);
-      core::EndProfile(Profiler, MPIIOOtherTime);
-      File_read_all_endian(XFile, Buffer, int(NumLocalInterpCoefs[iDim]), MPI_DOUBLE, Endian,
-        &Status, Profiler, ChunkComm);
-      MPI_Get_count(&Status, MPI_DOUBLE, &ReadSize);
-      if (ReadSize < NumLocalInterpCoefs[iDim]) Error = error::FILE_READ;
-      OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
-      if (Error != error::NONE) {
-        Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i donor interpolation "
-          "coefficients from XINTOUT file '%s'.", GridID, XPath);
-        OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-      }
-      Buffer += NumLocalInterpCoefs[iDim];
-      DatasetOffset += NumInterpCoefs[iDim]*sizeof(double);
-    }
-
-    elem<long long,MAX_DIMS> iNextCoef;
-    iNextCoef[0] = 0;
-    iNextCoef[1] = iNextCoef[0] + NumLocalInterpCoefs[0];
-    iNextCoef[2] = iNextCoef[1] + NumLocalInterpCoefs[1];
-    for (long long iDonor = 0; iDonor < NumLocalDonors; ++iDonor) {
+      // The above version causes "Conditional jump or move depends on uninitialized value(s)"
+      // errors in valgrind with MPICH 3.2... not sure why
+      DatasetOffset = XSizesOffset;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        int Size = Data.Extents(1,iDim,iDonor) - Data.Extents(0,iDim,iDonor);
-        for (int iPoint = 0; iPoint < Size; ++iPoint) {
-          Data.InterpCoefs(iDim,iPoint,iDonor) = InterpCoefs[iNextCoef[iDim]];
-          ++iNextCoef[iDim];
+        ReadOffset = DatasetOffset + LocalBegin*sizeof(int);
+        Profiler.StartSync(IMPORT_READ_MPI_IO_OTHER_TIME, ChunkComm);
+        MPI_File_set_view(XFile, ReadOffset, MPI_INT, MPI_INT, "native", MPIInfo);
+        Profiler.Stop(IMPORT_READ_MPI_IO_OTHER_TIME);
+        File_read_all_endian(XFile, Sizes.Data(iDim,0), int(NumLocalDonors), MPI_INT, Endian,
+          &Status, Profiler, ChunkComm);
+        MPI_Get_count(&Status, MPI_INT, &ReadSize);
+        error ReadSizesError = error::NONE;
+        if (ReadSize < NumLocalDonors) ReadSizesError = error::FILE_READ;
+        core::SyncError(ReadSizesError, ChunkComm);
+        if (ReadSizesError != error::NONE) {
+          Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i donor sizes from XINTOUT "
+            "file '%s'.", GridID, XPath);
+          core::ThrowError(ReadSizesError);
+        }
+        DatasetOffset += NumDonors*sizeof(int);
+      }
+
+      int MaxSize = 0;
+      for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+        for (long long iDonor = 0; iDonor < NumLocalDonors; ++iDonor) {
+          MaxSize = std::max(MaxSize, Sizes(iDim,iDonor));
         }
       }
+
+      CreateDonorData(Chunk.Data, NumLocalDonors, MaxSize);
+      donor_data &Data = Chunk.Data;
+
+  //     MPI_Datatype HODonorCellType;
+  //     MPI_Type_vector(MAX_DIMS, NumLocalDonors, NumDonors, MPI_INT, &HODonorCellType);
+  //     MPI_Type_commit(&HODonorCellType);
+  //     MPI_File_set_view(HOFile, HOCellsOffset+LocalBegin*sizeof(int), MPI_INT, HODonorCellType,
+  //       "native", MPIInfo);
+  //     DataSize = MAX_DIMS*NumLocalDonors;
+  //     File_read_all_endian(HOFile, Data.Extents.Data(), DataSize, MPI_INT, Endian, &Status);
+  //     MPI_Type_free(&HODonorCellType);
+  //     MPI_Get_count(&Status, MPI_INT, &ReadSize);
+  //     if (ReadSize < DataSize) Error = error::FILE_READ;
+  //     OVK_EH_SYNC(ErrorHandler, Error, ChunkComm); 
+  //     if (Error != error::NONE) {
+  //       Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i donor cells from "
+  //         XINTOUT file '%s'.", GridID, HOPath);
+  //       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
+  //     }
+
+      // The above version causes "Conditional jump or move depends on uninitialized value(s)"
+      // errors in valgrind with MPICH 3.2... not sure why
+      DatasetOffset = HOCellsOffset;
+      for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+        ReadOffset = DatasetOffset + LocalBegin*sizeof(int);
+        Profiler.StartSync(IMPORT_READ_MPI_IO_OTHER_TIME, ChunkComm);
+        MPI_File_set_view(HOFile, ReadOffset, MPI_INT, MPI_INT, "native", MPIInfo);
+        Profiler.Stop(IMPORT_READ_MPI_IO_OTHER_TIME);
+        File_read_all_endian(HOFile, Data.Extents.Data(0,iDim,0), int(NumLocalDonors), MPI_INT,
+          Endian, &Status, Profiler, ChunkComm);
+        MPI_Get_count(&Status, MPI_INT, &ReadSize);
+        error ReadCellsError = error::NONE;
+        if (ReadSize < NumLocalDonors) ReadCellsError = error::FILE_READ;
+        core::SyncError(ReadCellsError, ChunkComm);
+        if (ReadCellsError != error::NONE) {
+          Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i donor cells from XINTOUT "
+            "file '%s'.", GridID, HOPath);
+          core::ThrowError(ReadCellsError);
+        }
+        DatasetOffset += NumDonors*sizeof(int);
+      }
+
+      for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+        for (long long iDonor = 0; iDonor < NumLocalDonors; ++iDonor) {
+          // Convert to zero-based indexing
+          --Data.Extents(0,iDim,iDonor);
+          Data.Extents(1,iDim,iDonor) = Data.Extents(0,iDim,iDonor) + Sizes(iDim,iDonor);
+        }
+      }
+
+  //     MPI_Datatype HODonorCoordsType;
+  //     MPI_Type_vector(MAX_DIMS, NumLocalDonors, NumDonors, MPI_DOUBLE, &HODonorCoordsType);
+  //     MPI_Type_commit(&HODonorCoordsType);
+  //     MPI_File_set_view(HOFile, HOCoordsOffset+LocalBegin*sizeof(double), MPI_DOUBLE,
+  //       HODonorCoordsType, "native", MPIInfo);
+  //     DataSize = MAX_DIMS*NumLocalDonors;
+  //     File_read_all_endian(HOFile, Data.Coords.Data(), DataSize, MPI_DOUBLE, Endian, &Status);
+  //     MPI_Type_free(&HODonorCoordsType);
+  //     MPI_Get_count(&Status, MPI_DOUBLE, &ReadSize);
+  //     if (ReadSize < DataSize) Error = error::FILE_READ;
+  //     OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
+  //     if (Error != error::NONE) {
+  //       Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i donor Coords from "
+  //         "XINTOUT file '%s'.", GridID, HOPath);
+  //       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
+  //     }
+
+      // The above version causes "Conditional jump or move depends on uninitialized value(s)"
+      // errors in valgrind with MPICH 3.2... not sure why
+      DatasetOffset = HOCoordsOffset;
+      for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+        ReadOffset = DatasetOffset + LocalBegin*sizeof(double);
+        Profiler.StartSync(IMPORT_READ_MPI_IO_OTHER_TIME, ChunkComm);
+        MPI_File_set_view(HOFile, ReadOffset, MPI_DOUBLE, MPI_DOUBLE, "native", MPIInfo);
+        Profiler.Stop(IMPORT_READ_MPI_IO_OTHER_TIME);
+        File_read_all_endian(HOFile, Data.Coords.Data(iDim,0), int(NumLocalDonors), MPI_DOUBLE,
+          Endian, &Status, Profiler, ChunkComm);
+        MPI_Get_count(&Status, MPI_DOUBLE, &ReadSize);
+        error ReadCoordsError = error::NONE;
+        if (ReadSize < NumLocalDonors) ReadCoordsError = error::FILE_READ;
+        core::SyncError(ReadCoordsError, ChunkComm);
+        if (ReadCoordsError != error::NONE) {
+          Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i donor Coords from XINTOUT "
+            "file '%s'.", GridID, HOPath);
+          core::ThrowError(ReadCoordsError);
+        }
+        DatasetOffset += NumDonors*sizeof(double);
+      }
+
+      tuple<long long> NumLocalInterpCoefs = {0,0,0};
+      for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+        for (long long iDonor = 0; iDonor < NumLocalDonors; ++iDonor) {
+          int Size = Data.Extents(1,iDim,iDonor) - Data.Extents(0,iDim,iDonor);
+          NumLocalInterpCoefs[iDim] += Size;
+        }
+      }
+
+      ChunkSizeError = error::NONE;
+      for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+        if (NumLocalInterpCoefs[iDim]*sizeof(double) > std::numeric_limits<int>::max()) {
+          ChunkSizeError = error::FILE_READ;
+          break;
+        }
+      }
+      core::SyncError(ChunkSizeError, ChunkComm);
+      if (ChunkSizeError != error::NONE) {
+        Logger.LogError(ChunkComm.Rank() == 0, "Donor chunk size too big; increase number of "
+          "processes or read granularity.");
+        core::ThrowError(ChunkSizeError);
+      }
+
+      tuple<long long> NumInterpCoefs;
+      tuple<long long> NumInterpCoefsBeforeChunk;
+      MPI_Allreduce(&NumLocalInterpCoefs, &NumInterpCoefs, MAX_DIMS, MPI_LONG_LONG, MPI_SUM,
+        ChunkComm);
+      MPI_Scan(&NumLocalInterpCoefs, &NumInterpCoefsBeforeChunk, MAX_DIMS, MPI_LONG_LONG, MPI_SUM,
+        ChunkComm);
+      for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+        NumInterpCoefsBeforeChunk[iDim] -= NumLocalInterpCoefs[iDim];
+      }
+
+      array<double> InterpCoefs({NumLocalInterpCoefs[0]+NumLocalInterpCoefs[1]+
+        NumLocalInterpCoefs[2]});
+      double *Buffer = InterpCoefs.Data();
+      DatasetOffset = XInterpCoefsOffset;
+      for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+        ReadOffset = DatasetOffset + NumInterpCoefsBeforeChunk[iDim]*sizeof(double);
+        Profiler.StartSync(IMPORT_READ_MPI_IO_OTHER_TIME, ChunkComm);
+        MPI_File_set_view(XFile, ReadOffset, MPI_DOUBLE, MPI_DOUBLE, "native", MPIInfo);
+        Profiler.Stop(IMPORT_READ_MPI_IO_OTHER_TIME);
+        File_read_all_endian(XFile, Buffer, int(NumLocalInterpCoefs[iDim]), MPI_DOUBLE, Endian,
+          &Status, Profiler, ChunkComm);
+        MPI_Get_count(&Status, MPI_DOUBLE, &ReadSize);
+        error ReadInterpCoefsError = error::NONE;
+        if (ReadSize < NumLocalInterpCoefs[iDim]) ReadInterpCoefsError = error::FILE_READ;
+        core::SyncError(ReadInterpCoefsError, ChunkComm);
+        if (ReadInterpCoefsError != error::NONE) {
+          Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i donor interpolation "
+            "coefficients from XINTOUT file '%s'.", GridID, XPath);
+          core::ThrowError(ReadInterpCoefsError);
+        }
+        Buffer += NumLocalInterpCoefs[iDim];
+        DatasetOffset += NumInterpCoefs[iDim]*sizeof(double);
+      }
+
+      tuple<long long> iNextCoef;
+      iNextCoef[0] = 0;
+      iNextCoef[1] = iNextCoef[0] + NumLocalInterpCoefs[0];
+      iNextCoef[2] = iNextCoef[1] + NumLocalInterpCoefs[1];
+      for (long long iDonor = 0; iDonor < NumLocalDonors; ++iDonor) {
+        for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+          int Size = Data.Extents(1,iDim,iDonor) - Data.Extents(0,iDim,iDonor);
+          for (int iPoint = 0; iPoint < Size; ++iPoint) {
+            Data.InterpCoefs(iDim,iPoint,iDonor) = InterpCoefs(iNextCoef[iDim]);
+            ++iNextCoef[iDim];
+          }
+        }
+      }
+
     }
+
+  } catch (const exception &Exception) {
+
+    ReadDonorsError = Exception.Error();
 
   }
 
-  done_reading:
-    OVK_EH_SYNC(ErrorHandler, Error, Comm);
-    OVK_EH_CHECK(ErrorHandler, Error);
-
-  return error::NONE;
+  core::SyncError(ReadDonorsError, Comm);
+  core::CheckError(ReadDonorsError);
 
 }
 
-error ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath,
-  long long NumReceivers, MPI_Offset HOPointsOffset, MPI_Offset HOConnectionIDsOffset,
-  endian Endian, xintout_format Format, int ReadGranularityAdjust, MPI_Info MPIInfo,
-  core::profiler &Profiler) {
+void ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath, long long NumReceivers,
+  MPI_Offset HOPointsOffset, MPI_Offset HOConnectionIDsOffset, endian Endian, xintout_format Format,
+  int ReadGranularityAdjust, MPI_Info MPIInfo) {
 
   int GridID = XINTOUTGrid.ID;
 
   core::comm_view Comm = XINTOUTGrid.Comm;
 
-  core::logger &Logger = *XINTOUTGrid.Logger;
-  core::error_handler &ErrorHandler = *XINTOUTGrid.ErrorHandler;
+  core::logger &Logger = XINTOUTGrid.Context->core_Logger();
+  core::profiler &Profiler = XINTOUTGrid.Context->core_Profiler();
 
   xintout_receivers &XINTOUTReceivers = XINTOUTGrid.Receivers;
 
@@ -1309,10 +1317,10 @@ error ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath,
     NumChunks, ChunkSize);
   bool HasChunk = Comm.Rank() % ChunkRankInterval == 0;
 
-  if (Logger.LoggingStatus()) {
+  if (Logger.LoggingDebug()) {
     std::string NumReceiversString = core::FormatNumber(NumReceivers, "receivers", "receiver");
     std::string NumRanksString = core::FormatNumber(NumChunks, "I/O ranks", "I/O rank");
-    Logger.LogStatus(Comm.Rank() == 0, 1, "Grid %s has %s; using %s.", XINTOUTGrid.Name,
+    Logger.LogDebug(Comm.Rank() == 0, 0, "Grid %s has %s; using %s.", XINTOUTGrid.Name,
       NumReceiversString, NumRanksString);
   }
 
@@ -1321,203 +1329,202 @@ error ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath,
 
   core::comm ChunkComm = core::CreateSubsetComm(Comm, HasChunk);
 
-  error Error = error::NONE;
+  error ReadReceiversError = error::NONE;
 
-  if (HasChunk) {
+  try {
 
-    xintout_receiver_chunk &Chunk = XINTOUTReceivers.Chunk;
+    if (HasChunk) {
 
-    long long LocalBegin = ChunkSize*ChunkComm.Rank();
-    long long LocalEnd = std::min(ChunkSize*(ChunkComm.Rank()+1), NumReceivers);
-    long long NumLocalReceivers = LocalEnd - LocalBegin;
+      xintout_receiver_chunk &Chunk = XINTOUTReceivers.Chunk;
 
-    if (NumLocalReceivers*sizeof(long long) > std::numeric_limits<int>::max()) {
-      Error = error::FILE_READ;
-    }
-    OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
-    if (Error != error::NONE) {
-      Logger.LogError(ChunkComm.Rank() == 0, "Receiver chunk size too big; increase number of "
-        "processes or read granularity.");
-      OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-    }
+      long long LocalBegin = ChunkSize*ChunkComm.Rank();
+      long long LocalEnd = std::min(ChunkSize*(ChunkComm.Rank()+1), NumReceivers);
+      long long NumLocalReceivers = LocalEnd - LocalBegin;
 
-    Chunk.Begin = LocalBegin;
-    Chunk.End = LocalEnd;
-
-    CreateReceiverData(Chunk.Data, NumLocalReceivers);
-    receiver_data &Data = Chunk.Data;
-
-    Chunk.ConnectionIDs.Resize({NumLocalReceivers});
-
-    MPI_File HOFile;
-    MPI_Status Status;
-    int MPIError;
-    MPI_Offset DatasetOffset, ReadOffset;
-    int ReadSize;
-
-    int MPIIOOpenTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Open");
-    int MPIIOCloseTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Close");
-    int MPIIOOtherTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Other");
-
-    core::StartProfileSync(Profiler, MPIIOOpenTime, ChunkComm);
-    // MPI_File_open missing const qualifier for path string on some platforms
-    MPIError = MPI_File_open(ChunkComm, const_cast<char *>(HOPath.c_str()), MPI_MODE_RDONLY,
-      MPIInfo, &HOFile);
-    core::EndProfile(Profiler, MPIIOOpenTime);
-    if (MPIError != MPI_SUCCESS) {
-      Error = error::FILE_OPEN;
-      Logger.LogError(true, "Unable to open file '%s'.", HOPath);
-      OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-    }
-    auto CloseHO = core::OnScopeExit([&]() {
-      core::StartProfileSync(Profiler, MPIIOCloseTime, ChunkComm);
-      MPI_File_close(&HOFile);
-      core::EndProfile(Profiler, MPIIOCloseTime);
-    });
-
-//     MPI_Datatype HOReceiverPointType;
-//     MPI_Type_vector(MAX_DIMS, NumLocalReceivers, NumReceivers, MPI_INT, &HOReceiverPointType);
-//     MPI_Type_commit(&HOReceiverPointType);
-//     MPI_File_set_view(HOFile, HOPointsOffset+LocalBegin*sizeof(int), MPI_INT, HOReceiverPointType,
-//       "native", MPIInfo);
-//     DataSize = MAX_DIMS*NumLocalReceivers;
-//     File_read_all_endian(HOFile, Data.Points.Data(), DataSize, MPI_INT, Endian, &Status);
-//     MPI_Type_free(&HOReceiverPointType);
-//     MPI_Get_count(&Status, MPI_INT, &ReadSize);
-//     if (ReadSize < DataSize) Error = error::FILE_READ;
-//     OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
-//     if (Error != error::NONE) {
-//       Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i receiver points from "
-//         "XINTOUT file '%s'.", GridID, HOPath);
-//       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-//     }
-
-    // The above version causes "Conditional jump or move depends on uninitialized value(s)"
-    // errors in valgrind with MPICH 3.2... not sure why
-    DatasetOffset = HOPointsOffset;
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      ReadOffset = DatasetOffset + LocalBegin*sizeof(int);
-      core::StartProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
-      MPI_File_set_view(HOFile, ReadOffset, MPI_INT, MPI_INT, "native", MPIInfo);
-      core::EndProfile(Profiler, MPIIOOtherTime);
-      File_read_all_endian(HOFile, Data.Points.Data(iDim,0), int(NumLocalReceivers), MPI_INT,
-        Endian, &Status, Profiler, ChunkComm);
-      MPI_Get_count(&Status, MPI_INT, &ReadSize);
-      if (ReadSize < NumLocalReceivers) Error = error::FILE_READ;
-      OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
-      if (Error != error::NONE) {
-        Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i receiver points from "
-          "XINTOUT file '%s'.", GridID, HOPath);
-        OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
+      error ChunkSizeError = error::NONE;
+      if (NumLocalReceivers*sizeof(long long) > std::numeric_limits<int>::max()) {
+        ChunkSizeError = error::FILE_READ;
       }
-      DatasetOffset += NumReceivers*sizeof(int);
-    }
+      core::SyncError(ChunkSizeError, ChunkComm);
+      if (ChunkSizeError != error::NONE) {
+        Logger.LogError(ChunkComm.Rank() == 0, "Receiver chunk size too big; increase number of "
+          "processes or read granularity.");
+        core::ThrowError(ChunkSizeError);
+      }
 
-    // Convert to zero-based indexing
-    for (long long iReceiver = 0; iReceiver < NumLocalReceivers; ++iReceiver) {
+      Chunk.Begin = LocalBegin;
+      Chunk.End = LocalEnd;
+
+      CreateReceiverData(Chunk.Data, NumLocalReceivers);
+      receiver_data &Data = Chunk.Data;
+
+      Chunk.ConnectionIDs.Resize({NumLocalReceivers});
+
+      MPI_File HOFile;
+      MPI_Status Status;
+      int MPIError;
+      MPI_Offset DatasetOffset, ReadOffset;
+      int ReadSize;
+
+      Profiler.StartSync(IMPORT_READ_MPI_IO_OPEN_TIME, ChunkComm);
+      // MPI_File_open missing const qualifier for path string on some platforms
+      MPIError = MPI_File_open(ChunkComm, const_cast<char *>(HOPath.c_str()), MPI_MODE_RDONLY,
+        MPIInfo, &HOFile);
+      Profiler.Stop(IMPORT_READ_MPI_IO_OPEN_TIME);
+      if (MPIError != MPI_SUCCESS) {
+        Logger.LogError(true, "Unable to open file '%s'.", HOPath);
+        throw file_open_error();
+      }
+      auto CloseHO = core::OnScopeExit([&]() {
+        Profiler.StartSync(IMPORT_READ_MPI_IO_CLOSE_TIME, ChunkComm);
+        MPI_File_close(&HOFile);
+        Profiler.Stop(IMPORT_READ_MPI_IO_CLOSE_TIME);
+      });
+
+  //     MPI_Datatype HOReceiverPointType;
+  //     MPI_Type_vector(MAX_DIMS, NumLocalReceivers, NumReceivers, MPI_INT, &HOReceiverPointType);
+  //     MPI_Type_commit(&HOReceiverPointType);
+  //     MPI_File_set_view(HOFile, HOPointsOffset+LocalBegin*sizeof(int), MPI_INT, HOReceiverPointType,
+  //       "native", MPIInfo);
+  //     DataSize = MAX_DIMS*NumLocalReceivers;
+  //     File_read_all_endian(HOFile, Data.Points.Data(), DataSize, MPI_INT, Endian, &Status);
+  //     MPI_Type_free(&HOReceiverPointType);
+  //     MPI_Get_count(&Status, MPI_INT, &ReadSize);
+  //     if (ReadSize < DataSize) Error = error::FILE_READ;
+  //     OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
+  //     if (Error != error::NONE) {
+  //       Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i receiver points from "
+  //         "XINTOUT file '%s'.", GridID, HOPath);
+  //       OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
+  //     }
+
+      // The above version causes "Conditional jump or move depends on uninitialized value(s)"
+      // errors in valgrind with MPICH 3.2... not sure why
+      DatasetOffset = HOPointsOffset;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        --Data.Points(iDim,iReceiver);
+        ReadOffset = DatasetOffset + LocalBegin*sizeof(int);
+        Profiler.StartSync(IMPORT_READ_MPI_IO_OTHER_TIME, ChunkComm);
+        MPI_File_set_view(HOFile, ReadOffset, MPI_INT, MPI_INT, "native", MPIInfo);
+        Profiler.Stop(IMPORT_READ_MPI_IO_OTHER_TIME);
+        File_read_all_endian(HOFile, Data.Points.Data(iDim,0), int(NumLocalReceivers), MPI_INT,
+          Endian, &Status, Profiler, ChunkComm);
+        MPI_Get_count(&Status, MPI_INT, &ReadSize);
+        error ReadPointsError = error::NONE;
+        if (ReadSize < NumLocalReceivers) ReadPointsError = error::FILE_READ;
+        core::SyncError(ReadPointsError, ChunkComm);
+        if (ReadPointsError != error::NONE) {
+          Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i receiver points from "
+            "XINTOUT file '%s'.", GridID, HOPath);
+          core::ThrowError(ReadPointsError);
+        }
+        DatasetOffset += NumReceivers*sizeof(int);
       }
-    }
 
-    int ConnectionIDSize;
-    MPI_Datatype ConnectionIDType;
-    if (Format == xintout_format::STANDARD) {
-      ConnectionIDSize = sizeof(int);
-      ConnectionIDType = MPI_INT;
-    } else {
-      ConnectionIDSize = sizeof(long long);
-      ConnectionIDType = MPI_LONG_LONG;
-    }
-
-    std::vector<unsigned char> ConnectionIDsBytes(NumLocalReceivers*ConnectionIDSize);
-
-    DatasetOffset = HOConnectionIDsOffset;
-    ReadOffset = DatasetOffset+LocalBegin*ConnectionIDSize;
-    core::StartProfileSync(Profiler, MPIIOOtherTime, ChunkComm);
-    MPI_File_set_view(HOFile, ReadOffset, ConnectionIDType, ConnectionIDType, "native", MPIInfo);
-    core::EndProfile(Profiler, MPIIOOtherTime);
-    File_read_all_endian(HOFile, ConnectionIDsBytes.data(), int(NumLocalReceivers),
-      ConnectionIDType, Endian, &Status, Profiler, ChunkComm);
-    MPI_Get_count(&Status, ConnectionIDType, &ReadSize);
-    if (ReadSize < NumLocalReceivers) Error = error::FILE_READ;
-    OVK_EH_SYNC(ErrorHandler, Error, ChunkComm);
-    if (Error != error::NONE) {
-      Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i receiver connection IDs "
-        "from XINTOUT file '%s'.", GridID, HOPath);
-      OVK_EH_CHECK_SKIP_TO(ErrorHandler, Error, done_reading);
-    }
-
-    if (Format == xintout_format::STANDARD) {
-      auto ConnectionIDs = reinterpret_cast<int *>(ConnectionIDsBytes.data());
+      // Convert to zero-based indexing
       for (long long iReceiver = 0; iReceiver < NumLocalReceivers; ++iReceiver) {
-        // Convert to zero-based indexing
-        Chunk.ConnectionIDs(iReceiver) = ConnectionIDs[iReceiver]-1;
+        for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+          --Data.Points(iDim,iReceiver);
+        }
       }
-    } else {
-      auto ConnectionIDs = reinterpret_cast<long long *>(ConnectionIDsBytes.data());
-      for (long long iReceiver = 0; iReceiver < NumLocalReceivers; ++iReceiver) {
-        // Convert to zero-based indexing
-        Chunk.ConnectionIDs(iReceiver) = ConnectionIDs[iReceiver]-1;
+
+      int ConnectionIDSize;
+      MPI_Datatype ConnectionIDType;
+      if (Format == xintout_format::STANDARD) {
+        ConnectionIDSize = sizeof(int);
+        ConnectionIDType = MPI_INT;
+      } else {
+        ConnectionIDSize = sizeof(long long);
+        ConnectionIDType = MPI_LONG_LONG;
       }
+
+      array<unsigned char> ConnectionIDsBytes({NumLocalReceivers*ConnectionIDSize});
+
+      DatasetOffset = HOConnectionIDsOffset;
+      ReadOffset = DatasetOffset+LocalBegin*ConnectionIDSize;
+      Profiler.StartSync(IMPORT_READ_MPI_IO_OTHER_TIME, ChunkComm);
+      MPI_File_set_view(HOFile, ReadOffset, ConnectionIDType, ConnectionIDType, "native", MPIInfo);
+      Profiler.Stop(IMPORT_READ_MPI_IO_OTHER_TIME);
+      File_read_all_endian(HOFile, ConnectionIDsBytes.Data(), int(NumLocalReceivers),
+        ConnectionIDType, Endian, &Status, Profiler, ChunkComm);
+      MPI_Get_count(&Status, ConnectionIDType, &ReadSize);
+      error ReadConnectionIDsError = error::NONE;
+      if (ReadSize < NumLocalReceivers) ReadConnectionIDsError = error::FILE_READ;
+      core::SyncError(ReadConnectionIDsError, ChunkComm);
+      if (ReadConnectionIDsError != error::NONE) {
+        Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i receiver connection IDs "
+          "from XINTOUT file '%s'.", GridID, HOPath);
+        core::ThrowError(ReadConnectionIDsError);
+      }
+
+      if (Format == xintout_format::STANDARD) {
+        array_view<const int> ConnectionIDs(reinterpret_cast<int *>(ConnectionIDsBytes.Data()),
+          {NumLocalReceivers});
+        for (long long iReceiver = 0; iReceiver < NumLocalReceivers; ++iReceiver) {
+          // Convert to zero-based indexing
+          Chunk.ConnectionIDs(iReceiver) = ConnectionIDs(iReceiver)-1;
+        }
+      } else {
+        array_view<const long long> ConnectionIDs(reinterpret_cast<long long *>(
+          ConnectionIDsBytes.Data()), {NumLocalReceivers});
+        for (long long iReceiver = 0; iReceiver < NumLocalReceivers; ++iReceiver) {
+          // Convert to zero-based indexing
+          Chunk.ConnectionIDs(iReceiver) = ConnectionIDs(iReceiver)-1;
+        }
+      }
+
     }
+
+  } catch (const exception &Exception) {
+
+    ReadReceiversError = Exception.Error();
 
   }
 
-  done_reading:
-    OVK_EH_SYNC(ErrorHandler, Error, Comm);
-    OVK_EH_CHECK(ErrorHandler, Error);
-
-  return error::NONE;
+  core::SyncError(ReadReceiversError, Comm);
+  core::CheckError(ReadReceiversError);
 
 }
 
-void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
+void MatchDonorsAndReceivers(xintout &XINTOUT) {
 
   core::comm_view Comm = XINTOUT.Comm;
 
   MPI_Barrier(Comm);
 
-  core::logger &Logger = *XINTOUT.Logger;
+  core::logger &Logger = XINTOUT.Context->core_Logger();
+  core::profiler &Profiler = XINTOUT.Context->core_Profiler();
 
   Logger.LogStatus(Comm.Rank() == 0, 0, "Matching donors and receivers...");
-
-  int MapToBinsTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Match::MapToBins");
-  int HandshakeTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Match::Handshake");
-  int SendToBinsTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Match::SendToBins");
-  int FillConnectionDataTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Match::FillConnectionData");
-  int RecvFromBinsTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Match::RecvFromBins");
-  int UnpackTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Match::Unpack");
 
   int NumGrids = XINTOUT.NumGrids;
   int NumLocalGrids = XINTOUT.NumLocalGrids;
 
-  std::vector<long long> NumPointsOnGrid(NumGrids, 0);
-  std::vector<long long> NumReceiversOnGrid(NumGrids, 0);
+  array<long long> NumPointsOnGrid({NumGrids}, 0);
+  array<long long> NumReceiversOnGrid({NumGrids}, 0);
 
   for (int iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
-    xintout_grid &XINTOUTGrid = XINTOUT.Grids[iLocalGrid];
+    xintout_grid &XINTOUTGrid = XINTOUT.Grids(iLocalGrid);
     int GridID = XINTOUTGrid.ID;
     int iGrid = GridID-1;
-    NumPointsOnGrid[iGrid] = 1;
+    NumPointsOnGrid(iGrid) = 1;
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      NumPointsOnGrid[iGrid] *= XINTOUTGrid.GlobalSize[iDim];
+      NumPointsOnGrid(iGrid) *= XINTOUTGrid.GlobalSize[iDim];
     }
-    NumReceiversOnGrid[iGrid] = XINTOUTGrid.Receivers.Count;
+    NumReceiversOnGrid(iGrid) = XINTOUTGrid.Receivers.Count;
   }
 
-  MPI_Allreduce(MPI_IN_PLACE, NumPointsOnGrid.data(), NumGrids, MPI_LONG_LONG, MPI_MAX, Comm);
-  MPI_Allreduce(MPI_IN_PLACE, NumReceiversOnGrid.data(), NumGrids, MPI_LONG_LONG, MPI_MAX, Comm);
+  MPI_Allreduce(MPI_IN_PLACE, NumPointsOnGrid.Data(), NumGrids, MPI_LONG_LONG, MPI_MAX, Comm);
+  MPI_Allreduce(MPI_IN_PLACE, NumReceiversOnGrid.Data(), NumGrids, MPI_LONG_LONG, MPI_MAX, Comm);
 
   long long NumPoints = 0;
   long long NumConnections = 0;
   for (int iGrid = 0; iGrid < NumGrids; ++iGrid) {
-    NumPoints += NumPointsOnGrid[iGrid];
-    NumConnections += NumReceiversOnGrid[iGrid];
+    NumPoints += NumPointsOnGrid(iGrid);
+    NumConnections += NumReceiversOnGrid(iGrid);
   }
 
-  NumPointsOnGrid.clear();
-  NumReceiversOnGrid.clear();
+  NumPointsOnGrid.Clear();
+  NumReceiversOnGrid.Clear();
 
   xintout_connections &XINTOUTConnections = XINTOUT.Connections;
 
@@ -1538,19 +1545,19 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
   }
 
   struct send_recv {
-    int Count;
+    long long Count;
     connection_data Data;
     send_recv():
       Count(0)
     {}
   };
 
-  core::StartProfileSync(Profiler, MapToBinsTime, Comm);
+  Profiler.StartSync(IMPORT_MATCH_MAP_TO_BINS_TIME, Comm);
 
   std::map<int, send_recv> DonorSends, ReceiverSends;
 
   for (int iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
-    xintout_grid &XINTOUTGrid = XINTOUT.Grids[iLocalGrid];
+    xintout_grid &XINTOUTGrid = XINTOUT.Grids(iLocalGrid);
     xintout_donors &XINTOUTDonors = XINTOUTGrid.Donors;
     xintout_receivers &XINTOUTReceivers = XINTOUTGrid.Receivers;
     if (XINTOUTDonors.HasChunk) {
@@ -1598,7 +1605,7 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
   }
 
   for (int iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
-    xintout_grid &XINTOUTGrid = XINTOUT.Grids[iLocalGrid];
+    xintout_grid &XINTOUTGrid = XINTOUT.Grids(iLocalGrid);
     xintout_donors &XINTOUTDonors = XINTOUTGrid.Donors;
     xintout_receivers &XINTOUTReceivers = XINTOUTGrid.Receivers;
     if (XINTOUTDonors.HasChunk) {
@@ -1638,29 +1645,29 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
   int NumDonorSends = DonorSends.size();
   int NumReceiverSends = ReceiverSends.size();
 
-  std::vector<int> DonorSendToRanks;
+  array<int> DonorSendToRanks;
   for (auto &Pair : DonorSends) {
     int Rank = Pair.first;
-    DonorSendToRanks.push_back(Rank);
+    DonorSendToRanks.Append(Rank);
   }
 
-  std::vector<int> ReceiverSendToRanks;
+  array<int> ReceiverSendToRanks;
   for (auto &Pair : ReceiverSends) {
     int Rank = Pair.first;
-    ReceiverSendToRanks.push_back(Rank);
+    ReceiverSendToRanks.Append(Rank);
   }
 
-  core::EndProfile(Profiler, MapToBinsTime);
-  core::StartProfileSync(Profiler, HandshakeTime, Comm);
+  Profiler.Stop(IMPORT_MATCH_MAP_TO_BINS_TIME);
+  Profiler.StartSync(IMPORT_MATCH_HANDSHAKE_TIME, Comm);
 
   array<int> DonorRecvFromRanks = core::DynamicHandshake(Comm, DonorSendToRanks);
   array<int> ReceiverRecvFromRanks = core::DynamicHandshake(Comm, ReceiverSendToRanks);
 
-  DonorSendToRanks.clear();
-  ReceiverSendToRanks.clear();
+  DonorSendToRanks.Clear();
+  ReceiverSendToRanks.Clear();
 
-  core::EndProfile(Profiler, HandshakeTime);
-  core::StartProfileSync(Profiler, SendToBinsTime, Comm);
+  Profiler.Stop(IMPORT_MATCH_HANDSHAKE_TIME);
+  Profiler.StartSync(IMPORT_MATCH_SEND_TO_BINS_TIME, Comm);
 
   std::map<int, send_recv> DonorRecvs;
   for (int Rank : DonorRecvFromRanks) {
@@ -1678,21 +1685,23 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
   int NumDonorRecvs = DonorRecvs.size();
   int NumReceiverRecvs = ReceiverRecvs.size();
 
-  std::vector<MPI_Request> Requests;
+  array<MPI_Request> Requests;
 
   // 3 requests per send/recv (1 for each of grid IDs, connection IDs, and points/cells)
-  Requests.reserve(3*(NumDonorSends+NumDonorRecvs+NumReceiverSends+NumReceiverRecvs));
+  Requests.Reserve(3*(NumDonorSends+NumDonorRecvs+NumReceiverSends+NumReceiverRecvs));
 
-  auto Isend = [&Requests](void *Buffer, int Count, MPI_Datatype DataType, int DestRank, int Tag,
-    MPI_Comm Comm) {
-    Requests.emplace_back();
-    MPI_Isend(Buffer, Count, DataType, DestRank, Tag, Comm, &Requests.back());
-
+  auto Isend = [&Requests](void *Buffer, long long Count, MPI_Datatype DataType, int DestRank,
+    int Tag, MPI_Comm SendComm) {
+    OVK_DEBUG_ASSERT(Count <= std::numeric_limits<int>::max(), "Send count too large.");
+    MPI_Request &Request = Requests.Append();
+    MPI_Isend(Buffer, int(Count), DataType, DestRank, Tag, SendComm, &Request);
   };
-  auto Irecv = [&Requests](void *Buffer, int Count, MPI_Datatype DataType, int SourceRank, int Tag,
-    MPI_Comm Comm) {
-    Requests.emplace_back();
-    MPI_Irecv(Buffer, Count, DataType, SourceRank, Tag, Comm, &Requests.back());
+
+  auto Irecv = [&Requests](void *Buffer, long long Count, MPI_Datatype DataType, int SourceRank,
+    int Tag, MPI_Comm RecvComm) {
+    OVK_DEBUG_ASSERT(Count <= std::numeric_limits<int>::max(), "Receive count too large.");
+    MPI_Request &Request = Requests.Append();
+    MPI_Irecv(Buffer, int(Count), DataType, SourceRank, Tag, RecvComm, &Request);
   };
 
   for (auto &Pair : DonorRecvs) {
@@ -1719,9 +1728,9 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
     Isend(&Send.Count, 1, MPI_LONG_LONG, Rank, 1, Comm);
   }
 
-  MPI_Waitall(Requests.size(), Requests.data(), MPI_STATUSES_IGNORE);
+  MPI_Waitall(Requests.Count(), Requests.Data(), MPI_STATUSES_IGNORE);
 
-  Requests.clear();
+  Requests.Clear();
 
   for (auto &Pair : DonorRecvs) {
     int Rank = Pair.first;
@@ -1757,12 +1766,12 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
     Isend(Send.Data.ReceiverPoints.Data(), MAX_DIMS*Send.Count, MPI_INT, Rank, 1, Comm);
   }
 
-  MPI_Waitall(Requests.size(), Requests.data(), MPI_STATUSES_IGNORE);
+  MPI_Waitall(Requests.Count(), Requests.Data(), MPI_STATUSES_IGNORE);
 
-  Requests.clear();
+  Requests.Clear();
 
-  core::EndProfile(Profiler, SendToBinsTime);
-  core::StartProfileSync(Profiler, RecvFromBinsTime, Comm);
+  Profiler.Stop(IMPORT_MATCH_SEND_TO_BINS_TIME);
+  Profiler.StartSync(IMPORT_MATCH_RECV_FROM_BINS_TIME, Comm);
 
   for (auto &Pair : DonorSends) {
     int Rank = Pair.first;
@@ -1778,8 +1787,8 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
     Irecv(Send.Data.DonorCells.Data(), MAX_DIMS*Send.Count, MPI_INT, Rank, 1, Comm);
   }
 
-  core::EndProfile(Profiler, RecvFromBinsTime);
-  core::StartProfileSync(Profiler, FillConnectionDataTime, Comm);
+  Profiler.Stop(IMPORT_MATCH_RECV_FROM_BINS_TIME);
+  Profiler.StartSync(IMPORT_MATCH_FILL_CONNECTION_DATA_TIME, Comm);
 
   for (auto &Pair : DonorRecvs) {
     send_recv &Recv = Pair.second;
@@ -1803,8 +1812,8 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
     }
   }
 
-  core::EndProfile(Profiler, FillConnectionDataTime);
-  core::StartProfileSync(Profiler, RecvFromBinsTime, Comm);
+  Profiler.Stop(IMPORT_MATCH_FILL_CONNECTION_DATA_TIME);
+  Profiler.StartSync(IMPORT_MATCH_RECV_FROM_BINS_TIME, Comm);
 
   for (auto &Pair : DonorRecvs) {
     int Rank = Pair.first;
@@ -1834,12 +1843,12 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
     Isend(Recv.Data.DonorCells.Data(), MAX_DIMS*Recv.Count, MPI_INT, Rank, 1, Comm);
   }
 
-  MPI_Waitall(Requests.size(), Requests.data(), MPI_STATUSES_IGNORE);
+  MPI_Waitall(Requests.Count(), Requests.Data(), MPI_STATUSES_IGNORE);
 
-  Requests.clear();
+  Requests.Clear();
 
-  core::EndProfile(Profiler, RecvFromBinsTime);
-  core::StartProfileSync(Profiler, UnpackTime, Comm);
+  Profiler.Stop(IMPORT_MATCH_RECV_FROM_BINS_TIME);
+  Profiler.StartSync(IMPORT_MATCH_UNPACK_TIME, Comm);
 
   for (auto &Pair : DonorSends) {
     send_recv &Send = Pair.second;
@@ -1854,7 +1863,7 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
   }
 
   for (int iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
-    xintout_grid &XINTOUTGrid = XINTOUT.Grids[iLocalGrid];
+    xintout_grid &XINTOUTGrid = XINTOUT.Grids(iLocalGrid);
     xintout_donors &XINTOUTDonors = XINTOUTGrid.Donors;
     xintout_receivers &XINTOUTReceivers = XINTOUTGrid.Receivers;
     if (XINTOUTDonors.HasChunk) {
@@ -1889,50 +1898,44 @@ void MatchDonorsAndReceivers(xintout &XINTOUT, core::profiler &Profiler) {
     }
   }
 
-  core::EndProfile(Profiler, UnpackTime);
+  Profiler.Stop(IMPORT_MATCH_UNPACK_TIME);
 
   MPI_Barrier(Comm);
 
-  Logger.LogStatus(Comm.Rank() == 0, 0, "Finished matching donors and receivers.");
+  Logger.LogStatus(Comm.Rank() == 0, 0, "Done matching donors and receivers.");
 
 }
 
-void DistributeConnectivityData(const xintout &XINTOUT, const std::vector<const grid *> &LocalGrids,
-  std::vector<donor_data> &LocalDonorData, std::vector<receiver_data> &LocalReceiverData,
-  core::profiler &Profiler) {
+void DistributeConnectivityData(const xintout &XINTOUT, const array<const grid *> &LocalGrids,
+  array<donor_data> &LocalDonorData, array<receiver_data> &LocalReceiverData) {
 
   core::comm_view Comm = XINTOUT.Comm;
 
   MPI_Barrier(Comm);
 
-  core::logger &Logger = *XINTOUT.Logger;
+  core::logger &Logger = XINTOUT.Context->core_Logger();
 
   Logger.LogStatus(Comm.Rank() == 0, 0, "Distributing connectivity data to ranks...");
 
   for (int iLocalGrid = 0; iLocalGrid < XINTOUT.NumLocalGrids; ++iLocalGrid) {
-    const xintout_grid &XINTOUTGrid = XINTOUT.Grids[iLocalGrid];
-    const grid &Grid = *LocalGrids[iLocalGrid];
-    DistributeGridConnectivityData(XINTOUTGrid, Grid, LocalDonorData[iLocalGrid],
-      LocalReceiverData[iLocalGrid], Profiler);
+    const xintout_grid &XINTOUTGrid = XINTOUT.Grids(iLocalGrid);
+    const grid &Grid = *LocalGrids(iLocalGrid);
+    DistributeGridConnectivityData(XINTOUTGrid, Grid, LocalDonorData(iLocalGrid),
+      LocalReceiverData(iLocalGrid));
   }
 
   MPI_Barrier(Comm);
 
-  Logger.LogStatus(Comm.Rank() == 0, 0, "Finished distributing connectivity data to ranks.");
+  Logger.LogStatus(Comm.Rank() == 0, 0, "Done distributing connectivity data to ranks.");
 
 }
 
 void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid &Grid,
-  donor_data &DonorData, receiver_data &ReceiverData, core::profiler &Profiler) {
+  donor_data &DonorData, receiver_data &ReceiverData) {
 
   int NumDims = XINTOUTGrid.NumDims;
   core::comm_view Comm = XINTOUTGrid.Comm;
-
-  int MapToBinsTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Distribute::MapToBins");
-  int RetrieveBinsTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Distribute::RetrieveBins");
-  int FindRanksTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Distribute::FindRanks");
-  int HandshakeTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Distribute::Handshake");
-  int SendDataTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Distribute::SendData");
+  core::profiler &Profiler = XINTOUTGrid.Context->core_Profiler();
 
   const xintout_donors &XINTOUTDonors = XINTOUTGrid.Donors;
   const xintout_receivers &XINTOUTReceivers = XINTOUTGrid.Receivers;
@@ -1940,14 +1943,14 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
   const cart &Cart = Grid.Cart();
   const core::partition_hash &Hash = Grid.core_PartitionHash();
 
-  core::StartProfileSync(Profiler, MapToBinsTime, Comm);
+  Profiler.StartSync(IMPORT_DISTRIBUTE_MAP_TO_BINS_TIME, Comm);
 
   std::map<int, core::partition_hash::bin> Bins;
 
   long long NumChunkDonors = 0;
   long long NumChunkDonorPoints = 0;
   array<int,2> ChunkDonorPoints;
-  std::vector<int> ChunkDonorPointBinIndices;
+  array<int> ChunkDonorPointBinIndices;
   if (XINTOUTDonors.HasChunk) {
     const xintout_donor_chunk &DonorChunk = XINTOUTDonors.Chunk;
     NumChunkDonors = DonorChunk.End - DonorChunk.Begin;
@@ -1960,7 +1963,7 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
       NumChunkDonorPoints += NumPointsInCell;
     }
     ChunkDonorPoints.Resize({{MAX_DIMS,NumChunkDonorPoints}});
-    long long iDonorPoint = 0;
+    long long iNextDonorPoint = 0;
     for (long long iDonor = 0; iDonor < NumChunkDonors; ++iDonor) {
       range DonorRange;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
@@ -1972,11 +1975,11 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
         for (int k = DonorRange.Begin(2); k < DonorRange.End(2); ++k) {
           for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
             for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
-              elem<int,MAX_DIMS> Point = {i,j,k};
+              tuple<int> Point = {i,j,k};
               for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-                ChunkDonorPoints(iDim,iDonorPoint) = Point[iDim];
+                ChunkDonorPoints(iDim,iNextDonorPoint) = Point[iDim];
               }
-              ++iDonorPoint;
+              ++iNextDonorPoint;
             }
           }
         }
@@ -1984,20 +1987,20 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
         for (int k = DonorRange.Begin(2); k < DonorRange.End(2); ++k) {
           for (int j = DonorRange.Begin(1); j < DonorRange.End(1); ++j) {
             for (int i = DonorRange.Begin(0); i < DonorRange.End(0); ++i) {
-              elem<int,MAX_DIMS> Point = Cart.PeriodicAdjust({i,j,k});
+              tuple<int> Point = Cart.PeriodicAdjust({i,j,k});
               for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-                ChunkDonorPoints(iDim,iDonorPoint) = Point[iDim];
+                ChunkDonorPoints(iDim,iNextDonorPoint) = Point[iDim];
               }
-              ++iDonorPoint;
+              ++iNextDonorPoint;
             }
           }
         }
       }
     }
-    ChunkDonorPointBinIndices.resize(NumChunkDonorPoints);
+    ChunkDonorPointBinIndices.Resize({NumChunkDonorPoints});
     Hash.MapToBins(ChunkDonorPoints, ChunkDonorPointBinIndices);
     for (long long iDonorPoint = 0; iDonorPoint < NumChunkDonorPoints; ++iDonorPoint) {
-      int BinIndex = ChunkDonorPointBinIndices[iDonorPoint];
+      int BinIndex = ChunkDonorPointBinIndices(iDonorPoint);
       auto Iter = Bins.lower_bound(BinIndex);
       if (Iter == Bins.end() || Iter->first > BinIndex) {
         Bins.emplace_hint(Iter, BinIndex, core::partition_hash::bin());
@@ -2006,14 +2009,14 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
   }
 
   long long NumChunkReceivers = 0;
-  std::vector<int> ChunkReceiverBinIndices;
+  array<int> ChunkReceiverBinIndices;
   if (XINTOUTReceivers.HasChunk) {
     const xintout_receiver_chunk &ReceiverChunk = XINTOUTReceivers.Chunk;
     NumChunkReceivers = ReceiverChunk.End - ReceiverChunk.Begin;
-    ChunkReceiverBinIndices.resize(NumChunkReceivers);
+    ChunkReceiverBinIndices.Resize({NumChunkReceivers});
     Hash.MapToBins(ReceiverChunk.Data.Points, ChunkReceiverBinIndices);
     for (long long iReceiver = 0; iReceiver < NumChunkReceivers; ++iReceiver) {
-      int BinIndex = ChunkReceiverBinIndices[iReceiver];
+      int BinIndex = ChunkReceiverBinIndices(iReceiver);
       auto Iter = Bins.lower_bound(BinIndex);
       if (Iter == Bins.end() || Iter->first > BinIndex) {
         Bins.emplace_hint(Iter, BinIndex, core::partition_hash::bin());
@@ -2021,71 +2024,65 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
     }
   }
 
-  core::EndProfile(Profiler, MapToBinsTime);
-  core::StartProfileSync(Profiler, RetrieveBinsTime, Comm);
+  Profiler.Stop(IMPORT_DISTRIBUTE_MAP_TO_BINS_TIME);
+  Profiler.StartSync(IMPORT_DISTRIBUTE_RETRIEVE_BINS_TIME, Comm);
 
   Hash.RetrieveBins(Bins);
 
-  core::EndProfile(Profiler, RetrieveBinsTime);
-  core::StartProfileSync(Profiler, FindRanksTime, Comm);
+  Profiler.Stop(IMPORT_DISTRIBUTE_RETRIEVE_BINS_TIME);
+  Profiler.StartSync(IMPORT_DISTRIBUTE_FIND_RANKS_TIME, Comm);
 
-  std::vector<int> NumChunkDonorRanks;
-  std::vector<int *> ChunkDonorRanks;
-  std::vector<int> ChunkDonorRanksData;
+  array<int> NumChunkDonorRanks;
+  array<int *> ChunkDonorRanks;
+  array<int> ChunkDonorRanksData;
   if (XINTOUTDonors.HasChunk) {
     const xintout_donor_chunk &DonorChunk = XINTOUTDonors.Chunk;
-    NumChunkDonorRanks.resize(NumChunkDonors);
-    ChunkDonorRanks.resize(NumChunkDonors);
-    ChunkDonorRanksData.resize(NumChunkDonorPoints);
+    NumChunkDonorRanks.Resize({NumChunkDonors});
+    ChunkDonorRanks.Resize({NumChunkDonors});
+    ChunkDonorRanksData.Resize({NumChunkDonorPoints});
     Hash.FindPartitions(Bins, ChunkDonorPoints, ChunkDonorPointBinIndices, ChunkDonorRanksData);
     int MaxSize = DonorChunk.Data.MaxSize;
     int MaxPointsInCell = 1;
     for (int iDim = 0; iDim < NumDims; ++iDim) {
       MaxPointsInCell *= MaxSize;
     }
-    std::vector<int> UniqueRanks(MaxPointsInCell);
+    id_set<1> UniqueRanks;
+    UniqueRanks.Reserve(MaxPointsInCell);
     long long iDonorPoint = 0;
     for (long long iDonor = 0; iDonor < NumChunkDonors; ++iDonor) {
-      NumChunkDonorRanks[iDonor] = 0;
-      ChunkDonorRanks[iDonor] = ChunkDonorRanksData.data() + iDonorPoint;
+      ChunkDonorRanks(iDonor) = ChunkDonorRanksData.Data(iDonorPoint);
       int NumPointsInCell = 1;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
         NumPointsInCell *= DonorChunk.Data.Extents(1,iDim,iDonor) -
           DonorChunk.Data.Extents(0,iDim,iDonor);
       }
       for (int iPointInCell = 0; iPointInCell < NumPointsInCell; ++iPointInCell) {
-        int Rank = ChunkDonorRanks[iDonor][iPointInCell];
-        int iRank = 0;
-        while (iRank < NumChunkDonorRanks[iDonor] && UniqueRanks[iRank] != Rank) {
-          ++iRank;
-        }
-        if (iRank == NumChunkDonorRanks[iDonor]) {
-          UniqueRanks[iRank] = Rank;
-          ++NumChunkDonorRanks[iDonor];
-        }
+        UniqueRanks.Insert(ChunkDonorRanks(iDonor)[iPointInCell]);
       }
-      for (int iRank = 0; iRank < NumChunkDonorRanks[iDonor]; ++iRank) {
-        ChunkDonorRanks[iDonor][iRank] = UniqueRanks[iRank];
+      NumChunkDonorRanks(iDonor) = UniqueRanks.Count();
+      for (int iRank = 0; iRank < NumChunkDonorRanks(iDonor); ++iRank) {
+        ChunkDonorRanks(iDonor)[iRank] = UniqueRanks[iRank];
       }
+      UniqueRanks.Clear();
       iDonorPoint += NumPointsInCell;
     }
     ChunkDonorPoints.Clear();
-    ChunkDonorPointBinIndices.clear();
+    ChunkDonorPointBinIndices.Clear();
   }
 
-  std::vector<int> ChunkReceiverRanks;
+  array<int> ChunkReceiverRanks;
   if (XINTOUTReceivers.HasChunk) {
     const xintout_receiver_chunk &ReceiverChunk = XINTOUTReceivers.Chunk;
-    ChunkReceiverRanks.resize(NumChunkReceivers);
+    ChunkReceiverRanks.Resize({NumChunkReceivers});
     Hash.FindPartitions(Bins, ReceiverChunk.Data.Points, ChunkReceiverBinIndices,
       ChunkReceiverRanks);
-    ChunkReceiverBinIndices.clear();
+    ChunkReceiverBinIndices.Clear();
   }
 
   Bins.clear();
 
   struct donor_send_recv {
-    int Count;
+    long long Count;
     int MaxSize;
     donor_data Data;
     donor_send_recv():
@@ -2095,7 +2092,7 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
   };
 
   struct receiver_send_recv {
-    int Count;
+    long long Count;
     receiver_data Data;
     receiver_send_recv():
       Count(0)
@@ -2108,8 +2105,8 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
   if (XINTOUTDonors.HasChunk) {
     const xintout_donor_chunk &DonorChunk = XINTOUTDonors.Chunk;
     for (long long iDonor = 0; iDonor < NumChunkDonors; ++iDonor) {
-      for (int iRank = 0; iRank < NumChunkDonorRanks[iDonor]; ++iRank) {
-        int Rank = ChunkDonorRanks[iDonor][iRank];
+      for (int iRank = 0; iRank < NumChunkDonorRanks(iDonor); ++iRank) {
+        int Rank = ChunkDonorRanks(iDonor)[iRank];
         auto Iter = DonorSends.lower_bound(Rank);
         if (Iter == DonorSends.end() || Iter->first > Rank) {
           Iter = DonorSends.emplace_hint(Iter, Rank, donor_send_recv());
@@ -2123,7 +2120,7 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
 
   if (XINTOUTReceivers.HasChunk) {
     for (long long iReceiver = 0; iReceiver < NumChunkReceivers; ++iReceiver) {
-      int Rank = ChunkReceiverRanks[iReceiver];
+      int Rank = ChunkReceiverRanks(iReceiver);
       auto Iter = ReceiverSends.lower_bound(Rank);
       if (Iter == ReceiverSends.end() || Iter->first > Rank) {
         Iter = ReceiverSends.emplace_hint(Iter, Rank, receiver_send_recv());
@@ -2150,8 +2147,8 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
   if (XINTOUTDonors.HasChunk) {
     const xintout_donor_chunk &DonorChunk = XINTOUTDonors.Chunk;
     for (long long iDonor = 0; iDonor < NumChunkDonors; ++iDonor) {
-      for (int iRank = 0; iRank < NumChunkDonorRanks[iDonor]; ++iRank) {
-        int Rank = ChunkDonorRanks[iDonor][iRank];
+      for (int iRank = 0; iRank < NumChunkDonorRanks(iDonor); ++iRank) {
+        int Rank = ChunkDonorRanks(iDonor)[iRank];
         donor_send_recv &Send = DonorSends[Rank];
         long long iNext = Send.Count;
         int MaxSize = Send.MaxSize;
@@ -2182,15 +2179,15 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
         ++Send.Count;
       }
     }
-    NumChunkDonorRanks.clear();
-    ChunkDonorRanks.clear();
-    ChunkDonorRanksData.clear();
+    NumChunkDonorRanks.Clear();
+    ChunkDonorRanks.Clear();
+    ChunkDonorRanksData.Clear();
   }
 
   if (XINTOUTReceivers.HasChunk) {
     const xintout_receiver_chunk &ReceiverChunk = XINTOUTReceivers.Chunk;
     for (long long iReceiver = 0; iReceiver < NumChunkReceivers; ++iReceiver) {
-      int Rank = ChunkReceiverRanks[iReceiver];
+      int Rank = ChunkReceiverRanks(iReceiver);
       receiver_send_recv &Send = ReceiverSends[Rank];
       long long iNext = Send.Count;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
@@ -2202,35 +2199,35 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
       }
       ++Send.Count;
     }
-    ChunkReceiverRanks.clear();
+    ChunkReceiverRanks.Clear();
   }
 
   int NumDonorSends = DonorSends.size();
   int NumReceiverSends = ReceiverSends.size();
 
-  std::vector<int> DonorSendToRanks;
+  array<int> DonorSendToRanks;
   for (auto &Pair : DonorSends) {
     int Rank = Pair.first;
-    DonorSendToRanks.push_back(Rank);
+    DonorSendToRanks.Append(Rank);
   }
 
-  std::vector<int> ReceiverSendToRanks;
+  array<int> ReceiverSendToRanks;
   for (auto &Pair : ReceiverSends) {
     int Rank = Pair.first;
-    ReceiverSendToRanks.push_back(Rank);
+    ReceiverSendToRanks.Append(Rank);
   }
 
-  core::EndProfile(Profiler, FindRanksTime);
-  core::StartProfileSync(Profiler, HandshakeTime, Comm);
+  Profiler.Stop(IMPORT_DISTRIBUTE_FIND_RANKS_TIME);
+  Profiler.StartSync(IMPORT_DISTRIBUTE_HANDSHAKE_TIME, Comm);
 
   array<int> DonorRecvFromRanks = core::DynamicHandshake(Comm, DonorSendToRanks);
   array<int> ReceiverRecvFromRanks = core::DynamicHandshake(Comm, ReceiverSendToRanks);
 
-  DonorSendToRanks.clear();
-  ReceiverSendToRanks.clear();
+  DonorSendToRanks.Clear();
+  ReceiverSendToRanks.Clear();
 
-  core::EndProfile(Profiler, HandshakeTime);
-  core::StartProfileSync(Profiler, SendDataTime, Comm);
+  Profiler.Stop(IMPORT_DISTRIBUTE_HANDSHAKE_TIME);
+  Profiler.StartSync(IMPORT_DISTRIBUTE_SEND_DATA_TIME, Comm);
 
   std::map<int, donor_send_recv> DonorRecvs;
   for (int Rank : DonorRecvFromRanks) {
@@ -2248,23 +2245,25 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
   int NumDonorRecvs = DonorRecvs.size();
   int NumReceiverRecvs = ReceiverRecvs.size();
 
-  std::vector<MPI_Request> Requests;
+  array<MPI_Request> Requests;
 
   // 5 requests per donor send/recv (1 for each of Extents, Coords, interp coefs, destination grid
   // IDs, and destination points)
   // 3 requests per receiver send/recv (1 for each of points, source grid IDs, and source cells)
-  Requests.reserve(5*(NumDonorSends+NumDonorRecvs)+3*(NumReceiverSends+NumReceiverRecvs));
+  Requests.Reserve(5*(NumDonorSends+NumDonorRecvs)+3*(NumReceiverSends+NumReceiverRecvs));
 
-  auto Isend = [&Requests](void *Buffer, int Count, MPI_Datatype DataType, int DestRank, int Tag,
-    MPI_Comm Comm) {
-    Requests.emplace_back();
-    MPI_Isend(Buffer, Count, DataType, DestRank, Tag, Comm, &Requests.back());
-
+  auto Isend = [&Requests](void *Buffer, long long Count, MPI_Datatype DataType, int DestRank,
+    int Tag, MPI_Comm SendComm) {
+    OVK_DEBUG_ASSERT(Count <= std::numeric_limits<int>::max(), "Send count too large.");
+    MPI_Request &Request = Requests.Append();
+    MPI_Isend(Buffer, int(Count), DataType, DestRank, Tag, SendComm, &Request);
   };
-  auto Irecv = [&Requests](void *Buffer, int Count, MPI_Datatype DataType, int SourceRank, int Tag,
-    MPI_Comm Comm) {
-    Requests.emplace_back();
-    MPI_Irecv(Buffer, Count, DataType, SourceRank, Tag, Comm, &Requests.back());
+
+  auto Irecv = [&Requests](void *Buffer, long long Count, MPI_Datatype DataType, int SourceRank,
+    int Tag, MPI_Comm RecvComm) {
+    OVK_DEBUG_ASSERT(Count <= std::numeric_limits<int>::max(), "Receive count too large.");
+    MPI_Request &Request = Requests.Append();
+    MPI_Irecv(Buffer, Count, DataType, SourceRank, Tag, RecvComm, &Request);
   };
 
   for (auto &Pair : DonorRecvs) {
@@ -2293,9 +2292,9 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
     Isend(&Send.Count, 1, MPI_LONG_LONG, Rank, 1, Comm);
   }
 
-  MPI_Waitall(Requests.size(), Requests.data(), MPI_STATUSES_IGNORE);
+  MPI_Waitall(Requests.Count(), Requests.Data(), MPI_STATUSES_IGNORE);
 
-  Requests.clear();
+  Requests.Clear();
 
   for (auto &Pair : DonorRecvs) {
     int Rank = Pair.first;
@@ -2316,7 +2315,6 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
     Irecv(Recv.Data.Points.Data(), MAX_DIMS*Recv.Count, MPI_INT, Rank, 1, Comm);
     Irecv(Recv.Data.SourceGridIDs.Data(), Recv.Count, MPI_INT, Rank, 1, Comm);
     Irecv(Recv.Data.SourceCells.Data(), MAX_DIMS*Recv.Count, MPI_INT, Rank, 1, Comm);
-    
   }
 
   for (auto &Pair : DonorSends) {
@@ -2338,9 +2336,9 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
     Isend(Send.Data.SourceCells.Data(), MAX_DIMS*Send.Count, MPI_INT, Rank, 1, Comm);
   }
 
-  MPI_Waitall(Requests.size(), Requests.data(), MPI_STATUSES_IGNORE);
+  MPI_Waitall(Requests.Count(), Requests.Data(), MPI_STATUSES_IGNORE);
 
-  Requests.clear();
+  Requests.Clear();
 
   DonorSends.clear();
   ReceiverSends.clear();
@@ -2406,365 +2404,237 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
     }
   }
 
-  core::EndProfile(Profiler, SendDataTime);
+  Profiler.Stop(IMPORT_DISTRIBUTE_SEND_DATA_TIME);
 
 }
 
-void ImportConnectivityData(int NumGrids, int NumLocalGrids, const std::vector<int> &LocalGridIDs,
-  const std::vector<donor_data> &LocalDonorData, const std::vector<receiver_data>
-  &LocalReceiverData, domain &Domain) {
+void ImportConnectivityData(int NumGrids, int NumLocalGrids, const array<int> &LocalGridIDs,
+  const array<donor_data> &LocalDonorData, const array<receiver_data> &LocalReceiverData, domain
+  &Domain, int ConnectivityComponentID) {
 
-  std::string DomainName;
-  GetDomainName(Domain, DomainName);
-
-  core::comm_view Comm = core::GetDomainComm(Domain);
+  core::comm_view Comm = Domain.core_Comm();
 
   MPI_Barrier(Comm);
 
-  core::logger &Logger = core::GetDomainLogger(Domain);
+  core::logger &Logger = Domain.Context().core_Logger();
 
   Logger.LogStatus(Comm.Rank() == 0, 0, "Importing connectivity data into domain %s...",
-    DomainName);
+    Domain.Name());
 
-  std::vector<long long *> NumConnections(NumGrids);
-  std::vector<long long> NumConnectionsData(NumGrids*NumGrids, 0);
-  for (int iGrid = 0; iGrid < NumGrids; ++iGrid) {
-    NumConnections[iGrid] = NumConnectionsData.data() + iGrid*NumGrids;
-  }
+  OVK_DEBUG_ASSERT(ConnectivityComponentID >= 0, "Invalid connectivity component ID.");
+  OVK_DEBUG_ASSERT(Domain.ComponentExists(ConnectivityComponentID), "Component %i does not "
+    "exist.", ConnectivityComponentID);
+
+  array<long long,2> NumConnections({{NumGrids,NumGrids}}, 0);
 
   for (int iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
-    int jGrid = LocalGridIDs[iLocalGrid]-1;
-    for (long long iReceiver = 0; iReceiver < LocalReceiverData[iLocalGrid].Count; ++iReceiver) {
-      int iGrid = LocalReceiverData[iLocalGrid].SourceGridIDs(iReceiver)-1;
-      ++NumConnections[iGrid][jGrid];
+    int jGrid = LocalGridIDs(iLocalGrid)-1;
+    for (long long iReceiver = 0; iReceiver < LocalReceiverData(iLocalGrid).Count; ++iReceiver) {
+      int iGrid = LocalReceiverData(iLocalGrid).SourceGridIDs(iReceiver)-1;
+      ++NumConnections(iGrid,jGrid);
     }
   }
 
-  MPI_Allreduce(MPI_IN_PLACE, NumConnectionsData.data(), NumGrids*NumGrids, MPI_LONG_LONG, MPI_SUM,
+  MPI_Allreduce(MPI_IN_PLACE, NumConnections.Data(), NumConnections.Count(), MPI_LONG_LONG, MPI_SUM,
     Comm);
 
-  struct local_connectivity {
-    connectivity *Connectivity;
-    connectivity_d *Donors;
-    connectivity_r *Receivers;
-  };
-
-  std::map<int, local_connectivity> LocalConnectivities;
+  auto ConnectivityComponent = Domain.EditComponent<connectivity_component>(
+    ConnectivityComponentID);
 
   for (int iGrid = 0; iGrid < NumGrids; ++iGrid) {
     for (int jGrid = 0; jGrid < NumGrids; ++jGrid) {
-      if (NumConnections[iGrid][jGrid] > 0) {
-        int DonorGridID = iGrid+1;
-        int ReceiverGridID = jGrid+1;
-        bool DonorGridIsLocal = RankHasGrid(Domain, DonorGridID);
-        bool ReceiverGridIsLocal = RankHasGrid(Domain, ReceiverGridID);
-        if (DonorGridIsLocal || ReceiverGridIsLocal) {
-          int iPair = NumGrids*iGrid + jGrid;
-          local_connectivity &LocalConnectivity = LocalConnectivities[iPair];
-          EditConnectivityLocal(Domain, DonorGridID, ReceiverGridID,
-            LocalConnectivity.Connectivity);
-          connectivity &Connectivity = *LocalConnectivity.Connectivity;
-          LocalConnectivity.Donors = nullptr;
-          if (DonorGridIsLocal) {
-            EditConnectivityDonorSideLocal(Connectivity, LocalConnectivity.Donors);
-          } else {
-            EditConnectivityDonorSideRemote(Connectivity);
-          }
-          LocalConnectivity.Receivers = nullptr;
-          if (ReceiverGridIsLocal) {
-            EditConnectivityReceiverSideLocal(Connectivity, LocalConnectivity.Receivers);
-          } else {
-            EditConnectivityReceiverSideRemote(Connectivity);
-          }
-        } else {
-          EditConnectivityRemote(Domain, DonorGridID, ReceiverGridID);
-        }
+      if (NumConnections(iGrid,jGrid) > 0) {
+        int MGridID = iGrid+1;
+        int NGridID = jGrid+1;
+        ConnectivityComponent->CreateConnectivity(MGridID, NGridID);
       }
     }
   }
 
   for (int iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
 
-    int GridID = LocalGridIDs[iLocalGrid];
-    int iGrid = GridID-1;
+    int LocalGridID = LocalGridIDs(iLocalGrid);
+    int iGrid = LocalGridID-1;
 
-    const grid *Grid;
-    GetGrid(Domain, GridID, Grid);
-    core::comm_view GridComm = Grid->core_Comm();
+    const grid &Grid = Domain.Grid(LocalGridID);
+    core::comm_view GridComm = Grid.core_Comm();
 
-    int NumReceiverGrids = 0;
-    int NumDonorGrids = 0;
+    int NumConnectivityMs = 0;
+    int NumConnectivityNs = 0;
     for (int jGrid = 0; jGrid < NumGrids; ++jGrid) {
-      if (NumConnections[iGrid][jGrid] > 0) {
-        ++NumReceiverGrids;
+      if (NumConnections(iGrid,jGrid) > 0) {
+        ++NumConnectivityMs;
       }
-      if (NumConnections[jGrid][iGrid] > 0) {
-        ++NumDonorGrids;
+      if (NumConnections(jGrid,iGrid) > 0) {
+        ++NumConnectivityNs;
       }
     }
 
-    std::vector<connectivity_d *> Donors;
-    std::vector<connectivity_r *> Receivers;
+    array<edit_handle<connectivity_m>> ConnectivityMs;
+    array<edit_handle<connectivity_n>> ConnectivityNs;
+
+    ConnectivityMs.Reserve(NumConnectivityMs);
+    ConnectivityNs.Reserve(NumConnectivityNs);
 
     for (int jGrid = 0; jGrid < NumGrids; ++jGrid) {
-      if (NumConnections[iGrid][jGrid] > 0) {
-        int iPair = NumGrids*iGrid + jGrid;
-        local_connectivity &LocalConnectivity = LocalConnectivities[iPair];
-        Donors.push_back(LocalConnectivity.Donors);
+      int OtherGridID = jGrid+1;
+      if (NumConnections(iGrid,jGrid) > 0) {
+        ConnectivityMs.Append(ConnectivityComponent->EditConnectivityM(LocalGridID,
+          OtherGridID));
       }
-      if (NumConnections[jGrid][iGrid] > 0) {
-        int iPair = NumGrids*jGrid + iGrid;
-        local_connectivity &LocalConnectivity = LocalConnectivities[iPair];
-        Receivers.push_back(LocalConnectivity.Receivers);
+      if (NumConnections(jGrid,iGrid) > 0) {
+        ConnectivityNs.Append(ConnectivityComponent->EditConnectivityN(OtherGridID,
+          LocalGridID));
       }
     }
 
-    ImportDonors(LocalDonorData[iLocalGrid], GridComm, NumReceiverGrids, Donors);
-    ImportReceivers(LocalReceiverData[iLocalGrid], GridComm, NumDonorGrids, Receivers);
+    ImportDonors(LocalDonorData(iLocalGrid), GridComm, ConnectivityMs);
+    ImportReceivers(LocalReceiverData(iLocalGrid), GridComm, ConnectivityNs);
 
   }
 
-  for (int iGrid = 0; iGrid < NumGrids; ++iGrid) {
-    for (int jGrid = 0; jGrid < NumGrids; ++jGrid) {
-      if (NumConnections[iGrid][jGrid] > 0) {
-        int DonorGridID = iGrid+1;
-        int ReceiverGridID = jGrid+1;
-        bool DonorGridIsLocal = RankHasGrid(Domain, DonorGridID);
-        bool ReceiverGridIsLocal = RankHasGrid(Domain, ReceiverGridID);
-        if (DonorGridIsLocal || ReceiverGridIsLocal) {
-          int iPair = NumGrids*iGrid + jGrid;
-          local_connectivity &LocalConnectivity = LocalConnectivities[iPair];
-          connectivity &Connectivity = *LocalConnectivity.Connectivity;
-          if (DonorGridIsLocal) {
-            ReleaseConnectivityDonorSideLocal(Connectivity, LocalConnectivity.Donors);
-          } else {
-            ReleaseConnectivityDonorSideRemote(Connectivity);
-          }
-          if (ReceiverGridIsLocal) {
-            ReleaseConnectivityReceiverSideLocal(Connectivity, LocalConnectivity.Receivers);
-          } else {
-            ReleaseConnectivityReceiverSideRemote(Connectivity);
-          }
-          ReleaseConnectivityLocal(Domain, DonorGridID, ReceiverGridID,
-            LocalConnectivity.Connectivity);
-        } else {
-          ReleaseConnectivityRemote(Domain, DonorGridID, ReceiverGridID);
-        }
-      }
-    }
-  }
+  ConnectivityComponent.Restore();
 
   MPI_Barrier(Comm);
 
-  Logger.LogStatus(Comm.Rank() == 0, 0, "Finished importing connectivity data into domain %s.",
-    DomainName);
+  Logger.LogStatus(Comm.Rank() == 0, 0, "Done importing connectivity data into domain %s.",
+    Domain.Name());
 
 }
 
-void ImportDonors(const donor_data &GridDonors, core::comm_view Comm, int NumDestinationGrids,
-  const std::vector<connectivity_d *> &OverkitDonors) {
+void ImportDonors(const donor_data &GridDonors, core::comm_view Comm, const array<edit_handle<
+    connectivity_m>> &ConnectivityMs) {
+
+  int NumDestinationGrids = ConnectivityMs.Count();
 
   if (NumDestinationGrids == 0) return;
 
-  std::vector<int> DestinationGridIDs(NumDestinationGrids);
+  id_map<1,int> DestinationGridIDToIndex;
 
   for (int iDestinationGrid = 0; iDestinationGrid < NumDestinationGrids; ++iDestinationGrid) {
-    connectivity_d &Donors = *OverkitDonors[iDestinationGrid];
-    GetConnectivityDonorSideDestinationGridID(Donors, DestinationGridIDs[iDestinationGrid]);
+    connectivity_m &ConnectivityM = *ConnectivityMs(iDestinationGrid);
+    DestinationGridIDToIndex.Insert(ConnectivityM.DestinationGridID(), iDestinationGrid);
   }
 
-  struct donor_edit {
-    long long Count;
-    int MaxSize;
-    int *Extents[2][MAX_DIMS];
-//     static_array<int *,2*MAX_DIMS,2> Extents;
-    double *Coords[MAX_DIMS];
-//     static_array<double *,MAX_DIMS> Coords;
-    array<double *,2> InterpCoefs;
-    int *DestinationPoints[MAX_DIMS];
-//     static_array<int *,MAX_DIMS> DestinationPoints;
-    donor_edit():
-      Count(0),
-      MaxSize(0)
-    {}
-  };
-
-  std::map<int, donor_edit> DonorEdits;
-
-  for (int iDestinationGrid = 0; iDestinationGrid < NumDestinationGrids; ++iDestinationGrid) {
-    int DestinationGridID = DestinationGridIDs[iDestinationGrid];
-    DonorEdits.emplace(DestinationGridID, donor_edit());
-  }
+  array<long long> Counts({NumDestinationGrids}, 0);
+  array<int> MaxSizes({NumDestinationGrids}, 1);
 
   for (long long iDonor = 0; iDonor < GridDonors.Count; ++iDonor) {
-    int DestinationGridID = GridDonors.DestinationGridIDs[iDonor];
-    donor_edit &DonorEdit = DonorEdits[DestinationGridID];
-    ++DonorEdit.Count;
+    int DestinationGridID = GridDonors.DestinationGridIDs(iDonor);
+    int iDestinationGrid = DestinationGridIDToIndex(DestinationGridID);
+    ++Counts(iDestinationGrid);
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
       int Size = GridDonors.Extents(1,iDim,iDonor) - GridDonors.Extents(0,iDim,iDonor);
-      DonorEdit.MaxSize = std::max(DonorEdit.MaxSize, Size);
+      MaxSizes(iDestinationGrid) = std::max(MaxSizes(iDestinationGrid), Size);
     }
-  }
-
-  for (auto &Pair : DonorEdits) {
-    donor_edit &DonorEdit = Pair.second;
-    MPI_Allreduce(MPI_IN_PLACE, &DonorEdit.MaxSize, 1, MPI_INT, MPI_MAX, Comm);
-//     DonorEdit.Extents.Resize({{2,MAX_DIMS}});
-//     DonorEdit.Coords.Resize({MAX_DIMS});
-    DonorEdit.InterpCoefs.Resize({{MAX_DIMS,DonorEdit.MaxSize}});
-//     DonorEdit.DestinationPoints.Resize({MAX_DIMS});
   }
 
   for (int iDestinationGrid = 0; iDestinationGrid < NumDestinationGrids; ++iDestinationGrid) {
-    int DestinationGridID = DestinationGridIDs[iDestinationGrid];
-    connectivity_d &Donors = *OverkitDonors[iDestinationGrid];
-    donor_edit &DonorEdit = DonorEdits[DestinationGridID];
-    int MaxSize = DonorEdit.MaxSize;
-    ResizeDonors(Donors, DonorEdit.Count, MaxSize);
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      EditDonorExtents(Donors, iDim, DonorEdit.Extents[0][iDim], DonorEdit.Extents[1][iDim]);
-    }
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      EditDonorCoords(Donors, iDim, DonorEdit.Coords[iDim]);
-    }
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      for (int iPoint = 0; iPoint < MaxSize; ++iPoint) {
-        EditDonorInterpCoefs(Donors, iDim, iPoint, DonorEdit.InterpCoefs(iDim,iPoint));
-      }
-    }
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      EditDonorDestinations(Donors, iDim, DonorEdit.DestinationPoints[iDim]);
-    }
-    // Reset count to 0 for filling in data
-    DonorEdit.Count = 0;
+    connectivity_m &ConnectivityM = *ConnectivityMs(iDestinationGrid);
+    ConnectivityM.Resize(Counts(iDestinationGrid), MaxSizes(iDestinationGrid));
+  }
+
+  array<edit_handle<array<int,3>>> AllExtents({NumDestinationGrids});
+  array<edit_handle<array<double,2>>> AllCoords({NumDestinationGrids});
+  array<edit_handle<array<double,3>>> AllInterpCoefs({NumDestinationGrids});
+  array<edit_handle<array<int,2>>> AllDestinations({NumDestinationGrids});
+
+  for (int iDestinationGrid = 0; iDestinationGrid < NumDestinationGrids; ++iDestinationGrid) {
+    connectivity_m &ConnectivityM = *ConnectivityMs(iDestinationGrid);
+    AllExtents(iDestinationGrid) = ConnectivityM.EditExtents();
+    AllCoords(iDestinationGrid) = ConnectivityM.EditCoords();
+    AllInterpCoefs(iDestinationGrid) = ConnectivityM.EditInterpCoefs();
+    AllDestinations(iDestinationGrid) = ConnectivityM.EditDestinations();
+  }
+
+  // Reuse counts for filling in data
+  for (int iDestinationGrid = 0; iDestinationGrid < NumDestinationGrids; ++iDestinationGrid) {
+    Counts(iDestinationGrid) = 0;
   }
 
   for (long long iDonor = 0; iDonor < GridDonors.Count; ++iDonor) {
     int DestinationGridID = GridDonors.DestinationGridIDs(iDonor);
-    donor_edit &DonorEdit = DonorEdits[DestinationGridID];
-    long long &iNext = DonorEdit.Count;
+    int iDestinationGrid = DestinationGridIDToIndex(DestinationGridID);
+    array<int,3> &Extents = *AllExtents(iDestinationGrid);
+    array<double,2> &Coords = *AllCoords(iDestinationGrid);
+    array<double,3> &InterpCoefs = *AllInterpCoefs(iDestinationGrid);
+    array<int,2> &Destinations = *AllDestinations(iDestinationGrid);
+    long long &iNext = Counts(iDestinationGrid);
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      DonorEdit.Extents[0][iDim][iNext] = GridDonors.Extents(0,iDim,iDonor);
-      DonorEdit.Extents[1][iDim][iNext] = GridDonors.Extents(1,iDim,iDonor);
+      Extents(0,iDim,iNext) = GridDonors.Extents(0,iDim,iDonor);
+      Extents(1,iDim,iNext) = GridDonors.Extents(1,iDim,iDonor);
     }
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      DonorEdit.Coords[iDim][iNext] = GridDonors.Coords(iDim,iDonor);
+      Coords(iDim,iNext) = GridDonors.Coords(iDim,iDonor);
     }
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
       int Size = GridDonors.Extents(1,iDim,iDonor)-GridDonors.Extents(0,iDim,iDonor);
       for (int iPoint = 0; iPoint < Size; ++iPoint) {
-        DonorEdit.InterpCoefs(iDim,iPoint)[iNext] = GridDonors.InterpCoefs(iDim,iPoint,iDonor);
+        InterpCoefs(iDim,iPoint,iNext) = GridDonors.InterpCoefs(iDim,iPoint,iDonor);
       }
     }
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      DonorEdit.DestinationPoints[iDim][iNext] = GridDonors.DestinationPoints(iDim,iDonor);
+      Destinations(iDim,iNext) = GridDonors.DestinationPoints(iDim,iDonor);
     }
     ++iNext;
   }
 
-  for (int iDestinationGrid = 0; iDestinationGrid < NumDestinationGrids; ++iDestinationGrid) {
-    int DestinationGridID = DestinationGridIDs[iDestinationGrid];
-    connectivity_d &Donors = *OverkitDonors[iDestinationGrid];
-    donor_edit &DonorEdit = DonorEdits[DestinationGridID];
-    int MaxSize = DonorEdit.MaxSize;
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      ReleaseDonorExtents(Donors, iDim, DonorEdit.Extents[0][iDim], DonorEdit.Extents[1][iDim]);
-    }
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      ReleaseDonorCoords(Donors, iDim, DonorEdit.Coords[iDim]);
-    }
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      for (int iPoint = 0; iPoint < MaxSize; ++iPoint) {
-        ReleaseDonorInterpCoefs(Donors, iDim, iPoint, DonorEdit.InterpCoefs(iDim,iPoint));
-      }
-    }
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      ReleaseDonorDestinations(Donors, iDim, DonorEdit.DestinationPoints[iDim]);
-    }
-  }
-
 }
 
-void ImportReceivers(const receiver_data &GridReceivers, core::comm_view Comm, int NumSourceGrids,
-  const std::vector<connectivity_r *> &OverkitReceivers) {
+void ImportReceivers(const receiver_data &GridReceivers, core::comm_view Comm, const array<
+  edit_handle<connectivity_n>> &ConnectivityNs) {
+
+  int NumSourceGrids = ConnectivityNs.Count();
 
   if (NumSourceGrids == 0) return;
 
-  std::vector<int> SourceGridIDs(NumSourceGrids);
+  id_map<1,int> SourceGridIDToIndex;
 
   for (int iSourceGrid = 0; iSourceGrid < NumSourceGrids; ++iSourceGrid) {
-    connectivity_r &Receivers = *OverkitReceivers[iSourceGrid];
-    GetConnectivityReceiverSideSourceGridID(Receivers, SourceGridIDs[iSourceGrid]);
+    connectivity_n &ConnectivityN = *ConnectivityNs(iSourceGrid);
+    SourceGridIDToIndex.Insert(ConnectivityN.SourceGridID(), iSourceGrid);
   }
 
-  struct receiver_edit {
-    long long Count;
-    int *Points[MAX_DIMS];
-//     static_array<int *,MAX_DIMS> Points;
-    int *SourceCells[MAX_DIMS];
-//     static_array<int *,MAX_DIMS> SourceCells;
-    receiver_edit():
-      Count(0)
-    {}
-  };
+  array<long long> Counts({NumSourceGrids}, 0);
 
-  std::map<int, receiver_edit> ReceiverEdits;
+  for (long long iReceiver = 0; iReceiver < GridReceivers.Count; ++iReceiver) {
+    int SourceGridID = GridReceivers.SourceGridIDs(iReceiver);
+    int iSourceGrid = SourceGridIDToIndex(SourceGridID);
+    ++Counts(iSourceGrid);
+  }
 
   for (int iSourceGrid = 0; iSourceGrid < NumSourceGrids; ++iSourceGrid) {
-    int SourceGridID = SourceGridIDs[iSourceGrid];
-    ReceiverEdits.emplace(SourceGridID, receiver_edit());
+    connectivity_n &ConnectivityN = *ConnectivityNs(iSourceGrid);
+    ConnectivityN.Resize(Counts(iSourceGrid));
+  }
+
+  array<edit_handle<array<int,2>>> AllPoints({NumSourceGrids});
+  array<edit_handle<array<int,2>>> AllSources({NumSourceGrids});
+
+  for (int iSourceGrid = 0; iSourceGrid < NumSourceGrids; ++iSourceGrid) {
+    connectivity_n &ConnectivityN = *ConnectivityNs(iSourceGrid);
+    AllPoints(iSourceGrid) = ConnectivityN.EditPoints();
+    AllSources(iSourceGrid) = ConnectivityN.EditSources();
+  }
+
+  // Reuse counts for filling in data
+  for (int iSourceGrid = 0; iSourceGrid < NumSourceGrids; ++iSourceGrid) {
+    Counts(iSourceGrid) = 0;
   }
 
   for (long long iReceiver = 0; iReceiver < GridReceivers.Count; ++iReceiver) {
     int SourceGridID = GridReceivers.SourceGridIDs(iReceiver);
-    receiver_edit &ReceiverEdit = ReceiverEdits[SourceGridID];
-    ++ReceiverEdit.Count;
-  }
-
-//   for (auto &Pair : ReceiverEdits) {
-//     receiver_edit &ReceiverEdit = Pair.second;
-//     ReceiverEdit.Points.Resize({MAX_DIMS});
-//     ReceiverEdit.SourceCells.Resize({MAX_DIMS});
-//   }
-
-  for (int iSourceGrid = 0; iSourceGrid < NumSourceGrids; ++iSourceGrid) {
-    int SourceGridID = SourceGridIDs[iSourceGrid];
-    connectivity_r &Receivers = *OverkitReceivers[iSourceGrid];
-    receiver_edit &ReceiverEdit = ReceiverEdits[SourceGridID];
-    ResizeReceivers(Receivers, ReceiverEdit.Count);
+    int iSourceGrid = SourceGridIDToIndex(SourceGridID);
+    array<int,2> &Points = *AllPoints(iSourceGrid);
+    array<int,2> &Sources = *AllSources(iSourceGrid);
+    long long &iNext = Counts(iSourceGrid);
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      EditReceiverPoints(Receivers, iDim, ReceiverEdit.Points[iDim]);
+      Points(iDim,iNext) = GridReceivers.Points(iDim,iReceiver);
     }
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      EditReceiverSources(Receivers, iDim, ReceiverEdit.SourceCells[iDim]);
+      Sources(iDim,iNext) = GridReceivers.SourceCells(iDim,iReceiver);
     }
-    // Reset count to 0 for filling in data
-    ReceiverEdit.Count = 0;
-  }
-
-  for (long long iReceiver = 0; iReceiver < GridReceivers.Count; ++iReceiver) {
-    int SourceGridID = GridReceivers.SourceGridIDs(iReceiver);
-    receiver_edit &ReceiverEdit = ReceiverEdits[SourceGridID];
-    int iNext = ReceiverEdit.Count;
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      ReceiverEdit.Points[iDim][iNext] = GridReceivers.Points(iDim,iReceiver);
-    }
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      ReceiverEdit.SourceCells[iDim][iNext] = GridReceivers.SourceCells(iDim,iReceiver);
-    }
-    ++ReceiverEdit.Count;
-  }
-
-  for (int iSourceGrid = 0; iSourceGrid < NumSourceGrids; ++iSourceGrid) {
-    int SourceGridID = SourceGridIDs[iSourceGrid];
-    connectivity_r &Receivers = *OverkitReceivers[iSourceGrid];
-    receiver_edit &ReceiverEdit = ReceiverEdits[SourceGridID];
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      ReleaseReceiverPoints(Receivers, iDim, ReceiverEdit.Points[iDim]);
-    }
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      ReleaseReceiverSources(Receivers, iDim, ReceiverEdit.SourceCells[iDim]);
-    }
+    ++iNext;
   }
 
 }
@@ -2846,10 +2716,9 @@ void Chunkify(long long Count, int MaxChunks, long long TargetChunkSize, int Adj
 int File_read_all_endian(MPI_File File, void *Buffer, int Count, MPI_Datatype DataType,
   endian Endian, MPI_Status *Status, core::profiler &Profiler, core::comm_view Comm) {
 
-  int MPIIOReadTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Read");
-  core::StartProfileSync(Profiler, MPIIOReadTime, Comm);
+  Profiler.StartSync(IMPORT_READ_MPI_IO_READ_TIME, Comm);
   int MPIError = MPI_File_read_all(File, Buffer, Count, DataType, Status);
-  core::EndProfile(Profiler, MPIIOReadTime);
+  Profiler.Stop(IMPORT_READ_MPI_IO_READ_TIME);
 
   if (MPIError == MPI_SUCCESS) {
     if (Endian != MachineEndian()) {
@@ -2866,10 +2735,9 @@ int File_read_all_endian(MPI_File File, void *Buffer, int Count, MPI_Datatype Da
 int File_read_at_endian(MPI_File File, MPI_Offset Offset, void *Buffer, int Count,
   MPI_Datatype DataType, endian Endian, MPI_Status *Status, core::profiler &Profiler) {
 
-  int MPIIOReadTime = core::GetProfilerTimerID(Profiler, "XINTOUT::Import::Read::MPI-IO::Read");
-  core::StartProfile(Profiler, MPIIOReadTime);
+  Profiler.Start(IMPORT_READ_MPI_IO_READ_TIME);
   int MPIError = MPI_File_read_at(File, Offset, Buffer, Count, DataType, Status);
-  core::EndProfile(Profiler, MPIIOReadTime);
+  Profiler.Stop(IMPORT_READ_MPI_IO_READ_TIME);
 
   if (MPIError == MPI_SUCCESS) {
     if (Endian != MachineEndian()) {
@@ -2885,9 +2753,9 @@ int File_read_at_endian(MPI_File File, MPI_Offset Offset, void *Buffer, int Coun
 
 endian MachineEndian() {
 
-  elem<unsigned char,2> EndianTest = {1,0};
+  unsigned char EndianTest[] = {1,0};
 
-  if(*reinterpret_cast<short *>(EndianTest.Data()) == 1) {
+  if(*reinterpret_cast<short *>(&EndianTest[0]) == 1) {
     return endian::LITTLE;
   } else {
     return endian::BIG;
@@ -2897,16 +2765,17 @@ endian MachineEndian() {
 
 void SwapEndian(void *Data, int ElementSize, int NumElements) {
 
-  auto DataBytes = static_cast<unsigned char *>(Data);
+  array_view<unsigned char> DataBytes(static_cast<unsigned char *>(Data),
+    {NumElements*ElementSize});
 
-  std::vector<unsigned char> Element(ElementSize);
+  array<unsigned char> Element({ElementSize});
 
   for (int i = 0; i < NumElements; ++i) {
     for (int j = 0; j < ElementSize; ++j) {
-      Element[j] = DataBytes[ElementSize*i+j];
+      Element(j) = DataBytes(ElementSize*i+j);
     }
     for (int j = 0; j < ElementSize; ++j) {
-      DataBytes[ElementSize*i+j] = Element[ElementSize-j-1];
+      DataBytes(ElementSize*i+j) = Element(ElementSize-j-1);
     }
   }
 

@@ -17,9 +17,6 @@ class logger {
 
 public:
 
-  // Get rid of this when context no longer needs it
-  logger();
-
   logger(log_level Level, int Rank);
 
   logger(const logger &Other) = delete;
@@ -32,16 +29,19 @@ public:
 
   void SetLevel(log_level Level);
 
-  bool LoggingStatus() const { return (Level_ & log_level::STATUS) != log_level::NONE; }
-  bool LoggingWarnings() const { return (Level_ & log_level::WARNINGS) != log_level::NONE; }
   bool LoggingErrors() const { return (Level_ & log_level::ERRORS) != log_level::NONE; }
+  bool LoggingWarnings() const { return (Level_ & log_level::WARNINGS) != log_level::NONE; }
+  bool LoggingStatus() const { return (Level_ & log_level::STATUS) != log_level::NONE; }
+  bool LoggingDebug() const { return (Level_ & log_level::DEBUG) != log_level::NONE; }
 
-  template <typename... Ts> void LogStatus(bool WriteCondition, int IncrementLevel, const
-    std::string &Format, const Ts &... Args) const;
-  template <typename... Ts> void LogWarning(bool WriteCondition, const std::string &Format, const
-    Ts &... Args) const;
   template <typename... Ts> void LogError(bool WriteCondition, const std::string &Format, const
     Ts &... Args) const;
+  template <typename... Ts> void LogWarning(bool WriteCondition, const std::string &Format, const
+    Ts &... Args) const;
+  template <typename... Ts> void LogStatus(bool WriteCondition, int IncrementLevel, const
+    std::string &Format, const Ts &... Args) const;
+  template <typename... Ts> void LogDebug(bool WriteCondition, int IncrementLevel, const
+    std::string &Format, const Ts &... Args) const;
 
 private:
 

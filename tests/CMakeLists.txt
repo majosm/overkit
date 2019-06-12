@@ -45,6 +45,7 @@ set(SOURCES
   ArrayViewTests.cpp
   CartTests.cpp
   CommTests.cpp
+  ContextTests.cpp
   ElemTests.cpp
   ForEachTests.cpp
   HaloTests.cpp

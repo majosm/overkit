@@ -7,11 +7,10 @@
 #include <ovk/core/Array.hpp>
 #include <ovk/core/Cart.hpp>
 #include <ovk/core/Constants.hpp>
-#include <ovk/core/Elem.hpp>
+#include <ovk/core/Context.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Halo.hpp>
 #include <ovk/core/PartitionBase.hpp>
-#include <ovk/core/Profiler.hpp>
 #include <ovk/core/Range.hpp>
 #include <ovk/core/Request.hpp>
 #include <ovk/core/Tuple.hpp>
@@ -30,14 +29,18 @@ class partition {
 
 public:
 
-  partition(const cart &Cart, comm_view Comm, const range &LocalRange, int ExtendAmount, int
-    NumSubregions, const array<int> &NeighborRanks, profiler &Profiler);
+  partition(std::shared_ptr<context> Context, const cart &Cart, comm_view Comm, const range
+    &LocalRange, int ExtendAmount, int NumSubregions, const array<int> &NeighborRanks);
 
   partition(const partition &Other) = delete;
   partition(partition &&Other) noexcept = default;
 
   partition &operator=(const partition &Other) = delete;
   partition &operator=(partition &&Other) noexcept = default;
+
+  const context &Context() const { return *Context_; }
+  context &Context() { return *Context_; }
+  const std::shared_ptr<context> &SharedContext() const { return Context_; }
 
   const cart &Cart() const { return Cart_; }
   comm_view Comm() const { return Comm_; }
@@ -49,6 +52,8 @@ public:
   const halo &Halo() const { return Halo_; }
 
 private:
+
+  std::shared_ptr<context> Context_;
 
   cart Cart_;
   comm_view Comm_;

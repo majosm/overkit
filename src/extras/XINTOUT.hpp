@@ -7,6 +7,7 @@
 #include <ovk/extras/Constants.hpp>
 #include <ovk/extras/Global.hpp>
 #include <ovk/core/Domain.hpp>
+#include <ovk/core/Error.hpp>
 
 #include <mpi.h>
 
@@ -14,10 +15,17 @@
 
 namespace ovk {
 
-error ImportXINTOUT(domain &Domain, const std::string &HOPath, const std::string &XPath,
-  int ReadGranularityAdjust, MPI_Info MPIInfo);
-error ExportXINTOUT(const domain &Domain, const std::string &HOPath, const std::string &XPath,
-  xintout_format Format, endian Endian, int WriteGranularityAdjust, MPI_Info MPIInfo);
+void ImportXINTOUT(domain &Domain, int ConnectivityComponentID, const std::string &HOPath, const
+  std::string &XPath, int ReadGranularityAdjust, MPI_Info MPIInfo);
+void ImportXINTOUT(domain &Domain, int ConnectivityComponentID, const std::string &HOPath, const
+  std::string &XPath, int ReadGranularityAdjust, MPI_Info MPIInfo, error &Error);
+
+void ExportXINTOUT(const domain &Domain, int ConnectivityComponentID, const std::string &HOPath,
+  const std::string &XPath, xintout_format Format, endian Endian, int WriteGranularityAdjust,
+  MPI_Info MPIInfo);
+void ExportXINTOUT(const domain &Domain, int ConnectivityComponentID, const std::string &HOPath,
+  const std::string &XPath, xintout_format Format, endian Endian, int WriteGranularityAdjust,
+  MPI_Info MPIInfo, error &Error);
 
 }
 

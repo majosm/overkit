@@ -4,230 +4,144 @@
 #ifndef OVK_CORE_DOMAIN_HPP_INCLUDED
 #define OVK_CORE_DOMAIN_HPP_INCLUDED
 
+#include <ovk/core/Array.hpp>
 #include <ovk/core/ArrayView.hpp>
-#include <ovk/core/AssemblyOptions.hpp>
-#include <ovk/core/Collect.hpp>
-#include <ovk/core/CollectMap.hpp>
 #include <ovk/core/Comm.hpp>
-#include <ovk/core/Connectivity.hpp>
+#include <ovk/core/Component.hpp>
 #include <ovk/core/Constants.hpp>
-#include <ovk/core/Disperse.hpp>
-#include <ovk/core/ErrorHandler.hpp>
-// #include <ovk/core/Exchange.hpp>
+#include <ovk/core/Context.hpp>
+#include <ovk/core/Debug.hpp>
+#include <ovk/core/DomainBase.hpp>
+#include <ovk/core/Editor.hpp>
+#include <ovk/core/Event.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Grid.hpp>
-#include <ovk/core/Logger.hpp>
-#include <ovk/core/Profiler.hpp>
-#include <ovk/core/Recv.hpp>
-#include <ovk/core/RecvMap.hpp>
-#include <ovk/core/Send.hpp>
-#include <ovk/core/SendMap.hpp>
+#include <ovk/core/IDMap.hpp>
+#include <ovk/core/IDSet.hpp>
+#include <ovk/core/Optional.hpp>
+#include <ovk/core/Requires.hpp>
 
 #include <mpi.h>
 
-#include <list>
-#include <map>
+#include <algorithm>
+#include <memory>
 #include <string>
+#include <type_traits>
+#include <utility>
 
 namespace ovk {
 
-struct domain_params {
-  std::string Name_;
-  int NumDims_;
-  MPI_Comm Comm_;
+enum class component_event_flags : int {
+  NONE = OVK_COMPONENT_EVENT_FLAGS_NONE,
+  CREATE = OVK_COMPONENT_EVENT_FLAGS_CREATE,
+  DESTROY = OVK_COMPONENT_EVENT_FLAGS_DESTROY,
+  EDIT = OVK_COMPONENT_EVENT_FLAGS_EDIT,
+  ALL = OVK_COMPONENT_EVENT_FLAGS_ALL
 };
 
-struct domain {
+constexpr inline component_event_flags operator|(component_event_flags Left, component_event_flags
+  Right) {
+  return component_event_flags(int(Left) | int(Right));
+}
+constexpr inline component_event_flags operator&(component_event_flags Left, component_event_flags
+  Right) {
+  return component_event_flags(int(Left) & int(Right));
+}
+constexpr inline component_event_flags operator^(component_event_flags Left, component_event_flags
+  Right) {
+  return component_event_flags(int(Left) ^ int(Right));
+}
+constexpr inline component_event_flags operator~(component_event_flags EventFlags) {
+  return component_event_flags(~int(EventFlags));
+}
+inline component_event_flags operator|=(component_event_flags &Left, component_event_flags Right) {
+  return Left = Left | Right;
+}
+inline component_event_flags operator&=(component_event_flags &Left, component_event_flags Right) {
+  return Left = Left & Right;
+}
+inline component_event_flags operator^=(component_event_flags &Left, component_event_flags Right) {
+  return Left = Left ^ Right;
+}
 
-  struct grid_info : ovk::grid_info {
-    int EditRefCount_;
+class domain : public core::domain_base {
+
+public:
+
+  class params {
+  public:
+    params() = default;
+    const std::string &Name() const { return *Name_; }
+    params &SetName(std::string Name);
+    int Dimension() const { return NumDims_; }
+    params &SetDimension(int NumDims);
+    MPI_Comm Comm() const { return Comm_; }
+    params &SetComm(MPI_Comm Comm);
+  private:
+    core::string_wrapper Name_ = "Domain";
+    int NumDims_ = 2;
+    MPI_Comm Comm_ = MPI_COMM_NULL;
+    friend class domain;
   };
 
-  struct connectivity_info : ovk::connectivity_info {
-    int EditRefCount_;
+  domain(const domain &Other) = delete;
+  domain(domain &&Other) noexcept = default;
+
+  domain &operator=(const domain &Other) = delete;
+  domain &operator=(domain &&Other) noexcept = default;
+
+  ~domain() noexcept;
+
+  floating_ref<const domain> GetFloatingRef() const {
+    return FloatingRefGenerator_.Generate<const domain>();
+  }
+  floating_ref<domain> GetFloatingRef() { return FloatingRefGenerator_.Generate<domain>(); }
+
+  const id_set<1> &ComponentIDs() const { return Components_.Keys(); }
+
+  bool ComponentExists(int ComponentID) const;
+
+  template <typename T, typename... Args, OVK_FUNCDECL_REQUIRES(std::is_constructible<T, const
+    core::domain_base &, Args &&...>::value)> void CreateComponent(int ComponentID, Args &&...
+    Arguments);
+  void DestroyComponent(int ComponentID);
+
+  template <typename T> const T &Component(int ComponentID) const;
+  bool EditingComponent(int ComponentID) const;
+  template <typename T> edit_handle<T> EditComponent(int ComponentID);
+  void RestoreComponent(int ComponentID);
+
+  template <typename F, OVK_FUNCTION_REQUIRES(core::IsCallableWith<F, int, component_event_flags>()
+    )> event_listener_handle AddComponentEventListener(F Listener) const {
+    return ComponentEvent_.AddListener(std::move(Listener));
+  }
+
+  static domain internal_Create(std::shared_ptr<context> &&Context, params &&Params);
+
+private:
+
+  struct component_data {
+    core::component Component;
+    editor Editor;
+    explicit component_data(core::component &&Component_):
+      Component(std::move(Component_))
+    {}
   };
 
-  mutable core::logger *Logger_;
-  mutable core::error_handler *ErrorHandler_;
-  mutable core::profiler Profiler_;
+  id_map<1,component_data,false> Components_;
 
-  std::string Name_;
-  int NumDims_;
-  core::comm Comm_;
-  domain_config Config_;
+  mutable event<void(int, component_event_flags)> ComponentEvent_;
 
-  int NumGrids_;
-  std::map<int, grid_info> GridInfo_;
-  int AllGridsEditRefCount_;
-  std::map<int, grid> LocalGrids_;
+  domain(std::shared_ptr<context> &&Context, params &&Params);
 
-  std::map<int, std::map<int, connectivity_info>> ConnectivityInfo_;
-  int AllConnectivitiesEditRefCount_;
-  std::map<int, std::map<int, connectivity>> LocalConnectivities_;
-
-//   std::map<int, std::map<int, connectivity_m_info>> DonorInfo_;
-//   int AllDonorsEditRefCount_;
-//   std::map<int, std::map<int, connectivity_m>> LocalDonors_;
-
-//   std::map<int, std::map<int, connectivity_n_info>> ReceiverInfo_;
-//   int AllReceiversEditRefCount_;
-//   std::map<int, std::map<int, connectivity_n>> LocalReceivers_;
-
-//   std::map<int, std::map<int, core::exchange>> Exchanges_;
-
-  struct collect_data {
-    core::collect_map Map;
-    std::map<int, core::collect> Collects;
-  };
-
-  struct send_data {
-    core::send_map Map;
-    std::map<int, core::send> Sends;
-  };
-
-  struct recv_data {
-    core::recv_map Map;
-    std::map<int, core::recv> Recvs;
-  };
-
-  struct disperse_data {
-    std::map<int, core::disperse> Disperses;
-  };
-
-  std::map<int, std::map<int, collect_data>> CollectData_;
-  std::map<int, std::map<int, send_data>> SendData_;
-  std::map<int, std::map<int, recv_data>> RecvData_;
-  std::map<int, std::map<int, disperse_data>> DisperseData_;
-
-//   std::map<int, std::map<int, exchange_info>> ExchangeInfo_;
-//   std::map<int, std::map<int, exchange>> LocalExchanges_;
+  void DestroyExchangesForGrid_(int GridID);
 
 };
 
-namespace core {
-void CreateDomain(domain &Domain, const domain_params &Params, logger &Logger, error_handler
-  &ErrorHandler);
-void DestroyDomain(domain &Domain);
-}
-
-void GetDomainName(const domain &Domain, std::string &Name);
-void GetDomainDimension(const domain &Domain, int &NumDims);
-void GetDomainComm(const domain &Domain, MPI_Comm &Comm);
-void GetDomainCommSize(const domain &Domain, int &CommSize);
-void GetDomainCommRank(const domain &Domain, int &CommRank);
-
-void ConfigureDomain(domain &Domain, domain_config Config);
-void GetDomainConfiguration(const domain &Domain, domain_config &Config);
-
-void GetDomainGridCount(const domain &Domain, int &NumGrids);
-void GetDomainGridIDs(const domain &Domain, int *GridIDs);
-void GetNextAvailableGridID(const domain &Domain, int &GridID);
-
-namespace core {
-comm_view GetDomainComm(const domain &Domain);
-logger &GetDomainLogger(const domain &Domain);
-error_handler &GetDomainErrorHandler(const domain &Domain);
-profiler &GetDomainProfiler(const domain &Domain);
-}
-
-void CreateGridLocal(domain &Domain, int GridID, const grid_params &Params);
-void CreateGridRemote(domain &Domain, int GridID);
-void DestroyGrid(domain &Domain, int GridID);
-
-bool GridExists(const domain &Domain, int GridID);
-void GetGridInfo(const domain &Domain, int GridID, const grid_info *&GridInfo);
-bool RankHasGrid(const domain &Domain, int GridID);
-void GetGrid(const domain &Domain, int GridID, const grid *&Grid);
-void EditGridLocal(domain &Domain, int GridID, grid *&Grid);
-void EditGridRemote(domain &Domain, int GridID);
-void ReleaseGridLocal(domain &Domain, int GridID, grid *&Grid);
-void ReleaseGridRemote(domain &Domain, int GridID);
-
-bool ConnectivityExists(const domain &Domain, int DonorGridID, int ReceiverGridID);
-void GetConnectivityInfo(const domain &Domain, int DonorGridID, int ReceiverGridID, const
-  connectivity_info *&ConnectivityInfo);
-bool RankHasConnectivity(const domain &Domain, int DonorGridID, int ReceiverGridID);
-void GetConnectivity(const domain &Domain, int DonorGridID, int ReceiverGridID,
-  const connectivity *&Connectivity);
-void EditConnectivityLocal(domain &Domain, int DonorGridID, int ReceiverGridID,
-  connectivity *&Connectivity);
-void EditConnectivityRemote(domain &Domain, int DonorGridID, int ReceiverGridID);
-void ReleaseConnectivityLocal(domain &Domain, int DonorGridID, int ReceiverGridID,
-  connectivity *&Connectivity);
-void ReleaseConnectivityRemote(domain &Domain, int DonorGridID, int ReceiverGridID);
-
-// bool ExchangeExists(const domain &Domain, int DonorGridID, int ReceiverGridID);
-// void GetExchangeInfo(const domain &Domain, int DonorGridID, int ReceiverGridID, const exchange_info
-//   *&ExchangeInfo);
-// bool RankHasExchange(const domain &Domain, int DonorGridID, int ReceiverGridID);
-// void GetExchange(const domain &Domain, int DonorGridID, int ReceiverGridID,
-//   const exchange *&Exchange);
-
-void GetLocalDonorCount(const domain &Domain, int DonorGridID, int ReceiverGridID,
-  long long &NumDonors);
-void GetLocalReceiverCount(const domain &Domain, int DonorGridID, int ReceiverGridID,
-  long long &NumReceivers);
-
-void Assemble(domain &Domain, const assembly_options &Options);
-
-void CreateCollect(domain &Domain, int DonorGridID, int ReceiverGridID, int CollectID, collect_op
-  CollectOp, data_type ValueType, int Count, const range &GridValuesRange, array_layout
-  GridValuesLayout);
-void DestroyCollect(domain &Domain, int DonorGridID, int ReceiverGridID, int CollectID);
-void Collect(domain &Domain, int DonorGridID, int ReceiverGridID, int CollectID, const void * const
-  *GridValues, void **DonorValues);
-bool CollectExists(const domain &Domain, int DonorGridID, int ReceiverGridID, int CollectID);
-void GetNextAvailableCollectID(const domain &Domain, int DonorGridID, int ReceiverGridID, int
-  &CollectID);
-
-void CreateSend(domain &Domain, int DonorGridID, int ReceiverGridID, int SendID, data_type
-  ValueType, int Count, int Tag);
-void DestroySend(domain &Domain, int DonorGridID, int ReceiverGridID, int SendID);
-request Send(domain &Domain, int DonorGridID, int ReceiverGridID, int SendID, const void * const
-  *DonorValues);
-bool SendExists(const domain &Domain, int DonorGridID, int ReceiverGridID, int SendID);
-void GetNextAvailableSendID(const domain &Domain, int DonorGridID, int ReceiverGridID, int &SendID);
-
-void CreateReceive(domain &Domain, int DonorGridID, int ReceiverGridID, int RecvID, data_type
-  ValueType, int Count, int Tag);
-void DestroyReceive(domain &Domain, int DonorGridID, int ReceiverGridID, int RecvID);
-request Receive(domain &Domain, int DonorGridID, int ReceiverGridID, int RecvID, void
-  **ReceiverValues);
-bool ReceiveExists(const domain &Domain, int DonorGridID, int ReceiverGridID, int RecvID);
-void GetNextAvailableReceiveID(const domain &Domain, int DonorGridID, int ReceiverGridID, int
-  &RecvID);
-
-void Wait(const domain &Domain, request &Request);
-void WaitAll(const domain &Domain, array_view<request> Requests);
-void WaitAny(const domain &Domain, array_view<request> Requests, int &Index);
-// Needed for C API
-void WaitAll(const domain &Domain, array_view<request *> Requests);
-void WaitAny(const domain &Domain, array_view<request *> Requests, int &Index);
-
-void CreateDisperse(domain &Domain, int DonorGridID, int ReceiverGridID, int DisperseID, disperse_op
-  DisperseOp, data_type ValueType, int Count, const range &GridValuesRange, array_layout
-  GridValuesLayout);
-void DestroyDisperse(domain &Domain, int DonorGridID, int ReceiverGridID, int DisperseID);
-void Disperse(domain &Domain, int DonorGridID, int ReceiverGridID, int DisperseID, const void *
-  const *ReceiverValues, void **GridValues);
-bool DisperseExists(const domain &Domain, int DonorGridID, int ReceiverGridID, int DisperseID);
-void GetNextAvailableDisperseID(const domain &Domain, int DonorGridID, int ReceiverGridID, int
-  &DisperseID);
-
-void CreateDomainParams(domain_params &Params, int NumDims);
-void DestroyDomainParams(domain_params &Params);
-
-void GetDomainParamName(const domain_params &Params, std::string &Name);
-void SetDomainParamName(domain_params &Params, std::string Name);
-void GetDomainParamDimension(const domain_params &Params, int &NumDims);
-void GetDomainParamComm(const domain_params &Params, MPI_Comm &Comm);
-void SetDomainParamComm(domain_params &Params, MPI_Comm Comm);
-
-namespace domain_internal {
-void UpdateConnectivitySourceDestRanks(domain &Domain);
-void UpdateExchanges(domain &Domain);
-}
+domain CreateDomain(std::shared_ptr<context> Context, domain::params Params);
 
 }
+
+#include <ovk/core/Domain.inl>
 
 #endif

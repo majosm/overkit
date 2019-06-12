@@ -49,9 +49,6 @@ public:
     friend class partition_hash;
   };
 
-  // Remove this when exchange no longer needs it
-  partition_hash();
-
   partition_hash(int NumDims, comm_view Comm);
   partition_hash(int NumDims, comm_view Comm, const range &GlobalRange, const range &LocalRange);
 

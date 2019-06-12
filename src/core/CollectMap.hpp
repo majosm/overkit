@@ -8,6 +8,7 @@
 #include <ovk/core/ArrayView.hpp>
 #include <ovk/core/Cart.hpp>
 #include <ovk/core/Comm.hpp>
+#include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Partition.hpp>
 
@@ -34,6 +35,11 @@ public:
   collect_map();
   collect_map(const cart &Cart, const partition &Partition, array<int,3> CellExtents);
 
+  floating_ref<const collect_map> GetFloatingRef() const {
+    return FloatingRefGenerator_.Generate();
+  }
+  floating_ref<collect_map> GetFloatingRef() { return FloatingRefGenerator_.Generate(); }
+
   long long Count() const { return CellExtents_.Size(2); }
 
   const array<int,3> &CellExtents() const { return CellExtents_; }
@@ -52,8 +58,10 @@ public:
 
 private:
 
+  floating_ref_generator<collect_map> FloatingRefGenerator_;
+
   array<int,3> CellExtents_;
-  int MaxVertices_;
+  int MaxVertices_ = 0;
   array<send> Sends_;
   array<recv> Recvs_;
   array<int> NumRemoteVertices_;

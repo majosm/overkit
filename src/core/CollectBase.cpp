@@ -9,32 +9,34 @@
 #include "ovk/core/CollectMap.hpp"
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Constants.hpp"
-#include "ovk/core/ConnectivityD.hpp"
+#include "ovk/core/Context.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Indexer.hpp"
 #include "ovk/core/Profiler.hpp"
 #include "ovk/core/Range.hpp"
 #include "ovk/core/Tuple.hpp"
 
+#include <mpi.h>
+
+#include <memory>
+#include <utility>
+
 namespace ovk {
 namespace core {
 namespace collect_internal {
 
-template <array_layout Layout> collect_base<Layout>::collect_base(comm_view Comm, const cart &Cart,
-  const range &LocalRange, const collect_map &CollectMap, int Count, const range &FieldValuesRange,
-  profiler &Profiler):
+template <array_layout Layout> collect_base<Layout>::collect_base(std::shared_ptr<context>
+  &&Context, comm_view Comm, const cart &Cart, const range &LocalRange, const collect_map
+  &CollectMap, int Count, const range &FieldValuesRange):
+  Context_(std::move(Context)),
   Comm_(Comm),
   Cart_(Cart),
   LocalRange_(LocalRange),
-  CollectMap_(&CollectMap),
-  Profiler_(&Profiler),
+  CollectMap_(CollectMap.GetFloatingRef()),
   Count_(Count),
   FieldValuesRange_(FieldValuesRange),
   FieldValuesIndexer_(FieldValuesRange)
 {
-
-  int MemAllocTime = GetProfilerTimerID(*Profiler_, "Collect::MemAlloc");
-  StartProfile(*Profiler_, MemAllocTime);
 
   const array<collect_map::send> &Sends = CollectMap_->Sends();
   const array<collect_map::recv> &Recvs = CollectMap_->Recvs();
@@ -43,8 +45,6 @@ template <array_layout Layout> collect_base<Layout>::collect_base(comm_view Comm
 
   LocalVertexCellIndices_.Resize({CollectMap_->MaxVertices()});
   LocalVertexFieldValuesIndices_.Resize({CollectMap_->MaxVertices()});
-
-  EndProfile(*Profiler_, MemAllocTime);
 
 }
 
@@ -106,17 +106,13 @@ template class collect_base<array_layout::ROW_MAJOR>;
 template class collect_base<array_layout::COLUMN_MAJOR>;
 
 template <typename T, array_layout Layout> collect_base_for_type<T, Layout>::collect_base_for_type(
-  comm_view Comm, const cart &Cart, const range &LocalRange, const collect_map &CollectMap, int
-  Count, const range &FieldValuesRange, profiler &Profiler):
-  parent_type(Comm, Cart, LocalRange, CollectMap, Count, FieldValuesRange, Profiler)
+  std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart, const range &LocalRange,
+  const collect_map &CollectMap, int Count, const range &FieldValuesRange):
+  parent_type(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count, FieldValuesRange)
 {
-
-  int MemAllocTime = GetProfilerTimerID(*Profiler_, "Collect::MemAlloc");
 
   const array<collect_map::send> &Sends = CollectMap_->Sends();
   const array<collect_map::recv> &Recvs = CollectMap_->Recvs();
-
-  StartProfile(*Profiler_, MemAllocTime);
 
   SendBuffers_.Resize({Sends.Count()});
   for (int iSend = 0; iSend < Sends.Count(); ++iSend) {
@@ -132,8 +128,6 @@ template <typename T, array_layout Layout> collect_base_for_type<T, Layout>::col
 
   FieldValues_.Resize({Count_});
   PackedValues_.Resize({Count_});
-
-  EndProfile(*Profiler_, MemAllocTime);
 
 }
 
@@ -174,15 +168,14 @@ template <typename T, array_layout Layout> void collect_base_for_type<T, Layout>
   RetrieveRemoteValues_(array_view<array_view<const value_type>> FieldValues, array<array<
   value_type,2>> &RemoteValues) {
 
-  int MPITime = GetProfilerTimerID(*Profiler_, "Collect::MPI");
-  int PackTime = GetProfilerTimerID(*Profiler_, "Collect::Pack");
+  core::profiler &Profiler = Context_->core_Profiler();
 
   MPI_Datatype MPIDataType = core::GetMPIDataType<mpi_value_type>();
 
   const array<collect_map::send> &Sends = CollectMap_->Sends();
   const array<collect_map::recv> &Recvs = CollectMap_->Recvs();
 
-  StartProfile(*Profiler_, MPITime);
+  Profiler.Start(MPI_TIME);
 
   if (std::is_same<value_type, mpi_value_type>::value) {
     for (int iRecv = 0; iRecv < Recvs.Count(); ++iRecv) {
@@ -200,8 +193,8 @@ template <typename T, array_layout Layout> void collect_base_for_type<T, Layout>
     }
   }
 
-  EndProfile(*Profiler_, MPITime);
-  StartProfile(*Profiler_, PackTime);
+  Profiler.Stop(MPI_TIME);
+  Profiler.Start(PACK_TIME);
 
   for (int iSend = 0; iSend < Sends.Count(); ++iSend) {
     const collect_map::send &Send = Sends(iSend);
@@ -218,8 +211,8 @@ template <typename T, array_layout Layout> void collect_base_for_type<T, Layout>
     }
   }
 
-  EndProfile(*Profiler_, PackTime);
-  StartProfile(*Profiler_, MPITime);
+  Profiler.Stop(PACK_TIME);
+  Profiler.Start(MPI_TIME);
 
   for (int iSend = 0; iSend < Sends.Count(); ++iSend) {
     const collect_map::send &Send = Sends(iSend);
@@ -230,7 +223,7 @@ template <typename T, array_layout Layout> void collect_base_for_type<T, Layout>
 
   MPI_Waitall(Requests_.Count(), Requests_.Data(), MPI_STATUSES_IGNORE);
 
-  EndProfile(*Profiler_, MPITime);
+  Profiler.Stop(MPI_TIME);
 
   if (!std::is_same<value_type, mpi_value_type>::value) {
     for (int iRecv = 0; iRecv < RecvBuffers_.Count(); ++iRecv) {

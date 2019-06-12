@@ -7,8 +7,9 @@
 #include "ovk/core/ArrayView.hpp"
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Constants.hpp"
-#include "ovk/core/Connectivity.hpp"
+#include "ovk/core/Context.hpp"
 #include "ovk/core/DataType.hpp"
+#include "ovk/core/FloatingRef.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Misc.hpp"
 #include "ovk/core/Profiler.hpp"
@@ -18,6 +19,7 @@
 
 #include <mpi.h>
 
+#include <memory>
 #include <utility>
 
 namespace ovk {
@@ -25,64 +27,70 @@ namespace core {
 
 namespace {
 
-template <typename T> class send_request {
-
-public:
-
-  using value_type = T;
-  using mpi_value_type = mpi_compatible_type<value_type>;
-
-  send_request(const send_map &SendMap, int Count, array<MPI_Request> &MPIRequests, profiler
-    &Profiler):
-    SendMap_(&SendMap),
-    Profiler_(&Profiler),
-    MemAllocTime_(GetProfilerTimerID(*Profiler_, "SendRecv::MemAlloc")),
-    MPITime_(GetProfilerTimerID(*Profiler_, "SendRecv::MPI")),
-    Count_(Count),
-    MPIRequests_(MPIRequests)
-  {}
-
-  array_view<MPI_Request> MPIRequests() { return MPIRequests_; }
-
-  void Finish(int) { /* Nothing to finish */ }
-
-  void Wait();
-
-  void StartProfileMemAlloc() const { StartProfile(*Profiler_, MemAllocTime_); }
-  void EndProfileMemAlloc() const { EndProfile(*Profiler_, MemAllocTime_); }
-  void StartProfileMPI() const { StartProfile(*Profiler_, MPITime_); }
-  void EndProfileMPI() const { EndProfile(*Profiler_, MPITime_); }
-
-private:
-
-  const send_map *SendMap_;
-  profiler *Profiler_;
-  int MemAllocTime_;
-  int MPITime_;
-  int Count_;
-  array_view<MPI_Request> MPIRequests_;
-
-};
-
 template <typename T> class send_impl {
 
 public:
 
   using value_type = T;
+
+private:
+
   using mpi_value_type = mpi_compatible_type<value_type>;
 
-  send_impl(comm_view Comm, const send_map &SendMap, int Count, int Tag, profiler &Profiler):
+  class send_request {
+  public:
+    send_request(send_impl &Send):
+      Send_(Send.FloatingRefGenerator_.Generate())
+    {}
+    array_view<MPI_Request> MPIRequests() { return Send_->MPIRequests_; }
+    void Finish(int) { /* Nothing to finish */ }
+    void Wait() {
+
+      send_impl &Send = *Send_;
+
+      profiler &Profiler = Send.Context_->core_Profiler();
+
+      Profiler.Start(WAIT_TIME);
+      Profiler.Start(MPI_TIME);
+
+      MPI_Waitall(Send.MPIRequests_.Count(), Send.MPIRequests_.Data(), MPI_STATUSES_IGNORE);
+
+      Profiler.Stop(MPI_TIME);
+      Profiler.Stop(WAIT_TIME);
+
+    }
+    void StartWaitTime() const {
+      profiler &Profiler = Send_->Context_->core_Profiler();
+      Profiler.Start(WAIT_TIME);
+    }
+    void StopWaitTime() const {
+      profiler &Profiler = Send_->Context_->core_Profiler();
+      Profiler.Stop(WAIT_TIME);
+    }
+    void StartMPITime() const {
+      profiler &Profiler = Send_->Context_->core_Profiler();
+      Profiler.Start(MPI_TIME);
+    }
+    void StopMPITime() const {
+      profiler &Profiler = Send_->Context_->core_Profiler();
+      Profiler.Stop(MPI_TIME);
+    }
+  private:
+    floating_ref<send_impl> Send_;
+    static constexpr int WAIT_TIME = profiler::EXCHANGER_SEND_RECV_TIME;
+  };
+
+public:
+
+  send_impl(std::shared_ptr<context> &&Context, comm_view Comm, const send_map &SendMap, int Count,
+    int Tag):
+    FloatingRefGenerator_(*this),
+    Context_(std::move(Context)),
     Comm_(Comm),
-    SendMap_(&SendMap),
-    Profiler_(&Profiler),
-    MemAllocTime_(GetProfilerTimerID(*Profiler_, "SendRecv::MemAlloc")),
-    PackTime_(GetProfilerTimerID(*Profiler_, "SendRecv::Pack")),
-    MPITime_(GetProfilerTimerID(*Profiler_, "SendRecv::MPI")),
+    SendMap_(SendMap.GetFloatingRef()),
     Count_(Count),
     Tag_(Tag)
   {
-
-    StartProfile(*Profiler_, MemAllocTime_);
 
     const array<send_map::send> &Sends = SendMap.Sends();
 
@@ -98,8 +106,6 @@ public:
 
     MPIRequests_.Resize({Sends.Count()});
 
-    EndProfile(*Profiler_, MemAllocTime_);
-
   }
 
   send_impl(const send_impl &Other) = delete;
@@ -107,7 +113,11 @@ public:
 
   request Send(const void * const *ValuesVoid) {
 
-    long long NumValues = SendMap_->Count();
+    const send_map &SendMap = *SendMap_;
+
+    profiler &Profiler = Context_->core_Profiler();
+
+    long long NumValues = SendMap.Count();
 
     OVK_DEBUG_ASSERT(ValuesVoid || Count_ == 0, "Invalid values pointer.");
     for (int iCount = 0; iCount < Count_; ++iCount) {
@@ -117,12 +127,12 @@ public:
 
     MPI_Datatype MPIDataType = GetMPIDataType<mpi_value_type>();
 
-    const array<send_map::send> &Sends = SendMap_->Sends();
+    const array<send_map::send> &Sends = SendMap.Sends();
 
-    StartProfile(*Profiler_, PackTime_);
+    Profiler.Start(PACK_TIME);
 
-    const array<int> &SendOrder = SendMap_->SendOrder();
-    const array<int> &SendIndices = SendMap_->SendIndices();
+    const array<int> &SendOrder = SendMap.SendOrder();
+    const array<int> &SendIndices = SendMap.SendIndices();
 
     NextBufferEntry_.Fill(0);
 
@@ -138,8 +148,8 @@ public:
       }
     }
 
-    EndProfile(*Profiler_, PackTime_);
-    StartProfile(*Profiler_, MPITime_);
+    Profiler.Stop(PACK_TIME);
+    Profiler.Start(MPI_TIME);
 
     for (int iSend = 0; iSend < Sends.Count(); ++iSend) {
       const send_map::send &Send = Sends(iSend);
@@ -147,65 +157,61 @@ public:
         MPIRequests_.Data(iSend));
     }
 
-    EndProfile(*Profiler_, MPITime_);
+    Profiler.Stop(MPI_TIME);
 
-    return send_request<value_type>(*SendMap_, Count_, MPIRequests_, *Profiler_);
+    return send_request(*this);
 
   }
 
 private:
 
+  floating_ref_generator<send_impl> FloatingRefGenerator_;
+
+  std::shared_ptr<context> Context_;
+
   comm_view Comm_;
-  const send_map *SendMap_;
-  mutable profiler *Profiler_;
-  int MemAllocTime_;
-  int PackTime_;
-  int MPITime_;
+
+  floating_ref<const send_map> SendMap_;
+
   int Count_;
   int Tag_;
+
   array<array_view<const value_type>> Values_;
   array<array<mpi_value_type,2>> Buffers_;
   array<long long> NextBufferEntry_;
   array<MPI_Request> MPIRequests_;
 
+  static constexpr int PACK_TIME = profiler::EXCHANGER_SEND_RECV_PACK_TIME;
+  static constexpr int MPI_TIME = profiler::EXCHANGER_SEND_RECV_MPI_TIME;
+
 };
 
-template <typename T> void send_request<T>::Wait() {
-
-  StartProfile(*Profiler_, MPITime_);
-
-  MPI_Waitall(MPIRequests_.Count(), MPIRequests_.Data(), MPI_STATUSES_IGNORE);
-
-  EndProfile(*Profiler_, MPITime_);
-
 }
 
-}
-
-send MakeSend(comm_view Comm, const send_map &SendMap, data_type ValueType, int Count,
-  int Tag, profiler &Profiler) {
+send CreateSend(std::shared_ptr<context> Context, comm_view Comm, const send_map &SendMap, data_type
+  ValueType, int Count, int Tag) {
 
   switch (ValueType) {
   case data_type::BOOL:
-    return send_impl<bool>(Comm, SendMap, Count, Tag, Profiler);
+    return send_impl<bool>(std::move(Context), Comm, SendMap, Count, Tag);
   case data_type::BYTE:
-    return send_impl<unsigned char>(Comm, SendMap, Count, Tag, Profiler);
+    return send_impl<unsigned char>(std::move(Context), Comm, SendMap, Count, Tag);
   case data_type::INT:
-    return send_impl<int>(Comm, SendMap, Count, Tag, Profiler);
+    return send_impl<int>(std::move(Context), Comm, SendMap, Count, Tag);
   case data_type::LONG:
-    return send_impl<long>(Comm, SendMap, Count, Tag, Profiler);
+    return send_impl<long>(std::move(Context), Comm, SendMap, Count, Tag);
   case data_type::LONG_LONG:
-    return send_impl<long long>(Comm, SendMap, Count, Tag, Profiler);
+    return send_impl<long long>(std::move(Context), Comm, SendMap, Count, Tag);
   case data_type::UNSIGNED_INT:
-    return send_impl<unsigned int>(Comm, SendMap, Count, Tag, Profiler);
+    return send_impl<unsigned int>(std::move(Context), Comm, SendMap, Count, Tag);
   case data_type::UNSIGNED_LONG:
-    return send_impl<unsigned long>(Comm, SendMap, Count, Tag, Profiler);
+    return send_impl<unsigned long>(std::move(Context), Comm, SendMap, Count, Tag);
   case data_type::UNSIGNED_LONG_LONG:
-    return send_impl<unsigned long long>(Comm, SendMap, Count, Tag, Profiler);
+    return send_impl<unsigned long long>(std::move(Context), Comm, SendMap, Count, Tag);
   case data_type::FLOAT:
-    return send_impl<float>(Comm, SendMap, Count, Tag, Profiler);
+    return send_impl<float>(std::move(Context), Comm, SendMap, Count, Tag);
   case data_type::DOUBLE:
-    return send_impl<double>(Comm, SendMap, Count, Tag, Profiler);
+    return send_impl<double>(std::move(Context), Comm, SendMap, Count, Tag);
   }
 
   return {};

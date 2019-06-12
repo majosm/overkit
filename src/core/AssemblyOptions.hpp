@@ -4,93 +4,80 @@
 #ifndef OVK_CORE_ASSEMBLY_OPTIONS_HPP_INCLUDED
 #define OVK_CORE_ASSEMBLY_OPTIONS_HPP_INCLUDED
 
+#include <ovk/core/ArrayView.hpp>
 #include <ovk/core/Constants.hpp>
 #include <ovk/core/Global.hpp>
-
-#include <map>
+#include <ovk/core/IDMap.hpp>
+#include <ovk/core/IDSet.hpp>
 
 namespace ovk {
 
-struct assembly_options {
+class assembly_options {
+
+public:
+
+  assembly_options(int NumDims, const id_set<1> &GridIDs);
+
+  int Dimension() const { return NumDims_; }
+  int GridCount() const { return NumGrids_; }
+
+  bool Overlappable(int MGridID, int NGridID) const;
+  assembly_options &SetOverlappable(int MGridID, int NGridID, bool Overlappable);
+
+  double OverlapTolerance(int MGridID, int NGridID) const;
+  assembly_options &SetOverlapTolerance(int MGridID, int NGridID, double OverlapTolerance);
+
+  double OverlapAccelDepthAdjust(int MGridID) const;
+  assembly_options &SetOverlapAccelDepthAdjust(int MGridID, double OverlapAccelDepthAdjust);
+
+  double OverlapAccelResolutionAdjust(int MGridID) const;
+  assembly_options &SetOverlapAccelResolutionAdjust(int MGridID, double
+    OverlapAccelResolutionAdjust);
+
+  bool InferBoundaries(int GridID) const;
+  assembly_options &SetInferBoundaries(int GridID, bool InferBoundaries);
+
+  bool CutBoundaryHoles(int MGridID, int NGridID) const;
+  assembly_options &SetCutBoundaryHoles(int MGridID, int NGridID, bool CutBoundaryHoles);
+
+  occludes Occludes(int MGridID, int NGridID) const;
+  assembly_options &SetOccludes(int MGridID, int NGridID, occludes Occludes);
+
+  int EdgePadding(int MGridID, int NGridID) const;
+  assembly_options &SetEdgePadding(int MGridID, int NGridID, int EdgePadding);
+
+  int EdgeSmoothing(int NGridID) const;
+  assembly_options &SetEdgeSmoothing(int NGridID, int EdgeSmoothing);
+
+  connection_type ConnectionType(int MGridID, int NGridID) const;
+  assembly_options &SetConnectionType(int MGridID, int NGridID, connection_type ConnectionType);
+
+  int FringeSize(int NGridID) const;
+  assembly_options &SetFringeSize(int NGridID, int FringeSize);
+
+  bool MinimizeOverlap(int MGridID, int NGridID) const;
+  assembly_options &SetMinimizeOverlap(int MGridID, int NGridID, bool MinimizeOverlap);
+
+private:
+
   int NumDims_;
   int NumGrids_;
-  std::map<int, std::map<int, bool>> Overlappable_;
-  std::map<int, std::map<int, double>> OverlapTolerance_;
-  std::map<int, double> OverlapAccelDepthAdjust_;
-  std::map<int, double> OverlapAccelResolutionAdjust_;
-  std::map<int, bool> InferBoundaries_;
-  std::map<int, std::map<int, bool>> CutBoundaryHoles_;
-  std::map<int, std::map<int, occludes>> Occludes_;
-  std::map<int, std::map<int, int>> EdgePadding_;
-  std::map<int, int> EdgeSmoothing_;
-  std::map<int, std::map<int, connection_type>> ConnectionType_;
-  std::map<int, int> FringeSize_;
-  std::map<int, std::map<int, bool>> MinimizeOverlap_;
+  id_map<2,bool> Overlappable_;
+  id_map<2,double> OverlapTolerance_;
+  id_map<1,double> OverlapAccelDepthAdjust_;
+  id_map<1,double> OverlapAccelResolutionAdjust_;
+  id_map<1,bool> InferBoundaries_;
+  id_map<2,bool> CutBoundaryHoles_;
+  id_map<2,occludes> Occludes_;
+  id_map<2,int> EdgePadding_;
+  id_map<1,int> EdgeSmoothing_;
+  id_map<2,connection_type> ConnectionType_;
+  id_map<1,int> FringeSize_;
+  id_map<2,bool> MinimizeOverlap_;
+
+  void PrintOptions_();
+
 };
-
-void CreateAssemblyOptions(assembly_options &Options, int NumDims, int NumGrids, int *GridIDs);
-void DestroyAssemblyOptions(assembly_options &Options);
-
-void GetAssemblyOptionsDimension(const assembly_options &Options, int &NumDims);
-void GetAssemblyOptionsGridCount(const assembly_options &Options, int &NumGrids);
-
-void GetAssemblyOptionOverlappable(const assembly_options &Options, int OverlappingGridID,
-  int OverlappedGridID, bool &Overlappable);
-void SetAssemblyOptionOverlappable(assembly_options &Options, int OverlappingGridID,
-  int OverlappedGridID, bool Overlappable);
-
-void GetAssemblyOptionOverlapTolerance(const assembly_options &Options, int OverlappingGridID,
-  int OverlappedGridID, double &OverlapTolerance);
-void SetAssemblyOptionOverlapTolerance(assembly_options &Options, int OverlappingGridID,
-  int OverlappedGridID, double OverlapTolerance);
-
-void GetAssemblyOptionOverlapAccelDepthAdjust(const assembly_options &Options,
-  int OverlappingGridID, double &OverlapAccelDepthAdjust);
-void SetAssemblyOptionOverlapAccelDepthAdjust(assembly_options &Options,
-  int OverlappingGridID, double OverlapAccelDepthAdjust);
-
-void GetAssemblyOptionOverlapAccelResolutionAdjust(const assembly_options &Options,
-  int OverlappingGridID, double &OverlapAccelResolutionAdjust);
-void SetAssemblyOptionOverlapAccelResolutionAdjust(assembly_options &Options,
-  int OverlappingGridID, double OverlapAccelResolutionAdjust);
-
-void GetAssemblyOptionInferBoundaries(const assembly_options &Options, int GridID,
-  bool &InferBoundaries);
-void SetAssemblyOptionInferBoundaries(assembly_options &Options, int GridID,
-  bool InferBoundaries);
-
-void GetAssemblyOptionCutBoundaryHoles(const assembly_options &Options, int CuttingGridID,
-  int CutGridID, bool &CutBoundaryHoles);
-void SetAssemblyOptionCutBoundaryHoles(assembly_options &Options, int CuttingGridID,
-  int CutGridID, bool CutBoundaryHoles);
-
-void GetAssemblyOptionOccludes(const assembly_options &Options, int OccludingGridID,
-  int OccludedGridID, occludes &Occludes);
-void SetAssemblyOptionOccludes(assembly_options &Options, int OccludingGridID,
-  int OccludedGridID, occludes Occludes);
-
-void GetAssemblyOptionEdgePadding(const assembly_options &Options, int OccludingGridID,
-  int OccludedGridID, int &EdgePadding);
-void SetAssemblyOptionEdgePadding(assembly_options &Options, int OccludingGridID,
-  int OccludedGridID, int EdgePadding);
-
-void GetAssemblyOptionEdgeSmoothing(const assembly_options &Options, int OccludedGridID,
-  int &EdgeSmoothing);
-void SetAssemblyOptionEdgeSmoothing(assembly_options &Options, int OccludedGridID,
-  int EdgeSmoothing);
-
-void GetAssemblyOptionConnectionType(const assembly_options &Options, int DonorGridID,
-  int ReceiverGridID, connection_type &ConnectionType);
-void SetAssemblyOptionConnectionType(assembly_options &Options, int DonorGridID,
-  int ReceiverGridID, connection_type ConnectionType);
-
-void GetAssemblyOptionFringeSize(const assembly_options &Options, int GridID, int &FringeSize);
-void SetAssemblyOptionFringeSize(assembly_options &Options, int GridID, int FringeSize);
-
-void GetAssemblyOptionMinimizeOverlap(const assembly_options &Options, int DonorGridID,
-  int ReceiverGridID, bool &MinimizeOverlap);
-void SetAssemblyOptionMinimizeOverlap(assembly_options &Options, int DonorGridID,
-  int ReceiverGridID, bool MinimizeOverlap);
 
 }
 

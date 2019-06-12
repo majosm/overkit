@@ -3,31 +3,150 @@
 
 #include "ovk/core-c/Domain.h"
 
-#include "ovk/core-c/AssemblyOptions.h"
-#include "ovk/core-c/Connectivity.h"
+#include "ovk/core-c/ConnectivityComponent.h"
 #include "ovk/core-c/Constants.h"
-// #include "ovk/core-c/Exchange.h"
+#include "ovk/core-c/Context.h"
 #include "ovk/core-c/Global.h"
 #include "ovk/core-c/Grid.h"
-#include "ovk/core-c/Request.h"
 #include "ovk/core/Array.hpp"
-#include "ovk/core/AssemblyOptions.hpp"
-#include "ovk/core/Connectivity.hpp"
+#include "ovk/core/ArrayView.hpp"
+#include "ovk/core/ConnectivityComponent.hpp"
 #include "ovk/core/Constants.hpp"
+#include "ovk/core/Context.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Domain.hpp"
-// #include "ovk/core/Exchange.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
-#include "ovk/core/Range.hpp"
-#include "ovk/core/Request.hpp"
+#include "ovk/core/Optional.hpp"
 
 #include <mpi.h>
 
 #include <cstring>
+#include <memory>
 #include <string>
+#include <utility>
 
 extern "C" {
+
+void ovkCreateDomain(ovk_domain **Domain, ovk_shared_context *Context, ovk_domain_params **Params) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+  OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
+  OVK_DEBUG_ASSERT(*Params, "Invalid params pointer.");
+
+  auto &ContextCPP = *reinterpret_cast<std::shared_ptr<ovk::context> *>(Context);
+  auto ParamsCPPPtr = reinterpret_cast<ovk::domain::params *>(*Params);
+
+  auto DomainCPPPtr = new ovk::domain(ovk::CreateDomain(ContextCPP, std::move(*ParamsCPPPtr)));
+
+  delete ParamsCPPPtr;
+
+  *Domain = reinterpret_cast<ovk_domain *>(DomainCPPPtr);
+  *Params = nullptr;
+
+}
+
+void ovkDestroyDomain(ovk_domain **Domain) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+  OVK_DEBUG_ASSERT(*Domain, "Invalid domain pointer.");
+
+  auto DomainCPPPtr = reinterpret_cast<ovk::domain *>(*Domain);
+
+  delete DomainCPPPtr;
+
+  *Domain = nullptr;
+
+}
+
+void ovkShareDomain(ovk_domain **Domain, ovk_shared_domain **SharedDomain) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+  OVK_DEBUG_ASSERT(*Domain, "Invalid domain pointer.");
+  OVK_DEBUG_ASSERT(SharedDomain, "Invalid shared domain pointer.");
+
+  auto DomainCPPPtr = reinterpret_cast<ovk::domain *>(*Domain);
+
+  auto SharedDomainCPPPtr = new std::shared_ptr<ovk::domain>(std::make_shared<ovk::domain>(
+    std::move(*DomainCPPPtr)));
+
+  delete DomainCPPPtr;
+
+  *Domain = reinterpret_cast<ovk_domain *>(SharedDomainCPPPtr->get());
+  *SharedDomain = reinterpret_cast<ovk_shared_domain *>(SharedDomainCPPPtr);
+
+}
+
+void ovkResetSharedDomain(ovk_shared_domain **SharedDomain) {
+
+  OVK_DEBUG_ASSERT(SharedDomain, "Invalid shared domain pointer.");
+  OVK_DEBUG_ASSERT(*SharedDomain, "Invalid shared domain pointer.");
+
+  auto SharedDomainCPPPtr = reinterpret_cast<std::shared_ptr<ovk::domain> *>(*SharedDomain);
+
+  delete SharedDomainCPPPtr;
+
+  *SharedDomain = nullptr;
+
+}
+
+void ovkGetDomainFromSharedC(const ovk_shared_domain **SharedDomain, const ovk_domain **Domain) {
+
+  OVK_DEBUG_ASSERT(SharedDomain, "Invalid shared domain pointer.");
+  OVK_DEBUG_ASSERT(*SharedDomain, "Invalid shared domain pointer.");
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+
+  auto SharedDomainCPPPtr = reinterpret_cast<const std::shared_ptr<const ovk::domain> *>(
+    *SharedDomain);
+  *Domain = reinterpret_cast<const ovk_domain *>(SharedDomainCPPPtr->get());
+
+}
+
+void ovkGetDomainFromShared(ovk_shared_domain **SharedDomain, ovk_domain **Domain) {
+
+  OVK_DEBUG_ASSERT(SharedDomain, "Invalid shared domain pointer.");
+  OVK_DEBUG_ASSERT(*SharedDomain, "Invalid shared domain pointer.");
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+
+  auto SharedDomainCPPPtr = reinterpret_cast<std::shared_ptr<ovk::domain> *>(*SharedDomain);
+  *Domain = reinterpret_cast<ovk_domain *>(SharedDomainCPPPtr->get());
+
+}
+
+void ovkGetDomainContextC(const ovk_domain *Domain, const ovk_context **Context) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+  OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
+
+  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+  *Context = reinterpret_cast<const ovk_context *>(&DomainCPP.Context());
+
+}
+
+void ovkGetDomainContext(ovk_domain *Domain, ovk_context **Context) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+  OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
+
+  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
+  *Context = reinterpret_cast<ovk_context *>(&DomainCPP.Context());
+
+}
+
+void ovkGetDomainSharedContext(ovk_domain *Domain, ovk_shared_context **Context) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+  OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
+
+  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
+  auto &ContextCPP = DomainCPP.SharedContext();
+
+  auto ContextCPPPtr = new std::shared_ptr<ovk::context>(ContextCPP);
+
+  *Context = reinterpret_cast<ovk_shared_context *>(ContextCPPPtr);
+
+}
 
 void ovkGetDomainName(const ovk_domain *Domain, char *Name) {
 
@@ -35,11 +154,7 @@ void ovkGetDomainName(const ovk_domain *Domain, char *Name) {
   OVK_DEBUG_ASSERT(Name, "Invalid name pointer.");
 
   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-
-  std::string NameCPP;
-  ovk::GetDomainName(DomainCPP, NameCPP);
-
-  std::strcpy(Name, NameCPP.c_str());
+  std::strcpy(Name, DomainCPP.Name().c_str());
 
 }
 
@@ -49,7 +164,7 @@ void ovkGetDomainDimension(const ovk_domain *Domain, int *NumDims) {
   OVK_DEBUG_ASSERT(NumDims, "Invalid num dims pointer.");
 
   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  ovk::GetDomainDimension(DomainCPP, *NumDims);
+  *NumDims = DomainCPP.Dimension();
 
 }
 
@@ -59,7 +174,7 @@ void ovkGetDomainComm(const ovk_domain *Domain, MPI_Comm *Comm) {
   OVK_DEBUG_ASSERT(Comm, "Invalid comm pointer.");
 
   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  ovk::GetDomainComm(DomainCPP, *Comm);
+  *Comm = DomainCPP.Comm();
 
 }
 
@@ -69,7 +184,7 @@ void ovkGetDomainCommSize(const ovk_domain *Domain, int *CommSize) {
   OVK_DEBUG_ASSERT(CommSize, "Invalid comm size pointer.");
 
   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  ovk::GetDomainCommSize(DomainCPP, *CommSize);
+  *CommSize = DomainCPP.CommSize();
 
 }
 
@@ -79,50 +194,40 @@ void ovkGetDomainCommRank(const ovk_domain *Domain, int *CommRank) {
   OVK_DEBUG_ASSERT(CommRank, "Invalid comm rank pointer.");
 
   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  ovk::GetDomainCommRank(DomainCPP, *CommRank);
+  *CommRank = DomainCPP.CommRank();
 
 }
 
-void ovkConfigureDomain(ovk_domain *Domain, ovk_domain_config Config) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
-  ovk::ConfigureDomain(DomainCPP, ovk::domain_config(Config));
-
-}
-
-void ovkGetDomainConfiguration(const ovk_domain *Domain, ovk_domain_config *Config) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(Config, "Invalid config pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-
-  ovk::domain_config ConfigCPP;
-  ovk::GetDomainConfiguration(DomainCPP, ConfigCPP);
-
-  *Config = ovk_domain_config(ConfigCPP);
-
-}
-
-void ovkGetDomainGridCount(const ovk_domain *Domain, int *NumGrids) {
+void ovkGetGridCount(const ovk_domain *Domain, int *NumGrids) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
   OVK_DEBUG_ASSERT(NumGrids, "Invalid num grids pointer.");
 
   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  ovk::GetDomainGridCount(DomainCPP, *NumGrids);
+  *NumGrids = DomainCPP.GridCount();
 
 }
 
-void ovkGetDomainGridIDs(const ovk_domain *Domain, int *GridIDs) {
+void ovkGetGridIDs(const ovk_domain *Domain, int *GridIDs) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
   OVK_DEBUG_ASSERT(GridIDs, "Invalid grid IDs pointer.");
 
   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  ovk::GetDomainGridIDs(DomainCPP, GridIDs);
+
+  auto &GridIDsCPP = DomainCPP.GridIDs();
+  for (int iGrid = 0; iGrid < GridIDsCPP.Count(); ++iGrid) {
+    GridIDs[iGrid] = GridIDsCPP[iGrid];
+  }
+
+}
+
+bool ovkGridExists(const ovk_domain *Domain, int GridID) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+
+  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+  return DomainCPP.GridExists(GridID);
 
 }
 
@@ -132,27 +237,67 @@ void ovkGetNextAvailableGridID(const ovk_domain *Domain, int *GridID) {
   OVK_DEBUG_ASSERT(GridID, "Invalid grid ID pointer.");
 
   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  ovk::GetNextAvailableGridID(DomainCPP, *GridID);
+  *GridID = DomainCPP.GridIDs().NextAvailableValue();
 
 }
 
-void ovkCreateGridLocal(ovk_domain *Domain, int GridID, const ovk_grid_params *Params) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
-  auto &ParamsCPP = *reinterpret_cast<const ovk::grid_params *>(Params);
-  ovk::CreateGridLocal(DomainCPP, GridID, ParamsCPP);
-
-}
-
-void ovkCreateGridRemote(ovk_domain *Domain, int GridID) {
+void ovkCreateGrid(ovk_domain *Domain, int GridID, ovk_grid_params **MaybeParams) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
 
   auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
-  ovk::CreateGridRemote(DomainCPP, GridID);
+
+  ovk::grid::params *ParamsCPPPtr = nullptr;
+  if (MaybeParams && *MaybeParams) {
+    ParamsCPPPtr = reinterpret_cast<ovk::grid::params *>(*MaybeParams);
+  }
+
+  ovk::optional<ovk::grid::params> MaybeParamsCPP;
+  if (ParamsCPPPtr) {
+    MaybeParamsCPP = std::move(*ParamsCPPPtr);
+  }
+
+  DomainCPP.CreateGrid(GridID, std::move(MaybeParamsCPP));
+
+  if (ParamsCPPPtr) {
+    delete ParamsCPPPtr;
+    *MaybeParams = nullptr;
+  }
+
+}
+
+void ovkCreateGrids(ovk_domain *Domain, int Count, const int *GridIDs, ovk_grid_params
+  **MaybeParams) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+  OVK_DEBUG_ASSERT(Count >= 0, "Invalid count value.");
+  OVK_DEBUG_ASSERT(GridIDs || Count == 0, "Invalid grid IDs pointer.");
+  OVK_DEBUG_ASSERT(MaybeParams || Count == 0, "Invalid maybe params pointer.");
+
+  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
+
+  ovk::array<ovk::grid::params *> ParamsCPPPtrs({Count}, nullptr);
+  for (int iCreate = 0; iCreate < Count; ++iCreate) {
+    if (MaybeParams[iCreate]) {
+      ParamsCPPPtrs(iCreate) = reinterpret_cast<ovk::grid::params *>(MaybeParams[iCreate]);
+    }
+  }
+
+  ovk::array<ovk::optional<ovk::grid::params>> MaybeParamsCPP({Count});
+  for (int iCreate = 0; iCreate < Count; ++iCreate) {
+    if (ParamsCPPPtrs(iCreate)) {
+      MaybeParamsCPP(iCreate) = std::move(*ParamsCPPPtrs(iCreate));
+    }
+  }
+
+  DomainCPP.CreateGrids({GridIDs, {Count}}, std::move(MaybeParamsCPP));
+
+  for (int iCreate = 0; iCreate < Count; ++iCreate) {
+    if (ParamsCPPPtrs(iCreate)) {
+      delete ParamsCPPPtrs(iCreate);
+      MaybeParams[iCreate] = nullptr;
+    }
+  }
 
 }
 
@@ -161,16 +306,19 @@ void ovkDestroyGrid(ovk_domain *Domain, int GridID) {
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
 
   auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
-  ovk::DestroyGrid(DomainCPP, GridID);
+  DomainCPP.DestroyGrid(GridID);
 
 }
 
-bool ovkGridExists(const ovk_domain *Domain, int GridID) {
+void ovkDestroyGrids(ovk_domain *Domain, int Count, const int *GridIDs) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+  OVK_DEBUG_ASSERT(Count >= 0, "Invalid count value.");
+  OVK_DEBUG_ASSERT(GridIDs || Count == 0, "Invalid grid IDs pointer.");
 
-  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  return ovk::GridExists(DomainCPP, GridID);
+  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
+
+  DomainCPP.DestroyGrids({GridIDs, {Count}});
 
 }
 
@@ -180,20 +328,40 @@ void ovkGetGridInfo(const ovk_domain *Domain, int GridID, const ovk_grid_info **
   OVK_DEBUG_ASSERT(GridInfo, "Invalid grid info pointer.");
 
   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-
-  const ovk::grid_info *GridInfoCPPPtr;
-  ovk::GetGridInfo(DomainCPP, GridID, GridInfoCPPPtr);
-
-  *GridInfo = reinterpret_cast<const ovk_grid_info *>(GridInfoCPPPtr);
+  *GridInfo = reinterpret_cast<const ovk_grid_info *>(&DomainCPP.GridInfo(GridID));
 
 }
 
-bool ovkRankHasGrid(const ovk_domain *Domain, int GridID) {
+void ovkGetLocalGridCount(const ovk_domain *Domain, int *NumLocalGrids) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+  OVK_DEBUG_ASSERT(NumLocalGrids, "Invalid num local grids pointer.");
+
+  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+  *NumLocalGrids = DomainCPP.LocalGridCount();
+
+}
+
+void ovkGetLocalGridIDs(const ovk_domain *Domain, int *LocalGridIDs) {
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+  OVK_DEBUG_ASSERT(LocalGridIDs, "Invalid grid IDs pointer.");
+
+  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+
+  auto &LocalGridIDsCPP = DomainCPP.LocalGridIDs();
+  for (int iLocalGrid = 0; iLocalGrid < LocalGridIDsCPP.Count(); ++iLocalGrid) {
+    LocalGridIDs[iLocalGrid] = LocalGridIDsCPP[iLocalGrid];
+  }
+
+}
+
+bool ovkGridIsLocal(const ovk_domain *Domain, int GridID) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
 
   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  return ovk::RankHasGrid(DomainCPP, GridID);
+  return DomainCPP.GridIsLocal(GridID);
 
 }
 
@@ -203,555 +371,203 @@ void ovkGetGrid(const ovk_domain *Domain, int GridID, const ovk_grid **Grid) {
   OVK_DEBUG_ASSERT(Grid, "Invalid grid pointer.");
 
   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-
-  const ovk::grid *GridCPPPtr;
-  ovk::GetGrid(DomainCPP, GridID, GridCPPPtr);
-
-  *Grid = reinterpret_cast<const ovk_grid *>(GridCPPPtr);
+  *Grid = reinterpret_cast<const ovk_grid *>(&DomainCPP.Grid(GridID));
 
 }
 
-void ovkEditGridLocal(ovk_domain *Domain, int GridID, ovk_grid **Grid) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(Grid, "Invalid grid pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
-
-  ovk::grid *GridCPPPtr;
-  ovk::EditGridLocal(DomainCPP, GridID, GridCPPPtr);
-
-  *Grid = reinterpret_cast<ovk_grid *>(GridCPPPtr);
-
-}
-
-void ovkEditGridRemote(ovk_domain *Domain, int GridID) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
-  ovk::EditGridRemote(DomainCPP, GridID);
-
-}
-
-void ovkReleaseGridLocal(ovk_domain *Domain, int GridID, ovk_grid **Grid) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(Grid, "Invalid grid pointer.");
-  OVK_DEBUG_ASSERT(*Grid, "Invalid grid pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
-
-  auto GridCPPPtr = reinterpret_cast<ovk::grid *>(*Grid);
-  ovk::ReleaseGridLocal(DomainCPP, GridID, GridCPPPtr);
-
-  *Grid = nullptr;
-
-}
-
-void ovkReleaseGridRemote(ovk_domain *Domain, int GridID) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
-  ovk::ReleaseGridRemote(DomainCPP, GridID);
-
-}
-
-bool ovkConnectivityExists(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID) {
+bool ovkComponentExists(const ovk_domain *Domain, int ComponentID) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
 
   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  return ovk::ConnectivityExists(DomainCPP, DonorGridID, ReceiverGridID);
+  return DomainCPP.ComponentExists(ComponentID);
 
 }
 
-void ovkGetConnectivityInfo(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, const
-  ovk_connectivity_info **ConnectivityInfo) {
+void ovkGetNextAvailableComponentID(const ovk_domain *Domain, int *ComponentID) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(ConnectivityInfo, "Invalid connectivity info pointer.");
+  OVK_DEBUG_ASSERT(ComponentID, "Invalid num components pointer.");
 
   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-
-  const ovk::connectivity_info *ConnectivityInfoCPPPtr;
-  ovk::GetConnectivityInfo(DomainCPP, DonorGridID, ReceiverGridID, ConnectivityInfoCPPPtr);
-
-  *ConnectivityInfo = reinterpret_cast<const ovk_connectivity_info *>(ConnectivityInfoCPPPtr);
+  *ComponentID = DomainCPP.ComponentIDs().NextAvailableValue();
 
 }
 
-bool ovkRankHasConnectivity(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  return ovk::RankHasConnectivity(DomainCPP, DonorGridID, ReceiverGridID);
-
 }
 
-void ovkGetConnectivity(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
-  const ovk_connectivity **Connectivity) {
+namespace {
 
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(Connectivity, "Invalid connectivity pointer.");
+template <typename ComponentType, typename ComponentTypeCPP, typename ParamsType, typename
+  ParamsTypeCPP> void CreateComponent(ovk_domain *Domain, int ComponentID, void *ParamsVoid) {
 
-  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-
-  const ovk::connectivity *ConnectivityCPPPtr;
-  ovk::GetConnectivity(DomainCPP, DonorGridID, ReceiverGridID, ConnectivityCPPPtr);
-
-  *Connectivity = reinterpret_cast<const ovk_connectivity *>(ConnectivityCPPPtr);
-
-}
-
-void ovkEditConnectivityLocal(ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
-  ovk_connectivity **Connectivity) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(Connectivity, "Invalid connectivity pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
-
-  ovk::connectivity *ConnectivityCPPPtr;
-  ovk::EditConnectivityLocal(DomainCPP, DonorGridID, ReceiverGridID, ConnectivityCPPPtr);
-
-  *Connectivity = reinterpret_cast<ovk_connectivity *>(ConnectivityCPPPtr);
-
-}
-
-void ovkEditConnectivityRemote(ovk_domain *Domain, int DonorGridID, int ReceiverGridID) {
+  auto Params = static_cast<ParamsType **>(ParamsVoid);
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
 
-  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
-  ovk::EditConnectivityRemote(DomainCPP, DonorGridID, ReceiverGridID);
-
-}
-
-void ovkReleaseConnectivityLocal(ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
-  ovk_connectivity **Connectivity) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(Connectivity, "Invalid connectivity pointer.");
-  OVK_DEBUG_ASSERT(*Connectivity, "Invalid connectivity pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
-
-  auto ConnectivityCPPPtr = reinterpret_cast<ovk::connectivity *>(*Connectivity);
-  ovk::ReleaseConnectivityLocal(DomainCPP, DonorGridID, ReceiverGridID, ConnectivityCPPPtr);
-
-  *Connectivity = nullptr;
-
-}
-
-void ovkReleaseConnectivityRemote(ovk_domain *Domain, int DonorGridID, int ReceiverGridID) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
-  ovk::ReleaseConnectivityRemote(DomainCPP, DonorGridID, ReceiverGridID);
-
-}
-
-// bool ovkExchangeExists(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID) {
-
-//   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-
-//   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-//   return ovk::ExchangeExists(DomainCPP, DonorGridID, ReceiverGridID);
-
-// }
-
-// void ovkGetExchangeInfo(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, const
-//   ovk_exchange_info **ExchangeInfo) {
-
-//   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-//   OVK_DEBUG_ASSERT(ExchangeInfo, "Invalid exchange info pointer.");
-
-//   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-
-//   const ovk::exchange_info *ExchangeInfoCPPPtr;
-//   ovk::GetExchangeInfo(DomainCPP, DonorGridID, ReceiverGridID, ExchangeInfoCPPPtr);
-
-//   *ExchangeInfo = reinterpret_cast<const ovk_exchange_info *>(ExchangeInfoCPPPtr);
-
-// }
-
-// bool ovkRankHasExchange(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID) {
-
-//   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-
-//   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-//   return ovk::RankHasExchange(DomainCPP, DonorGridID, ReceiverGridID);
-
-// }
-
-// void ovkGetExchange(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
-//   const ovk_exchange **Exchange) {
-
-//   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-//   OVK_DEBUG_ASSERT(Exchange, "Invalid exchange pointer.");
-
-//   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-
-//   const ovk::exchange *ExchangeCPPPtr;
-//   ovk::GetExchange(DomainCPP, DonorGridID, ReceiverGridID, ExchangeCPPPtr);
-
-//   *Exchange = reinterpret_cast<const ovk_exchange *>(ExchangeCPPPtr);
-
-// }
-
-void ovkGetLocalDonorCount(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
-  long long *NumDonors) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(NumDonors, "Invalid num donors pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  ovk::GetLocalDonorCount(DomainCPP, DonorGridID, ReceiverGridID, *NumDonors);
-
-}
-
-void ovkGetLocalReceiverCount(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
-  long long *NumReceivers) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(NumReceivers, "Invalid num receivers pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  ovk::GetLocalReceiverCount(DomainCPP, DonorGridID, ReceiverGridID, *NumReceivers);
-
-}
-
-void ovkAssemble(ovk_domain *Domain, const ovk_assembly_options *Options) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(Options, "Invalid domain pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
-  auto &OptionsCPP = *reinterpret_cast<const ovk::assembly_options *>(Options);
-  ovk::Assemble(DomainCPP, OptionsCPP);
-
-}
-
-void ovkCreateCollect(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int CollectID,
-  ovk_collect_op CollectOp, ovk_data_type ValueType, int Count, const int *GridValuesBegin, const
-  int *GridValuesEnd, ovk_array_layout GridValuesLayout) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(GridValuesBegin, "Invalid grid values begin pointer.");
-  OVK_DEBUG_ASSERT(GridValuesEnd, "Invalid grid values end pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
-
-  int NumDims;
-  ovk::GetDomainDimension(DomainCPP, NumDims);
-
-  ovk::range GridValuesRange = ovk::MakeEmptyRange(NumDims);
-  for (int iDim = 0; iDim < NumDims; ++iDim) {
-    GridValuesRange.Begin(iDim) = GridValuesBegin[iDim];
-    GridValuesRange.End(iDim) = GridValuesEnd[iDim];
+  ParamsTypeCPP *ParamsCPPPtr = nullptr;
+  if (Params && *Params) {
+    ParamsCPPPtr = reinterpret_cast<ParamsTypeCPP *>(*Params);
   }
 
-  ovk::CreateCollect(DomainCPP, DonorGridID, ReceiverGridID, CollectID, ovk::collect_op(CollectOp),
-    ovk::data_type(ValueType), Count, GridValuesRange, ovk::array_layout(GridValuesLayout));
-
-}
-
-void ovkDestroyCollect(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int CollectID) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-
   auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
-
-  ovk::DestroyCollect(DomainCPP, DonorGridID, ReceiverGridID, CollectID);
-
-}
-
-void ovkCollect(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int CollectID, const void
-  **GridValues, void **DonorValues) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
-
-  ovk::Collect(DomainCPP, DonorGridID, ReceiverGridID, CollectID, GridValues, DonorValues);
-
-}
-
-bool ovkCollectExists(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int
-  CollectID) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-
-  return ovk::CollectExists(DomainCPP, DonorGridID, ReceiverGridID, CollectID);
-
-}
-
-void ovkGetNextAvailableCollectID(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int
-  *CollectID) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-
-  ovk::GetNextAvailableCollectID(DomainCPP, DonorGridID, ReceiverGridID, *CollectID);
-
-}
-
-void ovkCreateSend(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int SendID,
-  ovk_data_type ValueType, int Count, int Tag) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
-
-  ovk::CreateSend(DomainCPP, DonorGridID, ReceiverGridID, SendID, ovk::data_type(ValueType), Count,
-    Tag);
-
-}
-
-void ovkDestroySend(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int SendID) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
-
-  ovk::DestroySend(DomainCPP, DonorGridID, ReceiverGridID, SendID);
-
-}
-
-void ovkSend(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int SendID, const void
-  **DonorValues, ovk_request **Request) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(Request, "Invalid request pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
-  auto RequestCPPPtr = new ovk::request();
-
-  *RequestCPPPtr = ovk::Send(DomainCPP, DonorGridID, ReceiverGridID, SendID, DonorValues);
-
-  *Request = reinterpret_cast<ovk_request *>(RequestCPPPtr);
-
-}
-
-bool ovkSendExists(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int SendID) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-
-  return ovk::SendExists(DomainCPP, DonorGridID, ReceiverGridID, SendID);
-
-}
-
-void ovkGetNextAvailableSendID(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int
-  *SendID) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-
-  ovk::GetNextAvailableSendID(DomainCPP, DonorGridID, ReceiverGridID, *SendID);
-
-}
-
-void ovkCreateReceive(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int RecvID,
-  ovk_data_type ValueType, int Count, int Tag) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
-
-  ovk::CreateReceive(DomainCPP, DonorGridID, ReceiverGridID, RecvID, ovk::data_type(ValueType),
-    Count, Tag);
-
-}
-
-void ovkDestroyReceive(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int RecvID) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
-
-  ovk::DestroyReceive(DomainCPP, DonorGridID, ReceiverGridID, RecvID);
-
-}
-
-void ovkReceive(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int RecvID, void
-  **ReceiverValues, ovk_request **Request) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(Request, "Invalid request pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
-  auto RequestCPPPtr = new ovk::request();
-
-  *RequestCPPPtr = ovk::Receive(DomainCPP, DonorGridID, ReceiverGridID, RecvID, ReceiverValues);
-
-  *Request = reinterpret_cast<ovk_request *>(RequestCPPPtr);
-
-}
-
-bool ovkReceiveExists(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int RecvID) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-
-  return ovk::ReceiveExists(DomainCPP, DonorGridID, ReceiverGridID, RecvID);
-
-}
-
-void ovkGetNextAvailableReceiveID(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int
-  *RecvID) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-
-  ovk::GetNextAvailableReceiveID(DomainCPP, DonorGridID, ReceiverGridID, *RecvID);
-
-}
-
-void ovkWait(const ovk_domain *Domain, ovk_request **Request) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(Request, "Invalid request pointer.");
-
-  if (*Request) {
-    auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-    auto *RequestCPPPtr = reinterpret_cast<ovk::request *>(*Request);
-    ovk::Wait(DomainCPP, *RequestCPPPtr);
-    delete RequestCPPPtr;
-    *Request = nullptr;
+  if (ParamsCPPPtr) {
+    DomainCPP.CreateComponent<ComponentTypeCPP>(ComponentID, std::move(*ParamsCPPPtr));
+  } else {
+    DomainCPP.CreateComponent<ComponentTypeCPP>(ComponentID);
+  }
+
+  if (ParamsCPPPtr) {
+    delete ParamsCPPPtr;
+    *Params = NULL;
   }
 
 }
 
-void ovkWaitAll(const ovk_domain *Domain, int NumRequests, ovk_request **Requests) {
+}
 
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(NumRequests >= 0, "Invalid request count.");
-  OVK_DEBUG_ASSERT(Requests || NumRequests == 0, "Invalid requests pointer.");
-  // Note: Not checking Requests[i] here on purpose -- allowed to be null
+extern "C" {
 
-  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  ovk::array<ovk::request *> RequestCPPPtrs({NumRequests});
-  for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
-    RequestCPPPtrs(iRequest) = reinterpret_cast<ovk::request *>(Requests[iRequest]);
-  }
-  ovk::WaitAll(DomainCPP, RequestCPPPtrs);
+void ovkCreateComponent(ovk_domain *Domain, int ComponentID, ovk_component_type ComponentType,
+  void *Params) {
 
-  for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
-    delete RequestCPPPtrs[iRequest];
-    Requests[iRequest] = nullptr;
+  OVK_DEBUG_ASSERT(ovkValidComponentType(ComponentType), "Invalid component type.");
+
+  switch (ComponentType) {
+  case OVK_COMPONENT_TYPE_CONNECTIVITY:
+    CreateComponent<ovk_connectivity_component, ovk::connectivity_component,
+      ovk_connectivity_component_params, ovk::connectivity_component::params>(Domain, ComponentID,
+        Params);
   }
 
 }
 
-void ovkWaitAny(const ovk_domain *Domain, int NumRequests, ovk_request **Requests, int *Index) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(NumRequests >= 0, "Invalid request count.");
-  OVK_DEBUG_ASSERT(Requests || NumRequests == 0, "Invalid requests pointer.");
-  // Note: Not checking Requests[i] here on purpose -- allowed to be null
-  OVK_DEBUG_ASSERT(Index, "Invalid index pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  ovk::array<ovk::request *> RequestCPPPtrs({NumRequests});
-  for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
-    RequestCPPPtrs(iRequest) = reinterpret_cast<ovk::request *>(Requests[iRequest]);
-  }
-  ovk::WaitAny(DomainCPP, RequestCPPPtrs, *Index);
-
-  if (*Index >= 0) {
-    delete RequestCPPPtrs[*Index];
-    Requests[*Index] = nullptr;
-  }
-
-}
-
-void ovkCreateDisperse(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int DisperseID,
-  ovk_disperse_op DisperseOp, ovk_data_type ValueType, int Count, const int *GridValuesBegin, const
-  int *GridValuesEnd, ovk_array_layout GridValuesLayout) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(GridValuesBegin, "Invalid grid values begin pointer.");
-  OVK_DEBUG_ASSERT(GridValuesEnd, "Invalid grid values end pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
-
-  int NumDims;
-  ovk::GetDomainDimension(DomainCPP, NumDims);
-
-  ovk::range GridValuesRange = ovk::MakeEmptyRange(NumDims);
-  for (int iDim = 0; iDim < NumDims; ++iDim) {
-    GridValuesRange.Begin(iDim) = GridValuesBegin[iDim];
-    GridValuesRange.End(iDim) = GridValuesEnd[iDim];
-  }
-
-  ovk::CreateDisperse(DomainCPP, DonorGridID, ReceiverGridID, DisperseID, ovk::disperse_op(
-    DisperseOp), ovk::data_type(ValueType), Count, GridValuesRange, ovk::array_layout(
-    GridValuesLayout));
-
-}
-
-void ovkDestroyDisperse(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int DisperseID) {
+void ovkDestroyComponent(ovk_domain *Domain, int ComponentID) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
 
   auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
-
-  ovk::DestroyDisperse(DomainCPP, DonorGridID, ReceiverGridID, DisperseID);
+  DomainCPP.DestroyComponent(ComponentID);
 
 }
 
-void ovkDisperse(ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int DisperseID, const void
-  **ReceiverValues, void **GridValues) {
+}
+
+namespace {
+
+template <typename ComponentType, typename ComponentTypeCPP> void GetComponent(const ovk_domain
+  *Domain, int ComponentID, void *ComponentVoid) {
+
+  auto Component = static_cast<const ComponentType **>(ComponentVoid);
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+  OVK_DEBUG_ASSERT(Component, "Invalid component pointer.");
+
+  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+  auto &ComponentCPP = DomainCPP.Component<ComponentTypeCPP>(ComponentID);
+
+  *Component = reinterpret_cast<const ComponentType *>(&ComponentCPP);
+
+}
+
+}
+
+extern "C" {
+
+void ovkGetComponent(const ovk_domain *Domain, int ComponentID, ovk_component_type ComponentType,
+  void *Component) {
+
+  OVK_DEBUG_ASSERT(ovkValidComponentType(ComponentType), "Invalid component type.");
+
+  switch (ComponentType) {
+  case OVK_COMPONENT_TYPE_CONNECTIVITY:
+    GetComponent<ovk_connectivity_component, ovk::connectivity_component>(Domain, ComponentID,
+      Component);
+  }
+
+}
+
+}
+
+namespace {
+
+template <typename ComponentType, typename ComponentTypeCPP> void EditComponent(ovk_domain *Domain,
+  int ComponentID, void *ComponentVoid) {
+
+  auto Component = static_cast<ComponentType **>(ComponentVoid);
+
+  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+  OVK_DEBUG_ASSERT(Component, "Invalid component pointer.");
 
   auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
 
-  ovk::Disperse(DomainCPP, DonorGridID, ReceiverGridID, DisperseID, ReceiverValues, GridValues);
+  ovk::edit_handle<ComponentTypeCPP> EditHandle = DomainCPP.EditComponent<ComponentTypeCPP>(
+    ComponentID);
+  auto ComponentCPPPtr = EditHandle.Release();
+
+  *Component = reinterpret_cast<ComponentType *>(ComponentCPPPtr);
 
 }
 
-bool ovkDisperseExists(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID, int
-  DisperseID) {
+}
+
+extern "C" {
+
+void ovkEditComponent(ovk_domain *Domain, int ComponentID, ovk_component_type ComponentType,
+  void *Component) {
+
+  OVK_DEBUG_ASSERT(ovkValidComponentType(ComponentType), "Invalid component type.");
+
+  switch (ComponentType) {
+  case OVK_COMPONENT_TYPE_CONNECTIVITY:
+    EditComponent<ovk_connectivity_component, ovk::connectivity_component>(Domain, ComponentID,
+      Component);
+  }
+
+}
+
+}
+
+namespace {
+
+template <typename ComponentType, typename ComponentTypeCPP> void RestoreComponent(ovk_domain
+  *Domain, int ComponentID, void *ComponentVoid) {
+
+  auto Component = static_cast<ComponentType **>(ComponentVoid);
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
+  OVK_DEBUG_ASSERT(Component, "Invalid component pointer.");
+  OVK_DEBUG_ASSERT(*Component, "Invalid component pointer.");
 
-  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
+  auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
+  DomainCPP.RestoreComponent(ComponentID);
 
-  return ovk::DisperseExists(DomainCPP, DonorGridID, ReceiverGridID, DisperseID);
-
-}
-
-void ovkGetNextAvailableDisperseID(const ovk_domain *Domain, int DonorGridID, int ReceiverGridID,
-  int *DisperseID) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-
-  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-
-  ovk::GetNextAvailableDisperseID(DomainCPP, DonorGridID, ReceiverGridID, *DisperseID);
+  *Component = nullptr;
 
 }
 
-void ovkCreateDomainParams(ovk_domain_params **Params, int NumDims) {
+}
+
+extern "C" {
+
+void ovkRestoreComponent(ovk_domain *Domain, int ComponentID, ovk_component_type ComponentType, void
+  *Component) { 
+
+  OVK_DEBUG_ASSERT(ovkValidComponentType(ComponentType), "Invalid component type.");
+
+  switch (ComponentType) {
+  case OVK_COMPONENT_TYPE_CONNECTIVITY:
+    RestoreComponent<ovk_connectivity_component, ovk::connectivity_component>(Domain, ComponentID,
+      Component);
+  }
+
+}
+
+void ovkCreateDomainParams(ovk_domain_params **Params) {
 
   OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
 
-  auto ParamsCPPPtr = new ovk::domain_params();
-
-  ovk::CreateDomainParams(*ParamsCPPPtr, NumDims);
+  auto ParamsCPPPtr = new ovk::domain::params();
 
   *Params = reinterpret_cast<ovk_domain_params *>(ParamsCPPPtr);
 
@@ -762,9 +578,7 @@ void ovkDestroyDomainParams(ovk_domain_params **Params) {
   OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
   OVK_DEBUG_ASSERT(*Params, "Invalid params pointer.");
 
-  auto ParamsCPPPtr = reinterpret_cast<ovk::domain_params *>(*Params);
-
-  ovk::DestroyDomainParams(*ParamsCPPPtr);
+  auto ParamsCPPPtr = reinterpret_cast<ovk::domain::params *>(*Params);
 
   delete ParamsCPPPtr;
 
@@ -777,12 +591,8 @@ void ovkGetDomainParamName(const ovk_domain_params *Params, char *Name) {
   OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
   OVK_DEBUG_ASSERT(Name, "Invalid name pointer.");
 
-  auto &ParamsCPP = *reinterpret_cast<const ovk::domain_params *>(Params);
-
-  std::string NameCPP;
-  ovk::GetDomainParamName(ParamsCPP, NameCPP);
-
-  std::strcpy(Name, NameCPP.c_str());
+  auto &ParamsCPP = *reinterpret_cast<const ovk::domain::params *>(Params);
+  std::strcpy(Name, ParamsCPP.Name().c_str());
 
 }
 
@@ -791,8 +601,8 @@ void ovkSetDomainParamName(ovk_domain_params *Params, const char *Name) {
   OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
   OVK_DEBUG_ASSERT(Name, "Invalid name pointer.");
 
-  auto &ParamsCPP = *reinterpret_cast<ovk::domain_params *>(Params);
-  ovk::SetDomainParamName(ParamsCPP, Name);
+  auto &ParamsCPP = *reinterpret_cast<ovk::domain::params *>(Params);
+  ParamsCPP.SetName(Name);
 
 }
 
@@ -801,8 +611,17 @@ void ovkGetDomainParamDimension(const ovk_domain_params *Params, int *NumDims) {
   OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
   OVK_DEBUG_ASSERT(NumDims, "Invalid num dims pointer.");
 
-  auto &ParamsCPP = *reinterpret_cast<const ovk::domain_params *>(Params);
-  ovk::GetDomainParamDimension(ParamsCPP, *NumDims);
+  auto &ParamsCPP = *reinterpret_cast<const ovk::domain::params *>(Params);
+  *NumDims = ParamsCPP.Dimension();
+
+}
+
+void ovkSetDomainParamDimension(ovk_domain_params *Params, int NumDims) {
+
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
+
+  auto &ParamsCPP = *reinterpret_cast<ovk::domain::params *>(Params);
+  ParamsCPP.SetDimension(NumDims);
 
 }
 
@@ -811,8 +630,8 @@ void ovkGetDomainParamComm(const ovk_domain_params *Params, MPI_Comm *Comm) {
   OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
   OVK_DEBUG_ASSERT(Comm, "Invalid comm pointer.");
 
-  auto &ParamsCPP = *reinterpret_cast<const ovk::domain_params *>(Params);
-  ovk::GetDomainParamComm(ParamsCPP, *Comm);
+  auto &ParamsCPP = *reinterpret_cast<const ovk::domain::params *>(Params);
+  *Comm = ParamsCPP.Comm();
 
 }
 
@@ -820,8 +639,8 @@ void ovkSetDomainParamComm(ovk_domain_params *Params, MPI_Comm Comm) {
 
   OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
 
-  auto &ParamsCPP = *reinterpret_cast<ovk::domain_params *>(Params);
-  ovk::SetDomainParamComm(ParamsCPP, Comm);
+  auto &ParamsCPP = *reinterpret_cast<ovk::domain::params *>(Params);
+  ParamsCPP.SetComm(Comm);
 
 }
 

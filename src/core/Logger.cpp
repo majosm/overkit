@@ -13,11 +13,6 @@
 namespace ovk {
 namespace core {
 
-logger::logger():
-  Level_(log_level::NONE),
-  Rank_(-1)
-{}
-
 logger::logger(log_level Level, int Rank):
   Level_(Level),
   Rank_(Rank)

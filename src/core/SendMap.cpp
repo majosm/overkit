@@ -4,6 +4,7 @@
 #include "ovk/core/SendMap.hpp"
 
 #include "ovk/core/Array.hpp"
+#include "ovk/core/FloatingRef.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Profiler.hpp"
 
@@ -15,8 +16,13 @@
 namespace ovk {
 namespace core {
 
+send_map::send_map():
+  FloatingRefGenerator_(*this)
+{}
+
 send_map::send_map(long long NumValues, array<long long> SendOrder, const array<int>
   &DestinationRanks):
+  FloatingRefGenerator_(*this),
   SendOrder_(std::move(SendOrder))
 {
 
@@ -25,8 +31,8 @@ send_map::send_map(long long NumValues, array<long long> SendOrder, const array<
   std::map<int, long long> SendCounts;
 
   for (long long iValue = 0; iValue < NumValues; ++iValue) {
-    if (SendOrder_(iValue) >= 0) {
-      int Rank = DestinationRanks(iValue);
+    int Rank = DestinationRanks(iValue);
+    if (Rank >= 0) {
       auto Iter = SendCounts.lower_bound(Rank);
       if (Iter != SendCounts.end() && Iter->first == Rank) {
         ++Iter->second;
@@ -55,8 +61,8 @@ send_map::send_map(long long NumValues, array<long long> SendOrder, const array<
   SendIndices_.Resize({NumValues}, -1);
 
   for (long long iValue = 0; iValue < NumValues; ++iValue) {
-    if (SendOrder_(iValue) >= 0) {
-      int Rank = DestinationRanks(iValue);
+    int Rank = DestinationRanks(iValue);
+    if (Rank >= 0) {
       SendIndices_(iValue) = RankToSendIndex[Rank];
     }
   }

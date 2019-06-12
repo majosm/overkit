@@ -4,13 +4,11 @@
 #ifndef OVK_CORE_SEND_HPP_INCLUDED
 #define OVK_CORE_SEND_HPP_INCLUDED
 
-#include <ovk/core/Array.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Constants.hpp>
-#include <ovk/core/Connectivity.hpp>
+#include <ovk/core/Context.hpp>
 #include <ovk/core/DataType.hpp>
 #include <ovk/core/Global.hpp>
-#include <ovk/core/Profiler.hpp>
 #include <ovk/core/Request.hpp>
 #include <ovk/core/SendMap.hpp>
 #include <ovk/core/TypeTraits.hpp>
@@ -55,11 +53,11 @@ private:
 
   class concept {
   public:
-    virtual ~concept() {}
+    virtual ~concept() noexcept {}
     virtual request Send(const void * const *Values) = 0;
   };
 
-  template <typename T> class model : public concept {
+  template <typename T> class model final : public concept {
   public:
     explicit model(T Send):
       Send_(std::move(Send))
@@ -75,8 +73,8 @@ private:
 
 };
 
-send MakeSend(comm_view Comm, const send_map &SendMap, data_type ValueType, int Count, int Tag,
-  profiler &Profiler);
+send CreateSend(std::shared_ptr<context> Context, comm_view Comm, const send_map &SendMap, data_type
+  ValueType, int Count, int Tag);
 
 }}
 

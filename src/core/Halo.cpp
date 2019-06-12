@@ -8,35 +8,31 @@
 #include <ovk/core/Cart.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Constants.hpp>
-#include <ovk/core/Elem.hpp>
+#include <ovk/core/Context.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Profiler.hpp>
 #include <ovk/core/Range.hpp>
 #include <ovk/core/ScopeGuard.hpp>
 #include <ovk/core/TypeTraits.hpp>
 
+#include <mpi.h>
+
+#include <memory>
+#include <utility>
+
 namespace ovk {
 namespace core {
 
-halo::halo(const cart &Cart, comm_view Comm, const range &LocalRange, const range &ExtendedRange,
-  const array<partition_info> &Neighbors, profiler &Profiler):
-  Comm_(Comm),
-  Profiler_(&Profiler)
+namespace halo_internal {
+
+halo_map::halo_map():
+  FloatingRefGenerator_(*this)
+{}
+
+halo_map::halo_map(const cart &Cart, const range &LocalRange, const range &ExtendedRange,
+  const array<partition_info> &Neighbors):
+  FloatingRefGenerator_(*this)
 {
-
-  AddProfilerTimer(Profiler, "Halo");
-  AddProfilerTimer(Profiler, "Halo::Setup");
-  AddProfilerTimer(Profiler, "Halo::Exchange");
-  AddProfilerTimer(Profiler, "Halo::Exchange::Pack");
-  AddProfilerTimer(Profiler, "Halo::Exchange::Unpack");
-  AddProfilerTimer(Profiler, "Halo::Exchange::MPI");
-
-  TotalTime_ = GetProfilerTimerID(Profiler, "Halo");
-  SetupTime_ = GetProfilerTimerID(Profiler, "Halo::Setup");
-  ExchangeTime_ = GetProfilerTimerID(Profiler, "Halo::Exchange");
-
-  StartProfile(Profiler, TotalTime_);
-  StartProfile(Profiler, SetupTime_);
 
   const range &GlobalRange = Cart.Range();
   int NumNeighbors = Neighbors.Count();
@@ -182,8 +178,25 @@ halo::halo(const cart &Cart, comm_view Comm, const range &LocalRange, const rang
     }
   }
 
-  EndProfile(Profiler, SetupTime_);
-  EndProfile(Profiler, TotalTime_);
+}
+
+}
+
+halo::halo(std::shared_ptr<context> Context, const cart &Cart, comm_view Comm, const range
+  &LocalRange, const range &ExtendedRange, const array<partition_info> &Neighbors):
+  Context_(std::move(Context)),
+  Comm_(Comm)
+{
+
+  core::profiler &Profiler = Context_->core_Profiler();
+
+  Profiler.StartSync(TOTAL_TIME, Comm);
+  Profiler.Start(SETUP_TIME);
+
+  HaloMap_ = halo_map(Cart, LocalRange, ExtendedRange, Neighbors);
+
+  Profiler.Stop(SETUP_TIME);
+  Profiler.Stop(TOTAL_TIME);
 
 }
 

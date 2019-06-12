@@ -12,6 +12,7 @@
 
 #include <ovk/core/Cart.hpp>
 #include <ovk/core/Comm.hpp>
+#include <ovk/core/Context.hpp>
 #include <ovk/core/Partition.hpp>
 #include <ovk/core/Range.hpp>
 #include <ovk/core/ScalarOps.hpp>
@@ -149,8 +150,9 @@ TEST_F(HaloTests, Exchange) {
     return AfterData;
   };
 
-  ovk::core::profiler Profiler;
-  ovk::core::CreateProfiler(Profiler, TestComm());
+  auto Context = std::make_shared<ovk::context>(ovk::CreateContext(ovk::context::params()
+    .SetComm(TestComm())
+  ));
 
   // Extended range same as local range
   if (CommOfSize4) {
@@ -160,7 +162,7 @@ TEST_F(HaloTests, Exchange) {
     ovk::range ExtendedRange = LocalRange;
     ovk::array<ovk::core::partition_info> Neighbors = CreateNeighbors(Cart, Comm, LocalRange,
       ExtendedRange);
-    ovk::core::halo Halo(Cart, Comm, LocalRange, ExtendedRange, Neighbors, Profiler);
+    ovk::core::halo Halo(Context, Cart, Comm, LocalRange, ExtendedRange, Neighbors);
     field_data<int> Data = CreateBeforeDataInt(Comm, LocalRange, ExtendedRange);
     Halo.Exchange(Data);
     field_data<int> ExpectedData = CreateAfterDataInt(Cart, Comm, LocalRange, ExtendedRange,
@@ -176,7 +178,7 @@ TEST_F(HaloTests, Exchange) {
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
     ovk::array<ovk::core::partition_info> Neighbors = CreateNeighbors(Cart, Comm, LocalRange,
       ExtendedRange);
-    ovk::core::halo Halo(Cart, Comm, LocalRange, ExtendedRange, Neighbors, Profiler);
+    ovk::core::halo Halo(Context, Cart, Comm, LocalRange, ExtendedRange, Neighbors);
     field_data<int> Data = CreateBeforeDataInt(Comm, LocalRange, ExtendedRange);
     Halo.Exchange(Data);
     field_data<int> ExpectedData = CreateAfterDataInt(Cart, Comm, LocalRange, ExtendedRange,
@@ -192,7 +194,7 @@ TEST_F(HaloTests, Exchange) {
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
     ovk::array<ovk::core::partition_info> Neighbors = CreateNeighbors(Cart, Comm, LocalRange,
       ExtendedRange);
-    ovk::core::halo Halo(Cart, Comm, LocalRange, ExtendedRange, Neighbors, Profiler);
+    ovk::core::halo Halo(Context, Cart, Comm, LocalRange, ExtendedRange, Neighbors);
     field_data<int> Data = CreateBeforeDataInt(Comm, LocalRange, ExtendedRange);
     Halo.Exchange(Data);
     field_data<int> ExpectedData = CreateAfterDataInt(Cart, Comm, LocalRange, ExtendedRange,
@@ -208,7 +210,7 @@ TEST_F(HaloTests, Exchange) {
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
     ovk::array<ovk::core::partition_info> Neighbors = CreateNeighbors(Cart, Comm, LocalRange,
       ExtendedRange);
-    ovk::core::halo Halo(Cart, Comm, LocalRange, ExtendedRange, Neighbors, Profiler);
+    ovk::core::halo Halo(Context, Cart, Comm, LocalRange, ExtendedRange, Neighbors);
     field_data<int> Data = CreateBeforeDataInt(Comm, LocalRange, ExtendedRange);
     Halo.Exchange(Data);
     field_data<int> ExpectedData = CreateAfterDataInt(Cart, Comm, LocalRange, ExtendedRange,
@@ -224,7 +226,7 @@ TEST_F(HaloTests, Exchange) {
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
     ovk::array<ovk::core::partition_info> Neighbors = CreateNeighbors(Cart, Comm, LocalRange,
       ExtendedRange);
-    ovk::core::halo Halo(Cart, Comm, LocalRange, ExtendedRange, Neighbors, Profiler);
+    ovk::core::halo Halo(Context, Cart, Comm, LocalRange, ExtendedRange, Neighbors);
     field_data<int> Data = CreateBeforeDataInt(Comm, LocalRange, ExtendedRange);
     Halo.Exchange(Data);
     field_data<int> ExpectedData = CreateAfterDataInt(Cart, Comm, LocalRange, ExtendedRange,
@@ -240,7 +242,7 @@ TEST_F(HaloTests, Exchange) {
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
     ovk::array<ovk::core::partition_info> Neighbors = CreateNeighbors(Cart, Comm, LocalRange,
       ExtendedRange);
-    ovk::core::halo Halo(Cart, Comm, LocalRange, ExtendedRange, Neighbors, Profiler);
+    ovk::core::halo Halo(Context, Cart, Comm, LocalRange, ExtendedRange, Neighbors);
     field_data<int> Data1 = CreateBeforeDataInt(Comm, LocalRange, ExtendedRange);
     field_data<double> Data2 = CreateBeforeDataDouble(Comm, LocalRange, ExtendedRange);
     ovk::array<ovk::request> Requests({2});
@@ -263,7 +265,7 @@ TEST_F(HaloTests, Exchange) {
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
     ovk::array<ovk::core::partition_info> Neighbors = CreateNeighbors(Cart, Comm, LocalRange,
       ExtendedRange);
-    ovk::core::halo Halo(Cart, Comm, LocalRange, ExtendedRange, Neighbors, Profiler);
+    ovk::core::halo Halo(Context, Cart, Comm, LocalRange, ExtendedRange, Neighbors);
     field_data<int> Data1 = CreateBeforeDataInt(Comm, LocalRange, ExtendedRange);
     field_data<double> Data2 = CreateBeforeDataDouble(Comm, LocalRange, ExtendedRange);
     ovk::array<ovk::request> Requests({2});

@@ -6,15 +6,12 @@
 #include "ovk/core/Array.hpp"
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Constants.hpp"
+#include "ovk/core/Context.hpp"
 #include "ovk/core/Debug.hpp"
-#include "ovk/core/Elem.hpp"
-#include "ovk/core/ErrorHandler.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Halo.hpp"
-#include "ovk/core/Logger.hpp"
 #include "ovk/core/Misc.hpp"
 #include "ovk/core/PartitionHash.hpp"
-#include "ovk/core/Profiler.hpp"
 #include "ovk/core/Range.hpp"
 #include "ovk/core/Request.hpp"
 #include "ovk/core/ScalarOps.hpp"
@@ -36,8 +33,9 @@ array<range> CreateSubregions(int NumDims, const range &Range, int NumSubregions
 
 }
 
-partition::partition(const cart &Cart, comm_view Comm, const range &LocalRange, int ExtendAmount,
-  int NumSubregions, const array<int> &NeighborRanks, profiler &Profiler):
+partition::partition(std::shared_ptr<context> Context, const cart &Cart, comm_view Comm, const range
+  &LocalRange, int ExtendAmount, int NumSubregions, const array<int> &NeighborRanks):
+  Context_(std::move(Context)),
   Cart_(Cart),
   Comm_(Comm),
   LocalRange_(LocalRange),
@@ -45,7 +43,7 @@ partition::partition(const cart &Cart, comm_view Comm, const range &LocalRange, 
   LocalSubregions_(CreateSubregions(Cart.Dimension(), LocalRange, NumSubregions)),
   ExtendedSubregions_(CreateSubregions(Cart.Dimension(), ExtendedRange_, NumSubregions)),
   Neighbors_(RetrievePartitionInfo(Comm_, NeighborRanks, LocalRange, ExtendedRange_)),
-  Halo_(Cart, Comm_, LocalRange, ExtendedRange_, Neighbors_, Profiler)
+  Halo_(Context_, Cart, Comm_, LocalRange, ExtendedRange_, Neighbors_)
 {}
 
 range ExtendLocalRange(const cart &Cart, const range &LocalRange, int ExtendAmount) {

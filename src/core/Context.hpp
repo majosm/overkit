@@ -6,51 +6,101 @@
 
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Constants.hpp>
-#include <ovk/core/Domain.hpp>
-#include <ovk/core/ErrorHandler.hpp>
+#include <ovk/core/Error.hpp>
+#include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Logger.hpp>
+#include <ovk/core/Moveabool.hpp>
+#include <ovk/core/Optional.hpp>
+#include <ovk/core/Profiler.hpp>
 
 #include <mpi.h>
 
-#include <list>
+#include <memory>
 
 namespace ovk {
 
-struct context_params {
-  MPI_Comm Comm_;
-  log_level LogLevel_;
-  error_handler_type ErrorHandlerType_;
-};
+namespace context_internal {
 
-struct context {
-  mutable core::logger Logger_;
-  mutable core::error_handler ErrorHandler_;
+// For doing stuff before creation and after destruction
+class context_base {
+
+protected:
+
+  context_base(MPI_Comm Comm, log_level LogLevel);
+
+  context_base(const context_base &Other) = delete;
+  context_base(context_base &&Other) noexcept = default;
+
+  context_base &operator=(const context_base &Other) = delete;
+  context_base &operator=(context_base &&Other) noexcept = default;
+
+  ~context_base() noexcept;
+
+  core::moveabool Exists_;
+
   core::comm Comm_;
-  std::list<domain> Domains_;
+  // TODO: Maybe mutability should be encapsulated inside?
+  mutable core::logger Logger_;
+
 };
 
-void CreateContextParams(context_params &Params);
-void DestroyContextParams(context_params &Params);
-void GetContextParamComm(const context_params &Params, MPI_Comm &Comm);
-void SetContextParamComm(context_params &Params, MPI_Comm Comm);
-void GetContextParamLogLevel(const context_params &Params, log_level &LogLevel);
-void SetContextParamLogLevel(context_params &Params, log_level LogLevel);
-void GetContextParamErrorHandlerType(const context_params &Params, error_handler_type &
-  ErrorHandlerType);
-void SetContextParamErrorHandlerType(context_params &Params, error_handler_type ErrorHandlerType);
+}
 
-error CreateContext(context &Context, const context_params &Params);
-void DestroyContext(context &Context);
+class context : private context_internal::context_base {
 
-void GetContextComm(const context &Context, MPI_Comm &Comm);
-void GetContextLogLevel(const context &Context, log_level &LogLevel);
-void SetContextLogLevel(context &Context, log_level LogLevel);
-void GetContextErrorHandlerType(const context &Context, error_handler_type &ErrorHandlerType);
-void SetContextErrorHandlerType(context &Context, error_handler_type ErrorHandlerType);
+public:
 
-void CreateDomain(context &Context, domain *&Domain, const domain_params &Params);
-void DestroyDomain(context &Context, domain *&Domain);
+  class params {
+  public:
+    params() = default;
+    MPI_Comm Comm() const { return Comm_; }
+    params &SetComm(MPI_Comm Comm);
+    log_level LogLevel() const { return LogLevel_; }
+    params &SetLogLevel(log_level LogLevel);
+  private:
+    MPI_Comm Comm_ = MPI_COMM_NULL;
+    log_level LogLevel_ = log_level::ERRORS | log_level::WARNINGS;
+    friend class context;
+  };
+
+  context(const context &Other) = delete;
+  context(context &&Other) noexcept = default;
+
+  context &operator=(const context &Other) = delete;
+  context &operator=(context &&Other) noexcept = default;
+
+  ~context() noexcept;
+
+  floating_ref<const context> GetFloatingRef() const { return FloatingRefGenerator_.Generate(); }
+  floating_ref<context> GetFloatingRef() { return FloatingRefGenerator_.Generate(); }
+
+  MPI_Comm Comm() const { return Comm_; }
+  int CommSize() const { return Comm_.Size(); }
+  int CommRank() const { return Comm_.Rank(); }
+
+  log_level LogLevel() const { return Logger_.Level(); }
+  void SetLogLevel(log_level LogLevel);
+
+  const core::comm &core_Comm() const { return Comm_; }
+  core::logger &core_Logger() const { return Logger_; }
+  core::profiler &core_Profiler() const { return Profiler_; }
+
+  static context internal_Create(params &&Params);
+
+private:
+
+  floating_ref_generator<context> FloatingRefGenerator_;
+
+  // TODO: Maybe mutability should be encapsulated inside?
+  mutable core::profiler Profiler_;
+
+  context(params &&Params);
+
+};
+
+context CreateContext(context::params Params);
+optional<context> CreateContext(context::params Params, error &Error);
 
 }
 

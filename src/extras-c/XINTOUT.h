@@ -15,10 +15,11 @@
 extern "C" {
 #endif
 
-ovk_error ovkImportXINTOUT(ovk_domain *Domain, const char *HOPath, const char *XPath,
-  int ReadGranularityAdjust, MPI_Info MPIInfo);
-ovk_error ovkExportXINTOUT(const ovk_domain *Domain, const char *HOPath, const char *XPath,
-  ovk_xintout_format Format, ovk_endian Endian, int WriteGranularityAdjust, MPI_Info MPIInfo);
+void ovkImportXINTOUT(ovk_domain *Domain, int ConnectivityComponentID, const char *HOPath, const
+  char *XPath, int ReadGranularityAdjust, MPI_Info MPIInfo, ovk_error *Error);
+void ovkExportXINTOUT(const ovk_domain *Domain, int ConnectivityComponentID, const char *HOPath,
+  const char *XPath, ovk_xintout_format Format, ovk_endian Endian, int WriteGranularityAdjust,
+  MPI_Info MPIInfo, ovk_error *Error);
 
 #ifdef __cplusplus
 }

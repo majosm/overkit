@@ -4,82 +4,76 @@
 namespace ovk {
 namespace core {
 
-namespace profiler_internal {
+OVK_FORCE_INLINE void timer::Start() {
 
-OVK_FORCE_INLINE void ResetTimer(timer &Timer) {
-
-  Timer.Active_ = false;
-  Timer.LastStartTime_ = 0.;
-  Timer.LastEndTime_ = 0.;
-  Timer.AccumulatedTime_ = 0.;
-
-}
-
-OVK_FORCE_INLINE void StartTimer(timer &Timer) {
-
-  if (!Timer.Active_) {
-    Timer.LastStartTime_ = MPI_Wtime();
+  if (!Active_) {
+    LastStartTime_ = MPI_Wtime();
   }
-  Timer.Active_ = true;
+
+  Active_ = true;
 
 }
 
-OVK_FORCE_INLINE void StopTimer(timer &Timer) {
+OVK_FORCE_INLINE void timer::Stop() {
 
-  if (Timer.Active_) {
-    Timer.LastEndTime_ = MPI_Wtime();
-    Timer.AccumulatedTime_ += Timer.LastEndTime_ - Timer.LastStartTime_;
+  if (Active_) {
+    LastEndTime_ = MPI_Wtime();
+    AccumulatedTime_ += LastEndTime_ - LastStartTime_;
   }
-  Timer.Active_ = false;
+
+  Active_ = false;
 
 }
 
-OVK_FORCE_INLINE double GetElapsedTime(const timer &Timer) {
+inline void timer::Reset() {
 
-  if (Timer.Active_) {
-    return MPI_Wtime() - Timer.LastStartTime_;
+  *this = timer();
+
+}
+
+OVK_FORCE_INLINE double timer::Elapsed() const {
+
+  if (Active_) {
+    return MPI_Wtime() - LastStartTime_;
   } else {
-    return Timer.LastEndTime_ - Timer.LastStartTime_;
+    return LastEndTime_ - LastStartTime_;
   }
 
 }
 
-OVK_FORCE_INLINE double GetAccumulatedTime(const timer &Timer) {
+OVK_FORCE_INLINE double timer::Accumulated() const {
 
-  if (Timer.Active_) {
-    return Timer.AccumulatedTime_ + (MPI_Wtime() - Timer.LastStartTime_);
+  if (Active_) {
+    return AccumulatedTime_ + (MPI_Wtime() - LastStartTime_);
   } else {
-    return Timer.AccumulatedTime_;
+    return AccumulatedTime_;
   }
 
 }
 
-}
+OVK_FORCE_INLINE void profiler::Start(int TimerID) {
 
-OVK_FORCE_INLINE void StartProfile(profiler &Profiler, int TimerID) {
-
-  if (Profiler.Enabled_) {
-    OVK_DEBUG_ASSERT(TimerID >= 0 && TimerID < int(Profiler.Timers_.Count()), "Invalid timer ID.");
-    StartTimer(Profiler.Timers_(TimerID).second);
+  if (Enabled_) {
+    // Don't want to force everything inline, just the if statement
+    Start_(TimerID);
   }
 
 }
 
-OVK_FORCE_INLINE void StartProfileSync(profiler &Profiler, int TimerID, comm_view Comm) {
+OVK_FORCE_INLINE void profiler::StartSync(int TimerID, MPI_Comm Comm) {
 
-  if (Profiler.Enabled_) {
-    OVK_DEBUG_ASSERT(TimerID >= 0 && TimerID < int(Profiler.Timers_.Count()), "Invalid timer ID.");
-    MPI_Barrier(Comm);
-    StartTimer(Profiler.Timers_(TimerID).second);
+  if (Enabled_) {
+    // Don't want to force everything inline, just the if statement
+    StartSync_(TimerID, Comm);
   }
 
 }
 
-OVK_FORCE_INLINE void EndProfile(profiler &Profiler, int TimerID) {
+OVK_FORCE_INLINE void profiler::Stop(int TimerID) {
 
-  if (Profiler.Enabled_) {
-    OVK_DEBUG_ASSERT(TimerID >= 0 && TimerID < int(Profiler.Timers_.Count()), "Invalid timer ID.");
-    StopTimer(Profiler.Timers_(TimerID).second);
+  if (Enabled_) {
+    // Don't want to force everything inline, just the if statement
+    Stop_(TimerID);
   }
 
 }

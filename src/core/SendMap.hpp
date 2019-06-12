@@ -5,6 +5,7 @@
 #define OVK_CORE_SEND_MAP_HPP_INCLUDED
 
 #include <ovk/core/Array.hpp>
+#include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
 
 namespace ovk {
@@ -19,8 +20,11 @@ public:
     long long NumValues;
   };
 
-  send_map() = default;
+  send_map();
   send_map(long long NumValues, array<long long> SendOrder, const array<int> &DestinationRanks);
+
+  floating_ref<const send_map> GetFloatingRef() const { return FloatingRefGenerator_.Generate(); }
+  floating_ref<send_map> GetFloatingRef() { return FloatingRefGenerator_.Generate(); }
 
   long long Count() const { return SendOrder_.Count(); }
 
@@ -30,6 +34,8 @@ public:
   const array<int> &SendIndices() const { return SendIndices_; }
 
 private:
+
+  floating_ref_generator<send_map> FloatingRefGenerator_;
 
   array<send> Sends_;
   array<long long> SendOrder_;

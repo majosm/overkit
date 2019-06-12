@@ -3,424 +3,436 @@
 
 #include "ovk/core/AssemblyOptions.hpp"
 
+#include "ovk/core/ArrayView.hpp"
 #include "ovk/core/Constants.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Global.hpp"
-
-#include <map>
+#include "ovk/core/IDMap.hpp"
+#include "ovk/core/IDSet.hpp"
 
 namespace ovk {
 
 namespace {
 
-template <typename T> void GetOption(const std::map<int, T> &Option, int GridID, T &Value);
-template <typename T> void GetOption(const std::map<int, std::map<int, T>> &Option, int GridID1,
-  int GridID2, T &Value);
-template <typename T> void SetOption(std::map<int, T> &Option, int GridID, T Value);
-template <typename T> void SetOption(std::map<int, std::map<int, T>> &Option, int GridID1,
-  int GridID2, T Value);
+template <typename T> const T &GetOption(const id_map<1,T> &Option, int GridID);
+template <typename T> const T &GetOption(const id_map<2,T> &Option, int MGridID, int NGridID);
+template <typename T> void SetOption(id_map<1,T> &Option, int GridID, T Value);
+template <typename T> void SetOption(id_map<2,T> &Option, int MGridID, int NGridID, T Value);
 
 }
 
-void CreateAssemblyOptions(assembly_options &Options, int NumDims, int NumGrids, int *GridIDs) {
+assembly_options::assembly_options(int NumDims, const id_set<1> &GridIDs):
+  NumDims_(NumDims),
+  NumGrids_(GridIDs.Count())
+{
 
-  OVK_DEBUG_ASSERT(NumDims == 2 || NumDims == 3, "Invalid dimension.");
-  OVK_DEBUG_ASSERT(NumGrids >= 0, "Invalid grid count.");
-  OVK_DEBUG_ASSERT(GridIDs, "Invalid grid IDs pointer.");
+  OVK_DEBUG_ASSERT(NumDims_ == 2 || NumDims_ == 3, "Invalid dimension.");
+  OVK_DEBUG_ASSERT(NumGrids_ >= 0, "Invalid grid count.");
 
-  Options.NumDims_ = NumDims;
-  Options.NumGrids_ = NumGrids;
-
-  for (int iGrid = 0; iGrid < NumGrids; ++iGrid) {
-    for (int jGrid = 0; jGrid < NumGrids; ++jGrid) {
-      Options.Overlappable_[GridIDs[iGrid]][GridIDs[jGrid]] = false;
-      Options.OverlapTolerance_[GridIDs[iGrid]][GridIDs[jGrid]] = 1.e-12;
+  for (int MGridID : GridIDs) {
+    for (int NGridID : GridIDs) {
+      elem<int,2> IDPair = {MGridID,NGridID};
+      Overlappable_.Insert(IDPair, false);
+      OverlapTolerance_.Insert(IDPair, 1.e-12);
     }
-    Options.OverlapAccelDepthAdjust_[GridIDs[iGrid]] = 0.;
-    Options.OverlapAccelResolutionAdjust_[GridIDs[iGrid]] = 0.;
+    OverlapAccelDepthAdjust_.Insert(MGridID, 0.);
+    OverlapAccelResolutionAdjust_.Insert(MGridID, 0.);
   }
 
-  for (int iGrid = 0; iGrid < NumGrids; ++iGrid) {
-    Options.InferBoundaries_[GridIDs[iGrid]] = false;
-    for (int jGrid = 0; jGrid < NumGrids; ++jGrid) {
-      Options.CutBoundaryHoles_[GridIDs[iGrid]][GridIDs[jGrid]] = false;
-    }
-  }
-
-  for (int iGrid = 0; iGrid < NumGrids; ++iGrid) {
-    for (int jGrid = 0; jGrid < NumGrids; ++jGrid) {
-      Options.Occludes_[GridIDs[iGrid]][GridIDs[jGrid]] = occludes::NONE;
-      Options.EdgePadding_[GridIDs[iGrid]][GridIDs[jGrid]] = 0;
-    }
-    Options.EdgeSmoothing_[GridIDs[iGrid]] = 0;
-  }
-
-  for (int iGrid = 0; iGrid < NumGrids; ++iGrid) {
-    for (int jGrid = 0; jGrid < NumGrids; ++jGrid) {
-      Options.ConnectionType_[GridIDs[iGrid]][GridIDs[jGrid]] = connection_type::NONE;
-    }
-    Options.FringeSize_[GridIDs[iGrid]] = 0;
-    for (int jGrid = 0; jGrid < NumGrids; ++jGrid) {
-      Options.MinimizeOverlap_[GridIDs[iGrid]][GridIDs[jGrid]] = false;
+  for (int MGridID : GridIDs) {
+    InferBoundaries_.Insert(MGridID, false);
+    for (int NGridID : GridIDs) {
+      elem<int,2> IDPair = {MGridID,NGridID};
+      CutBoundaryHoles_.Insert(IDPair, false);
     }
   }
 
-}
+  for (int MGridID : GridIDs) {
+    for (int NGridID : GridIDs) {
+      elem<int,2> IDPair = {MGridID,NGridID};
+      Occludes_.Insert(IDPair, occludes::NONE);
+      EdgePadding_.Insert(IDPair, 0);
+    }
+    EdgeSmoothing_.Insert(MGridID, 0);
+  }
 
-void DestroyAssemblyOptions(assembly_options &Options) {
-
-  Options.Overlappable_.clear();
-  Options.OverlapTolerance_.clear();
-  Options.OverlapAccelDepthAdjust_.clear();
-  Options.OverlapAccelResolutionAdjust_.clear();
-
-  Options.InferBoundaries_.clear();
-  Options.CutBoundaryHoles_.clear();
-
-  Options.Occludes_.clear();
-  Options.EdgePadding_.clear();
-  Options.EdgeSmoothing_.clear();
-
-  Options.ConnectionType_.clear();
-  Options.FringeSize_.clear();
-  Options.MinimizeOverlap_.clear();
+  for (int MGridID : GridIDs) {
+    for (int NGridID : GridIDs) {
+      elem<int,2> IDPair = {MGridID,NGridID};
+      ConnectionType_.Insert(IDPair, connection_type::NONE);
+      MinimizeOverlap_.Insert(IDPair, false);
+    }
+    FringeSize_.Insert(MGridID, 0);
+  }
 
 }
 
-void GetAssemblyOptionsDimension(const assembly_options &Options, int &NumDims) {
+bool assembly_options::Overlappable(int MGridID, int NGridID) const {
 
-  NumDims = Options.NumDims_;
-
-}
-
-void GetAssemblyOptionsGridCount(const assembly_options &Options, int &NumGrids) {
-
-  NumGrids = Options.NumGrids_;
+  return GetOption(Overlappable_, MGridID, NGridID);
 
 }
 
-void GetAssemblyOptionOverlappable(const assembly_options &Options, int OverlappingGridID,
-  int OverlappedGridID, bool &Overlappable) {
+assembly_options &assembly_options::SetOverlappable(int MGridID, int NGridID, bool Overlappable) {
 
-  OVK_DEBUG_ASSERT(OverlappingGridID >= 0, "Invalid overlapping grid ID.");
-  OVK_DEBUG_ASSERT(OverlappedGridID >= 0, "Invalid overlapped grid ID.");
+  SetOption(Overlappable_, MGridID, NGridID, Overlappable);
 
-  GetOption(Options.Overlappable_, OverlappingGridID, OverlappedGridID, Overlappable);
+  return *this;
 
 }
 
-void SetAssemblyOptionOverlappable(assembly_options &Options, int OverlappingGridID,
-  int OverlappedGridID, bool Overlappable) {
+double assembly_options::OverlapTolerance(int MGridID, int NGridID) const {
 
-  OVK_DEBUG_ASSERT(OverlappingGridID >= 0 || OverlappingGridID == ALL_GRIDS, "Invalid overlapping "
-    "grid ID.");
-  OVK_DEBUG_ASSERT(OverlappedGridID >= 0 || OverlappedGridID == ALL_GRIDS, "Invalid overlapped "
-    "grid ID.");
-
-  SetOption(Options.Overlappable_, OverlappingGridID, OverlappedGridID, Overlappable);
+  return GetOption(OverlapTolerance_, MGridID, NGridID);
 
 }
 
-void GetAssemblyOptionOverlapTolerance(const assembly_options &Options, int OverlappingGridID,
-  int OverlappedGridID, double &OverlapTolerance) {
+assembly_options &assembly_options::SetOverlapTolerance(int MGridID, int NGridID, double
+  OverlapTolerance) {
 
-  OVK_DEBUG_ASSERT(OverlappingGridID >= 0, "Invalid overlapping grid ID.");
-  OVK_DEBUG_ASSERT(OverlappedGridID >= 0, "Invalid overlapped grid ID.");
-
-  GetOption(Options.OverlapTolerance_, OverlappingGridID, OverlappedGridID, OverlapTolerance);
-
-}
-
-void SetAssemblyOptionOverlapTolerance(assembly_options &Options, int OverlappingGridID,
-  int OverlappedGridID, double OverlapTolerance) {
-
-  OVK_DEBUG_ASSERT(OverlappingGridID >= 0 || OverlappingGridID == ALL_GRIDS, "Invalid overlapping "
-    "grid ID.");
-  OVK_DEBUG_ASSERT(OverlappedGridID >= 0 || OverlappedGridID == ALL_GRIDS, "Invalid overlapped "
-    "grid ID.");
   OVK_DEBUG_ASSERT(OverlapTolerance >= 0., "Invalid overlap tolerance value.");
 
-  GetOption(Options.OverlapTolerance_, OverlappingGridID, OverlappedGridID, OverlapTolerance);
+  SetOption(OverlapTolerance_, MGridID, NGridID, OverlapTolerance);
+
+  return *this;
 
 }
 
-void GetAssemblyOptionOverlapAccelDepthAdjust(const assembly_options &Options,
-  int OverlappingGridID, double &OverlapAccelDepthAdjust) {
+double assembly_options::OverlapAccelDepthAdjust(int MGridID) const {
 
-  OVK_DEBUG_ASSERT(OverlappingGridID >= 0, "Invalid overlapping grid ID.");
+  OVK_DEBUG_ASSERT(MGridID >= 0, "Invalid M grid ID.");
 
-  GetOption(Options.OverlapAccelDepthAdjust_, OverlappingGridID, OverlapAccelDepthAdjust);
-
-}
-
-void SetAssemblyOptionOverlapAccelDepthAdjust(assembly_options &Options,
-  int OverlappingGridID, double OverlapAccelDepthAdjust) {
-
-  OVK_DEBUG_ASSERT(OverlappingGridID >= 0 || OverlappingGridID == ALL_GRIDS, "Invalid overlapping "
-    "grid ID.");
-
-  SetOption(Options.OverlapAccelDepthAdjust_, OverlappingGridID, OverlapAccelDepthAdjust);
+  return GetOption(OverlapAccelDepthAdjust_, MGridID);
 
 }
 
-void GetAssemblyOptionOverlapAccelResolutionAdjust(const assembly_options &Options,
-  int OverlappingGridID, double &OverlapAccelResolutionAdjust) {
+assembly_options &assembly_options::SetOverlapAccelDepthAdjust(int MGridID, double
+  OverlapAccelDepthAdjust) {
 
-  OVK_DEBUG_ASSERT(OverlappingGridID >= 0, "Invalid overlapping grid ID.");
+  SetOption(OverlapAccelDepthAdjust_, MGridID, OverlapAccelDepthAdjust);
 
-  GetOption(Options.OverlapAccelResolutionAdjust_, OverlappingGridID, OverlapAccelResolutionAdjust);
-
-}
-
-void SetAssemblyOptionOverlapAccelResolutionAdjust(assembly_options &Options,
-  int OverlappingGridID, double OverlapAccelResolutionAdjust) {
-
-  OVK_DEBUG_ASSERT(OverlappingGridID >= 0 || OverlappingGridID == ALL_GRIDS, "Invalid overlapping "
-    "grid ID.");
-
-  auto Iter = Options.OverlapAccelResolutionAdjust_.find(OverlappingGridID);
-  OVK_DEBUG_ASSERT(Iter != Options.OverlapAccelResolutionAdjust_.end(), "Invalid overlapping "
-    "grid ID.");
-
-  SetOption(Options.OverlapAccelResolutionAdjust_, OverlappingGridID, OverlapAccelResolutionAdjust);
+  return *this;
 
 }
 
-void GetAssemblyOptionInferBoundaries(const assembly_options &Options, int GridID,
-  bool &InferBoundaries) {
+double assembly_options::OverlapAccelResolutionAdjust(int MGridID) const {
 
-  OVK_DEBUG_ASSERT(GridID >= 0, "Invalid grid ID.");
-
-  GetOption(Options.InferBoundaries_, GridID, InferBoundaries);
+  return GetOption(OverlapAccelResolutionAdjust_, MGridID);
 
 }
 
-void SetAssemblyOptionInferBoundaries(assembly_options &Options, int GridID,
-  bool InferBoundaries) {
+assembly_options &assembly_options::SetOverlapAccelResolutionAdjust(int MGridID, double
+  OverlapAccelResolutionAdjust) {
 
-  OVK_DEBUG_ASSERT(GridID >= 0 || GridID == ALL_GRIDS, "Invalid grid ID.");
+  SetOption(OverlapAccelResolutionAdjust_, MGridID, OverlapAccelResolutionAdjust);
 
-  SetOption(Options.InferBoundaries_, GridID, InferBoundaries);
-
-}
-
-void GetAssemblyOptionCutBoundaryHoles(const assembly_options &Options, int CuttingGridID,
-  int CutGridID, bool &CutBoundaryHoles) {
-
-  OVK_DEBUG_ASSERT(CuttingGridID >= 0, "Invalid cutting grid ID.");
-  OVK_DEBUG_ASSERT(CutGridID >= 0, "Invalid cut grid ID.");
-
-  GetOption(Options.CutBoundaryHoles_, CuttingGridID, CutGridID, CutBoundaryHoles);
+  return *this;
 
 }
 
-void SetAssemblyOptionCutBoundaryHoles(assembly_options &Options, int CuttingGridID,
-  int CutGridID, bool CutBoundaryHoles) {
+bool assembly_options::InferBoundaries(int GridID) const {
 
-  OVK_DEBUG_ASSERT(CuttingGridID >= 0 || CuttingGridID == ALL_GRIDS, "Invalid cutting grid ID.");
-  OVK_DEBUG_ASSERT(CutGridID >= 0 || CutGridID == ALL_GRIDS, "Invalid cut grid ID.");
-
-  SetOption(Options.CutBoundaryHoles_, CuttingGridID, CutGridID, CutBoundaryHoles);
+  return GetOption(InferBoundaries_, GridID);
 
 }
 
-void GetAssemblyOptionOccludes(const assembly_options &Options, int OccludingGridID,
-  int OccludedGridID, occludes &Occludes) {
+assembly_options &assembly_options::SetInferBoundaries(int GridID, bool InferBoundaries) {
 
-  OVK_DEBUG_ASSERT(OccludingGridID >= 0, "Invalid occluding grid ID.");
-  OVK_DEBUG_ASSERT(OccludedGridID >= 0, "Invalid occluded grid ID.");
+  SetOption(InferBoundaries_, GridID, InferBoundaries);
 
-  GetOption(Options.Occludes_, OccludingGridID, OccludedGridID, Occludes);
+  return *this;
 
 }
 
-void SetAssemblyOptionOccludes(assembly_options &Options, int OccludingGridID,
-  int OccludedGridID, occludes Occludes) {
+bool assembly_options::CutBoundaryHoles(int MGridID, int NGridID) const {
 
-  OVK_DEBUG_ASSERT(OccludingGridID >= 0 || OccludingGridID == ALL_GRIDS, "Invalid occluding "
-    "grid ID.");
-  OVK_DEBUG_ASSERT(OccludedGridID >= 0 || OccludedGridID == ALL_GRIDS, "Invalid occluded "
-    "grid ID.");
+  return GetOption(CutBoundaryHoles_, MGridID, NGridID);
+
+}
+
+assembly_options &assembly_options::SetCutBoundaryHoles(int MGridID, int NGridID, bool
+  CutBoundaryHoles) {
+
+  SetOption(CutBoundaryHoles_, MGridID, NGridID, CutBoundaryHoles);
+
+  return *this;
+
+}
+
+occludes assembly_options::Occludes(int MGridID, int NGridID) const {
+
+  return GetOption(Occludes_, MGridID, NGridID);
+
+}
+
+assembly_options &assembly_options::SetOccludes(int MGridID, int NGridID, occludes Occludes) {
+
   OVK_DEBUG_ASSERT(ValidOccludes(Occludes), "Invalid occludes value.");
 
-  SetOption(Options.Occludes_, OccludingGridID, OccludedGridID, Occludes);
+  SetOption(Occludes_, MGridID, NGridID, Occludes);
+
+  return *this;
 
 }
 
-void GetAssemblyOptionEdgePadding(const assembly_options &Options, int OccludingGridID,
-  int OccludedGridID, int &EdgePadding) {
+int assembly_options::EdgePadding(int MGridID, int NGridID) const {
 
-  OVK_DEBUG_ASSERT(OccludingGridID >= 0, "Invalid occluding grid ID.");
-  OVK_DEBUG_ASSERT(OccludedGridID >= 0, "Invalid occluded grid ID.");
-
-  GetOption(Options.EdgePadding_, OccludingGridID, OccludedGridID, EdgePadding);
+  return GetOption(EdgePadding_, MGridID, NGridID);
 
 }
 
-void SetAssemblyOptionEdgePadding(assembly_options &Options, int OccludingGridID,
-  int OccludedGridID, int EdgePadding) {
+assembly_options &assembly_options::SetEdgePadding(int MGridID, int NGridID, int EdgePadding) {
 
-  OVK_DEBUG_ASSERT(OccludingGridID >= 0 || OccludingGridID == ALL_GRIDS, "Invalid occluding "
-    "grid ID.");
-  OVK_DEBUG_ASSERT(OccludedGridID >= 0 || OccludedGridID == ALL_GRIDS, "Invalid occluded "
-    "grid ID.");
   OVK_DEBUG_ASSERT(EdgePadding >= 0, "Invalid edge padding value.");
 
-  SetOption(Options.EdgePadding_, OccludingGridID, OccludedGridID, EdgePadding);
+  SetOption(EdgePadding_, MGridID, NGridID, EdgePadding);
+
+  return *this;
 
 }
 
-void GetAssemblyOptionEdgeSmoothing(const assembly_options &Options, int OccludedGridID,
-  int &EdgeSmoothing) {
+int assembly_options::EdgeSmoothing(int NGridID) const {
 
-  OVK_DEBUG_ASSERT(OccludedGridID >= 0, "Invalid occluded grid ID.");
-
-  GetOption(Options.EdgeSmoothing_, OccludedGridID, EdgeSmoothing);
+  return GetOption(EdgeSmoothing_, NGridID);
 
 }
 
-void SetAssemblyOptionEdgeSmoothing(assembly_options &Options, int OccludedGridID,
-  int EdgeSmoothing) {
+assembly_options &assembly_options::SetEdgeSmoothing(int NGridID, int EdgeSmoothing) {
 
-  OVK_DEBUG_ASSERT(OccludedGridID >= 0 || OccludedGridID == ALL_GRIDS, "Invalid occluded grid ID.");
   OVK_DEBUG_ASSERT(EdgeSmoothing >= 0, "Invalid edge smoothing value.");
 
-  SetOption(Options.EdgeSmoothing_, OccludedGridID, EdgeSmoothing);
+  SetOption(EdgeSmoothing_, NGridID, EdgeSmoothing);
+
+  return *this;
 
 }
 
-void GetAssemblyOptionConnectionType(const assembly_options &Options, int DonorGridID,
-  int ReceiverGridID, connection_type &ConnectionType) {
+connection_type assembly_options::ConnectionType(int MGridID, int NGridID) const {
 
-  OVK_DEBUG_ASSERT(DonorGridID >= 0, "Invalid donor grid ID.");
-  OVK_DEBUG_ASSERT(ReceiverGridID >= 0, "Invalid receiver grid ID.");
-
-  GetOption(Options.ConnectionType_, DonorGridID, ReceiverGridID, ConnectionType);
+  return GetOption(ConnectionType_, MGridID, NGridID);
 
 }
 
-void SetAssemblyOptionConnectionType(assembly_options &Options, int DonorGridID,
-  int ReceiverGridID, connection_type ConnectionType) {
+assembly_options &assembly_options::SetConnectionType(int MGridID, int NGridID, connection_type
+  ConnectionType) {
 
-  OVK_DEBUG_ASSERT(DonorGridID >= 0 || DonorGridID == ALL_GRIDS, "Invalid donor grid ID.");
-  OVK_DEBUG_ASSERT(ReceiverGridID >= 0 || ReceiverGridID == ALL_GRIDS, "Invalid receiver "
-    "grid ID.");
   OVK_DEBUG_ASSERT(ValidConnectionType(ConnectionType), "Invalid connection type.");
 
-  SetOption(Options.ConnectionType_, DonorGridID, ReceiverGridID, ConnectionType);
+  SetOption(ConnectionType_, MGridID, NGridID, ConnectionType);
+
+  return *this;
 
 }
 
-void GetAssemblyOptionFringeSize(const assembly_options &Options, int GridID, int &FringeSize) {
+int assembly_options::FringeSize(int NGridID) const {
 
-  OVK_DEBUG_ASSERT(GridID >= 0, "Invalid grid ID.");
-
-  GetOption(Options.FringeSize_, GridID, FringeSize);
+  return GetOption(FringeSize_, NGridID);
 
 }
 
-void SetAssemblyOptionFringeSize(assembly_options &Options, int GridID, int FringeSize) {
+assembly_options &assembly_options::SetFringeSize(int NGridID, int FringeSize) {
 
-  OVK_DEBUG_ASSERT(GridID >= 0 || GridID == ALL_GRIDS, "Invalid grid ID.");
   OVK_DEBUG_ASSERT(FringeSize >= 0, "Invalid fringe size.");
 
-  SetOption(Options.FringeSize_, GridID, FringeSize);
+  SetOption(FringeSize_, NGridID, FringeSize);
+
+  return *this;
 
 }
 
-void GetAssemblyOptionMinimizeOverlap(const assembly_options &Options, int DonorGridID,
-  int ReceiverGridID, bool &MinimizeOverlap) {
+bool assembly_options::MinimizeOverlap(int MGridID, int NGridID) const {
 
-  OVK_DEBUG_ASSERT(DonorGridID >= 0, "Invalid donor grid ID.");
-  OVK_DEBUG_ASSERT(ReceiverGridID >= 0, "Invalid receiver grid ID.");
-
-  GetOption(Options.MinimizeOverlap_, DonorGridID, ReceiverGridID, MinimizeOverlap);
+  return GetOption(MinimizeOverlap_, MGridID, NGridID);
 
 }
 
-void SetAssemblyOptionMinimizeOverlap(assembly_options &Options, int DonorGridID,
-  int ReceiverGridID, bool MinimizeOverlap) {
+assembly_options &assembly_options::SetMinimizeOverlap(int MGridID, int NGridID, bool
+  MinimizeOverlap) {
 
-  OVK_DEBUG_ASSERT(DonorGridID >= 0 || DonorGridID == ALL_GRIDS, "Invalid donor grid ID.");
-  OVK_DEBUG_ASSERT(ReceiverGridID >= 0 || ReceiverGridID == ALL_GRIDS, "Invalid receiver "
-    "grid ID.");
+  SetOption(MinimizeOverlap_, MGridID, NGridID, MinimizeOverlap);
 
-  SetOption(Options.MinimizeOverlap_, DonorGridID, ReceiverGridID, MinimizeOverlap);
+  return *this;
+
+}
+
+void assembly_options::PrintOptions_() {
+
+  id_set<1> GridIDs = OverlapAccelDepthAdjust_.Keys();
+
+  for (int MGridID : GridIDs) {
+    for (int NGridID : GridIDs) {
+      std::printf("Overlappable(%i,%i) = %c\n", MGridID, NGridID, Overlappable_(MGridID,NGridID) ?
+        'T' : 'F');
+    }
+  }
+
+  for (int MGridID : GridIDs) {
+    for (int NGridID : GridIDs) {
+      std::printf("OverlapTolerance(%i,%i) = %16.8f\n", MGridID, NGridID, OverlapTolerance_(MGridID,
+        NGridID));
+    }
+  }
+
+  for (int MGridID : GridIDs) {
+    std::printf("OverlapAccelDepthAdjust(%i) = %16.8f\n", MGridID, OverlapAccelDepthAdjust_(
+      MGridID));
+  }
+
+  for (int MGridID : GridIDs) {
+    std::printf("OverlapAccelResolutionAdjust(%i) = %16.8f\n", MGridID,
+      OverlapAccelResolutionAdjust_(MGridID));
+  }
+
+  for (int MGridID : GridIDs) {
+    std::printf("InferBoundaries(%i) = %c\n", MGridID, InferBoundaries_(MGridID) ? 'T' : 'F');
+  }
+
+  for (int MGridID : GridIDs) {
+    for (int NGridID : GridIDs) {
+      std::printf("CutBoundaryHoles(%i,%i) = %c\n", MGridID, NGridID, CutBoundaryHoles_(MGridID,
+        NGridID) ? 'T' : 'F');
+    }
+  }
+
+  for (int MGridID : GridIDs) {
+    for (int NGridID : GridIDs) {
+      std::string OccludesString;
+      switch (Occludes_(MGridID,NGridID)) {
+      case occludes::NONE:
+        OccludesString = "NONE";
+        break;
+      case occludes::ALL:
+        OccludesString = "ALL";
+        break;
+      case occludes::COARSE:
+        OccludesString = "COARSE";
+        break;
+      }
+      std::printf("Occludes(%i,%i) = %s\n", MGridID, NGridID, OccludesString.c_str());
+    }
+  }
+
+  for (int MGridID : GridIDs) {
+    for (int NGridID : GridIDs) {
+      std::printf("EdgePadding(%i,%i) = %i\n", MGridID, NGridID, EdgePadding_(MGridID,NGridID));
+    }
+  }
+
+  for (int MGridID : GridIDs) {
+    std::printf("EdgeSmoothing(%i) = %i\n", MGridID, EdgeSmoothing_(MGridID));
+  }
+
+  for (int MGridID : GridIDs) {
+    for (int NGridID : GridIDs) {
+      std::string ConnectionTypeString;
+      switch (ConnectionType_(MGridID,NGridID)) {
+      case connection_type::NONE:
+        ConnectionTypeString = "NONE";
+        break;
+      case connection_type::NEAREST:
+        ConnectionTypeString = "NEAREST";
+        break;
+      case connection_type::LINEAR:
+        ConnectionTypeString = "LINEAR";
+        break;
+      case connection_type::CUBIC:
+        ConnectionTypeString = "CUBIC";
+        break;
+      }
+      std::printf("ConnectionType(%i,%i) = %s\n", MGridID, NGridID, ConnectionTypeString.c_str());
+    }
+  }
+
+  for (int MGridID : GridIDs) {
+    for (int NGridID : GridIDs) {
+      std::printf("MinimizeOverlap(%i,%i) = %c\n", MGridID, NGridID, MinimizeOverlap_(MGridID,
+        NGridID) ? 'T' : 'F');
+    }
+  }
+
+  for (int MGridID : GridIDs) {
+    std::printf("FringeSize(%i) = %i\n", MGridID, FringeSize_(MGridID));
+  }
 
 }
 
 namespace {
 
-template <typename T> void GetOption(const std::map<int, T> &Option, int GridID, T &Value) {
+template <typename T> const T &GetOption(const id_map<1,T> &Option, int GridID) {
 
   OVK_DEBUG_ASSERT(GridID >= 0, "Invalid grid ID.");
+  OVK_DEBUG_ASSERT(Option.Contains(GridID), "No option for grid %i.", GridID);
 
-  auto Iter = Option.find(GridID);
-  OVK_DEBUG_ASSERT(Iter != Option.end(), "Invalid grid ID.");
-  Value = Iter->second;
-
-}
-
-template <typename T> void GetOption(const std::map<int, std::map<int, T>> &Option, int GridID1,
-  int GridID2, T &Value) {
-
-  OVK_DEBUG_ASSERT(GridID1 >= 0, "Invalid grid ID.");
-  OVK_DEBUG_ASSERT(GridID2 >= 0, "Invalid grid ID.");
-
-  auto RowIter = Option.find(GridID1);
-  OVK_DEBUG_ASSERT(RowIter != Option.end(), "Invalid grid ID.");
-  auto Iter = RowIter->second.find(GridID2);
-  OVK_DEBUG_ASSERT(Iter != RowIter->second.end(), "Invalid grid ID.");
-  Value = Iter->second;
+  return Option(GridID);
 
 }
 
-template <typename T> void SetOption(std::map<int, T> &Option, int GridID, T Value) {
+template <typename T> const T &GetOption(const id_map<2,T> &Option, int MGridID, int NGridID)
+  {
+
+  OVK_DEBUG_ASSERT(MGridID >= 0, "Invalid M grid ID.");
+  OVK_DEBUG_ASSERT(NGridID >= 0, "Invalid N grid ID.");
+  OVK_DEBUG_ASSERT(Option.Contains({MGridID,NGridID}), "No option for grid pair (%i,%i).", MGridID,
+    NGridID);
+
+  return Option(MGridID,NGridID);
+
+}
+
+template <typename T> void SetOption(id_map<1,T> &Option, int GridID, T Value) {
 
   OVK_DEBUG_ASSERT(GridID >= 0 || GridID == ALL_GRIDS, "Invalid grid ID.");
 
   if (GridID == ALL_GRIDS) {
-    for (auto &Pair : Option) {
-      Pair.second = Value;
+    for (auto &Entry : Option) {
+      Entry.Value() = Value;
     }
   } else {
-    auto Iter = Option.find(GridID);
-    OVK_DEBUG_ASSERT(Iter != Option.end(), "Invalid grid ID.");
-    Iter->second = Value;
+    OVK_DEBUG_ASSERT(Option.Contains(GridID), "No option for grid %i.", GridID);
+    Option(GridID) = Value;
   }
 
 }
 
-template <typename T> void SetOption(std::map<int, std::map<int, T>> &Option, int GridID1,
-  int GridID2, T Value) {
+template <typename T> void SetOption(id_map<2,T> &Option, int MGridID, int NGridID, T Value) {
 
-  OVK_DEBUG_ASSERT(GridID1 >= 0 || GridID1 == ALL_GRIDS, "Invalid grid ID.");
-  OVK_DEBUG_ASSERT(GridID2 >= 0 || GridID2 == ALL_GRIDS, "Invalid grid ID.");
+  OVK_DEBUG_ASSERT(MGridID >= 0 || MGridID == ALL_GRIDS, "Invalid M grid ID.");
+  OVK_DEBUG_ASSERT(NGridID >= 0 || NGridID == ALL_GRIDS, "Invalid N grid ID.");
 
-  if (GridID1 == ALL_GRIDS && GridID2 == ALL_GRIDS) {
-    for (auto &RowPair : Option) {
-      for (auto &Pair : RowPair.second) {
-        Pair.second = Value;
+  if (MGridID == ALL_GRIDS && NGridID == ALL_GRIDS) {
+    for (auto &Entry : Option) {
+      Entry.Value() = Value;
+    }
+  } else if (MGridID == ALL_GRIDS) {
+    if (OVK_DEBUG) {
+      bool Found = false;
+      for (auto &Entry : Option) {
+        if (Entry.Key(1) == NGridID) Found = true;
+      }
+      OVK_DEBUG_ASSERT(Found, "No option for grid %i.", NGridID);
+    }
+    for (auto &Entry : Option) {
+      if (Entry.Key(1) == NGridID) {
+        Entry.Value() = Value;
       }
     }
-  } else if (GridID1 == ALL_GRIDS) {
-    for (auto &RowPair : Option) {
-      auto Iter = RowPair.second.find(GridID2);
-      OVK_DEBUG_ASSERT(Iter != RowPair.second.end(), "Invalid grid ID.");
-      Iter->second = Value;
+  } else if (NGridID == ALL_GRIDS) {
+    if (OVK_DEBUG) {
+      bool Found = false;
+      for (auto &Entry : Option) {
+        if (Entry.Key(0) == MGridID) Found = true;
+      }
+      OVK_DEBUG_ASSERT(Found, "No option for grid %i.", MGridID);
     }
-  } else if (GridID2 == ALL_GRIDS) {
-    auto RowIter = Option.find(GridID1);
-    OVK_DEBUG_ASSERT(RowIter != Option.end(), "Invalid grid ID.");
-    for (auto &Pair : RowIter->second) {
-      Pair.second = Value;
+    for (auto &Entry : Option) {
+      if (Entry.Key(0) == MGridID) {
+        Entry.Value() = Value;
+      }
     }
   } else {
-    auto RowIter = Option.find(GridID1);
-    OVK_DEBUG_ASSERT(RowIter != Option.end(), "Invalid grid ID.");
-    auto Iter = RowIter->second.find(GridID2);
-    OVK_DEBUG_ASSERT(Iter != RowIter->second.end(), "Invalid grid ID.");
-    Iter->second = Value;
+    OVK_DEBUG_ASSERT(Option.Contains({MGridID,NGridID}), "No option for grid pair (%i,%i).",
+      MGridID, NGridID);
+    Option(MGridID,NGridID) = Value;
   }
 
 }
