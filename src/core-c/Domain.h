@@ -8,6 +8,7 @@
 #include <ovk/core-c/Global.h>
 #include <ovk/core-c/Grid.h>
 #include <ovk/core-c/Request.h>
+#include <ovk/core/Domain.h>
 
 #include <mpi.h>
 

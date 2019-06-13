@@ -7,7 +7,7 @@
 #include <ovk/core/Array.hpp>
 #include <ovk/core/ArrayView.hpp>
 #include <ovk/core/Comm.hpp>
-#include <ovk/core/ConnectivityComponentBase.h>
+#include <ovk/core/ConnectivityComponent.h>
 #include <ovk/core/ConnectivityM.hpp>
 #include <ovk/core/ConnectivityN.hpp>
 #include <ovk/core/Context.hpp>

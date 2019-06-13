@@ -5,7 +5,7 @@
 #define OVK_CORE_ERROR_HPP_INCLUDED
 
 #include <ovk/core/Comm.hpp>
-#include <ovk/core/ErrorBase.h>
+#include <ovk/core/Error.h>
 #include <ovk/core/Global.hpp>
 
 #include <mpi.h>

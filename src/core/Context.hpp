@@ -5,7 +5,7 @@
 #define OVK_CORE_CONTEXT_HPP_INCLUDED
 
 #include <ovk/core/Comm.hpp>
-#include <ovk/core/ContextBase.h>
+#include <ovk/core/Context.h>
 #include <ovk/core/Error.hpp>
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>

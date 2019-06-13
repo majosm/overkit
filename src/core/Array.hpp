@@ -6,7 +6,8 @@
 
 #include <ovk/core/ArrayTraits.hpp>
 #include <ovk/core/ArrayView.hpp>
-#include <ovk/core/DebugBase.h>
+// Can't include Debug.hpp because it depends on this header
+#include <ovk/core/Debug.h>
 #include <ovk/core/Elem.hpp>
 #include <ovk/core/ForEach.hpp>
 #include <ovk/core/Global.hpp>
@@ -73,8 +74,8 @@ public:
     Values_(ValuesList),
     View_(Values_.Data(), Extents)
   {
-    OVK_DEBUG_ASSERT((long long)(Values_.Count()) == View_.Count(), "Incorrect number of values in "
-      "initializer list");
+    OVK_DEBUG_ASSERT_C((long long)(Values_.Count()) == View_.Count(), "Incorrect number of values "
+      "in initializer list");
   }
 
   template <typename IterType, OVK_FUNCTION_REQUIRES(core::IsInputIterator<IterType>())>
@@ -129,7 +130,7 @@ public:
   array_base_1 &Assign(const interval_type &Extents, std::initializer_list<value_type> ValuesList) {
     Values_.Assign(ValuesList);
     View_ = view_type(Values_.Data(), Extents);
-    OVK_DEBUG_ASSERT((long long)(Values_.Count()) == View_.Count(), "Incorrect number of values in "
+    OVK_DEBUG_ASSERT_C((long long)(Values_.Count()) == View_.Count(), "Incorrect number of values in "
       "initializer list");
     return *this;
   }

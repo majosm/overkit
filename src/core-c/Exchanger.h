@@ -9,7 +9,7 @@
 #include <ovk/core-c/Domain.h>
 #include <ovk/core-c/Global.h>
 #include <ovk/core-c/Request.h>
-#include <ovk/core/ExchangerBase.h>
+#include <ovk/core/Exchanger.h>
 
 #include <mpi.h>
 

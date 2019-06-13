@@ -5,7 +5,7 @@
 #define OVK_EXTRAS_XINTOUT_HPP_INCLUDED
 
 #include <ovk/extras/Global.hpp>
-#include <ovk/extras/XINTOUTBase.h>
+#include <ovk/extras/XINTOUT.h>
 #include <ovk/core/Domain.hpp>
 #include <ovk/core/Error.hpp>
 

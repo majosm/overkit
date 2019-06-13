@@ -1,10 +1,10 @@
 // Copyright (c) 2018 Matthew J. Smith and Overkit contributors
 // License: MIT (http://opensource.org/licenses/MIT)
 
-#ifndef OVK_CORE_CONNECTIVITY_COMPONENT_BASE_H_INCLUDED
-#define OVK_CORE_CONNECTIVITY_COMPONENT_BASE_H_INCLUDED
+#ifndef OVK_CORE_CONNECTIVITY_COMPONENT_H_INCLUDED
+#define OVK_CORE_CONNECTIVITY_COMPONENT_H_INCLUDED
 
-#include <ovk/core/GlobalBase.h>
+#include <ovk/core/Global.h>
 
 #include <stdbool.h>
 

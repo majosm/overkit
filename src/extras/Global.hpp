@@ -4,7 +4,7 @@
 #ifndef OVK_EXTRAS_GLOBAL_HPP_INCLUDED
 #define OVK_EXTRAS_GLOBAL_HPP_INCLUDED
 
-#include <ovk/extras/GlobalBase.h>
+#include <ovk/extras/Global.h>
 #include <ovk/core/Global.hpp>
 
 #endif

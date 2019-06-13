@@ -34,11 +34,11 @@ list(APPEND PUBLIC_HEADERS
 endif()
 
 set(INTERNAL_HEADERS
-  GlobalBase.h
+  Global.h
 )
 if(XPACC)
 list(APPEND INTERNAL_HEADERS
-  XINTOUTBase.h
+  XINTOUT.h
 )
 endif()
 

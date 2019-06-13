@@ -4,6 +4,6 @@
 #ifndef OVK_CORE_C_ERROR_H_INCLUDED
 #define OVK_CORE_C_ERROR_H_INCLUDED
 
-#include <ovk/core/ErrorBase.h>
+#include <ovk/core/Error.h>
 
 #endif

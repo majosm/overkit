@@ -4,6 +4,6 @@
 #ifndef OVK_CORE_C_GLOBAL_H_INCLUDED
 #define OVK_CORE_C_GLOBAL_H_INCLUDED
 
-#include <ovk/core/GlobalBase.h>
+#include <ovk/core/Global.h>
 
 #endif

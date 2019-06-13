@@ -6,7 +6,7 @@
 
 #include <ovk/core-c/Context.h>
 #include <ovk/core-c/Global.h>
-#include <ovk/core/GridBase.h>
+#include <ovk/core/Grid.h>
 
 #include <mpi.h>
 

@@ -4,7 +4,7 @@
 #ifndef OVK_CORE_DEBUG_HPP_INCLUDED
 #define OVK_CORE_DEBUG_HPP_INCLUDED
 
-#include <ovk/core/DebugBase.h>
+#include <ovk/core/Debug.h>
 
 #include <ovk/core/Global.hpp>
 #include <ovk/core/TextProcessing.hpp>

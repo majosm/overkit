@@ -16,7 +16,7 @@
 #include <ovk/core/Disperse.hpp>
 #include <ovk/core/Domain.hpp>
 #include <ovk/core/Event.hpp>
-#include <ovk/core/ExchangerBase.h>
+#include <ovk/core/Exchanger.h>
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Grid.hpp>

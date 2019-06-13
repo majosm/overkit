@@ -8,6 +8,7 @@
 #include <ovk/core-c/ConnectivityN.h>
 #include <ovk/core-c/Context.h>
 #include <ovk/core-c/Global.h>
+#include <ovk/core/ConnectivityComponent.h>
 
 #include <mpi.h>
 

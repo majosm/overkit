@@ -4,6 +4,6 @@
 #ifndef OVK_CORE_C_DATA_TYPE_H_INCLUDED
 #define OVK_CORE_C_DATA_TYPE_H_INCLUDED
 
-#include <ovk/core/DataTypeBase.h>
+#include <ovk/core/DataType.h>
 
 #endif

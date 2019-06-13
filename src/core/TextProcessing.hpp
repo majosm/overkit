@@ -5,7 +5,8 @@
 #define OVK_CORE_TEXT_PROCESSING_HPP_INCLUDED
 
 #include <ovk/core/Array.hpp>
-#include <ovk/core/DebugBase.h>
+// Can't include Debug.hpp because it depends on this header
+#include <ovk/core/Debug.h>
 #include <ovk/core/Global.hpp>
 
 #include <cstdlib>

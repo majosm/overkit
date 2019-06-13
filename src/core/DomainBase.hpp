@@ -8,7 +8,7 @@
 #include <ovk/core/ArrayView.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Context.hpp>
-#include <ovk/core/DomainBase.h>
+#include <ovk/core/Domain.h>
 #include <ovk/core/Event.hpp>
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>

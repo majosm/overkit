@@ -85,7 +85,7 @@ set(PUBLIC_HEADERS
 
 set(INTERNAL_HEADERS
   ArrayTraitsBase.hpp
-  AssemblyOptionsBase.h
+  AssemblyOptions.h
   Box.inl
   Cart.inl
   Collect.hpp
@@ -99,27 +99,27 @@ set(INTERNAL_HEADERS
   Comm.inl
   Component.hpp
   Component.inl
-  ConnectivityComponentBase.h
-  ContextBase.h
-  DataTypeBase.h
+  ConnectivityComponent.h
+  Context.h
+  DataType.h
   Debug.hpp
-  DebugBase.h
+  Debug.h
   Disperse.hpp
   DisperseAppend.hpp
   DisperseBase.hpp
   DisperseOverwrite.hpp
+  Domain.h
   Domain.inl
   DomainBase.hpp
-  DomainBase.h
   Editor.inl
   Elem.inl
-  ErrorBase.h
+  Error.h
   Event.inl
-  ExchangerBase.h
+  Exchanger.h
   FloatingRef.inl
   ForEach.hpp
-  GlobalBase.h
-  GridBase.h
+  Global.h
+  Grid.h
   Halo.hpp
   Halo.inl
   IntegerSequence.hpp

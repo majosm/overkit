@@ -5,7 +5,7 @@
 #define OVK_CORE_C_ASSEMBLY_OPTIONS_H_INCLUDED
 
 #include <ovk/core-c/Global.h>
-#include <ovk/core/AssemblyOptionsBase.h>
+#include <ovk/core/AssemblyOptions.h>
 
 #ifdef __cplusplus
 extern "C" {

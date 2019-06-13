@@ -5,7 +5,7 @@
 #define OVK_CORE_ASSEMBLY_OPTIONS_HPP_INCLUDED
 
 #include <ovk/core/ArrayView.hpp>
-#include <ovk/core/AssemblyOptionsBase.h>
+#include <ovk/core/AssemblyOptions.h>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/IDMap.hpp>
 #include <ovk/core/IDSet.hpp>

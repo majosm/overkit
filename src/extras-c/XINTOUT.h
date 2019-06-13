@@ -6,7 +6,7 @@
 
 #include <ovk/extras-c/Global.h>
 #include <ovk/core-c/Domain.h>
-#include <ovk/extras/XINTOUTBase.h>
+#include <ovk/extras/XINTOUT.h>
 
 #include <mpi.h>
 

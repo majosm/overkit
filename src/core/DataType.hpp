@@ -4,7 +4,7 @@
 #ifndef OVK_CORE_DATA_TYPE_HPP_INCLUDED
 #define OVK_CORE_DATA_TYPE_HPP_INCLUDED
 
-#include <ovk/core/DataTypeBase.h>
+#include <ovk/core/DataType.h>
 #include <ovk/core/Global.hpp>
 
 #include <mpi.h>

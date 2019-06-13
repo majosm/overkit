@@ -6,7 +6,7 @@
 
 #include <ovk/core-c/Error.h>
 #include <ovk/core-c/Global.h>
-#include <ovk/core/ContextBase.h>
+#include <ovk/core/Context.h>
 
 #include <mpi.h>
 
