@@ -314,65 +314,6 @@ void ovkExchangerReceive(ovk_exchanger *Exchanger, int MGridID, int NGridID, int
 
 }
 
-void ovkExchangerWait(ovk_exchanger *Exchanger, ovk_request **Request) {
-
-  OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
-  OVK_DEBUG_ASSERT(Request, "Invalid request pointer.");
-
-  if (*Request) {
-    auto &ExchangerCPP = *reinterpret_cast<ovk::exchanger *>(Exchanger);
-    auto *RequestCPPPtr = reinterpret_cast<ovk::request *>(*Request);
-    ExchangerCPP.Wait(*RequestCPPPtr);
-    delete RequestCPPPtr;
-    *Request = nullptr;
-  }
-
-}
-
-void ovkExchangerWaitAll(ovk_exchanger *Exchanger, int NumRequests, ovk_request **Requests) {
-
-  OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
-  OVK_DEBUG_ASSERT(NumRequests >= 0, "Invalid request count.");
-  OVK_DEBUG_ASSERT(Requests || NumRequests == 0, "Invalid requests pointer.");
-  // Note: Not checking Requests[i] here on purpose -- allowed to be null
-
-  auto &ExchangerCPP = *reinterpret_cast<ovk::exchanger *>(Exchanger);
-  ovk::array<ovk::request *> RequestCPPPtrs({NumRequests});
-  for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
-    RequestCPPPtrs(iRequest) = reinterpret_cast<ovk::request *>(Requests[iRequest]);
-  }
-  ExchangerCPP.core_WaitAll(RequestCPPPtrs);
-
-  for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
-    delete RequestCPPPtrs[iRequest];
-    Requests[iRequest] = nullptr;
-  }
-
-}
-
-void ovkExchangerWaitAny(ovk_exchanger *Exchanger, int NumRequests, ovk_request **Requests, int
-  *Index) {
-
-  OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
-  OVK_DEBUG_ASSERT(NumRequests >= 0, "Invalid request count.");
-  OVK_DEBUG_ASSERT(Requests || NumRequests == 0, "Invalid requests pointer.");
-  // Note: Not checking Requests[i] here on purpose -- allowed to be null
-  OVK_DEBUG_ASSERT(Index, "Invalid index pointer.");
-
-  auto &ExchangerCPP = *reinterpret_cast<ovk::exchanger *>(Exchanger);
-  ovk::array<ovk::request *> RequestCPPPtrs({NumRequests});
-  for (int iRequest = 0; iRequest < NumRequests; ++iRequest) {
-    RequestCPPPtrs(iRequest) = reinterpret_cast<ovk::request *>(Requests[iRequest]);
-  }
-  ExchangerCPP.core_WaitAny(RequestCPPPtrs, *Index);
-
-  if (*Index >= 0) {
-    delete RequestCPPPtrs[*Index];
-    Requests[*Index] = nullptr;
-  }
-
-}
-
 bool ovkExchangerDisperseExists(const ovk_exchanger *Exchanger, int MGridID, int NGridID, int
   DisperseID) {
 

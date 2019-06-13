@@ -403,7 +403,7 @@ void ExchangeTest(int argc, char **argv) {
     }
   }
 
-  ovkExchangerWaitAll(Exchanger, NumSends+NumReceives, Requests);
+  ovkWaitAll(NumSends+NumReceives, Requests);
 
   free(Requests);
 

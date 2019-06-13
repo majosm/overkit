@@ -129,11 +129,11 @@ private:
 
 };
 
-void RequestWaitAll(array_view<request> Requests);
-void RequestWaitAny(array_view<request> Requests, int &Index);
+void WaitAll(array_view<request> Requests);
+void WaitAny(array_view<request> Requests, int &Index);
 // Needed for C API
-void RequestWaitAll(array_view<request *> Requests);
-void RequestWaitAny(array_view<request *> Requests, int &Index);
+void WaitAll(array_view<request *> Requests);
+void WaitAny(array_view<request *> Requests, int &Index);
 
 }
 

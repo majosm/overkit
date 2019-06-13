@@ -1313,46 +1313,6 @@ request exchanger::Receive(int MGridID, int NGridID, int RecvID, void **Receiver
 
 }
 
-void exchanger::Wait(request &Request) {
-
-  if (Request) {
-    Request.Wait();
-  }
-
-}
-
-void exchanger::WaitAll(array_view<request> Requests) {
-
-  OVK_DEBUG_ASSERT(Requests || Requests.Count() == 0, "Invalid requests array.");
-
-  RequestWaitAll(Requests);
-
-}
-
-void exchanger::WaitAny(array_view<request> Requests, int &Index) {
-
-  OVK_DEBUG_ASSERT(Requests || Requests.Count() == 0, "Invalid requests array.");
-
-  RequestWaitAny(Requests, Index);
-
-}
-
-void exchanger::core_WaitAll(array_view<request *> Requests) {
-
-  OVK_DEBUG_ASSERT(Requests || Requests.Count() == 0, "Invalid requests array.");
-
-  RequestWaitAll(Requests);
-
-}
-
-void exchanger::core_WaitAny(array_view<request *> Requests, int &Index) {
-
-  OVK_DEBUG_ASSERT(Requests || Requests.Count() == 0, "Invalid requests array.");
-
-  RequestWaitAny(Requests, Index);
-
-}
-
 const id_set<1> &exchanger::DisperseIDs(int MGridID, int NGridID) const {
 
   OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");

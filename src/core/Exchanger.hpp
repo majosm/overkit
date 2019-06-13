@@ -105,13 +105,6 @@ public:
   void DestroyReceive(int MGridID, int NGridID, int RecvID);
   request Receive(int MGridID, int NGridID, int RecvID, void **ReceiverValues);
 
-  void Wait(request &Request);
-  void WaitAll(array_view<request> Requests);
-  void WaitAny(array_view<request> Requests, int &Index);
-  // Needed for C API
-  void core_WaitAll(array_view<request *> Requests);
-  void core_WaitAny(array_view<request *> Requests, int &Index);
-
   const id_set<1> &DisperseIDs(int MGridID, int NGridID) const;
   bool DisperseExists(int MGridID, int NGridID, int DisperseID) const;
   void CreateDisperse(int MGridID, int NGridID, int DisperseID, disperse_op DisperseOp,

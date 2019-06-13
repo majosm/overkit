@@ -248,7 +248,7 @@ TEST_F(HaloTests, Exchange) {
     ovk::array<ovk::request> Requests({2});
     Requests(0) = Halo.Exchange(Data1);
     Requests(1) = Halo.Exchange(Data2);
-    ovk::RequestWaitAll(Requests);
+    ovk::WaitAll(Requests);
     field_data<int> ExpectedData1 = CreateAfterDataInt(Cart, Comm, LocalRange, ExtendedRange,
       Neighbors);
     field_data<double> ExpectedData2 = CreateAfterDataDouble(Cart, Comm, LocalRange, ExtendedRange,
@@ -271,7 +271,7 @@ TEST_F(HaloTests, Exchange) {
     ovk::array<ovk::request> Requests({2});
     Requests(0) = Halo.Exchange(Data1);
     Requests(1) = Halo.Exchange(Data2);
-    ovk::RequestWaitAll(Requests);
+    ovk::WaitAll(Requests);
     field_data<int> ExpectedData1 = CreateAfterDataInt(Cart, Comm, LocalRange, ExtendedRange,
       Neighbors);
     field_data<double> ExpectedData2 = CreateAfterDataDouble(Cart, Comm, LocalRange, ExtendedRange,

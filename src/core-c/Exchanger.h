@@ -70,11 +70,6 @@ void ovkDestroyExchangerReceive(ovk_exchanger *Exchanger, int MGridID, int NGrid
 void ovkExchangerReceive(ovk_exchanger *Exchanger, int MGridID, int NGridID, int RecvID, void
   **ReceiverValues, ovk_request **Request);
 
-void ovkExchangerWait(ovk_exchanger *Exchanger, ovk_request **Request);
-void ovkExchangerWaitAll(ovk_exchanger *Exchanger, int NumRequests, ovk_request **Requests);
-void ovkExchangerWaitAny(ovk_exchanger *Exchanger, int NumRequests, ovk_request **Requests, int
-  *Index);
-
 bool ovkExchangerDisperseExists(const ovk_exchanger *Exchanger, int MGridID, int NGridID, int
   DisperseID);
 void ovkGetNextAvailableExchangerDisperseID(const ovk_exchanger *Exchanger, int MGridID, int

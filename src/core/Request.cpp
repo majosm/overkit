@@ -16,25 +16,25 @@
 
 namespace ovk {
 
-void RequestWaitAll(array_view<request> Requests) {
+void WaitAll(array_view<request> Requests) {
 
   request::internal_WaitAll(Requests);
 
 }
 
-void RequestWaitAny(array_view<request> Requests, int &Index) {
+void WaitAny(array_view<request> Requests, int &Index) {
 
   request::internal_WaitAny(Requests, Index);
 
 }
 
-void RequestWaitAll(array_view<request *> Requests) {
+void WaitAll(array_view<request *> Requests) {
 
   request::internal_WaitAll(Requests);
 
 }
 
-void RequestWaitAny(array_view<request *> Requests, int &Index) {
+void WaitAny(array_view<request *> Requests, int &Index) {
 
   request::internal_WaitAny(Requests, Index);
 
