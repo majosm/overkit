@@ -80,12 +80,10 @@ public:
   const std::string &Name() const { return *Name_; }
 
   bool Bound() const;
-  void Bind(std::shared_ptr<domain> Domain, bindings Bindings);
+  void Bind(const domain &Domain, bindings Bindings);
   void Unbind();
 
   const domain &Domain() const;
-  domain &Domain();
-  const std::shared_ptr<domain> &SharedDomain();
 
   const id_set<1> &CollectIDs(int MGridID, int NGridID) const;
   bool CollectExists(int MGridID, int NGridID, int CollectID) const;
@@ -149,7 +147,7 @@ private:
 
   core::string_wrapper Name_;
 
-  std::shared_ptr<domain> Domain_;
+  floating_ref<const domain> Domain_;
   floating_ref<const connectivity_component> ConnectivityComponent_;
 
   event_listener_handle ComponentEventListener_;

@@ -106,7 +106,7 @@ bool ovkExchangerIsBound(const ovk_exchanger *Exchanger) {
 
 }
 
-void ovkBindExchanger(ovk_exchanger *Exchanger, ovk_shared_domain *Domain, ovk_exchanger_bindings
+void ovkBindExchanger(ovk_exchanger *Exchanger, const ovk_domain *Domain, ovk_exchanger_bindings
   **Bindings) {
 
   OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
@@ -115,7 +115,7 @@ void ovkBindExchanger(ovk_exchanger *Exchanger, ovk_shared_domain *Domain, ovk_e
   OVK_DEBUG_ASSERT(*Bindings, "Invalid bindings pointer.");
 
   auto &ExchangerCPP = *reinterpret_cast<ovk::exchanger *>(Exchanger);
-  auto &DomainCPP = *reinterpret_cast<std::shared_ptr<ovk::domain> *>(Domain);
+  auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
   auto BindingsCPPPtr = reinterpret_cast<ovk::exchanger::bindings *>(*Bindings);
 
   ExchangerCPP.Bind(DomainCPP, std::move(*BindingsCPPPtr));
@@ -135,37 +135,13 @@ void ovkUnbindExchanger(ovk_exchanger *Exchanger) {
 
 }
 
-void ovkGetExchangerDomainC(const ovk_exchanger *Exchanger, const ovk_domain **Domain) {
+void ovkGetExchangerDomain(const ovk_exchanger *Exchanger, const ovk_domain **Domain) {
 
   OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
 
   auto &ExchangerCPP = *reinterpret_cast<const ovk::exchanger *>(Exchanger);
   *Domain = reinterpret_cast<const ovk_domain *>(&ExchangerCPP.Domain());
-
-}
-
-void ovkGetExchangerDomain(ovk_exchanger *Exchanger, ovk_domain **Domain) {
-
-  OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-
-  auto &ExchangerCPP = *reinterpret_cast<ovk::exchanger *>(Exchanger);
-  *Domain = reinterpret_cast<ovk_domain *>(&ExchangerCPP.Domain());
-
-}
-
-void ovkGetExchangerSharedDomain(ovk_exchanger *Exchanger, ovk_shared_domain **Domain) {
-
-  OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-
-  auto &ExchangerCPP = *reinterpret_cast<ovk::exchanger *>(Exchanger);
-  auto &DomainCPP = ExchangerCPP.SharedDomain();
-
-  auto DomainCPPPtr = new std::shared_ptr<ovk::domain>(DomainCPP);
-
-  *Domain = reinterpret_cast<ovk_shared_domain *>(&DomainCPPPtr);
 
 }
 

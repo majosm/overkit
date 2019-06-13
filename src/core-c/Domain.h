@@ -34,20 +34,11 @@ static inline bool ovkValidComponentType(ovk_component_type ComponentType) {
 struct ovk_domain;
 typedef struct ovk_domain ovk_domain;
 
-struct ovk_shared_domain;
-typedef struct ovk_shared_domain ovk_shared_domain;
-
 struct ovk_domain_params;
 typedef struct ovk_domain_params ovk_domain_params;
 
 void ovkCreateDomain(ovk_domain **Domain, ovk_shared_context *Context, ovk_domain_params **Params);
 void ovkDestroyDomain(ovk_domain **Domain);
-
-void ovkShareDomain(ovk_domain **Domain, ovk_shared_domain **SharedDomain);
-void ovkResetSharedDomain(ovk_shared_domain **SharedDomain);
-void ovkGetDomainFromSharedC(const ovk_shared_domain **SharedDomain, const ovk_domain
-  **Domain);
-void ovkGetDomainFromShared(ovk_shared_domain **SharedDomain, ovk_domain **Domain);
 
 void ovkGetDomainContextC(const ovk_domain *Domain, const ovk_context **Context);
 void ovkGetDomainContext(ovk_domain *Domain, ovk_context **Context);

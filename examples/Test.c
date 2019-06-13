@@ -117,9 +117,6 @@ void ExchangeTest(int argc, char **argv) {
   ovk_domain *Domain;
   ovkCreateDomain(&Domain, SharedContext, &DomainParams);
 
-  ovk_shared_domain *SharedDomain;
-  ovkShareDomain(&Domain, &SharedDomain);
-
   const int CONNECTIVITY_ID = 1;
   ovkCreateComponent(Domain, CONNECTIVITY_ID, OVK_COMPONENT_TYPE_CONNECTIVITY, NULL);
 
@@ -290,7 +287,7 @@ void ExchangeTest(int argc, char **argv) {
   ovk_exchanger_bindings *ExchangerBindings;
   ovkCreateExchangerBindings(&ExchangerBindings);
   ovkSetExchangerBindingsConnectivityComponentID(ExchangerBindings, CONNECTIVITY_ID);
-  ovkBindExchanger(Exchanger, SharedDomain, &ExchangerBindings);
+  ovkBindExchanger(Exchanger, Domain, &ExchangerBindings);
 
   // Exchange variant #1 -- basic exchange
   const ovk_connectivity_component *ConnectivityComponent;
@@ -579,10 +576,7 @@ void ExchangeTest(int argc, char **argv) {
 #endif
 
   ovkDestroyExchanger(&Exchanger);
-
-  ovkDestroyGrid(Domain, 1);
-
-  ovkResetSharedDomain(&SharedDomain);
+  ovkDestroyDomain(&Domain);
   ovkResetSharedContext(&SharedContext);
 
   DestroyInputs(NumLocalGrids, &InputGrids, &InputStates);

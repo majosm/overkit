@@ -99,13 +99,11 @@ bool exchanger::Bound() const {
 
 }
 
-void exchanger::Bind(std::shared_ptr<domain> SharedDomain, bindings Bindings) {
+void exchanger::Bind(const domain &Domain, bindings Bindings) {
 
   OVK_DEBUG_ASSERT(!Domain_, "Exchanger is already bound to a domain.");
 
-  Domain_ = std::move(SharedDomain);
-
-  domain &Domain = *Domain_;
+  Domain_ = Domain.GetFloatingRef();
 
   int ConnectivityComponentID = Bindings.ConnectivityComponentID_;
 
@@ -174,7 +172,7 @@ void exchanger::Unbind() {
   ComponentEventListener_.Reset();
 
   ConnectivityComponent_.Reset();
-  Domain_.reset();
+  Domain_.Reset();
 
   MPI_Barrier(Domain.Comm());
 
@@ -188,22 +186,6 @@ const domain &exchanger::Domain() const {
   OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
 
   return *Domain_;
-
-}
-
-domain &exchanger::Domain() {
-
-  OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
-
-  return *Domain_;
-
-}
-
-const std::shared_ptr<domain> &exchanger::SharedDomain() {
-
-  OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
-
-  return Domain_;
 
 }
 

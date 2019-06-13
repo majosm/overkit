@@ -34,13 +34,11 @@ void ovkGetExchangerContext(ovk_exchanger *Exchanger, ovk_context **Context);
 void ovkGetExchangerSharedContext(ovk_exchanger *Exchanger, ovk_shared_context **Context);
 
 bool ovkExchangerIsBound(const ovk_exchanger *Exchanger);
-void ovkBindExchanger(ovk_exchanger *Exchanger, ovk_shared_domain *Domain, ovk_exchanger_bindings
+void ovkBindExchanger(ovk_exchanger *Exchanger, const ovk_domain *Domain, ovk_exchanger_bindings
   **Bindings);
 void ovkUnbindExchanger(ovk_exchanger *Exchanger);
 
-void ovkGetExchangerDomainC(const ovk_exchanger *Exchanger, const ovk_domain **Domain);
-void ovkGetExchangerDomain(ovk_exchanger *Exchanger, ovk_domain **Domain);
-void ovkGetExchangerSharedDomain(ovk_exchanger *Exchanger, ovk_shared_domain **Domain);
+void ovkGetExchangerDomain(const ovk_exchanger *Exchanger, const ovk_domain **Domain);
 
 bool ovkExchangerCollectExists(const ovk_exchanger *Exchanger, int MGridID, int NGridID, int
   CollectID);

@@ -111,9 +111,6 @@ int main(int argc, char **argv) {
   ovk_domain *Domain;
   ovkCreateDomain(&Domain, SharedContext, &DomainParams);
 
-  ovk_shared_domain *SharedDomain;
-  ovkShareDomain(&Domain, &SharedDomain);
-
   const int CONNECTIVITY_ID = 1;
   ovkCreateComponent(Domain, CONNECTIVITY_ID, OVK_COMPONENT_TYPE_CONNECTIVITY, NULL);
 
@@ -151,7 +148,7 @@ int main(int argc, char **argv) {
   ovk_exchanger_bindings *ExchangerBindings;
   ovkCreateExchangerBindings(&ExchangerBindings);
   ovkSetExchangerBindingsConnectivityComponentID(ExchangerBindings, 1);
-  ovkBindExchanger(Exchanger, SharedDomain, &ExchangerBindings);
+  ovkBindExchanger(Exchanger, Domain, &ExchangerBindings);
 
   ovk_connectivity_component *ConnectivityComponent;
   ovkGetComponent(Domain, CONNECTIVITY_ID, OVK_COMPONENT_TYPE_CONNECTIVITY, &ConnectivityComponent);
@@ -335,8 +332,7 @@ int main(int argc, char **argv) {
   }
 
   ovkDestroyExchanger(&Exchanger);
-
-  ovkResetSharedDomain(&SharedDomain);
+  ovkDestroyDomain(&Domain);
   ovkResetSharedContext(&SharedContext);
 
   DestroyInputs(NumLocalGrids, &InputGrids, &InputStates);

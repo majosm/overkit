@@ -60,60 +60,6 @@ void ovkDestroyDomain(ovk_domain **Domain) {
 
 }
 
-void ovkShareDomain(ovk_domain **Domain, ovk_shared_domain **SharedDomain) {
-
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(*Domain, "Invalid domain pointer.");
-  OVK_DEBUG_ASSERT(SharedDomain, "Invalid shared domain pointer.");
-
-  auto DomainCPPPtr = reinterpret_cast<ovk::domain *>(*Domain);
-
-  auto SharedDomainCPPPtr = new std::shared_ptr<ovk::domain>(std::make_shared<ovk::domain>(
-    std::move(*DomainCPPPtr)));
-
-  delete DomainCPPPtr;
-
-  *Domain = reinterpret_cast<ovk_domain *>(SharedDomainCPPPtr->get());
-  *SharedDomain = reinterpret_cast<ovk_shared_domain *>(SharedDomainCPPPtr);
-
-}
-
-void ovkResetSharedDomain(ovk_shared_domain **SharedDomain) {
-
-  OVK_DEBUG_ASSERT(SharedDomain, "Invalid shared domain pointer.");
-  OVK_DEBUG_ASSERT(*SharedDomain, "Invalid shared domain pointer.");
-
-  auto SharedDomainCPPPtr = reinterpret_cast<std::shared_ptr<ovk::domain> *>(*SharedDomain);
-
-  delete SharedDomainCPPPtr;
-
-  *SharedDomain = nullptr;
-
-}
-
-void ovkGetDomainFromSharedC(const ovk_shared_domain **SharedDomain, const ovk_domain **Domain) {
-
-  OVK_DEBUG_ASSERT(SharedDomain, "Invalid shared domain pointer.");
-  OVK_DEBUG_ASSERT(*SharedDomain, "Invalid shared domain pointer.");
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-
-  auto SharedDomainCPPPtr = reinterpret_cast<const std::shared_ptr<const ovk::domain> *>(
-    *SharedDomain);
-  *Domain = reinterpret_cast<const ovk_domain *>(SharedDomainCPPPtr->get());
-
-}
-
-void ovkGetDomainFromShared(ovk_shared_domain **SharedDomain, ovk_domain **Domain) {
-
-  OVK_DEBUG_ASSERT(SharedDomain, "Invalid shared domain pointer.");
-  OVK_DEBUG_ASSERT(*SharedDomain, "Invalid shared domain pointer.");
-  OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
-
-  auto SharedDomainCPPPtr = reinterpret_cast<std::shared_ptr<ovk::domain> *>(*SharedDomain);
-  *Domain = reinterpret_cast<ovk_domain *>(SharedDomainCPPPtr->get());
-
-}
-
 void ovkGetDomainContextC(const ovk_domain *Domain, const ovk_context **Context) {
 
   OVK_DEBUG_ASSERT(Domain, "Invalid domain pointer.");
