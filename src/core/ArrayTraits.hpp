@@ -26,7 +26,7 @@ namespace ovk {
 template <typename T> struct array_traits<T, OVK_SPECIALIZATION_REQUIRES(std::is_array<T>::value)> {
   using value_type = typename std::remove_all_extents<T>::type;
   static constexpr int Rank = std::rank<T>::value;
-  static constexpr const array_layout Layout = array_layout::ROW_MAJOR;
+  static constexpr array_layout Layout = array_layout::ROW_MAJOR;
   template <int> static constexpr long long Begin() { return 0; }
   template <int iDim> static constexpr long long End() { return std::extent<T,iDim>::value; }
   // Not sure if there's a better way to do this that works for general multidimensional arrays
@@ -42,7 +42,7 @@ template <typename T> struct array_traits<T, OVK_SPECIALIZATION_REQUIRES(std::is
 template <typename T, std::size_t N> struct array_traits<std::array<T,N>> {
   using value_type = T;
   static constexpr int Rank = 1;
-  static constexpr const array_layout Layout = array_layout::ROW_MAJOR;
+  static constexpr array_layout Layout = array_layout::ROW_MAJOR;
   template <int> static constexpr long long Begin() { return 0; }
   template <int> static constexpr long long End() { return N; }
   static const T *Data(const std::array<T,N> &Array) { return Array.data(); }
@@ -53,7 +53,7 @@ template <typename T, std::size_t N> struct array_traits<std::array<T,N>> {
 template <typename T, typename Allocator> struct array_traits<std::vector<T, Allocator>> {
   using value_type = T;
   static constexpr int Rank = 1;
-  static constexpr const array_layout Layout = array_layout::ROW_MAJOR;
+  static constexpr array_layout Layout = array_layout::ROW_MAJOR;
   template <int> static long long Begin(const std::vector<T, Allocator> &) { return 0; }
   template <int> static long long End(const std::vector<T, Allocator> &Vec) { return Vec.size(); }
   static const T *Data(const std::vector<T, Allocator> &Vec) { return Vec.data(); }
@@ -65,7 +65,7 @@ template <typename CharT, typename Traits, typename Allocator> struct array_trai
   std::basic_string<CharT, Traits, Allocator>> {
   using value_type = CharT;
   static constexpr int Rank = 1;
-  static constexpr const array_layout Layout = array_layout::ROW_MAJOR;
+  static constexpr array_layout Layout = array_layout::ROW_MAJOR;
   template <int> static long long Begin(const std::basic_string<CharT, Traits, Allocator> &) {
     return 0;
   }

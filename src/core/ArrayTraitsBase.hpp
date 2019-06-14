@@ -21,7 +21,7 @@ template <typename T, typename=void> struct array_traits {
 
   static constexpr int Rank = ???;
 
-  static constexpr const array_layout Layout = ???;
+  static constexpr array_layout Layout = ???;
 
   // For statically-sized arrays
   template <int iDim> static constexpr long long Begin() { return ???; }

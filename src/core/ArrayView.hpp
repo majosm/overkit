@@ -225,8 +225,8 @@ template <typename T, int Rank_=1, array_layout Layout_=array_layout::ROW_MAJOR>
 public:
 
   using value_type = T;
-  static constexpr const int Rank = Rank_;
-  static constexpr const array_layout Layout = Layout_;
+  static constexpr int Rank = Rank_;
+  static constexpr array_layout Layout = Layout_;
   using index_type = long long;
   using tuple_element_type = long long;
   using tuple_type = elem<tuple_element_type,Rank>;

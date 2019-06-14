@@ -260,8 +260,8 @@ public:
 
   using index_type = IndexType;
   using tuple_element_type = TupleElementType;
-  static constexpr const int Rank = Rank_;
-  static constexpr const array_layout Layout = Layout_;
+  static constexpr int Rank = Rank_;
+  static constexpr array_layout Layout = Layout_;
   using tuple_type = elem<tuple_element_type,Rank>;
   using stride_type = elem<index_type,Rank>;
   using interval_type = interval<tuple_element_type,Rank>;

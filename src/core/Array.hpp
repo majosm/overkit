@@ -392,8 +392,8 @@ private:
 public:
 
   using value_type = T;
-  static constexpr const int Rank = Rank_;
-  static constexpr const array_layout Layout = Layout_;
+  static constexpr int Rank = Rank_;
+  static constexpr array_layout Layout = Layout_;
   using index_type = long long;
   using tuple_element_type = long long;
   using tuple_type = elem<tuple_element_type,Rank>;
@@ -727,8 +727,8 @@ private:
 template <typename T, int Rank_, array_layout Layout_> struct array_traits<array<T, Rank_, Layout_>>
   {
   using value_type = T;
-  static constexpr const int Rank = Rank_;
-  static constexpr const array_layout Layout = Layout_;
+  static constexpr int Rank = Rank_;
+  static constexpr array_layout Layout = Layout_;
   template <int iDim> static long long Begin(const array<T, Rank, Layout> &Array) {
     return Array.Begin(iDim);
   }

@@ -195,7 +195,7 @@ private:
 template <typename T, int N> struct array_traits<elem<T,N>> {
   using value_type = T;
   static constexpr int Rank = 1;
-  static constexpr const array_layout Layout = array_layout::ROW_MAJOR;
+  static constexpr array_layout Layout = array_layout::ROW_MAJOR;
   template <int> static constexpr long long Begin() { return 0; }
   template <int> static constexpr long long End() { return N; }
   static const T *Data(const elem<T,N> &Elem) { return Elem.Data(); }

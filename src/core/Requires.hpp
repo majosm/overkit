@@ -15,7 +15,7 @@ namespace requires_internal {
 enum class function_requires_type {
   value
 };
-constexpr const function_requires_type function_requires_value = function_requires_type::value;
+constexpr function_requires_type function_requires_value = function_requires_type::value;
 template <bool Condition> struct function_requires {};
 template <> struct function_requires<true> {
   using type = function_requires_type;
