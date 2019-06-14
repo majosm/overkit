@@ -59,7 +59,7 @@ public:
   collect_all &operator=(const collect_all &Other) = delete;
   collect_all &operator=(collect_all &&Other) noexcept = default;
 
-  void Collect(const void * const *FieldValuesVoid, void **PackedValuesVoid) {
+  void Collect(const void *FieldValuesVoid, void *PackedValuesVoid) {
 
     profiler &Profiler = Context_->core_Profiler();
 

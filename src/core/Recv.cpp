@@ -132,7 +132,7 @@ public:
   recv_impl(const recv_impl &Other) = delete;
   recv_impl(recv_impl &&Other) = default;
 
-  request Recv(void **ValuesVoid) {
+  request Recv(void *ValuesVoid) {
 
     const recv_map &RecvMap = *RecvMap_;
 
@@ -140,10 +140,13 @@ public:
 
     long long NumValues = RecvMap.Count();
 
-    OVK_DEBUG_ASSERT(ValuesVoid || Count_ == 0, "Invalid values pointer.");
+    auto ValuesRaw = static_cast<value_type **>(ValuesVoid);
+
+    OVK_DEBUG_ASSERT(ValuesRaw || Count_ == 0, "Invalid values pointer.");
+
     for (int iCount = 0; iCount < Count_; ++iCount) {
-      OVK_DEBUG_ASSERT(ValuesVoid[iCount] || NumValues == 0, "Invalid values pointer.");
-      Values_(iCount) = {static_cast<value_type *>(ValuesVoid[iCount]), {NumValues}};
+      OVK_DEBUG_ASSERT(ValuesRaw[iCount] || NumValues == 0, "Invalid values pointer.");
+      Values_(iCount) = {ValuesRaw[iCount], {NumValues}};
     }
 
     MPI_Datatype MPIDataType = GetMPIDataType<mpi_value_type>();

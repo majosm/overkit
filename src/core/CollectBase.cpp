@@ -143,22 +143,24 @@ template <typename T, array_layout Layout> void collect_base_for_type<T, Layout>
 }
 
 template <typename T, array_layout Layout> void collect_base_for_type<T, Layout>::
-  SetBufferViews_(const void * const *FieldValuesVoid, void **PackedValuesVoid) {
+  SetBufferViews_(const void *FieldValuesVoid, void *PackedValuesVoid) {
 
-  OVK_DEBUG_ASSERT(FieldValuesVoid || Count_ == 0, "Invalid field values pointer.");
-  OVK_DEBUG_ASSERT(PackedValuesVoid || Count_ == 0, "Invalid packed values pointer.");
+  auto FieldValuesRaw = static_cast<const value_type * const *>(FieldValuesVoid);
+  auto PackedValuesRaw = static_cast<value_type **>(PackedValuesVoid);
+
+  OVK_DEBUG_ASSERT(FieldValuesRaw || Count_ == 0, "Invalid field values pointer.");
+  OVK_DEBUG_ASSERT(PackedValuesRaw || Count_ == 0, "Invalid packed values pointer.");
 
   long long NumCells = CollectMap_->Count();
 
   for (int iCount = 0; iCount < Count_; ++iCount) {
-    OVK_DEBUG_ASSERT(FieldValuesVoid[iCount] || NumCells == 0, "Invalid field values pointer.");
-    FieldValues_(iCount) = {static_cast<const value_type *>(FieldValuesVoid[iCount]),
-      {FieldValuesRange_.Count()}};
+    OVK_DEBUG_ASSERT(FieldValuesRaw[iCount] || NumCells == 0, "Invalid field values pointer.");
+    FieldValues_(iCount) = {FieldValuesRaw[iCount], {FieldValuesRange_.Count()}};
   }
 
   for (int iCount = 0; iCount < Count_; ++iCount) {
-    OVK_DEBUG_ASSERT(PackedValuesVoid[iCount] || NumCells == 0, "Invalid packed values pointer.");
-    PackedValues_(iCount) = {static_cast<value_type *>(PackedValuesVoid[iCount]), {NumCells}};
+    OVK_DEBUG_ASSERT(PackedValuesRaw[iCount] || NumCells == 0, "Invalid packed values pointer.");
+    PackedValues_(iCount) = {PackedValuesRaw[iCount], {NumCells}};
   }
 
 }

@@ -196,7 +196,7 @@ void ovkDestroyExchangerCollect(ovk_exchanger *Exchanger, int MGridID, int NGrid
 }
 
 void ovkExchangerCollect(ovk_exchanger *Exchanger, int MGridID, int NGridID, int CollectID, const
-  void **GridValues, void **DonorValues) {
+  void *GridValues, void *DonorValues) {
 
   OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
 
@@ -244,7 +244,7 @@ void ovkDestroyExchangerSend(ovk_exchanger *Exchanger, int MGridID, int NGridID,
 }
 
 void ovkExchangerSend(ovk_exchanger *Exchanger, int MGridID, int NGridID, int SendID, const void
-  **DonorValues, ovk_request **Request) {
+  *DonorValues, ovk_request **Request) {
 
   OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
   OVK_DEBUG_ASSERT(Request, "Invalid request pointer.");
@@ -298,7 +298,7 @@ void ovkDestroyExchangerReceive(ovk_exchanger *Exchanger, int MGridID, int NGrid
 }
 
 void ovkExchangerReceive(ovk_exchanger *Exchanger, int MGridID, int NGridID, int RecvID, void
-  **ReceiverValues, ovk_request **Request) {
+  *ReceiverValues, ovk_request **Request) {
 
   OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
   OVK_DEBUG_ASSERT(Request, "Invalid request pointer.");
@@ -366,7 +366,7 @@ void ovkDestroyExchangerDisperse(ovk_exchanger *Exchanger, int MGridID, int NGri
 }
 
 void ovkExchangerDisperse(ovk_exchanger *Exchanger, int MGridID, int NGridID, int DisperseID, const
-  void **ReceiverValues, void **GridValues) {
+  void *ReceiverValues, void *GridValues) {
 
   OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
 

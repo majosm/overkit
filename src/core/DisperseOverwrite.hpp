@@ -51,7 +51,7 @@ public:
   disperse_overwrite &operator=(const disperse_overwrite &Other) = delete;
   disperse_overwrite &operator=(disperse_overwrite &&Other) noexcept = default;
 
-  void Disperse(const void * const *PackedValuesVoid, void **FieldValuesVoid) {
+  void Disperse(const void *PackedValuesVoid, void *FieldValuesVoid) {
 
     parent_type::SetBufferViews(PackedValuesVoid, FieldValuesVoid);
 

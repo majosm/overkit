@@ -35,24 +35,24 @@ template <typename T, array_layout Layout> disperse_base_for_type<T, Layout>::
 }
 
 template <typename T, array_layout Layout> void disperse_base_for_type<T, Layout>::SetBufferViews(
-  const void * const *PackedValuesVoid, void **FieldValuesVoid) {
+  const void *PackedValuesVoid, void *FieldValuesVoid) {
 
   long long NumPoints = Points_.Size(1);
 
-  OVK_DEBUG_ASSERT(PackedValuesVoid || Count_ == 0, "Invalid packed values pointer.");
-  OVK_DEBUG_ASSERT(FieldValuesVoid || Count_ == 0, "Invalid field values pointer.");
+  auto PackedValuesRaw = static_cast<const value_type * const *>(PackedValuesVoid);
+  auto FieldValuesRaw = static_cast<value_type **>(FieldValuesVoid);
+
+  OVK_DEBUG_ASSERT(PackedValuesRaw || Count_ == 0, "Invalid packed values pointer.");
+  OVK_DEBUG_ASSERT(FieldValuesRaw || Count_ == 0, "Invalid field values pointer.");
 
   for (int iCount = 0; iCount < Count_; ++iCount) {
-    OVK_DEBUG_ASSERT(PackedValuesVoid[iCount] || NumPoints == 0, "Invalid packed values "
-      "pointer.");
-    PackedValues_(iCount) = {static_cast<const value_type *>(PackedValuesVoid[iCount]),
-      {NumPoints}};
+    OVK_DEBUG_ASSERT(PackedValuesRaw[iCount] || NumPoints == 0, "Invalid packed values pointer.");
+    PackedValues_(iCount) = {PackedValuesRaw[iCount], {NumPoints}};
   }
 
   for (int iCount = 0; iCount < Count_; ++iCount) {
-    OVK_DEBUG_ASSERT(FieldValuesVoid[iCount] || NumPoints == 0, "Invalid field values pointer.");
-    FieldValues_(iCount) = {static_cast<value_type *>(FieldValuesVoid[iCount]),
-      {FieldValuesRange_.Count()}};
+    OVK_DEBUG_ASSERT(FieldValuesRaw[iCount] || NumPoints == 0, "Invalid field values pointer.");
+    FieldValues_(iCount) = {FieldValuesRaw[iCount], {FieldValuesRange_.Count()}};
   }
 
 }

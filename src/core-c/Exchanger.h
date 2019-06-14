@@ -49,8 +49,10 @@ void ovkCreateExchangerCollect(ovk_exchanger *Exchanger, int MGridID, int NGridI
   ovk_collect_op CollectOp, ovk_data_type ValueType, int Count, const int *GridValuesBegin, const
   int *GridValuesEnd, ovk_array_layout GridValuesLayout);
 void ovkDestroyExchangerCollect(ovk_exchanger *Exchanger, int MGridID, int NGridID, int CollectID);
+// "GridValues" actual type is const T * const *
+// "DonorValues" actual type is T **
 void ovkExchangerCollect(ovk_exchanger *Exchanger, int MGridID, int NGridID, int CollectID, const
-  void **GridValues, void **DonorValues);
+  void *GridValues, void *DonorValues);
 
 bool ovkExchangerSendExists(const ovk_exchanger *Exchanger, int MGridID, int NGridID, int SendID);
 void ovkGetNextAvailableExchangerSendID(const ovk_exchanger *Exchanger, int MGridID, int NGridID,
@@ -58,8 +60,9 @@ void ovkGetNextAvailableExchangerSendID(const ovk_exchanger *Exchanger, int MGri
 void ovkCreateExchangerSend(ovk_exchanger *Exchanger, int MGridID, int NGridID, int SendID,
   ovk_data_type ValueType, int Count, int Tag);
 void ovkDestroyExchangerSend(ovk_exchanger *Exchanger, int MGridID, int NGridID, int SendID);
+// "DonorValues" actual type is const T * const *
 void ovkExchangerSend(ovk_exchanger *Exchanger, int MGridID, int NGridID, int SendID, const void
-  **DonorValues, ovk_request **Request);
+  *DonorValues, ovk_request **Request);
 
 bool ovkExchangerReceiveExists(const ovk_exchanger *Exchanger, int MGridID, int NGridID, int
   RecvID);
@@ -68,8 +71,9 @@ void ovkGetNextAvailableExchangerReceiveID(const ovk_exchanger *Exchanger, int M
 void ovkCreateExchangerReceive(ovk_exchanger *Exchanger, int MGridID, int NGridID, int RecvID,
   ovk_data_type ValueType, int Count, int Tag);
 void ovkDestroyExchangerReceive(ovk_exchanger *Exchanger, int MGridID, int NGridID, int RecvID);
+// "ReceiverValues" actual type is T **
 void ovkExchangerReceive(ovk_exchanger *Exchanger, int MGridID, int NGridID, int RecvID, void
-  **ReceiverValues, ovk_request **Request);
+  *ReceiverValues, ovk_request **Request);
 
 bool ovkExchangerDisperseExists(const ovk_exchanger *Exchanger, int MGridID, int NGridID, int
   DisperseID);
@@ -80,8 +84,10 @@ void ovkCreateExchangerDisperse(ovk_exchanger *Exchanger, int MGridID, int NGrid
   int *GridValuesEnd, ovk_array_layout GridValuesLayout);
 void ovkDestroyExchangerDisperse(ovk_exchanger *Exchanger, int MGridID, int NGridID, int
   DisperseID);
+// "ReceiverValues" actual type is const T * const *
+// "GridValues" actual type is T **
 void ovkExchangerDisperse(ovk_exchanger *Exchanger, int MGridID, int NGridID, int DisperseID,
-  const void **ReceiverValues, void **GridValues);
+  const void *ReceiverValues, void *GridValues);
 
 void ovkCreateExchangerParams(ovk_exchanger_params **Params);
 void ovkDestroyExchangerParams(ovk_exchanger_params **Params);

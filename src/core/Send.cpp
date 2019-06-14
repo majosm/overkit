@@ -110,7 +110,7 @@ public:
   send_impl(const send_impl &Other) = delete;
   send_impl(send_impl &&Other) = default;
 
-  request Send(const void * const *ValuesVoid) {
+  request Send(const void *ValuesVoid) {
 
     const send_map &SendMap = *SendMap_;
 
@@ -118,10 +118,13 @@ public:
 
     long long NumValues = SendMap.Count();
 
-    OVK_DEBUG_ASSERT(ValuesVoid || Count_ == 0, "Invalid values pointer.");
+    auto ValuesRaw = static_cast<const value_type * const *>(ValuesVoid);
+
+    OVK_DEBUG_ASSERT(ValuesRaw || Count_ == 0, "Invalid values pointer.");
+
     for (int iCount = 0; iCount < Count_; ++iCount) {
-      OVK_DEBUG_ASSERT(ValuesVoid[iCount] || NumValues == 0, "Invalid values pointer.");
-      Values_(iCount) = {static_cast<const value_type *>(ValuesVoid[iCount]), {NumValues}};
+      OVK_DEBUG_ASSERT(ValuesRaw[iCount] || NumValues == 0, "Invalid values pointer.");
+      Values_(iCount) = {ValuesRaw[iCount], {NumValues}};
     }
 
     MPI_Datatype MPIDataType = GetMPIDataType<mpi_value_type>();

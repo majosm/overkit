@@ -77,7 +77,7 @@ protected:
   array<array_view<const value_type>> PackedValues_;
   array<array_view<value_type>> FieldValues_;
 
-  void SetBufferViews(const void * const *PackedValuesVoid, void **FieldValuesVoid);
+  void SetBufferViews(const void *PackedValuesVoid, void *FieldValuesVoid);
 
 };
 

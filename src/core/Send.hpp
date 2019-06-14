@@ -44,7 +44,7 @@ public:
   send &operator=(const send &Other) = delete;
   send &operator=(send &&Other) noexcept = default;
 
-  request Send(const void * const *Values) {
+  request Send(const void *Values) {
     return Send_->Send(Values);
   }
 
@@ -53,7 +53,7 @@ private:
   class concept {
   public:
     virtual ~concept() noexcept {}
-    virtual request Send(const void * const *Values) = 0;
+    virtual request Send(const void *Values) = 0;
   };
 
   template <typename T> class model final : public concept {
@@ -61,7 +61,7 @@ private:
     explicit model(T Send):
       Send_(std::move(Send))
     {}
-    virtual request Send(const void * const *Values) override {
+    virtual request Send(const void *Values) override {
       return Send_.Send(Values);
     }
   private:

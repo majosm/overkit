@@ -44,7 +44,7 @@ public:
   recv &operator=(const recv &Other) = delete;
   recv &operator=(recv &&Other) noexcept = default;
 
-  request Recv(void **ReceiverValues) {
+  request Recv(void *ReceiverValues) {
     return Recv_->Recv(ReceiverValues);
   }
 
@@ -53,7 +53,7 @@ private:
   class concept {
   public:
     virtual ~concept() noexcept {}
-    virtual request Recv(void **ReceiverValues) = 0;
+    virtual request Recv(void *ReceiverValues) = 0;
   };
 
   template <typename T> class model final : public concept {
@@ -61,7 +61,7 @@ private:
     explicit model(T Recv):
       Recv_(std::move(Recv))
     {}
-    virtual request Recv(void **ReceiverValues) override {
+    virtual request Recv(void *ReceiverValues) override {
       return Recv_.Recv(ReceiverValues);
     }
   private:

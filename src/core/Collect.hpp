@@ -47,7 +47,7 @@ public:
   collect &operator=(const collect &Other) = delete;
   collect &operator=(collect &&Other) noexcept = default;
 
-  void Collect(const void * const *FieldValues, void **PackedValues) {
+  void Collect(const void *FieldValues, void *PackedValues) {
     Collect_->Collect(FieldValues, PackedValues);
   }
 
@@ -56,7 +56,7 @@ private:
   class concept {
   public:
     virtual ~concept() noexcept {}
-    virtual void Collect(const void * const *FieldValues, void **PackedValues) = 0;
+    virtual void Collect(const void *FieldValues, void *PackedValues) = 0;
   };
 
   template <typename T> class model final : public concept {
@@ -64,7 +64,7 @@ private:
     model(T Collect):
       Collect_(std::move(Collect))
     {}
-    virtual void Collect(const void * const *FieldValues, void **PackedValues) override {
+    virtual void Collect(const void *FieldValues, void *PackedValues) override {
       Collect_.Collect(FieldValues, PackedValues);
     }
   private:

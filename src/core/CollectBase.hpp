@@ -115,7 +115,7 @@ protected:
 
   void AllocateRemoteValues_(array<array<value_type,2>> &RemoteValues) const;
 
-  void SetBufferViews_(const void * const *FieldValuesVoid, void **PackedValuesVoid);
+  void SetBufferViews_(const void *FieldValuesVoid, void *PackedValuesVoid);
 
   void RetrieveRemoteValues_(array_view<array_view<const value_type>> FieldValues, array<array<
     value_type,2>> &RemoteValues);

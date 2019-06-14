@@ -51,7 +51,7 @@ public:
   disperse_append &operator=(const disperse_append &Other) = delete;
   disperse_append &operator=(disperse_append &&Other) noexcept = default;
 
-  void Disperse(const void * const *PackedValuesVoid, void **FieldValuesVoid) {
+  void Disperse(const void *PackedValuesVoid, void *FieldValuesVoid) {
 
     parent_type::SetBufferViews(PackedValuesVoid, FieldValuesVoid);
 

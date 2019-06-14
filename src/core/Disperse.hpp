@@ -43,7 +43,7 @@ public:
   disperse &operator=(const disperse &Other) = delete;
   disperse &operator=(disperse &&Other) noexcept = default;
 
-  void Disperse(const void * const *PackedValues, void **FieldValues) {
+  void Disperse(const void *PackedValues, void *FieldValues) {
     Disperse_->Disperse(PackedValues, FieldValues);
   }
 
@@ -52,7 +52,7 @@ private:
   class concept {
   public:
     virtual ~concept() noexcept {}
-    virtual void Disperse(const void * const *PackedValues, void **FieldValues) = 0;
+    virtual void Disperse(const void *PackedValues, void *FieldValues) = 0;
   };
 
   template <typename T> class model final : public concept {
@@ -60,7 +60,7 @@ private:
     explicit model(T Disperse):
       Disperse_(std::move(Disperse))
     {}
-    virtual void Disperse(const void * const *PackedValues, void **FieldValues) override {
+    virtual void Disperse(const void *PackedValues, void *FieldValues) override {
       Disperse_.Disperse(PackedValues, FieldValues);
     }
   private:

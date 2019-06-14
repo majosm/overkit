@@ -974,8 +974,8 @@ void exchanger::DestroyCollect(int MGridID, int NGridID, int CollectID) {
 
 }
 
-void exchanger::Collect(int MGridID, int NGridID, int CollectID, const void * const *GridValues,
-  void **DonorValues) {
+void exchanger::Collect(int MGridID, int NGridID, int CollectID, const void *GridValues, void
+  *DonorValues) {
 
   OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
 
@@ -1127,7 +1127,7 @@ void exchanger::DestroySend(int MGridID, int NGridID, int SendID) {
 
 }
 
-request exchanger::Send(int MGridID, int NGridID, int SendID, const void * const *DonorValues) {
+request exchanger::Send(int MGridID, int NGridID, int SendID, const void *DonorValues) {
 
   OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
 
@@ -1274,7 +1274,7 @@ void exchanger::DestroyReceive(int MGridID, int NGridID, int RecvID) {
 
 }
 
-request exchanger::Receive(int MGridID, int NGridID, int RecvID, void **ReceiverValues) {
+request exchanger::Receive(int MGridID, int NGridID, int RecvID, void *ReceiverValues) {
 
   OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
 
@@ -1432,8 +1432,8 @@ void exchanger::DestroyDisperse(int MGridID, int NGridID, int DisperseID) {
 
 }
 
-void exchanger::Disperse(int MGridID, int NGridID, int DisperseID, const void * const
-  *ReceiverValues, void **GridValues) {
+void exchanger::Disperse(int MGridID, int NGridID, int DisperseID, const void *ReceiverValues, void
+  *GridValues) {
 
   OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
 

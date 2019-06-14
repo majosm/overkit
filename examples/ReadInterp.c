@@ -232,9 +232,8 @@ int main(int argc, char **argv) {
       for (iGrid = 0; iGrid < 2; ++iGrid) {
         int OtherGridID = iGrid+1;
         if (ovkConnectivityExists(ConnectivityComponent, LocalGridID, OtherGridID)) {
-          const void *GridData = InputState->values;
-          void *DonorData = SendBuffers[iSend];
-          ovkExchangerCollect(Exchanger, LocalGridID, OtherGridID, 1, &GridData, &DonorData);
+          ovkExchangerCollect(Exchanger, LocalGridID, OtherGridID, 1, &InputState->values,
+            &SendBuffers[iSend]);
           ++iSend;
         }
       }
@@ -248,8 +247,7 @@ int main(int argc, char **argv) {
       for (iGrid = 0; iGrid < 2; ++iGrid) {
         int OtherGridID = iGrid+1;
         if (ovkConnectivityExists(ConnectivityComponent, OtherGridID, LocalGridID)) {
-          void *ReceiverData = ReceiveBuffers[iReceive];
-          ovkExchangerReceive(Exchanger, OtherGridID, LocalGridID, 1, &ReceiverData,
+          ovkExchangerReceive(Exchanger, OtherGridID, LocalGridID, 1, &ReceiveBuffers[iReceive],
             &Requests[iReceive]);
           ++iReceive;
         }
@@ -262,8 +260,7 @@ int main(int argc, char **argv) {
       for (iGrid = 0; iGrid < 2; ++iGrid) {
         int OtherGridID = iGrid+1;
         if (ovkConnectivityExists(ConnectivityComponent, LocalGridID, OtherGridID)) {
-          const void *DonorData = SendBuffers[iSend];
-          ovkExchangerSend(Exchanger, LocalGridID, OtherGridID, 1, &DonorData,
+          ovkExchangerSend(Exchanger, LocalGridID, OtherGridID, 1, &SendBuffers[iSend],
             &Requests[NumReceives+iSend]);
           ++iSend;
         }
@@ -282,9 +279,8 @@ int main(int argc, char **argv) {
       for (iGrid = 0; iGrid < 2; ++iGrid) {
         int OtherGridID = iGrid+1;
         if (ovkConnectivityExists(ConnectivityComponent, OtherGridID, LocalGridID)) {
-          const void *ReceiverData = ReceiveBuffers[iReceive];
-          void *GridData = InputState->values;
-          ovkExchangerDisperse(Exchanger, OtherGridID, LocalGridID, 1, &ReceiverData, &GridData);
+          ovkExchangerDisperse(Exchanger, OtherGridID, LocalGridID, 1, &ReceiveBuffers[iReceive],
+            &InputState->values);
           ++iReceive;
         }
       }
