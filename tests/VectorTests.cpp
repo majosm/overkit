@@ -569,34 +569,36 @@ TEST_F(VectorTests, Append) {
   using vector_nonbool = ovk::core::vector<int>;
   using vector_bool = ovk::core::vector<bool>;
   using vector_noncopyable = ovk::core::vector<noncopyable<int>>;
-  using vector_nondefaultconstructible = ovk::core::vector<nondefaultconstructible<int>>;
   using vector_multiargument = ovk::core::vector<multiargument>;
+  using vector_nondefaultconstructible = ovk::core::vector<nondefaultconstructible<int>>;
   using helper_nonbool = ovk::core::test_helper<vector_nonbool>;
   using helper_bool = ovk::core::test_helper<vector_bool>;
   using helper_noncopyable = ovk::core::test_helper<vector_noncopyable>;
-  using helper_nondefaultconstructible = ovk::core::test_helper<vector_nondefaultconstructible>;
   using helper_multiargument = ovk::core::test_helper<vector_multiargument>;
+  using helper_nondefaultconstructible = ovk::core::test_helper<vector_nondefaultconstructible>;
 
-  // Non-bool
+  // Non-bool, lvalue ref
   {
     vector_nonbool Vector = {0,1,2,3};
-    int &NewValue = Vector.Append(4);
+    int SourceValue = 4;
+    int &NewValue = Vector.Append(SourceValue);
     auto &Values = helper_nonbool::GetValues(Vector);
     EXPECT_THAT(Values, ElementsAreArray({0,1,2,3,4}));
     EXPECT_EQ(&NewValue, Values.data()+4);
   }
 
-  // Bool
+  // Bool, lvalue ref
   {
     vector_bool Vector = {false,true,false,false};
-    bool &NewValue = Vector.Append(true);
+    bool SourceValue = true;
+    bool &NewValue = Vector.Append(SourceValue);
     auto &Values = helper_bool::GetValues(Vector);
     EXPECT_THAT(Values, ElementsAreArray({not_bool::FALSE,not_bool::TRUE,not_bool::FALSE,
       not_bool::FALSE,not_bool::TRUE}));
     EXPECT_EQ(&NewValue, reinterpret_cast<bool *>(Values.data()+4));
   }
 
-  // Non-copyable, rvalue ref
+  // rvalue ref
   {
     vector_noncopyable Vector;
     noncopyable<int> Value(1);
@@ -609,19 +611,7 @@ TEST_F(VectorTests, Append) {
     EXPECT_EQ(&NewValue, Values.data());
   }
 
-  // Non-default-constructible
-  {
-    vector_nondefaultconstructible Vector;
-    nondefaultconstructible<int> &NewValue = Vector.Append({1});
-    auto &Values = helper_nondefaultconstructible::GetValues(Vector);
-    EXPECT_EQ(int(Values.size()), 1);
-    int Sum = 0;
-    for (auto &Value : Values) Sum += Value.Value();
-    EXPECT_EQ(Sum, 1);
-    EXPECT_EQ(&NewValue, Values.data());
-  }
-
-  // Multi-argument constructor
+  // In-place
   {
     vector_multiargument Vector;
     multiargument &NewValue = Vector.Append(1, 2);
@@ -630,6 +620,44 @@ TEST_F(VectorTests, Append) {
     int Sum = 0;
     for (auto &Value : Values) Sum += Value.v1 + Value.v2;
     EXPECT_EQ(Sum, 3);
+    EXPECT_EQ(&NewValue, Values.data());
+  }
+
+  // Non-default-constructible, lvalue ref
+  {
+    vector_nondefaultconstructible Vector;
+    nondefaultconstructible<int> SourceValue(1);
+    nondefaultconstructible<int> &NewValue = Vector.Append(SourceValue);
+    auto &Values = helper_nondefaultconstructible::GetValues(Vector);
+    EXPECT_EQ(int(Values.size()), 1);
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 1);
+    EXPECT_EQ(&NewValue, Values.data());
+  }
+
+  // Non-default-constructible, rvalue ref
+  {
+    vector_nondefaultconstructible Vector;
+    nondefaultconstructible<int> SourceValue(1);
+    nondefaultconstructible<int> &NewValue = Vector.Append(std::move(SourceValue));
+    auto &Values = helper_nondefaultconstructible::GetValues(Vector);
+    EXPECT_EQ(int(Values.size()), 1);
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 1);
+    EXPECT_EQ(&NewValue, Values.data());
+  }
+
+  // Non-default-constructible, in-place
+  {
+    vector_nondefaultconstructible Vector;
+    nondefaultconstructible<int> &NewValue = Vector.Append(1);
+    auto &Values = helper_nondefaultconstructible::GetValues(Vector);
+    EXPECT_EQ(int(Values.size()), 1);
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 1);
     EXPECT_EQ(&NewValue, Values.data());
   }
 
@@ -642,34 +670,36 @@ TEST_F(VectorTests, Insert) {
   using vector_nonbool = ovk::core::vector<int>;
   using vector_bool = ovk::core::vector<bool>;
   using vector_noncopyable = ovk::core::vector<noncopyable<int>>;
-  using vector_nondefaultconstructible = ovk::core::vector<nondefaultconstructible<int>>;
   using vector_multiargument = ovk::core::vector<multiargument>;
+  using vector_nondefaultconstructible = ovk::core::vector<nondefaultconstructible<int>>;
   using helper_nonbool = ovk::core::test_helper<vector_nonbool>;
   using helper_bool = ovk::core::test_helper<vector_bool>;
   using helper_noncopyable = ovk::core::test_helper<vector_noncopyable>;
-  using helper_nondefaultconstructible = ovk::core::test_helper<vector_nondefaultconstructible>;
   using helper_multiargument = ovk::core::test_helper<vector_multiargument>;
+  using helper_nondefaultconstructible = ovk::core::test_helper<vector_nondefaultconstructible>;
 
-  // Non-bool
+  // lvalue ref, non-bool
   {
     vector_nonbool Vector = {0,1,3,4};
-    auto Iter = Vector.Insert(Vector.Begin()+2, 2);
+    int SourceValue = 2;
+    auto Iter = Vector.Insert(Vector.Begin()+2, SourceValue);
     auto &Values = helper_nonbool::GetValues(Vector);
     EXPECT_THAT(Values, ElementsAreArray({0,1,2,3,4}));
     EXPECT_EQ(Iter, Values.data()+2);
   }
 
-  // Bool
+  // lvalue ref, bool
   {
     vector_bool Vector = {false,true,false,true};
-    auto Iter = Vector.Insert(Vector.Begin()+2, false);
+    bool SourceValue = false;
+    auto Iter = Vector.Insert(Vector.Begin()+2, SourceValue);
     auto &Values = helper_bool::GetValues(Vector);
     EXPECT_THAT(Values, ElementsAreArray({not_bool::FALSE,not_bool::TRUE,not_bool::FALSE,
       not_bool::FALSE,not_bool::TRUE}));
     EXPECT_EQ(Iter, reinterpret_cast<bool *>(Values.data()+2));
   }
 
-  // Non-copyable, rvalue ref
+  // rvalue ref
   {
     vector_noncopyable Vector;
     Vector.Append(2);
@@ -683,19 +713,7 @@ TEST_F(VectorTests, Insert) {
     EXPECT_EQ(Iter, Values.data());
   }
 
-  // Non-default-constructible
-  {
-    vector_nondefaultconstructible Vector = {{2}};
-    auto Iter = Vector.Insert(Vector.Begin(), {1});
-    auto &Values = helper_nondefaultconstructible::GetValues(Vector);
-    EXPECT_EQ(int(Values.size()), 2);
-    int Sum = 0;
-    for (auto &Value : Values) Sum += Value.Value();
-    EXPECT_EQ(Sum, 3);
-    EXPECT_EQ(Iter, Values.data());
-  }
-
-  // Multi-argument constructor
+  // In-place
   {
     vector_multiargument Vector = {{3,4}};
     auto Iter = Vector.Insert(Vector.Begin(), 1, 2);
@@ -704,6 +722,44 @@ TEST_F(VectorTests, Insert) {
     int Sum = 0;
     for (auto &Value : Values) Sum += Value.v1 + Value.v2;
     EXPECT_EQ(Sum, 10);
+    EXPECT_EQ(Iter, Values.data());
+  }
+
+  // Non-default-constructible, lvalue ref
+  {
+    vector_nondefaultconstructible Vector = {{2}};
+    nondefaultconstructible<int> SourceValue(1);
+    auto Iter = Vector.Insert(Vector.Begin(), SourceValue);
+    auto &Values = helper_nondefaultconstructible::GetValues(Vector);
+    EXPECT_EQ(int(Values.size()), 2);
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 3);
+    EXPECT_EQ(Iter, Values.data());
+  }
+
+  // Non-default-constructible, rvalue ref
+  {
+    vector_nondefaultconstructible Vector = {{2}};
+    nondefaultconstructible<int> SourceValue(1);
+    auto Iter = Vector.Insert(Vector.Begin(), std::move(SourceValue));
+    auto &Values = helper_nondefaultconstructible::GetValues(Vector);
+    EXPECT_EQ(int(Values.size()), 2);
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 3);
+    EXPECT_EQ(Iter, Values.data());
+  }
+
+  // Non-default-constructible, in-place
+  {
+    vector_nondefaultconstructible Vector = {{2}};
+    auto Iter = Vector.Insert(Vector.Begin(), 1);
+    auto &Values = helper_nondefaultconstructible::GetValues(Vector);
+    EXPECT_EQ(int(Values.size()), 2);
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 3);
     EXPECT_EQ(Iter, Values.data());
   }
 
