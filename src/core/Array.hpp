@@ -275,13 +275,13 @@ public:
 
   value_type &Append(const value_type &Value) {
     Values_.Append(Value);
-    View_ = view_type(Values_.Data(), {View_.Begin(0), View_.End(0)+1});
+    View_ = view_type(Values_.Data(), {View_.Extents().Begin(0), View_.Extents().End(0)+1});
     return Values_.Back();
   }
 
   value_type &Append(value_type &&Value) {
     Values_.Append(std::move(Value));
-    View_ = view_type(Values_.Data(), {View_.Begin(0), View_.End(0)+1});
+    View_ = view_type(Values_.Data(), {View_.Extents().Begin(0), View_.Extents().End(0)+1});
     return Values_.Back();
   }
 
@@ -289,21 +289,21 @@ public:
     >::value && !core::IsCopyOrMoveArgument<value_type, Args &&...>())> value_type &Append(Args
     &&... Arguments) {
     Values_.Append(std::forward<Args>(Arguments)...);
-    View_ = view_type(Values_.Data(), {View_.Begin(0), View_.End(0)+1});
+    View_ = view_type(Values_.Data(), {View_.Extents().Begin(0), View_.Extents().End(0)+1});
     return Values_.Back();
   }
 
   iterator Insert(const_iterator Pos, const value_type &Value) {
     auto ValuesPos = Values_.Begin() + (Pos - View_.LinearBegin());
     auto ValuesIter = Values_.Insert(ValuesPos, Value);
-    View_ = view_type(Values_.Data(), {View_.Begin(0), View_.End(0)+1});
+    View_ = view_type(Values_.Data(), {View_.Extents().Begin(0), View_.Extents().End(0)+1});
     return View_.LinearBegin() + (ValuesIter - Values_.Begin());
   }
 
   iterator Insert(const_iterator Pos, value_type &&Value) {
     auto ValuesPos = Values_.Begin() + (Pos - View_.LinearBegin());
     auto ValuesIter = Values_.Insert(ValuesPos, std::move(Value));
-    View_ = view_type(Values_.Data(), {View_.Begin(0), View_.End(0)+1});
+    View_ = view_type(Values_.Data(), {View_.Extents().Begin(0), View_.Extents().End(0)+1});
     return View_.LinearBegin() + (ValuesIter - Values_.Begin());
   }
 
@@ -312,14 +312,14 @@ public:
     const_iterator Pos, Args &&... Arguments) {
     auto ValuesPos = Values_.Begin() + (Pos - View_.LinearBegin());
     auto ValuesIter = Values_.Insert(ValuesPos, std::forward<Args>(Arguments)...);
-    View_ = view_type(Values_.Data(), {View_.Begin(0), View_.End(0)+1});
+    View_ = view_type(Values_.Data(), {View_.Extents().Begin(0), View_.Extents().End(0)+1});
     return View_.LinearBegin() + (ValuesIter - Values_.Begin());
   }
 
   iterator Erase(const_iterator Pos) {
     auto ValuesPos = Values_.Begin() + (Pos - View_.LinearBegin());
     auto ValuesIter = Values_.Erase(ValuesPos);
-    View_ = view_type(Values_.Data(), {View_.Begin(0), View_.End(0)-1});
+    View_ = view_type(Values_.Data(), {View_.Extents().Begin(0), View_.Extents().End(0)-1});
     return View_.LinearBegin() + (ValuesIter - Values_.Begin());
   }
 
@@ -621,12 +621,6 @@ public:
 
   OVK_FORCE_INLINE const interval_type &Extents() const { return View_.Extents(); }
 
-  OVK_FORCE_INLINE const tuple_type &Begin() const { return View_.Begin(); }
-  OVK_FORCE_INLINE tuple_element_type Begin(int iDim) const { return View_.Begin(iDim); }
-
-  OVK_FORCE_INLINE const tuple_type &End() const { return View_.End(); }
-  OVK_FORCE_INLINE tuple_element_type End(int iDim) const { return View_.End(iDim); }
-
   tuple_type Size() const { return View_.Size(); }
   tuple_element_type Size(int iDim) const { return View_.Size(iDim); }
 
@@ -655,17 +649,17 @@ public:
   template <typename ArrayType, OVK_FUNCTION_REQUIRES(core::IsArray<ArrayType>() &&
     !core::IsIterator<typename std::decay<ArrayType>::type>() && std::is_convertible<
     core::array_access_type<const ArrayType &>, tuple_element_type>::value && core::ArrayRank<
-    ArrayType>() == 1 && (core::ArrayHasRuntimeExtents<ArrayType>() || (core::StaticArrayHasBegin<
-    ArrayType,0>() && core::StaticArrayHasEnd<ArrayType,Rank_>())))> OVK_FORCE_INLINE const
-    value_type &operator()(const ArrayType &Array) const {
+    ArrayType>() == 1 && (core::ArrayHasRuntimeExtents<ArrayType>() || (core::
+    StaticArrayHasExtentsBegin<ArrayType,0>() && core::StaticArrayHasExtentsEnd<ArrayType,Rank_>()))
+    )> OVK_FORCE_INLINE const value_type &operator()(const ArrayType &Array) const {
     return View_(Array);
   }
   template <typename ArrayType, OVK_FUNCTION_REQUIRES(core::IsArray<ArrayType>() &&
     !core::IsIterator<typename std::decay<ArrayType>::type>() && std::is_convertible<
     core::array_access_type<const ArrayType &>, tuple_element_type>::value && core::ArrayRank<
-    ArrayType>() == 1 && (core::ArrayHasRuntimeExtents<ArrayType>() || (core::StaticArrayHasBegin<
-    ArrayType,0>() && core::StaticArrayHasEnd<ArrayType,Rank_>())))> OVK_FORCE_INLINE value_type
-    &operator()(const ArrayType &Array) {
+    ArrayType>() == 1 && (core::ArrayHasRuntimeExtents<ArrayType>() || (core::
+    StaticArrayHasExtentsBegin<ArrayType,0>() && core::StaticArrayHasExtentsEnd<ArrayType,Rank_>()))
+    )> OVK_FORCE_INLINE value_type &operator()(const ArrayType &Array) {
     return View_(Array);
   }
 
@@ -692,17 +686,18 @@ public:
   template <typename ArrayType, OVK_FUNCTION_REQUIRES(core::IsArray<ArrayType>() &&
     !core::IsIterator<typename std::decay<ArrayType>::type>() && std::is_convertible<
     core::array_access_type<const ArrayType &>, tuple_element_type>::value && core::ArrayRank<
-    ArrayType>() == 1 && (core::ArrayHasRuntimeExtents<ArrayType>() || (core::StaticArrayHasBegin<
-    ArrayType,0>() && core::StaticArrayHasEnd<ArrayType,Rank_>())))> OVK_FORCE_INLINE const
+    ArrayType>() == 1 && (core::ArrayHasRuntimeExtents<ArrayType>() || (core::
+    StaticArrayHasExtentsBegin<ArrayType,0>() && core::StaticArrayHasExtentsEnd<ArrayType,Rank_>()))
+    )> OVK_FORCE_INLINE const
     value_type *Data(const ArrayType &Array) const {
     return View_.Data(Array);
   }
   template <typename ArrayType, OVK_FUNCTION_REQUIRES(core::IsArray<ArrayType>() &&
     !core::IsIterator<typename std::decay<ArrayType>::type>() && std::is_convertible<
     core::array_access_type<const ArrayType &>, tuple_element_type>::value && core::ArrayRank<
-    ArrayType>() == 1 && (core::ArrayHasRuntimeExtents<ArrayType>() || (core::StaticArrayHasBegin<
-    ArrayType,0>() && core::StaticArrayHasEnd<ArrayType,Rank_>())))> OVK_FORCE_INLINE value_type
-    *Data(const ArrayType &Array) {
+    ArrayType>() == 1 && (core::ArrayHasRuntimeExtents<ArrayType>() || (core::
+    StaticArrayHasExtentsBegin<ArrayType,0>() && core::StaticArrayHasExtentsEnd<ArrayType,Rank_>()))
+    )> OVK_FORCE_INLINE value_type *Data(const ArrayType &Array) {
     return View_.Data(Array);
   }
 
@@ -729,11 +724,11 @@ template <typename T, int Rank_, array_layout Layout_> struct array_traits<array
   using value_type = T;
   static constexpr int Rank = Rank_;
   static constexpr array_layout Layout = Layout_;
-  template <int iDim> static long long Begin(const array<T, Rank, Layout> &Array) {
-    return Array.Begin(iDim);
+  template <int iDim> static long long ExtentBegin(const array<T, Rank, Layout> &Array) {
+    return Array.Extents().Begin(iDim);
   }
-  template <int iDim> static long long End(const array<T, Rank, Layout> &Array) {
-    return Array.End(iDim);
+  template <int iDim> static long long ExtentEnd(const array<T, Rank, Layout> &Array) {
+    return Array.Extents().End(iDim);
   }
   static const T *Data(const array<T, Rank, Layout> &Array) { return Array.Data(); }
   static T *Data(array<T, Rank, Layout> &Array) { return Array.Data(); }

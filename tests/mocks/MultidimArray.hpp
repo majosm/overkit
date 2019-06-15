@@ -79,8 +79,12 @@ public:
   using value_type = T;
   static constexpr int Rank = 3;
   static constexpr array_layout Layout = array_layout::ROW_MAJOR;
-  template <int iDim> static long long Begin(const array_type &Array) { return Array.Begin(iDim); }
-  template <int iDim> static long long End(const array_type &Array) { return Array.End(iDim); }
+  template <int iDim> static long long ExtentBegin(const array_type &Array) {
+    return Array.Begin(iDim);
+  }
+  template <int iDim> static long long ExtentEnd(const array_type &Array) {
+    return Array.End(iDim);
+  }
   static const value_type *Data(const array_type &Array) { return &Array[0]; }
   static value_type *Data(array_type &Array) { return &Array[0]; }
 };
@@ -92,8 +96,12 @@ public:
   using value_type = T;
   static constexpr int Rank = 3;
   static constexpr array_layout Layout = array_layout::COLUMN_MAJOR;
-  template <int iDim> static long long Begin(const array_type &Array) { return Array.Begin(iDim); }
-  template <int iDim> static long long End(const array_type &Array) { return Array.End(iDim); }
+  template <int iDim> static long long ExtentBegin(const array_type &Array) {
+    return Array.Begin(iDim);
+  }
+  template <int iDim> static long long ExtentEnd(const array_type &Array) {
+    return Array.End(iDim);
+  }
   static const value_type *Data(const array_type &Array) { return &Array[0]; }
   static value_type *Data(array_type &Array) { return &Array[0]; }
 };

@@ -27,8 +27,8 @@ template <typename T> struct array_traits<T, OVK_SPECIALIZATION_REQUIRES(std::is
   using value_type = typename std::remove_all_extents<T>::type;
   static constexpr int Rank = std::rank<T>::value;
   static constexpr array_layout Layout = array_layout::ROW_MAJOR;
-  template <int> static constexpr long long Begin() { return 0; }
-  template <int iDim> static constexpr long long End() { return std::extent<T,iDim>::value; }
+  template <int> static constexpr long long ExtentBegin() { return 0; }
+  template <int iDim> static constexpr long long ExtentEnd() { return std::extent<T,iDim>::value; }
   // Not sure if there's a better way to do this that works for general multidimensional arrays
   static const value_type *Data(const T &Array) {
     return reinterpret_cast<const value_type *>(&Array[0]);
@@ -43,8 +43,8 @@ template <typename T, std::size_t N> struct array_traits<std::array<T,N>> {
   using value_type = T;
   static constexpr int Rank = 1;
   static constexpr array_layout Layout = array_layout::ROW_MAJOR;
-  template <int> static constexpr long long Begin() { return 0; }
-  template <int> static constexpr long long End() { return N; }
+  template <int> static constexpr long long ExtentBegin() { return 0; }
+  template <int> static constexpr long long ExtentEnd() { return N; }
   static const T *Data(const std::array<T,N> &Array) { return Array.data(); }
   static T *Data(std::array<T,N> &Array) { return Array.data(); }
 };
@@ -54,8 +54,10 @@ template <typename T, typename Allocator> struct array_traits<std::vector<T, All
   using value_type = T;
   static constexpr int Rank = 1;
   static constexpr array_layout Layout = array_layout::ROW_MAJOR;
-  template <int> static long long Begin(const std::vector<T, Allocator> &) { return 0; }
-  template <int> static long long End(const std::vector<T, Allocator> &Vec) { return Vec.size(); }
+  template <int> static long long ExtentBegin(const std::vector<T, Allocator> &) { return 0; }
+  template <int> static long long ExtentEnd(const std::vector<T, Allocator> &Vec) {
+    return Vec.size();
+  }
   static const T *Data(const std::vector<T, Allocator> &Vec) { return Vec.data(); }
   static T *Data(std::vector<T, Allocator> &Vec) { return Vec.data(); }
 };
@@ -66,10 +68,11 @@ template <typename CharT, typename Traits, typename Allocator> struct array_trai
   using value_type = CharT;
   static constexpr int Rank = 1;
   static constexpr array_layout Layout = array_layout::ROW_MAJOR;
-  template <int> static long long Begin(const std::basic_string<CharT, Traits, Allocator> &) {
+  template <int> static long long ExtentBegin(const std::basic_string<CharT, Traits, Allocator> &) {
     return 0;
   }
-  template <int> static long long End(const std::basic_string<CharT, Traits, Allocator> &String) {
+  template <int> static long long ExtentEnd(const std::basic_string<CharT, Traits, Allocator>
+    &String) {
     return String.length();
   }
   static const CharT *Data(const std::basic_string<CharT, Traits, Allocator> &String) {
@@ -119,61 +122,40 @@ template <typename T, typename U, OVK_FUNCTION_REQUIRES(!IsArray<T>() || !IsArra
 }
 
 namespace array_traits_internal {
-template <typename ArrayType, std::size_t... Indices> constexpr elem<long long,ArrayRank<
-  ArrayType>()> StaticArrayBeginHelper(core::index_sequence<Indices...>) {
-  return {array_traits<ArrayType>::template Begin<Indices>()...};
+template <typename ArrayType, std::size_t... Indices> constexpr interval<long long,ArrayRank<
+  ArrayType>()> StaticArrayExtentsHelper(core::index_sequence<Indices...>) {
+  return {{array_traits<ArrayType>::template ExtentBegin<Indices>()...}, {array_traits<ArrayType>::
+    template ExtentEnd<Indices>()...}};
 }
-template <typename ArrayType, std::size_t... Indices> elem<long long,ArrayRank<ArrayType>()>
-  RuntimeArrayBeginHelper(core::index_sequence<Indices...>, const ArrayType &Array) {
-  return {array_traits<ArrayType>::template Begin<Indices>(Array)...};
+template <typename ArrayType, std::size_t... Indices> interval<long long,ArrayRank<ArrayType>()>
+  RuntimeArrayExtentsHelper(core::index_sequence<Indices...>, const ArrayType &Array) {
+  return {{array_traits<ArrayType>::template ExtentBegin<Indices>(Array)...}, {array_traits<
+    ArrayType>::template ExtentEnd<Indices>(Array)...}};
 }
 }
 template <typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<ArrayType>() &&
-  ArrayHasStaticExtents<ArrayType>())> constexpr elem<long long,ArrayRank<ArrayType>()> ArrayBegin(
-  const ArrayType &) {
-  return array_traits_internal::StaticArrayBeginHelper<ArrayType>(core::index_sequence_of_size<
+  ArrayHasStaticExtents<ArrayType>())> constexpr interval<long long,ArrayRank<ArrayType>()>
+  ArrayExtents(const ArrayType &) {
+  return array_traits_internal::StaticArrayExtentsHelper<ArrayType>(core::index_sequence_of_size<
     ArrayRank<ArrayType>()>());
 }
 template <typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<ArrayType>() &&
-  ArrayHasRuntimeExtents<ArrayType>())> elem<long long,ArrayRank<ArrayType>()> ArrayBegin(const
-  ArrayType &Array) {
-  return array_traits_internal::RuntimeArrayBeginHelper<ArrayType>(core::index_sequence_of_size<
-    ArrayRank<ArrayType>()>(), Array);
-}
-
-namespace array_traits_internal {
-template <typename ArrayType, std::size_t... Indices> constexpr elem<long long,ArrayRank<
-  ArrayType>()> StaticArrayEndHelper(core::index_sequence<Indices...>) {
-  return {array_traits<ArrayType>::template End<Indices>()...};
-}
-template <typename ArrayType, std::size_t... Indices> elem<long long,ArrayRank<ArrayType>()>
-  RuntimeArrayEndHelper(core::index_sequence<Indices...>, const ArrayType &Array) {
-  return {array_traits<ArrayType>::template End<Indices>(Array)...};
-}
-}
-template <typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<ArrayType>() &&
-  ArrayHasStaticExtents<ArrayType>())> constexpr elem<long long,ArrayRank<ArrayType>()> ArrayEnd(
-  const ArrayType &) {
-  return array_traits_internal::StaticArrayEndHelper<ArrayType>(core::index_sequence_of_size<
-    ArrayRank<ArrayType>()>());
-}
-template <typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<ArrayType>() &&
-  ArrayHasRuntimeExtents<ArrayType>())> elem<long long,ArrayRank<ArrayType>()> ArrayEnd(const
-  ArrayType &Array) {
-  return array_traits_internal::RuntimeArrayEndHelper<ArrayType>(core::index_sequence_of_size<
+  ArrayHasRuntimeExtents<ArrayType>())> interval<long long,ArrayRank<ArrayType>()> ArrayExtents(
+  const ArrayType &Array) {
+  return array_traits_internal::RuntimeArrayExtentsHelper<ArrayType>(core::index_sequence_of_size<
     ArrayRank<ArrayType>()>(), Array);
 }
 
 namespace array_traits_internal {
 template <typename ArrayType, std::size_t... Indices> constexpr elem<long long,ArrayRank<
   ArrayType>()> StaticArraySizeHelper(core::index_sequence<Indices...>) {
-  return {array_traits<ArrayType>::template End<Indices>() - array_traits<ArrayType>::template
-  Begin<Indices>()...};
+  return {array_traits<ArrayType>::template ExtentEnd<Indices>() - array_traits<ArrayType>::template
+  ExtentBegin<Indices>()...};
 }
 template <typename ArrayType, std::size_t... Indices> elem<long long,ArrayRank<ArrayType>()>
   RuntimeArraySizeHelper(core::index_sequence<Indices...>, const ArrayType &Array) {
-  return {array_traits<ArrayType>::template End<Indices>(Array) - array_traits<ArrayType>::template
-    Begin<Indices>(Array)...};
+  return {array_traits<ArrayType>::template ExtentEnd<Indices>(Array) - array_traits<ArrayType>::
+    template ExtentBegin<Indices>(Array)...};
 }
 }
 template <typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<ArrayType>() &&
@@ -189,31 +171,26 @@ template <typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<ArrayType>() &&
     ArrayRank<ArrayType>()>(), Array);
 }
 
-template <typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<ArrayType>())> interval<long long,
-  ArrayRank<ArrayType>()> ArrayExtents(const ArrayType &Array) {
-  return {ArrayBegin(Array), ArrayEnd(Array)};
-}
-
 namespace array_traits_internal {
 template <typename ArrayType, int Index, OVK_FUNCTION_REQUIRES(Index == ArrayRank<
   ArrayType>()-1)> constexpr long long StaticArrayCountHelper() {
-  return array_traits<ArrayType>::template End<Index>() -
-    array_traits<ArrayType>::template Begin<Index>();
+  return array_traits<ArrayType>::template ExtentEnd<Index>() -
+    array_traits<ArrayType>::template ExtentBegin<Index>();
 }
 template <typename ArrayType, int Index, OVK_FUNCTION_REQUIRES(Index < ArrayRank<
   ArrayType>()-1)> constexpr long long StaticArrayCountHelper() {
-  return (array_traits<ArrayType>::template End<Index>() - array_traits<ArrayType>::template
-  Begin<Index>()) * StaticArrayCountHelper<ArrayType, Index+1>();
+  return (array_traits<ArrayType>::template ExtentEnd<Index>() - array_traits<ArrayType>::template
+  ExtentBegin<Index>()) * StaticArrayCountHelper<ArrayType, Index+1>();
 }
 template <typename ArrayType, int Index, OVK_FUNCTION_REQUIRES(Index == ArrayRank<
   ArrayType>()-1)> long long RuntimeArrayCountHelper(const ArrayType &Array) {
-  return array_traits<ArrayType>::template End<Index>(Array) -
-    array_traits<ArrayType>::template Begin<Index>(Array);
+  return array_traits<ArrayType>::template ExtentEnd<Index>(Array) -
+    array_traits<ArrayType>::template ExtentBegin<Index>(Array);
 }
 template <typename ArrayType, int Index, OVK_FUNCTION_REQUIRES(Index < ArrayRank<
   ArrayType>()-1)> long long RuntimeArrayCountHelper(const ArrayType &Array) {
-  return (array_traits<ArrayType>::template End<Index>(Array) - array_traits<ArrayType>::template
-    Begin<Index>(Array)) * RuntimeArrayCountHelper<ArrayType, Index+1>(Array);
+  return (array_traits<ArrayType>::template ExtentEnd<Index>(Array) - array_traits<ArrayType>::
+    template ExtentBegin<Index>(Array)) * RuntimeArrayCountHelper<ArrayType, Index+1>(Array);
 }
 }
 template <typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<ArrayType>() &&

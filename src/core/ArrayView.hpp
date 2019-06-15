@@ -286,16 +286,6 @@ public:
 
   constexpr OVK_FORCE_INLINE const interval_type &Extents() const { return Extents_; }
 
-  constexpr OVK_FORCE_INLINE const tuple_type &Begin() const { return Extents_.Begin(); }
-  constexpr OVK_FORCE_INLINE tuple_element_type Begin(int iDim) const {
-    return Extents_.Begin(iDim);
-  }
-
-  constexpr OVK_FORCE_INLINE const tuple_type &End() const { return Extents_.End(); }
-  constexpr OVK_FORCE_INLINE tuple_element_type End(int iDim) const {
-    return Extents_.End(iDim);
-  }
-
   constexpr OVK_FORCE_INLINE tuple_type Size() const { return Extents_.Size(); }
   constexpr OVK_FORCE_INLINE tuple_element_type Size(int iDim) const {
     return Extents_.Size(iDim);
@@ -319,9 +309,9 @@ public:
   template <typename ArrayType, OVK_FUNCTION_REQUIRES(core::IsArray<ArrayType>() &&
     !core::IsIterator<typename std::decay<ArrayType>::type>() && std::is_convertible<
     core::array_access_type<const ArrayType &>, tuple_element_type>::value && core::ArrayRank<
-    ArrayType>() == 1 && (core::ArrayHasRuntimeExtents<ArrayType>() || (core::StaticArrayHasBegin<
-    ArrayType,0>() && core::StaticArrayHasEnd<ArrayType,Rank_>())))> constexpr OVK_FORCE_INLINE
-    value_type &operator()(const ArrayType &Array) const {
+    ArrayType>() == 1 && (core::ArrayHasRuntimeExtents<ArrayType>() || (core::
+    StaticArrayHasExtentsBegin<ArrayType,0>() && core::StaticArrayHasExtentsEnd<ArrayType,Rank_>()))
+    )> constexpr OVK_FORCE_INLINE value_type &operator()(const ArrayType &Array) const {
     return Ptr_[Indexer_.ToIndex(Array)];
   }
 
@@ -341,9 +331,9 @@ public:
   template <typename ArrayType, OVK_FUNCTION_REQUIRES(core::IsArray<ArrayType>() &&
     !core::IsIterator<typename std::decay<ArrayType>::type>() && std::is_convertible<
     core::array_access_type<const ArrayType &>, tuple_element_type>::value && core::ArrayRank<
-    ArrayType>() == 1 && (core::ArrayHasRuntimeExtents<ArrayType>() || (core::StaticArrayHasBegin<
-    ArrayType,0>() && core::StaticArrayHasEnd<ArrayType,Rank_>())))> constexpr OVK_FORCE_INLINE
-    value_type *Data(const ArrayType &Array) const {
+    ArrayType>() == 1 && (core::ArrayHasRuntimeExtents<ArrayType>() || (core::
+    StaticArrayHasExtentsBegin<ArrayType,0>() && core::StaticArrayHasExtentsEnd<ArrayType,Rank_>()))
+    )> constexpr OVK_FORCE_INLINE value_type *Data(const ArrayType &Array) const {
     return Ptr_+Indexer_.ToIndex(Array);
   }
 

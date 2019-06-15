@@ -33,12 +33,12 @@ TEST_F(ArrayTraitsTests, CArrayTraits) {
   EXPECT_EQ(ovk::core::ArrayRank<array>(), 3);
   EXPECT_EQ(ovk::core::ArrayLayout<array>(), ovk::array_layout::ROW_MAJOR);
   EXPECT_TRUE(ovk::core::ArrayHasStaticExtents<array>());
-  EXPECT_TRUE((ovk::core::StaticArrayHasBegin<array, 0,0,0>()));
-  EXPECT_TRUE((ovk::core::StaticArrayHasEnd<array, 1,2,3>()));
+  EXPECT_TRUE((ovk::core::StaticArrayHasExtentsBegin<array,0,0,0>()));
+  EXPECT_TRUE((ovk::core::StaticArrayHasExtentsEnd<array,1,2,3>()));
 
   array Array = {{{0,1,2},{3,4,5}}};
-  EXPECT_THAT(ovk::core::ArrayBegin(Array), ElementsAre(0,0,0));
-  EXPECT_THAT(ovk::core::ArrayEnd(Array), ElementsAre(1,2,3));
+  EXPECT_THAT(ovk::core::ArrayExtents(Array).Begin(), ElementsAre(0,0,0));
+  EXPECT_THAT(ovk::core::ArrayExtents(Array).End(), ElementsAre(1,2,3));
   EXPECT_EQ(ovk::core::ArrayData(Array), &Array[0][0][0]);
 
 }
@@ -54,12 +54,12 @@ TEST_F(ArrayTraitsTests, StdArrayTraits) {
   EXPECT_EQ(ovk::core::ArrayRank<array>(), 1);
   EXPECT_EQ(ovk::core::ArrayLayout<array>(), ovk::array_layout::ROW_MAJOR);
   EXPECT_TRUE(ovk::core::ArrayHasStaticExtents<array>());
-  EXPECT_TRUE((ovk::core::StaticArrayHasBegin<array, 0>()));
-  EXPECT_TRUE((ovk::core::StaticArrayHasEnd<array, 5>()));
+  EXPECT_TRUE((ovk::core::StaticArrayHasExtentsBegin<array,0>()));
+  EXPECT_TRUE((ovk::core::StaticArrayHasExtentsEnd<array,5>()));
 
   array Array = {{0,1,2,3,4}};
-  EXPECT_THAT(ovk::core::ArrayBegin(Array), ElementsAre(0));
-  EXPECT_THAT(ovk::core::ArrayEnd(Array), ElementsAre(5));
+  EXPECT_THAT(ovk::core::ArrayExtents(Array).Begin(), ElementsAre(0));
+  EXPECT_THAT(ovk::core::ArrayExtents(Array).End(), ElementsAre(5));
   EXPECT_EQ(ovk::core::ArrayData(Array), Array.data());
 
 }
@@ -77,8 +77,8 @@ TEST_F(ArrayTraitsTests, StdVectorTraits) {
   EXPECT_TRUE(ovk::core::ArrayHasRuntimeExtents<vector>());
 
   vector Vector = {0,1,2,3,4};
-  EXPECT_THAT(ovk::core::ArrayBegin(Vector), ElementsAre(0));
-  EXPECT_THAT(ovk::core::ArrayEnd(Vector), ElementsAre(5));
+  EXPECT_THAT(ovk::core::ArrayExtents(Vector).Begin(), ElementsAre(0));
+  EXPECT_THAT(ovk::core::ArrayExtents(Vector).End(), ElementsAre(5));
   EXPECT_EQ(ovk::core::ArrayData(Vector), Vector.data());
 
 }
@@ -94,8 +94,8 @@ TEST_F(ArrayTraitsTests, StdStringTraits) {
   EXPECT_TRUE(ovk::core::ArrayHasRuntimeExtents<std::string>());
 
   std::string String = "Hello, world!";
-  EXPECT_THAT(ovk::core::ArrayBegin(String), ElementsAre(0));
-  EXPECT_THAT(ovk::core::ArrayEnd(String), ElementsAre(13));
+  EXPECT_THAT(ovk::core::ArrayExtents(String).Begin(), ElementsAre(0));
+  EXPECT_THAT(ovk::core::ArrayExtents(String).End(), ElementsAre(13));
   EXPECT_EQ(ovk::core::ArrayData(String), String.data());
 
 }

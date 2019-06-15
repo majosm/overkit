@@ -1007,38 +1007,6 @@ TEST_F(ArrayViewTests, Extents) {
 
 }
 
-TEST_F(ArrayViewTests, Begin) {
-
-  if (TestComm().Rank() != 0) return;
-
-  using array_view = ovk::array_view<int,3>;
-  using multidim_array = multidim_array_row<int>;
-
-  multidim_array Array({{1,2,3}, {4,5,6}});
-  array_view View(Array);
-  EXPECT_THAT(View.Begin(), ElementsAre(1,2,3));
-  EXPECT_EQ(View.Begin(0), 1);
-  EXPECT_EQ(View.Begin(1), 2);
-  EXPECT_EQ(View.Begin(2), 3);
-
-}
-
-TEST_F(ArrayViewTests, End) {
-
-  if (TestComm().Rank() != 0) return;
-
-  using array_view = ovk::array_view<int,3>;
-  using multidim_array = multidim_array_row<int>;
-
-  multidim_array Array({{1,2,3}, {4,5,6}});
-  array_view View(Array);
-  EXPECT_THAT(View.End(), ElementsAre(4,5,6));
-  EXPECT_EQ(View.End(0), 4);
-  EXPECT_EQ(View.End(1), 5);
-  EXPECT_EQ(View.End(2), 6);
-
-}
-
 TEST_F(ArrayViewTests, Size) {
 
   if (TestComm().Rank() != 0) return;

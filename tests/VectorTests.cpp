@@ -1109,8 +1109,8 @@ TEST_F(VectorTests, Traits) {
   EXPECT_TRUE(ovk::core::ArrayHasRuntimeExtents<vector>());
 
   vector Vector = {0,1,2,3,4};
-  EXPECT_THAT(ovk::core::ArrayBegin(Vector), ElementsAre(0));
-  EXPECT_THAT(ovk::core::ArrayEnd(Vector), ElementsAre(5));
+  EXPECT_THAT(ovk::core::ArrayExtents(Vector).Begin(), ElementsAre(0));
+  EXPECT_THAT(ovk::core::ArrayExtents(Vector).End(), ElementsAre(5));
   EXPECT_EQ(ovk::core::ArrayData(Vector), Vector.Data());
 
 }

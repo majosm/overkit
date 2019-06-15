@@ -88,8 +88,9 @@ public:
     !std::is_base_of<elem_base, ArrayType>::value && !core::IsIterator<typename
     std::decay<ArrayType>::type>() && std::is_convertible<core::array_access_type<const ArrayType
     &>, value_type>::value && core::ArrayRank<ArrayType>() == 1 && (core::ArrayHasRuntimeExtents<
-    ArrayType>() || (core::StaticArrayHasBegin<ArrayType, 0>() && core::StaticArrayHasEnd<ArrayType,
-    N>())))> constexpr OVK_FORCE_INLINE elem_base(const ArrayType &Array):
+    ArrayType>() || (core::StaticArrayHasExtentsBegin<ArrayType, 0>() && core::
+    StaticArrayHasExtentsEnd<ArrayType, N>())))> constexpr OVK_FORCE_INLINE elem_base(const
+    ArrayType &Array):
     elem_base(core::index_sequence_of_size<Rank>(), Array)
   {}
 
@@ -98,8 +99,8 @@ public:
     ArrayType>::type>() && !std::is_convertible<core::array_access_type<const ArrayType &>,
     value_type>::value && std::is_constructible<value_type, core::array_access_type<const ArrayType
     &>>::value && core::ArrayRank<ArrayType>() == 1 && (core::ArrayHasRuntimeExtents<ArrayType>() ||
-    (core::StaticArrayHasBegin<ArrayType, 0>() && core::StaticArrayHasEnd<ArrayType, N>())))>
-    constexpr OVK_FORCE_INLINE explicit elem_base(const ArrayType &Array):
+    (core::StaticArrayHasExtentsBegin<ArrayType, 0>() && core::StaticArrayHasExtentsEnd<ArrayType,
+    N>())))> constexpr OVK_FORCE_INLINE explicit elem_base(const ArrayType &Array):
     elem_base(core::index_sequence_of_size<Rank>(), Array)
   {}
 
@@ -196,8 +197,8 @@ template <typename T, int N> struct array_traits<elem<T,N>> {
   using value_type = T;
   static constexpr int Rank = 1;
   static constexpr array_layout Layout = array_layout::ROW_MAJOR;
-  template <int> static constexpr long long Begin() { return 0; }
-  template <int> static constexpr long long End() { return N; }
+  template <int> static constexpr long long ExtentBegin() { return 0; }
+  template <int> static constexpr long long ExtentEnd() { return N; }
   static const T *Data(const elem<T,N> &Elem) { return Elem.Data(); }
   static T *Data(elem<T,N> &Elem) { return Elem.Data(); }
 };

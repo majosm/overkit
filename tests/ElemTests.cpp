@@ -367,12 +367,12 @@ TEST_F(ElemTests, Traits) {
   EXPECT_EQ(ovk::core::ArrayRank<elem>(), 1);
   EXPECT_EQ(ovk::core::ArrayLayout<elem>(), ovk::array_layout::ROW_MAJOR);
   EXPECT_TRUE(ovk::core::ArrayHasStaticExtents<elem>());
-  EXPECT_TRUE((ovk::core::StaticArrayHasBegin<elem, 0>()));
-  EXPECT_TRUE((ovk::core::StaticArrayHasEnd<elem, 3>()));
+  EXPECT_TRUE((ovk::core::StaticArrayHasExtentsBegin<elem, 0>()));
+  EXPECT_TRUE((ovk::core::StaticArrayHasExtentsEnd<elem, 3>()));
 
   elem Elem = {1,2,3};
-  EXPECT_THAT(ovk::core::ArrayBegin(Elem), ElementsAre(0));
-  EXPECT_THAT(ovk::core::ArrayEnd(Elem), ElementsAre(3));
+  EXPECT_THAT(ovk::core::ArrayExtents(Elem).Begin(), ElementsAre(0));
+  EXPECT_THAT(ovk::core::ArrayExtents(Elem).End(), ElementsAre(3));
   EXPECT_EQ(ovk::core::ArrayData(Elem), Elem.Data());
 
 }

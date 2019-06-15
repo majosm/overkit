@@ -298,9 +298,9 @@ public:
   template <typename ArrayType, OVK_FUNCTION_REQUIRES(core::IsArray<ArrayType>() &&
     !core::IsIterator<ArrayType>() && std::is_convertible<core::array_access_type<const ArrayType
     &>, tuple_element_type>::value && core::ArrayRank<ArrayType>() == 1 &&
-    (core::ArrayHasRuntimeExtents<ArrayType>() || (core::StaticArrayHasBegin<ArrayType,0>() &&
-    core::StaticArrayHasEnd<ArrayType,Rank>())))> constexpr OVK_FORCE_INLINE index_type ToIndex(
-    const ArrayType &Array) const {
+    (core::ArrayHasRuntimeExtents<ArrayType>() || (core::StaticArrayHasExtentsBegin<ArrayType,0>()
+    && core::StaticArrayHasExtentsEnd<ArrayType,Rank>())))> constexpr OVK_FORCE_INLINE index_type
+    ToIndex(const ArrayType &Array) const {
     return TupleToIndexHelper<index_type, tuple_element_type>(Begin_, Stride_, Array);
   }
 

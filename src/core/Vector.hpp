@@ -302,8 +302,10 @@ template <typename T, typename Allocator> struct array_traits<core::vector<T, Al
   using value_type = T;
   static constexpr int Rank = 1;
   static constexpr array_layout Layout = array_layout::ROW_MAJOR;
-  template <int> static long long Begin(const core::vector<T, Allocator> &) { return 0; }
-  template <int> static long long End(const core::vector<T, Allocator> &Vec) { return Vec.Count(); }
+  template <int> static long long ExtentBegin(const core::vector<T, Allocator> &) { return 0; }
+  template <int> static long long ExtentEnd(const core::vector<T, Allocator> &Vec) {
+    return Vec.Count();
+  }
   static const T *Data(const core::vector<T, Allocator> &Vec) { return Vec.Data(); }
   static T *Data(core::vector<T, Allocator> &Vec) { return Vec.Data(); }
 };

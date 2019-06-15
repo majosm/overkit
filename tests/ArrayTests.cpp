@@ -2578,34 +2578,6 @@ TEST_F(ArrayTests, Extents) {
 
 }
 
-TEST_F(ArrayTests, Begin) {
-
-  if (TestComm().Rank() != 0) return;
-
-  using array = ovk::array<int,3>;
-
-  array Array({{1,2,3}, {2,4,6}});
-  EXPECT_THAT(Array.Begin(), ElementsAre(1,2,3));
-  EXPECT_EQ(Array.Begin(0), 1);
-  EXPECT_EQ(Array.Begin(1), 2);
-  EXPECT_EQ(Array.Begin(2), 3);
-
-}
-
-TEST_F(ArrayTests, End) {
-
-  if (TestComm().Rank() != 0) return;
-
-  using array = ovk::array<int,3>;
-
-  array Array({{1,2,3}, {2,4,6}});
-  EXPECT_THAT(Array.End(), ElementsAre(2,4,6));
-  EXPECT_EQ(Array.End(0), 2);
-  EXPECT_EQ(Array.End(1), 4);
-  EXPECT_EQ(Array.End(2), 6);
-
-}
-
 TEST_F(ArrayTests, Size) {
 
   if (TestComm().Rank() != 0) return;
@@ -2860,8 +2832,8 @@ TEST_F(ArrayTests, Traits) {
   EXPECT_TRUE(ovk::core::ArrayHasRuntimeExtents<array_row>());
   {
     array_row Array({{1,2,3}, {2,4,6}});
-    EXPECT_THAT(ovk::core::ArrayBegin(Array), ElementsAre(1,2,3));
-    EXPECT_THAT(ovk::core::ArrayEnd(Array), ElementsAre(2,4,6));
+    EXPECT_THAT(ovk::core::ArrayExtents(Array).Begin(), ElementsAre(1,2,3));
+    EXPECT_THAT(ovk::core::ArrayExtents(Array).End(), ElementsAre(2,4,6));
     EXPECT_EQ(ovk::core::ArrayData(Array), Array.Data());
   }
 
@@ -2873,8 +2845,8 @@ TEST_F(ArrayTests, Traits) {
   EXPECT_TRUE(ovk::core::ArrayHasRuntimeExtents<array_col>());
   {
     array_col Array({{1,2,3}, {2,4,6}});
-    EXPECT_THAT(ovk::core::ArrayBegin(Array), ElementsAre(1,2,3));
-    EXPECT_THAT(ovk::core::ArrayEnd(Array), ElementsAre(2,4,6));
+    EXPECT_THAT(ovk::core::ArrayExtents(Array).Begin(), ElementsAre(1,2,3));
+    EXPECT_THAT(ovk::core::ArrayExtents(Array).End(), ElementsAre(2,4,6));
     EXPECT_EQ(ovk::core::ArrayData(Array), Array.Data());
   }
 
