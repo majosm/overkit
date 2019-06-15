@@ -68,7 +68,7 @@ TEST_F(IndexerTests, Create) {
 
   // Row major, size
   {
-    indexer_row Indexer({1,2,3});
+    indexer_row Indexer({{1,2,3}});
     EXPECT_THAT(helper_row::GetBegin(Indexer), ElementsAre(0,0,0));
     EXPECT_THAT(helper_row::GetStride(Indexer), ElementsAre(6,3,1));
   }
@@ -89,7 +89,7 @@ TEST_F(IndexerTests, Create) {
 
   // Column major, size
   {
-    indexer_col Indexer({1,2,3});
+    indexer_col Indexer({{1,2,3}});
     EXPECT_THAT(helper_col::GetBegin(Indexer), ElementsAre(0,0,0));
     EXPECT_THAT(helper_col::GetStride(Indexer), ElementsAre(1,1,2));
   }

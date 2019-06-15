@@ -279,11 +279,6 @@ public:
       tuple_element_type,Rank>(0)))
   {}
 
-  constexpr OVK_FORCE_INLINE explicit indexer_base(const tuple_type &Size):
-    Begin_(MakeUniformElem<tuple_element_type,Rank>(0)),
-    Stride_(MakeStride_(core::index_sequence_of_size<Rank>(), Begin_, Size))
-  {}
-
   constexpr OVK_FORCE_INLINE explicit indexer_base(const interval_type &Extents):
     Begin_(Extents.Begin()),
     Stride_(MakeStride_(core::index_sequence_of_size<Rank>(), Extents.Begin(), Extents.End()))
