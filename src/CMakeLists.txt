@@ -63,24 +63,33 @@ if(COVERAGE)
   target_link_libraries(overkit-parallel PUBLIC ${COVERAGE_LINK_FLAGS})
 endif()
 
-#---------------
-# Header target
-#---------------
+#----------------
+# Header targets
+#----------------
 
-set(BUILT_OVERKIT_HEADER ${CMAKE_BINARY_DIR}/include/overkit.h)
-set(OVERKIT_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/overkit.h)
-
-add_custom_command(OUTPUT ${BUILT_OVERKIT_HEADER}
-  MAIN_DEPENDENCY ${OVERKIT_HEADER}
-  COMMAND "${CMAKE_COMMAND}" -E copy "${OVERKIT_HEADER}" "${BUILT_OVERKIT_HEADER}"
+# C++ header
+set(BUILT_OVERKIT_CXX_HEADER ${CMAKE_BINARY_DIR}/include/overkit.hpp)
+set(OVERKIT_CXX_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/overkit.hpp)
+add_custom_command(OUTPUT ${BUILT_OVERKIT_CXX_HEADER}
+  MAIN_DEPENDENCY ${OVERKIT_CXX_HEADER}
+  COMMAND "${CMAKE_COMMAND}" -E copy "${OVERKIT_CXX_HEADER}" "${BUILT_OVERKIT_CXX_HEADER}"
 )
+install(FILES ${BUILT_OVERKIT_CXX_HEADER} DESTINATION include)
+set_source_files_properties(${BUILT_OVERKIT_CXX_HEADER} PROPERTIES GENERATED TRUE)
+add_custom_target(overkit-cxx-header ALL DEPENDS ${BUILT_OVERKIT_CXX_HEADER})
+list(APPEND LOCAL_TARGETS overkit-cxx-header)
 
-install(FILES ${BUILT_OVERKIT_HEADER} DESTINATION include)
-
-set_source_files_properties(${BUILT_OVERKIT_HEADER} PROPERTIES GENERATED TRUE)
-
-add_custom_target(overkit-header ALL DEPENDS ${BUILT_OVERKIT_HEADER})
-list(APPEND LOCAL_TARGETS overkit-header)
+# C header
+set(BUILT_OVERKIT_C_HEADER ${CMAKE_BINARY_DIR}/include/overkit.h)
+set(OVERKIT_C_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/overkit.h)
+add_custom_command(OUTPUT ${BUILT_OVERKIT_C_HEADER}
+  MAIN_DEPENDENCY ${OVERKIT_C_HEADER}
+  COMMAND "${CMAKE_COMMAND}" -E copy "${OVERKIT_C_HEADER}" "${BUILT_OVERKIT_C_HEADER}"
+)
+install(FILES ${BUILT_OVERKIT_C_HEADER} DESTINATION include)
+set_source_files_properties(${BUILT_OVERKIT_C_HEADER} PROPERTIES GENERATED TRUE)
+add_custom_target(overkit-c-header ALL DEPENDS ${BUILT_OVERKIT_C_HEADER})
+list(APPEND LOCAL_TARGETS overkit-c-header)
 
 #================
 # Subdirectories
