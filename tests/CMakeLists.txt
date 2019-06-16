@@ -48,6 +48,7 @@ set(SOURCES
   CommTests.cpp
   ContextTests.cpp
   ElemTests.cpp
+  ExchangerTests.cpp
   ForEachTests.cpp
   HaloTests.cpp
   IDMapTests.cpp
@@ -60,11 +61,13 @@ set(SOURCES
   TupleTests.cpp
   UnitTestMain.cpp
   VectorTests.cpp
+  fixtures/Interface.cpp
 )
 
 set(HEADERS
   MPIPrinter.hpp
   MPITest.hpp
+  fixtures/Interface.hpp
   mocks/MultidimArray.hpp
   mocks/Noncopyable.hpp
   mocks/Nondefaultconstructible.hpp
