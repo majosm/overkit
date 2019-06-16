@@ -147,7 +147,8 @@ void ExchangeTest(int argc, char **argv) {
       ovkSetGridParamName(GridParams, InputGrid->name);
       ovkSetGridParamDimension(GridParams, 2);
       ovkSetGridParamComm(GridParams, InputGrid->comm);
-      ovkSetGridParamSize(GridParams, InputGrid->global_size);
+      const int Zero[OVK_MAX_DIMS] = {0, 0, 0};
+      ovkSetGridParamGlobalRange(GridParams, Zero, InputGrid->global_size);
       ovkSetGridParamLocalRange(GridParams, InputGrid->is, InputGrid->ie);
     }
   }

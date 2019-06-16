@@ -75,25 +75,25 @@ public:
     params &SetDimension(int NumDims);
     MPI_Comm Comm() const { return Comm_; }
     params &SetComm(MPI_Comm Comm);
-    const tuple<int> &Size() const { return Size_; }
-    params &SetSize(const tuple<int> &Size);
-    const tuple<bool> &Periodic() const { return Periodic_; }
+    const cart &Cart() const { return Cart_; }
+    params &SetCart(const cart &Cart);
+    const range &GlobalRange() const { return Cart_.Range(); }
+    params &SetGlobalRange(const range &GlobalRange);
+    const range &LocalRange() const { return LocalRange_; }
+    params &SetLocalRange(const range &LocalRange);
+    const tuple<bool> &Periodic() const { return Cart_.Periodic(); }
     params &SetPeriodic(const tuple<bool> &Periodic);
-    periodic_storage PeriodicStorage() const { return PeriodicStorage_; }
+    periodic_storage PeriodicStorage() const { return Cart_.PeriodicStorage(); }
     params &SetPeriodicStorage(periodic_storage PeriodicStorage);
     const tuple<double> &PeriodicLength() const { return PeriodicLength_; }
     params &SetPeriodicLength(const tuple<double> &PeriodicLength);
     geometry_type GeometryType() const { return GeometryType_; }
     params &SetGeometryType(geometry_type GeometryType);
-    const range &LocalRange() const { return LocalRange_; }
-    params &SetLocalRange(const range &LocalRange);
   private:
     core::string_wrapper Name_ = "Grid";
     int NumDims_ = 2;
     MPI_Comm Comm_ = MPI_COMM_NULL;
-    tuple<int> Size_ = {1,1,1};
-    tuple<bool> Periodic_ = {false, false, false};
-    periodic_storage PeriodicStorage_ = periodic_storage::UNIQUE;
+    cart Cart_ = cart(2, {{1,1,1}}, {false, false, false}, periodic_storage::UNIQUE);
     tuple<double> PeriodicLength_ = {0., 0., 0.};
     geometry_type GeometryType_ = geometry_type::CURVILINEAR;
     range LocalRange_ = {{0,0,0}, {1,1,1}};
@@ -121,8 +121,13 @@ public:
   const comm &Comm() const { return Comm_; }
 
   const cart &Cart() const { return Cart_; }
+
+  const range &GlobalRange() const { return Cart_.Range(); }
+  const range &LocalRange() const { return Partition_->LocalRange(); }
+
   tuple<int> Size() const { return Cart_.Range().Size(); }
   int Size(int iDim) const { return Cart_.Range().Size(iDim); }
+
   const tuple<bool> &Periodic() const { return Cart_.Periodic(); }
   bool Periodic(int iDim) const { return Cart_.Periodic(iDim); }
   periodic_storage PeriodicStorage() const { return Cart_.PeriodicStorage(); }
@@ -130,9 +135,6 @@ public:
   double PeriodicLength(int iDim) const { return PeriodicLength_[iDim]; }
 
   geometry_type GeometryType() const { return GeometryType_; }
-
-  const range &GlobalRange() const { return Cart_.Range(); }
-  const range &LocalRange() const { return Partition_->LocalRange(); }
 
   const core::partition_hash &core_PartitionHash() const { return PartitionHash_; }
   const std::shared_ptr<core::partition> &core_PartitionShared() const { return Partition_; }

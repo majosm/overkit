@@ -51,7 +51,7 @@ grid::grid(std::shared_ptr<context> &&Context, params &&Params):
   grid_base(std::move(Context), std::move(*Params.Name_), Params.Comm_),
   FloatingRefGenerator_(*this),
   NumDims_(Params.NumDims_),
-  Cart_(NumDims_, {Params.Size_}, Params.Periodic_, Params.PeriodicStorage_),
+  Cart_(Params.Cart_),
   PeriodicLength_(Params.PeriodicLength_),
   GeometryType_(Params.GeometryType_),
   PartitionHash_(NumDims_, Comm_, Cart_.Range(), Params.LocalRange_),
@@ -165,9 +165,16 @@ grid::params &grid::params::SetDimension(int NumDims) {
 
   NumDims_ = NumDims;
 
+  range GlobalRange = MakeEmptyRange(NumDims);
+  tuple<bool> Periodic = MakeUniformTuple<bool>(NumDims, false);
+  for (int iDim = 0; iDim < NumDims; ++iDim) {
+    GlobalRange.Begin(iDim) = Cart_.Range().Begin(iDim);
+    GlobalRange.End(iDim) = Cart_.Range().End(iDim);
+    Periodic(iDim) = Cart_.Periodic(iDim);
+  }
+  Cart_ = cart(NumDims, GlobalRange, Periodic, Cart_.PeriodicStorage());
+
   for (int iDim = NumDims_; iDim < MAX_DIMS; ++iDim) {
-    Size_(iDim) = 1;
-    Periodic_(iDim) = false;
     PeriodicLength_(iDim) = 0.;
     LocalRange_.Begin(iDim) = 0;
     LocalRange_.End(iDim) = 1;
@@ -187,19 +194,54 @@ grid::params &grid::params::SetComm(MPI_Comm Comm) {
 
 }
 
-grid::params &grid::params::SetSize(const tuple<int> &Size) {
+grid::params &grid::params::SetCart(const cart &Cart) {
 
+  OVK_DEBUG_ASSERT(Cart.Dimension() == NumDims_, "Cart has incorrect dimension.");
   if (OVK_DEBUG) {
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      OVK_DEBUG_ASSERT(Size(iDim) > 0, "Size must be greater than 0 in each dimension.");
+      OVK_DEBUG_ASSERT(Cart.Range().Begin(iDim) == 0, "Cart range begin must be 0.");
+    }
+    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+      OVK_DEBUG_ASSERT(Cart.Range().Size(iDim) > 0, "Size must be greater than 0 in each "
+        "dimension.");
+    }
+  }
+  OVK_DEBUG_ASSERT(Cart.PeriodicStorage() == periodic_storage::UNIQUE, "Duplicated periodic "
+    "storage is not currently supported.");
+
+  Cart_ = Cart;
+
+  return *this;
+
+}
+
+grid::params &grid::params::SetGlobalRange(const range &GlobalRange) {
+
+  OVK_DEBUG_ASSERT(!GlobalRange.Empty(), "Global range cannot be empty.");
+  if (OVK_DEBUG) {
+    for (int iDim = NumDims_; iDim < MAX_DIMS; ++iDim) {
+      OVK_DEBUG_ASSERT(GlobalRange.Begin(iDim) == 0, "Global range has incorrect dimension.");
+      OVK_DEBUG_ASSERT(GlobalRange.End(iDim) == 1, "Global range has incorrect dimension.");
     }
   }
 
-  Size_ = Size;
+  Cart_.Range() = GlobalRange;
 
-  for (int iDim = NumDims_; iDim < MAX_DIMS; ++iDim) {
-    Size_(iDim) = 1;
+  return *this;
+
+}
+
+grid::params &grid::params::SetLocalRange(const range &LocalRange) {
+
+  OVK_DEBUG_ASSERT(!LocalRange.Empty(), "Local range cannot be empty.");
+  if (OVK_DEBUG) {
+    for (int iDim = NumDims_; iDim < MAX_DIMS; ++iDim) {
+      OVK_DEBUG_ASSERT(LocalRange.Begin(iDim) == 0, "Local range has incorrect dimension.");
+      OVK_DEBUG_ASSERT(LocalRange.End(iDim) == 1, "Local range has incorrect dimension.");
+    }
   }
+
+  LocalRange_ = LocalRange;
 
   return *this;
 
@@ -207,11 +249,13 @@ grid::params &grid::params::SetSize(const tuple<int> &Size) {
 
 grid::params &grid::params::SetPeriodic(const tuple<bool> &Periodic) {
 
-  Periodic_ = Periodic;
-
-  for (int iDim = NumDims_; iDim < MAX_DIMS; ++iDim) {
-    Periodic_(iDim) = false;
+  if (OVK_DEBUG) {
+    for (int iDim = NumDims_; iDim < MAX_DIMS; ++iDim) {
+      OVK_DEBUG_ASSERT(Periodic(iDim) == false, "Periodic has incorrect dimension.");
+    }
   }
+
+  Cart_.Periodic() = Periodic;
 
   return *this;
 
@@ -222,7 +266,7 @@ grid::params &grid::params::SetPeriodicStorage(periodic_storage PeriodicStorage)
   OVK_DEBUG_ASSERT(PeriodicStorage == periodic_storage::UNIQUE, "Duplicated periodic storage "
     "is not currently supported.");
 
-  PeriodicStorage_ = PeriodicStorage;
+  Cart_.PeriodicStorage() = PeriodicStorage;
 
   return *this;
 
@@ -234,13 +278,12 @@ grid::params &grid::params::SetPeriodicLength(const tuple<double> &PeriodicLengt
     for (int iDim = 0; iDim < NumDims_; ++iDim) {
       OVK_DEBUG_ASSERT(PeriodicLength(iDim) >= 0., "Periodic length must be nonnegative.");
     }
+    for (int iDim = NumDims_; iDim < MAX_DIMS; ++iDim) {
+      OVK_DEBUG_ASSERT(PeriodicLength(iDim) == 0., "Periodic length has incorrect dimension.");
+    }
   }
 
   PeriodicLength_ = PeriodicLength;
-
-  for (int iDim = NumDims_; iDim < MAX_DIMS; ++iDim) {
-    PeriodicLength_(iDim) = 0.;
-  }
 
   return *this;
 
@@ -251,19 +294,6 @@ grid::params &grid::params::SetGeometryType(geometry_type GeometryType) {
   OVK_DEBUG_ASSERT(ValidGeometryType(GeometryType), "Invalid geometry type.");
 
   GeometryType_ = GeometryType;
-
-  return *this;
-
-}
-
-grid::params &grid::params::SetLocalRange(const range &LocalRange) {
-
-  LocalRange_ = LocalRange;
-
-  for (int iDim = NumDims_; iDim < MAX_DIMS; ++iDim) {
-    LocalRange_.Begin(iDim) = 0;
-    LocalRange_.End(iDim) = 1;
-  }
 
   return *this;
 
