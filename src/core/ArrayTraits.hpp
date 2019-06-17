@@ -194,9 +194,35 @@ template <typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<ArrayType>())> inter
   return {ArrayBegin(Array), ArrayEnd(Array)};
 }
 
-template <typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<ArrayType>())> long long ArrayCount(
-  const ArrayType &Array) {
-  return interval<long long,ArrayRank<ArrayType>()>(ArraySize(Array)).Count();
+namespace array_traits_internal {
+template <typename ArrayType, int Index, OVK_FUNCTION_REQUIRES(Index == ArrayRank<
+  ArrayType>()-1)> constexpr long long StaticArrayCountHelper() {
+  return array_traits<ArrayType>::template End<Index>() -
+    array_traits<ArrayType>::template Begin<Index>();
+}
+template <typename ArrayType, int Index, OVK_FUNCTION_REQUIRES(Index < ArrayRank<
+  ArrayType>()-1)> constexpr long long StaticArrayCountHelper() {
+  return (array_traits<ArrayType>::template End<Index>() - array_traits<ArrayType>::template
+  Begin<Index>()) * StaticArrayCountHelper<ArrayType, Index+1>();
+}
+template <typename ArrayType, int Index, OVK_FUNCTION_REQUIRES(Index == ArrayRank<
+  ArrayType>()-1)> long long RuntimeArrayCountHelper(const ArrayType &Array) {
+  return array_traits<ArrayType>::template End<Index>(Array) -
+    array_traits<ArrayType>::template Begin<Index>(Array);
+}
+template <typename ArrayType, int Index, OVK_FUNCTION_REQUIRES(Index < ArrayRank<
+  ArrayType>()-1)> long long RuntimeArrayCountHelper(const ArrayType &Array) {
+  return (array_traits<ArrayType>::template End<Index>(Array) - array_traits<ArrayType>::template
+    Begin<Index>(Array)) * RuntimeArrayCountHelper<ArrayType, Index+1>(Array);
+}
+}
+template <typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<ArrayType>() &&
+  ArrayHasStaticExtents<ArrayType>())> constexpr long long ArrayCount(const ArrayType &) {
+  return array_traits_internal::StaticArrayCountHelper<ArrayType, 0>();
+}
+template <typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<ArrayType>() &&
+  ArrayHasRuntimeExtents<ArrayType>())> long long ArrayCount(const ArrayType &Array) {
+  return array_traits_internal::RuntimeArrayCountHelper<ArrayType, 0>(Array);
 }
 
 template <typename ArrayRefType, OVK_FUNCTION_REQUIRES(IsArray<remove_cvref<ArrayRefType>>())> auto
