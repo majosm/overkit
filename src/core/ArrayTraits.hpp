@@ -110,7 +110,7 @@ template <typename T, int Rank, array_layout Layout, OVK_FUNCTION_REQUIRES(!IsAr
 
 template <typename T, typename U, OVK_FUNCTION_REQUIRES(IsArray<T>() && IsArray<U>())>
   constexpr bool ArraysAreSimilar() {
-  return ArrayRank<T>() == ArrayRank<U>() && (ArrayLayout<T>() == 1 || ArrayLayout<T>() ==
+  return ArrayRank<T>() == ArrayRank<U>() && (ArrayRank<T>() == 1 || ArrayLayout<T>() ==
     ArrayLayout<U>());
 }
 template <typename T, typename U, OVK_FUNCTION_REQUIRES(!IsArray<T>() || !IsArray<U>())>
@@ -129,7 +129,7 @@ template <typename ArrayType, std::size_t... Indices> elem<long long,ArrayRank<A
 }
 }
 template <typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<ArrayType>() &&
-  ArrayHasStaticExtents<ArrayType>())> elem<long long,ArrayRank<ArrayType>()> constexpr ArrayBegin(
+  ArrayHasStaticExtents<ArrayType>())> constexpr elem<long long,ArrayRank<ArrayType>()> ArrayBegin(
   const ArrayType &) {
   return array_traits_internal::StaticArrayBeginHelper<ArrayType>(core::index_sequence_of_size<
     ArrayRank<ArrayType>()>());
@@ -152,7 +152,7 @@ template <typename ArrayType, std::size_t... Indices> elem<long long,ArrayRank<A
 }
 }
 template <typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<ArrayType>() &&
-  ArrayHasStaticExtents<ArrayType>())> elem<long long,ArrayRank<ArrayType>()> constexpr ArrayEnd(
+  ArrayHasStaticExtents<ArrayType>())> constexpr elem<long long,ArrayRank<ArrayType>()> ArrayEnd(
   const ArrayType &) {
   return array_traits_internal::StaticArrayEndHelper<ArrayType>(core::index_sequence_of_size<
     ArrayRank<ArrayType>()>());
@@ -177,7 +177,7 @@ template <typename ArrayType, std::size_t... Indices> elem<long long,ArrayRank<A
 }
 }
 template <typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<ArrayType>() &&
-  ArrayHasStaticExtents<ArrayType>())> elem<long long,ArrayRank<ArrayType>()> constexpr ArraySize(
+  ArrayHasStaticExtents<ArrayType>())> constexpr elem<long long,ArrayRank<ArrayType>()> ArraySize(
   const ArrayType &) {
   return array_traits_internal::StaticArraySizeHelper<ArrayType>(core::index_sequence_of_size<
     ArrayRank<ArrayType>()>());
@@ -196,7 +196,7 @@ template <typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<ArrayType>())> inter
 
 template <typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<ArrayType>())> long long ArrayCount(
   const ArrayType &Array) {
-  return interval<long long,ArrayRank<ArrayType>>(ArraySize(Array)).Count();
+  return interval<long long,ArrayRank<ArrayType>()>(ArraySize(Array)).Count();
 }
 
 template <typename ArrayRefType, OVK_FUNCTION_REQUIRES(IsArray<remove_cvref<ArrayRefType>>())> auto
