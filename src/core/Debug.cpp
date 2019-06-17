@@ -19,19 +19,19 @@ extern "C" {
 // Wrapper around ovk::core::DebugExit that can be called from C code
 void ovk_core_DebugExit(const char *File, int Line, const char *Format, ...) {
 
-  va_list ArgList1;
+  std::va_list ArgList1;
   va_start(ArgList1, Format);
 
-  va_list ArgList2;
+  std::va_list ArgList2;
   va_copy(ArgList2, ArgList1);
 
-  int NumChars = vsnprintf(nullptr, 0, Format, ArgList1);
+  int NumChars = std::vsnprintf(nullptr, 0, Format, ArgList1);
 
   ovk::array<char> MessageChars({NumChars+1});
 
   va_end(ArgList1);
 
-  vsnprintf(MessageChars.Data(), MessageChars.Count(), Format, ArgList2);
+  std::vsnprintf(MessageChars.Data(), MessageChars.Count(), Format, ArgList2);
 
   va_end(ArgList2);
 

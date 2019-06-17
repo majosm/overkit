@@ -80,7 +80,7 @@ context::~context() noexcept {
     // May want to move this somewhere else
     std::string ProfileTimesString = Profiler_.WriteProfile();
     if (Comm_.Rank() == 0) {
-      printf("%s", ProfileTimesString.c_str());
+      std::printf("%s", ProfileTimesString.c_str());
     }
 
     Logger_.LogStatus(Comm_.Rank() == 0, 0, "Destroying context...");
@@ -96,7 +96,8 @@ context context::internal_Create(params &&Params) {
     MPI_Initialized(&MPIInitialized);
     // Can't use OVK_DEBUG_ASSERT here because it calls MPI_Abort
     if (!MPIInitialized) {
-      fprintf(stderr, "ERROR: MPI not initialized.\n"); fflush(stderr);
+      std::fprintf(stderr, "ERROR: MPI not initialized.\n");
+      std::fflush(stderr);
       exit(1);
     }
   }

@@ -79,7 +79,7 @@ namespace text_processing_internal {
 template <typename T> void StringPrintAppend(std::string &String, const std::string &Format,
   const T &Arg) {
   array<char> Buffer({1});
-  int WriteSize = snprintf(Buffer.Data(), 1, Format.c_str(), Arg);
+  int WriteSize = std::snprintf(Buffer.Data(), 1, Format.c_str(), Arg);
   Buffer.Resize({WriteSize+1});
   std::sprintf(Buffer.Data(), Format.c_str(), Arg);
   String.append(Buffer.LinearBegin(), Buffer.LinearBegin()+WriteSize);
@@ -89,7 +89,7 @@ template <typename T> void StringPrintAppend(std::string &String, const std::str
 inline void StringPrintAppend(std::string &String, const std::string &Format, const std::string
   &Arg) {
   array<char> Buffer({1});
-  int WriteSize = snprintf(Buffer.Data(), 1, Format.c_str(), Arg.c_str());
+  int WriteSize = std::snprintf(Buffer.Data(), 1, Format.c_str(), Arg.c_str());
   Buffer.Resize({WriteSize+1});
   std::sprintf(Buffer.Data(), Format.c_str(), Arg.c_str());
   String.append(Buffer.LinearBegin(), Buffer.LinearBegin()+WriteSize);

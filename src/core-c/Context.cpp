@@ -20,7 +20,8 @@ void ovkCreateContext(ovk_context **Context, ovk_context_params **Params, ovk_er
     MPI_Initialized(&MPIInitialized);
     // Can't use OVK_DEBUG_ASSERT here because it calls MPI_Abort
     if (!MPIInitialized) {
-      fprintf(stderr, "ERROR: MPI not initialized.\n"); fflush(stderr);
+      std::fprintf(stderr, "ERROR: MPI not initialized.\n");
+      std::fflush(stderr);
       exit(1);
     }
   }

@@ -11,8 +11,8 @@ template <typename... Ts> void logger::LogError(bool WriteCondition, const std::
     std::string Prefix = "ovk :: [!] ERROR: ";
     std::string Message = StringPrint(Format, Args...);
     Message = StringReplace(Message, "@rank@", FormatNumber(Rank_));
-    fprintf(stderr, "%s%s\n", Prefix.c_str(), Message.c_str());
-    fflush(stderr);
+    std::fprintf(stderr, "%s%s\n", Prefix.c_str(), Message.c_str());
+    std::fflush(stderr);
   }
 
 }
@@ -24,8 +24,8 @@ template <typename... Ts> void logger::LogWarning(bool WriteCondition, const std
     std::string Prefix = "ovk :: [!] WARNING: ";
     std::string Message = StringPrint(Format, Args...);
     Message = StringReplace(Message, "@rank@", FormatNumber(Rank_));
-    fprintf(stderr, "%s%s\n", Prefix.c_str(), Message.c_str());
-    fflush(stderr);
+    std::fprintf(stderr, "%s%s\n", Prefix.c_str(), Message.c_str());
+    std::fflush(stderr);
   }
 
 }
@@ -39,8 +39,8 @@ template <typename... Ts> void logger::LogStatus(bool WriteCondition, int Increm
     if (IncrementLevel > 0) Prefix += "* ";
     std::string Message = StringPrint(Format, Args...);
     Message = StringReplace(Message, "@rank@", FormatNumber(Rank_));
-    fprintf(stdout, "%s%s\n", Prefix.c_str(), Message.c_str());
-    fflush(stdout);
+    std::fprintf(stdout, "%s%s\n", Prefix.c_str(), Message.c_str());
+    std::fflush(stdout);
   }
 
 }
@@ -54,8 +54,8 @@ template <typename... Ts> void logger::LogDebug(bool WriteCondition, int Increme
     if (IncrementLevel > 0) Prefix += "* ";
     std::string Message = StringPrint(Format, Args...);
     Message = StringReplace(Message, "@rank@", FormatNumber(Rank_));
-    fprintf(stdout, "%s%s\n", Prefix.c_str(), Message.c_str());
-    fflush(stdout);
+    std::fprintf(stdout, "%s%s\n", Prefix.c_str(), Message.c_str());
+    std::fflush(stdout);
   }
 
 }

@@ -29,8 +29,8 @@ template <typename... Ts> void DebugExit(const char *File, int Line, const std::
   std::string Message = StringPrint(Format, Args...);
   Message = StringReplace(Message, "@rank@", FormatNumber(Rank));
 
-  fprintf(stderr, "%s%s\n", Prefix.c_str(), Message.c_str());
-  fflush(stderr);
+  std::fprintf(stderr, "%s%s\n", Prefix.c_str(), Message.c_str());
+  std::fflush(stderr);
 
   MPI_Abort(MPI_COMM_WORLD, 1);
 

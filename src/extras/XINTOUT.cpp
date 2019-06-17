@@ -653,7 +653,7 @@ bool DetectFormat(MPI_File HOFile, endian &Endian, xintout_format &Format, core:
   }
 
   int HeaderSize;
-  memcpy(&HeaderSize, InitialBytes, sizeof(int));
+  std::memcpy(&HeaderSize, InitialBytes, sizeof(int));
   if (Endian != MachineEndian()) {
     SwapEndian(&HeaderSize, sizeof(int), 1);
   }
