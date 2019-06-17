@@ -96,9 +96,9 @@ template <typename ArrayType, typename T, int Rank, array_layout Layout, OVK_FUN
 }
 
 template <typename T, int Rank, array_layout Layout, typename SourceArrayRefType,
-  OVK_FUNCTION_REQUIRES(!std::is_const<T>::value && core::IsArray<typename std::decay<
-  SourceArrayRefType>::type>() && !core::IsIterator<typename std::decay<SourceArrayRefType>::type>()
-  && core::ArrayHasFootprint<typename std::decay<SourceArrayRefType>::type, Rank, Layout>() &&
+  OVK_FUNCTION_REQUIRES(!std::is_const<T>::value && core::IsArray<core::remove_cvref<
+  SourceArrayRefType>>() && !core::IsIterator<typename std::decay<SourceArrayRefType>::type>()
+  && core::ArrayHasFootprint<core::remove_cvref<SourceArrayRefType>, Rank, Layout>() &&
   std::is_convertible<core::array_access_type<SourceArrayRefType &&>, T>::value)> void ArrayFill(
   array_view<T, Rank, Layout> View, SourceArrayRefType &&SourceArray) {
 
@@ -107,9 +107,9 @@ template <typename T, int Rank, array_layout Layout, typename SourceArrayRefType
 }
 
 template <typename ArrayType, typename SourceArrayRefType, OVK_FUNCTION_REQUIRES(core::IsArray<
-  ArrayType>() && core::IsArray<typename std::decay<SourceArrayRefType>::value>() && !core::
-  IsIterator<typename std::decay<SourceArrayRefType>::type>() && core::ArraysAreSimilar<ArrayType,
-  typename std::decay<SourceArrayRefType>::type>() && std::is_convertible<core::array_access_type<
+  ArrayType>() && core::IsArray<core::remove_cvref<SourceArrayRefType>>() && !core::IsIterator<
+  typename std::decay<SourceArrayRefType>::type>() && core::ArraysAreSimilar<ArrayType,
+  core::remove_cvref<SourceArrayRefType>>() && std::is_convertible<core::array_access_type<
   SourceArrayRefType &&>, core::array_value_type<ArrayType>>::value)> void ArrayFill(ArrayType
   &Array, SourceArrayRefType &&SourceArray) {
 
