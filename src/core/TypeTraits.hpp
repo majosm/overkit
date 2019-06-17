@@ -33,7 +33,7 @@ template <typename T, typename U> struct helper {
 template <typename T, typename U> using mimic_cvref = typename mimic_cvref_internal::helper<T,
 U>::type;
 
-// Check if a function can be called with a specified set of argument types
+// Check if a type can be called with a specified set of argument types
 namespace is_callable_with_internal {
 template <typename FRef, typename... Args> constexpr std::true_type Test(decltype(
   std::declval<FRef>()(std::declval<Args>()...)) *) { return {}; }
@@ -41,6 +41,20 @@ template <typename FRef, typename... Args> constexpr std::false_type Test(...) {
 }
 template <typename FRef, typename... Args> constexpr bool IsCallableWith() {
   return decltype(is_callable_with_internal::Test<FRef, Args...>(nullptr))::value;
+}
+
+// Check if a type can be called as if it was a function with a given interface
+namespace is_callable_as_internal {
+template <typename Result> constexpr int ImplicitConvertToResult(const Result &) { return 0; }
+template <typename Signature> struct helper;
+template <typename Result, typename... Args> struct helper<Result(Args...)> {
+  template <typename FRef> static constexpr std::true_type Test(decltype(ImplicitConvertToResult<
+    Result>(std::declval<FRef>()(std::declval<Args>()...))) *) { return {}; }
+  template <typename FRef> static constexpr std::false_type Test(...) { return {}; }
+};
+}
+template <typename FRef, typename Signature> constexpr bool IsCallableAs() {
+  return decltype(is_callable_as_internal::helper<Signature>::template Test<FRef>(nullptr))::value;
 }
 
 // Check if a list of arguments to be forwarded to a type's constructor is an lvalue reference to
