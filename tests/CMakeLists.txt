@@ -40,6 +40,7 @@ set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_SAVED})
 #--------------
 
 set(SOURCES
+  ArrayOpsTests.cpp
   ArrayTests.cpp
   ArrayTraitsTests.cpp
   ArrayViewTests.cpp

@@ -122,6 +122,332 @@ template <typename T, int Rank, array_layout Layout, typename SourceArrayRefType
 
 }
 
+template <typename ArrayType, OVK_FUNCTION_REQUIRES(core::IsArray<ArrayType>() &&
+  std::is_convertible<core::array_access_type<ArrayType>, bool>::value)> bool ArrayNone(const
+  ArrayType &Array) {
+
+  long long NumValues = core::ArrayCount(Array);
+
+  bool Result = true;
+
+  for (long long i = 0; i < NumValues; ++i) {
+    Result = Result && !Array[i];
+  }
+
+  return Result;
+
+}
+
+template <typename T, int Rank, array_layout Layout, OVK_FUNCTION_REQUIRES(std::is_convertible<T,
+  bool>::value)> bool ArrayNone(const array_view<T, Rank, Layout> &View) {
+
+  bool Result = true;
+
+  for (auto &Value : View) {
+    Result = Result && !Value;
+  }
+
+  return Result;
+
+}
+
+template <typename ArrayType, typename F, OVK_FUNCTION_REQUIRES(core::IsArray<ArrayType>() &&
+  core::IsCallableAs<F, bool(core::array_access_type<const ArrayType &>)>())> bool ArrayNone(const
+  ArrayType &Array, F Condition) {
+
+  long long NumValues = core::ArrayCount(Array);
+
+  bool Result = true;
+
+  for (long long i = 0; i < NumValues; ++i) {
+    Result = Result && !Condition(Array[i]);
+  }
+
+  return Result;
+
+}
+
+template <typename T, int Rank, array_layout Layout, typename F, OVK_FUNCTION_REQUIRES(
+  core::IsCallableAs<F, bool(T &)>())> bool ArrayNone(const array_view<T, Rank, Layout> &View, F
+  Condition) {
+
+  bool Result = true;
+
+  for (auto &Value : View) {
+    Result = Result && !Condition(Value);
+  }
+
+  return Result;
+
+}
+
+template <typename ArrayType, OVK_FUNCTION_REQUIRES(core::IsArray<ArrayType>() &&
+  std::is_convertible<core::array_access_type<ArrayType>, bool>::value)> bool ArrayAny(const
+  ArrayType &Array) {
+
+  long long NumValues = core::ArrayCount(Array);
+
+  bool Result = false;
+
+  for (long long i = 0; i < NumValues; ++i) {
+    Result = Result || Array[i];
+  }
+
+  return Result;
+
+}
+
+template <typename T, int Rank, array_layout Layout, OVK_FUNCTION_REQUIRES(std::is_convertible<T,
+  bool>::value)> bool ArrayAny(const array_view<T, Rank, Layout> &View) {
+
+  bool Result = false;
+
+  for (auto &Value : View) {
+    Result = Result || Value;
+  }
+
+  return Result;
+
+}
+
+template <typename ArrayType, typename F, OVK_FUNCTION_REQUIRES(core::IsArray<ArrayType>() &&
+  core::IsCallableAs<F, bool(core::array_access_type<const ArrayType &>)>())> bool ArrayAny(const
+  ArrayType &Array, F Condition) {
+
+  long long NumValues = core::ArrayCount(Array);
+
+  bool Result = false;
+
+  for (long long i = 0; i < NumValues; ++i) {
+    Result = Result || Condition(Array[i]);
+  }
+
+  return Result;
+
+}
+
+template <typename T, int Rank, array_layout Layout, typename F, OVK_FUNCTION_REQUIRES(
+  core::IsCallableAs<F, bool(T &)>())> bool ArrayAny(const array_view<T, Rank, Layout> &View, F
+  Condition) {
+
+  bool Result = false;
+
+  for (auto &Value : View) {
+    Result = Result || Condition(Value);
+  }
+
+  return Result;
+
+}
+
+template <typename ArrayType, OVK_FUNCTION_REQUIRES(core::IsArray<ArrayType>() &&
+  std::is_convertible<core::array_access_type<ArrayType>, bool>::value)> bool ArrayNotAll(const
+  ArrayType &Array) {
+
+  long long NumValues = core::ArrayCount(Array);
+
+  bool Result = false;
+
+  for (long long i = 0; i < NumValues; ++i) {
+    Result = Result || !Array[i];
+  }
+
+  return Result;
+
+}
+
+template <typename T, int Rank, array_layout Layout, OVK_FUNCTION_REQUIRES(std::is_convertible<T,
+  bool>::value)> bool ArrayNotAll(const array_view<T, Rank, Layout> &View) {
+
+  bool Result = false;
+
+  for (auto &Value : View) {
+    Result = Result || !Value;
+  }
+
+  return Result;
+
+}
+
+template <typename ArrayType, typename F, OVK_FUNCTION_REQUIRES(core::IsArray<ArrayType>() &&
+  core::IsCallableAs<F, bool(core::array_access_type<const ArrayType &>)>())> bool ArrayNotAll(const
+  ArrayType &Array, F Condition) {
+
+  long long NumValues = core::ArrayCount(Array);
+
+  bool Result = false;
+
+  for (long long i = 0; i < NumValues; ++i) {
+    Result = Result || !Condition(Array[i]);
+  }
+
+  return Result;
+
+}
+
+template <typename T, int Rank, array_layout Layout, typename F, OVK_FUNCTION_REQUIRES(
+  core::IsCallableAs<F, bool(T &)>())> bool ArrayNotAll(const array_view<T, Rank, Layout> &View, F
+  Condition) {
+
+  bool Result = false;
+
+  for (auto &Value : View) {
+    Result = Result || !Condition(Value);
+  }
+
+  return Result;
+
+}
+
+template <typename ArrayType, OVK_FUNCTION_REQUIRES(core::IsArray<ArrayType>() &&
+  std::is_convertible<core::array_access_type<ArrayType>, bool>::value)> bool ArrayAll(const
+  ArrayType &Array) {
+
+  long long NumValues = core::ArrayCount(Array);
+
+  bool Result = true;
+
+  for (long long i = 0; i < NumValues; ++i) {
+    Result = Result && Array[i];
+  }
+
+  return Result;
+
+}
+
+template <typename T, int Rank, array_layout Layout, OVK_FUNCTION_REQUIRES(std::is_convertible<T,
+  bool>::value)> bool ArrayAll(const array_view<T, Rank, Layout> &View) {
+
+  bool Result = true;
+
+  for (auto &Value : View) {
+    Result = Result && Value;
+  }
+
+  return Result;
+
+}
+
+template <typename ArrayType, typename F, OVK_FUNCTION_REQUIRES(core::IsArray<ArrayType>() &&
+  core::IsCallableAs<F, bool(core::array_access_type<const ArrayType &>)>())> bool ArrayAll(const
+  ArrayType &Array, F Condition) {
+
+  long long NumValues = core::ArrayCount(Array);
+
+  bool Result = true;
+
+  for (long long i = 0; i < NumValues; ++i) {
+    Result = Result && Condition(Array[i]);
+  }
+
+  return Result;
+
+}
+
+template <typename T, int Rank, array_layout Layout, typename F, OVK_FUNCTION_REQUIRES(
+  core::IsCallableAs<F, bool(T &)>())> bool ArrayAll(const array_view<T, Rank, Layout> &View, F
+  Condition) {
+
+  bool Result = true;
+
+  for (auto &Value : View) {
+    Result = Result && Condition(Value);
+  }
+
+  return Result;
+
+}
+
+template <typename ArrayType, OVK_FUNCTION_REQUIRES(core::IsArray<ArrayType>())>
+  core::array_value_type<ArrayType> ArrayMin(const ArrayType &Array) {
+
+  using value_type = core::array_value_type<ArrayType>;
+
+  long long NumValues = core::ArrayCount(Array);
+
+  value_type Result = Array[0];
+
+  for (long long i = 1; i < NumValues; ++i) {
+    Result = Min(Result, Array[i]);
+  }
+
+  return Result;
+
+}
+
+template <typename T, int Rank, array_layout Layout> T ArrayMin(const array_view<T, Rank, Layout>
+  &View) {
+
+  T Result = View[0];
+
+  for (long long i = 1; i < View.Count(); ++i) {
+    Result = Min(Result, View[i]);
+  }
+
+  return Result;
+
+}
+
+template <typename ArrayType, OVK_FUNCTION_REQUIRES(core::IsArray<ArrayType>())>
+  core::array_value_type<ArrayType> ArrayMax(const ArrayType &Array) {
+
+  using value_type = core::array_value_type<ArrayType>;
+
+  long long NumValues = core::ArrayCount(Array);
+
+  value_type Result = Array[0];
+
+  for (long long i = 1; i < NumValues; ++i) {
+    Result = Max(Result, Array[i]);
+  }
+
+  return Result;
+
+}
+
+template <typename T, int Rank, array_layout Layout> T ArrayMax(const array_view<T, Rank, Layout>
+  &View) {
+
+  T Result = View[0];
+
+  for (long long i = 1; i < View.Count(); ++i) {
+    Result = Max(Result, View[i]);
+  }
+
+  return Result;
+
+}
+
+template <typename ArrayType, OVK_FUNCTION_REQUIRES(core::IsArray<ArrayType>())>
+  core::array_value_type<ArrayType> ArraySum(const ArrayType &Array) {
+
+  using value_type = core::array_value_type<ArrayType>;
+
+  long long NumValues = core::ArrayCount(Array);
+
+  value_type Result = Array[0];
+
+  for (long long i = 1; i < NumValues; ++i) {
+    Result += Array[i];
+  }
+
+  return Result;
+
+}
+
+template <typename T, int Rank, array_layout Layout> T ArraySum(const array_view<T, Rank, Layout>
+  &View) {
+
+  T Result = View[0];
+
+  for (long long i = 1; i < View.Count(); ++i) {
+    Result += View[i];
+  }
+
+  return Result;
+
+}
+
 }
 
 #endif

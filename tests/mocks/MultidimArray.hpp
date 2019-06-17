@@ -28,7 +28,7 @@ public:
   long long End(int iDim) const { return Extents_.End(iDim); }
   const T &operator[](long long l) const { return Values_[l]; }
   T &operator[](long long l) { return Values_[l]; }
-private:
+protected:
   std::vector<T> Values_;
   ovk::interval<long long,3> Extents_;
 };
@@ -36,12 +36,36 @@ private:
 
 // Implementations are the same, just treated differently by array_traits
 template <typename T> class multidim_array_row : public multidim_array_internal::base<T> {
+protected:
+  using parent_type = multidim_array_internal::base<T>;
+  using parent_type::Values_;
+  using parent_type::Extents_;
 public:
-  using multidim_array_internal::base<T>::base;
+  using parent_type::parent_type;
+  const T &operator()(int i, int j, int k) const {
+    return Values_[Extents_.Size(0)*(Extents_.Size(1)*(i-Extents_.Begin(0)) + (j-Extents_.Begin(1)))
+      + (k-Extents_.Begin(2))];
+  }
+  T &operator()(int i, int j, int k) {
+    return Values_[Extents_.Size(0)*(Extents_.Size(1)*(i-Extents_.Begin(0)) + (j-Extents_.Begin(1)))
+      + (k-Extents_.Begin(2))];
+  }
 };
 template <typename T> class multidim_array_col : public multidim_array_internal::base<T> {
+protected:
+  using parent_type = multidim_array_internal::base<T>;
+  using parent_type::Values_;
+  using parent_type::Extents_;
 public:
-  using multidim_array_internal::base<T>::base;
+  using parent_type::parent_type;
+  const T &operator()(int i, int j, int k) const {
+    return Values_[(i-Extents_.Begin(0)) + Extents_.Size(0)*((j-Extents_.Begin(1)) +
+      Extents_.Size(1)*(k-Extents_.Begin(2)))];
+  }
+  T &operator()(int i, int j, int k) {
+    return Values_[(i-Extents_.Begin(0)) + Extents_.Size(0)*((j-Extents_.Begin(1)) +
+      Extents_.Size(1)*(k-Extents_.Begin(2)))];
+  }
 };
 
 }
