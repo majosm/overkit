@@ -431,13 +431,13 @@ public:
   {}
 
   template <typename U, OVK_FUNCTION_REQUIRES(std::is_convertible<typename std::remove_const<U>::
-    type, value_type>::value)> array(array_view<U, Rank, Layout> View):
+    type, value_type>::value)> array(const array_view<U, Rank, Layout> &View):
     parent_type(View.Extents(), View.LinearBegin())
   {}
 
   template <typename U, OVK_FUNCTION_REQUIRES(std::is_convertible<typename std::remove_const<U>::
-    type, value_type>::value)> array(const interval_type &Extents, array_view<U, Rank, Layout>
-    View):
+    type, value_type>::value)> array(const interval_type &Extents, const array_view<U, Rank, Layout>
+    &View):
     parent_type(Extents, View.LinearBegin())
   {}
 
@@ -478,7 +478,7 @@ public:
   array &operator=(array &&Other) noexcept = default;
 
   template <typename U, OVK_FUNCTION_REQUIRES(std::is_convertible<typename std::remove_const<U>::
-    type, value_type>::value)> array &operator=(array_view<U, Rank, Layout> View) {
+    type, value_type>::value)> array &operator=(const array_view<U, Rank, Layout> &View) {
     parent_type::Assign(View.Extents(), View.LinearBegin());
     return *this;
   }
@@ -512,14 +512,14 @@ public:
   }
 
   template <typename U, OVK_FUNCTION_REQUIRES(std::is_convertible<typename std::remove_const<U>::
-    type, value_type>::value)> array &Assign(array_view<U, Rank, Layout> View) {
+    type, value_type>::value)> array &Assign(const array_view<U, Rank, Layout> &View) {
     parent_type::Assign(View.Extents(), View.LinearBegin());
     return *this;
   }
 
   template <typename U, OVK_FUNCTION_REQUIRES(std::is_convertible<typename std::remove_const<U>::
-    type, value_type>::value)> array &Assign(const interval_type &Extents, array_view<U, Rank,
-    Layout> View) {
+    type, value_type>::value)> array &Assign(const interval_type &Extents, const array_view<U, Rank,
+    Layout> &View) {
     parent_type::Assign(Extents, View.LinearBegin());
     return *this;
   }
@@ -604,7 +604,7 @@ public:
   }
 
   template <typename U, OVK_FUNCTION_REQUIRES(std::is_convertible<typename std::remove_const<U>::
-    type, value_type>::value)> array &Fill(array_view<U, Rank, Layout> View) {
+    type, value_type>::value)> array &Fill(const array_view<U, Rank, Layout> &View) {
     View_.Fill(View);
     return *this;
   }

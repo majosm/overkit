@@ -158,8 +158,8 @@ public:
   }
 
   template <typename U, OVK_FUNCTION_REQUIRES(std::is_convertible<typename std::remove_const<U
-    >::type, value_type>::value)> const array_view_base_2 &Fill(array_view<U, Rank, Layout>
-    SourceView) const {
+    >::type, value_type>::value)> const array_view_base_2 &Fill(const array_view<U, Rank, Layout>
+    &SourceView) const {
     for (index_type i = 0; i < NumValues_; ++i) {
       Ptr_[i] = SourceView[i];
     }

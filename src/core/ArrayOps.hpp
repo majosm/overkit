@@ -16,7 +16,7 @@
 namespace ovk {
 
 template <typename T, int Rank, array_layout Layout, OVK_FUNCTION_REQUIRES(!std::is_const<T>::value
-  )> void ArrayFill(array_view<T, Rank, Layout> View, const T &Value) {
+  )> void ArrayFill(const array_view<T, Rank, Layout> &View, const T &Value) {
 
   View.Fill(Value);
 
@@ -34,7 +34,7 @@ template <typename ArrayType, OVK_FUNCTION_REQUIRES(core::IsArray<ArrayType>())>
 }
 
 template <typename T, int Rank, array_layout Layout, OVK_FUNCTION_REQUIRES(!std::is_const<T>::value
-  )> void ArrayFill(array_view<T, Rank, Layout> View, std::initializer_list<T> ValuesList) {
+  )> void ArrayFill(const array_view<T, Rank, Layout> &View, std::initializer_list<T> ValuesList) {
 
   View.Fill(ValuesList);
 
@@ -54,8 +54,8 @@ template <typename ArrayType, OVK_FUNCTION_REQUIRES(core::IsArray<ArrayType>())>
 
 template <typename T, int Rank, array_layout Layout, typename IterType, OVK_FUNCTION_REQUIRES(
   !std::is_const<T>::value && core::IsInputIterator<IterType>() && std::is_convertible<
-  core::iterator_reference_type<IterType>, T>::value)> void ArrayFill(array_view<T, Rank, Layout>
-  View, IterType First) {
+  core::iterator_reference_type<IterType>, T>::value)> void ArrayFill(const array_view<T, Rank,
+  Layout> &View, IterType First) {
 
   View.Fill(First);
 
@@ -76,7 +76,8 @@ template <typename ArrayType, typename IterType, OVK_FUNCTION_REQUIRES(core::IsA
 
 template <typename T, typename U, int Rank, array_layout Layout, OVK_FUNCTION_REQUIRES(
   !std::is_const<T>::value && std::is_convertible<typename std::remove_const<U>::type, T>::value)>
-  void ArrayFill(array_view<T, Rank, Layout> View, array_view<U, Rank, Layout> SourceView) {
+  void ArrayFill(const array_view<T, Rank, Layout> &View, const array_view<U, Rank, Layout>
+  &SourceView) {
 
   View.Fill(SourceView);
 
@@ -85,7 +86,7 @@ template <typename T, typename U, int Rank, array_layout Layout, OVK_FUNCTION_RE
 template <typename ArrayType, typename T, int Rank, array_layout Layout, OVK_FUNCTION_REQUIRES(
   core::IsArray<ArrayType>() && core::ArrayHasFootprint<ArrayType, Rank, Layout>() &&
   std::is_convertible<typename std::remove_const<T>::type, core::array_value_type<ArrayType>>::
-  value)> void ArrayFill(ArrayType &Array, array_view<T, Rank, Layout> SourceView) {
+  value)> void ArrayFill(ArrayType &Array, const array_view<T, Rank, Layout> &SourceView) {
 
   long long NumValues = core::ArrayCount(Array);
 
@@ -100,7 +101,7 @@ template <typename T, int Rank, array_layout Layout, typename SourceArrayRefType
   SourceArrayRefType>>() && !core::IsIterator<typename std::decay<SourceArrayRefType>::type>()
   && core::ArrayHasFootprint<core::remove_cvref<SourceArrayRefType>, Rank, Layout>() &&
   std::is_convertible<core::array_access_type<SourceArrayRefType &&>, T>::value)> void ArrayFill(
-  array_view<T, Rank, Layout> View, SourceArrayRefType &&SourceArray) {
+  const array_view<T, Rank, Layout> &View, SourceArrayRefType &&SourceArray) {
 
   View.Fill(std::forward<SourceArrayRefType>(SourceArray));
 
