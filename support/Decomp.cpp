@@ -3,18 +3,17 @@
 
 #include "support/Decomp.hpp"
 
-#include <ovk/core/Cart.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Indexer.hpp>
 #include <ovk/core/Range.hpp>
 #include <ovk/core/Tuple.hpp>
 
+#include <mpi.h>
+
 namespace support {
 
-ovk::range CartesianDecomp(const ovk::cart &Cart, ovk::comm_view Comm, const ovk::tuple<int>
-  &CartDims) {
-
-  int NumDims = Cart.Dimension();
+ovk::range CartesianDecomp(int NumDims, const ovk::range &GlobalRange, ovk::comm_view Comm, const
+  ovk::tuple<int> &CartDims) {
 
   ovk::indexer<int, int, OVK_MAX_DIMS> Indexer(CartDims);
   ovk::tuple<int> CartCoords = Indexer.ToTuple(Comm.Rank());
@@ -22,9 +21,9 @@ ovk::range CartesianDecomp(const ovk::cart &Cart, ovk::comm_view Comm, const ovk
   ovk::range LocalRange = ovk::MakeEmptyRange(NumDims);
 
   for (int iDim = 0; iDim < NumDims; ++iDim) {
-    int NumPerRank = Cart.Range().Size(iDim)/CartDims[iDim];
-    int Remainder = Cart.Range().Size(iDim) - CartDims[iDim]*NumPerRank;
-    int Begin = Cart.Range().Begin(iDim);
+    int NumPerRank = GlobalRange.Size(iDim)/CartDims[iDim];
+    int Remainder = GlobalRange.Size(iDim) - CartDims[iDim]*NumPerRank;
+    int Begin = GlobalRange.Begin(iDim);
     int Coord = CartCoords[iDim];
     LocalRange.Begin(iDim) = Begin + NumPerRank*Coord + std::min(Remainder, Coord);
     LocalRange.End(iDim) = Begin + NumPerRank*(Coord+1) + std::min(Remainder, Coord+1);
@@ -34,9 +33,7 @@ ovk::range CartesianDecomp(const ovk::cart &Cart, ovk::comm_view Comm, const ovk
 
 }
 
-ovk::range TriangularDecomp(const ovk::cart &Cart, ovk::comm_view Comm) {
-
-  int NumDims = Cart.Dimension();
+ovk::range TriangularDecomp(int NumDims, const ovk::range &GlobalRange, ovk::comm_view Comm) {
 
   auto CountProcs = [NumDims](int NumPlanes) -> int {
     if (NumDims == 2) {
@@ -77,9 +74,9 @@ ovk::range TriangularDecomp(const ovk::cart &Cart, ovk::comm_view Comm) {
   ovk::range LocalRange = ovk::MakeEmptyRange(NumDims);
 
   for (int iDim = 0; iDim < NumDims; ++iDim) {
-    int NumPerRank = Cart.Range().Size(iDim)/TriangleDims[iDim];
-    int Remainder = Cart.Range().Size(iDim) - TriangleDims[iDim]*NumPerRank;
-    int Begin = Cart.Range().Begin(iDim);
+    int NumPerRank = GlobalRange.Size(iDim)/TriangleDims[iDim];
+    int Remainder = GlobalRange.Size(iDim) - TriangleDims[iDim]*NumPerRank;
+    int Begin = GlobalRange.Begin(iDim);
     int Coord = TriangleCoords[iDim];
     LocalRange.Begin(iDim) = Begin + NumPerRank*Coord + std::min(Remainder, Coord);
     LocalRange.End(iDim) = Begin + NumPerRank*(Coord+1) + std::min(Remainder, Coord+1);

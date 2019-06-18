@@ -4,7 +4,6 @@
 #ifndef OVK_SUPPORT_DECOMP_HPP_LOADED
 #define OVK_SUPPORT_DECOMP_HPP_LOADED
 
-#include <ovk/core/Cart.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Range.hpp>
 #include <ovk/core/Tuple.hpp>
@@ -13,9 +12,9 @@
 
 namespace support {
 
-ovk::range CartesianDecomp(const ovk::cart &Cart, ovk::comm_view Comm, const ovk::tuple<int>
-  &CartDims);
-ovk::range TriangularDecomp(const ovk::cart &Cart, ovk::comm_view Comm);
+ovk::range CartesianDecomp(int NumDims, const ovk::range &GlobalRange, ovk::comm_view Comm,
+  const ovk::tuple<int> &CartDims);
+ovk::range TriangularDecomp(int NumDims, const ovk::range &GlobalRange, ovk::comm_view Comm);
 
 }
 
