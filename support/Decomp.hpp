@@ -12,8 +12,7 @@
 
 namespace support {
 
-ovk::range CartesianDecomp(int NumDims, const ovk::range &GlobalRange, ovk::comm_view Comm,
-  const ovk::tuple<int> &CartDims);
+ovk::range CartesianDecomp(int NumDims, const ovk::range &GlobalRange, ovk::comm_view CartComm);
 ovk::range TriangularDecomp(int NumDims, const ovk::range &GlobalRange, ovk::comm_view Comm);
 
 }

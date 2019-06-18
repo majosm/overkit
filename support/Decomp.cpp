@@ -4,19 +4,22 @@
 #include "support/Decomp.hpp"
 
 #include <ovk/core/Comm.hpp>
+#include <ovk/core/Debug.hpp>
 #include <ovk/core/Indexer.hpp>
 #include <ovk/core/Range.hpp>
+#include <ovk/core/ScalarOps.hpp>
 #include <ovk/core/Tuple.hpp>
 
 #include <mpi.h>
 
 namespace support {
 
-ovk::range CartesianDecomp(int NumDims, const ovk::range &GlobalRange, ovk::comm_view Comm, const
-  ovk::tuple<int> &CartDims) {
+ovk::range CartesianDecomp(int NumDims, const ovk::range &GlobalRange, ovk::comm_view CartComm) {
 
-  ovk::indexer<int, int, OVK_MAX_DIMS> Indexer(CartDims);
-  ovk::tuple<int> CartCoords = Indexer.ToTuple(Comm.Rank());
+  OVK_DEBUG_ASSERT(ovk::IsCartComm(CartComm), "Communicator is not Cartesian.");
+
+  ovk::tuple<int> CartDims = ovk::GetCartCommDims(CartComm);
+  ovk::tuple<int> CartCoords = ovk::GetCartCommCoords(CartComm);
 
   ovk::range LocalRange = ovk::MakeEmptyRange(NumDims);
 
@@ -25,8 +28,8 @@ ovk::range CartesianDecomp(int NumDims, const ovk::range &GlobalRange, ovk::comm
     int Remainder = GlobalRange.Size(iDim) - CartDims[iDim]*NumPerRank;
     int Begin = GlobalRange.Begin(iDim);
     int Coord = CartCoords[iDim];
-    LocalRange.Begin(iDim) = Begin + NumPerRank*Coord + std::min(Remainder, Coord);
-    LocalRange.End(iDim) = Begin + NumPerRank*(Coord+1) + std::min(Remainder, Coord+1);
+    LocalRange.Begin(iDim) = Begin + NumPerRank*Coord + ovk::Min(Remainder, Coord);
+    LocalRange.End(iDim) = Begin + NumPerRank*(Coord+1) + ovk::Min(Remainder, Coord+1);
   }
 
   return LocalRange;
@@ -78,8 +81,8 @@ ovk::range TriangularDecomp(int NumDims, const ovk::range &GlobalRange, ovk::com
     int Remainder = GlobalRange.Size(iDim) - TriangleDims[iDim]*NumPerRank;
     int Begin = GlobalRange.Begin(iDim);
     int Coord = TriangleCoords[iDim];
-    LocalRange.Begin(iDim) = Begin + NumPerRank*Coord + std::min(Remainder, Coord);
-    LocalRange.End(iDim) = Begin + NumPerRank*(Coord+1) + std::min(Remainder, Coord+1);
+    LocalRange.Begin(iDim) = Begin + NumPerRank*Coord + ovk::Min(Remainder, Coord);
+    LocalRange.End(iDim) = Begin + NumPerRank*(Coord+1) + ovk::Min(Remainder, Coord+1);
   }
 
   return LocalRange;
