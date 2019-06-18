@@ -11,23 +11,43 @@ set(LOCAL_TARGETS)
 # Examples
 #==========
 
+#----------------
+# Header targets
+#----------------
+
+# C++ header
+set(BUILT_COMMON_CXX_HEADER ${CMAKE_BINARY_DIR}/include/examples/Common.hpp)
+set(COMMON_CXX_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/Common.hpp)
+add_custom_command(OUTPUT ${BUILT_COMMON_CXX_HEADER}
+  MAIN_DEPENDENCY ${COMMON_CXX_HEADER}
+  COMMAND "${CMAKE_COMMAND}" -E copy "${COMMON_CXX_HEADER}" "${BUILT_COMMON_CXX_HEADER}"
+)
+set_source_files_properties(${BUILT_COMMON_CXX_HEADER} PROPERTIES GENERATED TRUE)
+add_custom_target(examples-common-cxx-header ALL DEPENDS ${BUILT_COMMON_CXX_HEADER})
+list(APPEND LOCAL_TARGETS examples-common-cxx-header)
+
+# C header
+set(BUILT_COMMON_C_HEADER ${CMAKE_BINARY_DIR}/include/examples/Common.h)
+set(COMMON_C_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/Common.h)
+add_custom_command(OUTPUT ${BUILT_COMMON_C_HEADER}
+  MAIN_DEPENDENCY ${COMMON_C_HEADER}
+  COMMAND "${CMAKE_COMMAND}" -E copy "${COMMON_C_HEADER}" "${BUILT_COMMON_C_HEADER}"
+)
+set_source_files_properties(${BUILT_COMMON_C_HEADER} PROPERTIES GENERATED TRUE)
+add_custom_target(examples-common-c-header ALL DEPENDS ${BUILT_COMMON_C_HEADER})
+list(APPEND LOCAL_TARGETS examples-common-c-header)
+
 #-----------------
 # Example targets
 #-----------------
 
-add_executable(Test Test.c)
-list(APPEND LOCAL_TARGETS Test)
-list(APPEND C_TARGETS Test)
+add_executable(Interface Interface.cpp)
+list(APPEND LOCAL_TARGETS Interface)
+list(APPEND CXX_TARGETS Interface)
 
-# add_executable(Debug Debug.c)
-# list(APPEND LOCAL_TARGETS Debug)
-# list(APPEND C_TARGETS Debug)
-
-if(XPACC)
-  add_executable(ReadInterp ReadInterp.c)
-  list(APPEND LOCAL_TARGETS ReadInterp)
-  list(APPEND C_TARGETS ReadInterp)
-endif()
+add_executable(InterfaceC InterfaceC.c)
+list(APPEND LOCAL_TARGETS InterfaceC)
+list(APPEND C_TARGETS InterfaceC)
 
 #-------------------
 # Compiling/linking
@@ -93,14 +113,17 @@ foreach(EXAMPLE ${C_TARGETS} ${CXX_TARGETS})
   # MPI
   if(EXTERNAL_MPI)
     target_include_directories(${EXAMPLE} SYSTEM PRIVATE ${MPI_INCLUDE_PATH})
-    target_link_libraries(${EXAMPLE} ${MPI_C_LIBRARIES} ${MPI_CXX_LIBRARIES})
+    target_link_libraries(${EXAMPLE} PRIVATE ${MPI_C_LIBRARIES} ${MPI_CXX_LIBRARIES})
   endif()
 
   # C math library
-  target_link_libraries(${EXAMPLE} ${C_MATH_LIBRARY})
+  target_link_libraries(${EXAMPLE} PRIVATE ${C_MATH_LIBRARY})
 
-  # Overkit library
-  target_link_libraries(${EXAMPLE} overkit-parallel)
+  # Overkit
+  target_link_libraries(${EXAMPLE} PRIVATE overkit-parallel)
+
+  # Support library
+  target_link_libraries(${EXAMPLE} PRIVATE support)
 
 endforeach()
 
