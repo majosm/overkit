@@ -103,10 +103,14 @@ inline comm CreateSubsetComm(comm_view Comm, bool InSubset) {
 
 }
 
-inline comm CreateCartComm(comm_view Comm, int NumDims, const tuple<int> &Dims, const
-  tuple<bool> &Periodic, bool AllowReorder) {
+inline comm CreateCartComm(comm_view Comm, int NumDims, const tuple<int> &Dims_, const tuple<bool>
+  &Periodic, bool AllowReorder) {
+
+  tuple<int> Dims = Dims_;
+  MPI_Dims_create(Comm.Size(), NumDims, Dims.Data());
 
   tuple<int> PeriodicInt = tuple<int>(Periodic);
+
   MPI_Comm CartCommRaw;
   MPI_Cart_create(Comm, NumDims, Dims.Data(), PeriodicInt.Data(), AllowReorder, &CartCommRaw);
 
