@@ -269,6 +269,21 @@ TEST(CommTests, Reset) {
 
 }
 
+TEST(CommTests, Release) {
+
+  using helper = ovk::core::test_helper<ovk::comm>;
+
+  MPI_Comm CommRaw;
+  MPI_Comm_dup(MPI_COMM_WORLD, &CommRaw);
+  ovk::comm Comm(CommRaw);
+  MPI_Comm CommReleased = Comm.Release();
+  EXPECT_EQ(CommReleased, CommRaw);
+  EXPECT_EQ(helper::GetMPIComm(Comm), MPI_COMM_NULL);
+
+  MPI_Comm_free(&CommReleased);
+
+}
+
 TEST(CommTests, ConvertToBool) {
 
   // Null

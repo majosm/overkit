@@ -64,6 +64,18 @@ inline void comm::Reset() {
 
 }
 
+inline MPI_Comm comm::Release() {
+
+  MPI_Comm Comm = Resource_->Comm_;
+  Resource_->Comm_ = MPI_COMM_NULL;
+
+  Resource_.reset();
+  View_.Reset();
+
+  return Comm;
+
+}
+
 inline bool operator==(const comm_view &Left, const comm_view &Right) {
   return Left.Get() == Right.Get();
 }

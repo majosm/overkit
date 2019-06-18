@@ -64,6 +64,8 @@ public:
   int Size() const { return View_.Size(); }
   int Rank() const { return View_.Rank(); }
 
+  MPI_Comm Release();
+
 private:
 
   struct resource {
@@ -72,7 +74,9 @@ private:
       Comm_(Comm)
     {}
     ~resource() noexcept {
-      MPI_Comm_free(&Comm_);
+      if (Comm_ != MPI_COMM_NULL) {
+        MPI_Comm_free(&Comm_);
+      }
     }
   };
 
