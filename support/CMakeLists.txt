@@ -21,6 +21,7 @@ set(SOURCES
 )
 
 set(HEADERS
+  Decomp.h
   Decomp.hpp
   Grid.hpp
 )

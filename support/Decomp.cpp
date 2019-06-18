@@ -90,3 +90,35 @@ ovk::range TriangularDecomp(int NumDims, const ovk::range &GlobalRange, ovk::com
 }
 
 }
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void support_CartesianDecomp(int NumDims, const int *GlobalBegin, const int *GlobalEnd, MPI_Comm
+  CartComm, int *LocalBegin, int *LocalEnd) {
+
+  ovk::range LocalRange = support::CartesianDecomp(NumDims, {GlobalBegin, GlobalEnd}, CartComm);
+
+  for (int iDim = 0; iDim < ovk::MAX_DIMS; ++iDim) {
+    LocalBegin[iDim] = LocalRange.Begin(iDim);
+    LocalEnd[iDim] = LocalRange.End(iDim);
+  }
+
+}
+
+void support_TriangularDecomp(int NumDims, const int *GlobalBegin, const int *GlobalEnd, MPI_Comm
+  Comm, int *LocalBegin, int *LocalEnd) {
+
+  ovk::range LocalRange = support::TriangularDecomp(NumDims, {GlobalBegin, GlobalEnd}, Comm);
+
+  for (int iDim = 0; iDim < ovk::MAX_DIMS; ++iDim) {
+    LocalBegin[iDim] = LocalRange.Begin(iDim);
+    LocalEnd[iDim] = LocalRange.End(iDim);
+  }
+
+}
+
+#ifdef __cplusplus
+}
+#endif
