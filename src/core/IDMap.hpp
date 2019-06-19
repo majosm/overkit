@@ -165,7 +165,7 @@ public:
   value_type &Insert(IDTypes... IDs) {
     key_type Key(IDs...);
     auto KeysIter = Keys_.LowerBound(Key);
-    auto EntriesIter = Entries_.LinearBegin() + (KeysIter - Keys_.Begin());
+    auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
     if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
       Keys_.Insert(KeysIter, Key);
       EntriesIter = Entries_.Insert(EntriesIter, Key);
@@ -178,7 +178,7 @@ public:
   void Erase(IDTypes... IDs) {
     key_type Key(IDs...);
     auto KeysIter = Keys_.LowerBound(Key);
-    auto EntriesIter = Entries_.LinearBegin() + (KeysIter - Keys_.Begin());
+    auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
     if (KeysIter != Keys_.End() && !Keys_.Less(Key, *KeysIter)) {
       Keys_.Erase(KeysIter);
       Entries_.Erase(EntriesIter);
@@ -219,7 +219,7 @@ public:
   value_type &Get(IDTypes... IDs) {
     key_type Key(IDs...);
     auto KeysIter = Keys_.LowerBound(Key);
-    auto EntriesIter = Entries_.LinearBegin() + (KeysIter - Keys_.Begin());
+    auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
     if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
       Keys_.Insert(KeysIter, Key);
       EntriesIter = Entries_.Insert(EntriesIter, Key);
@@ -324,7 +324,7 @@ public:
 
   value_type &Insert(const entry &Entry) {
     auto KeysIter = Keys_.LowerBound(Entry.Key());
-    auto EntriesIter = Entries_.LinearBegin() + (KeysIter - Keys_.Begin());
+    auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
     if (KeysIter == Keys_.End() || Keys_.Less(Entry.Key(), *KeysIter)) {
       Keys_.Insert(KeysIter, Entry.Key());
       EntriesIter = Entries_.Insert(EntriesIter, Entry);
@@ -336,7 +336,7 @@ public:
 
   value_type &Insert(entry &&Entry) {
     auto KeysIter = Keys_.LowerBound(Entry.Key());
-    auto EntriesIter = Entries_.LinearBegin() + (KeysIter - Keys_.Begin());
+    auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
     if (KeysIter == Keys_.End() || Keys_.Less(Entry.Key(), *KeysIter)) {
       Keys_.Insert(KeysIter, Entry.Key());
       EntriesIter = Entries_.Insert(EntriesIter, std::move(Entry));
@@ -348,7 +348,7 @@ public:
 
   value_type &Insert(const key_type &Key, const value_type &Value) {
     auto KeysIter = Keys_.LowerBound(Key);
-    auto EntriesIter = Entries_.LinearBegin() + (KeysIter - Keys_.Begin());
+    auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
     if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
       Keys_.Insert(KeysIter, Key);
       EntriesIter = Entries_.Insert(EntriesIter, Key, Value);
@@ -360,7 +360,7 @@ public:
 
   value_type &Insert(const key_type &Key, value_type &&Value) {
     auto KeysIter = Keys_.LowerBound(Key);
-    auto EntriesIter = Entries_.LinearBegin() + (KeysIter - Keys_.Begin());
+    auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
     if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
       Keys_.Insert(KeysIter, Key);
       EntriesIter = Entries_.Insert(EntriesIter, Key, std::move(Value));
@@ -374,7 +374,7 @@ public:
     >::value && !core::IsCopyOrMoveArgument<value_type, Args &&...>())> value_type &Insert(const
     key_type &Key, Args &&... Arguments) {
     auto KeysIter = Keys_.LowerBound(Key);
-    auto EntriesIter = Entries_.LinearBegin() + (KeysIter - Keys_.Begin());
+    auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
     if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
       Keys_.Insert(KeysIter, Key);
       EntriesIter = Entries_.Insert(EntriesIter, Key, std::forward<Args>(Arguments)...);
@@ -386,7 +386,7 @@ public:
 
   value_type &Insert(const_iterator LowerBoundIter, const key_type &Key, const value_type &Value) {
     auto KeysIter = Keys_.Begin() + (LowerBoundIter - Entries_.Data());
-    auto EntriesIter = Entries_.LinearBegin() + (LowerBoundIter - Entries_.Data());
+    auto EntriesIter = Entries_.Begin() + (LowerBoundIter - Entries_.Data());
     if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
       Keys_.Insert(KeysIter, Key);
       EntriesIter = Entries_.Insert(EntriesIter, Key, Value);
@@ -398,7 +398,7 @@ public:
 
   value_type &Insert(const_iterator LowerBoundIter, const key_type &Key, value_type &&Value) {
     auto KeysIter = Keys_.Begin() + (LowerBoundIter - Entries_.Data());
-    auto EntriesIter = Entries_.LinearBegin() + (LowerBoundIter - Entries_.Data());
+    auto EntriesIter = Entries_.Begin() + (LowerBoundIter - Entries_.Data());
     if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
       Keys_.Insert(KeysIter, Key);
       EntriesIter = Entries_.Insert(EntriesIter, Key, std::move(Value));
@@ -412,7 +412,7 @@ public:
     >::value && !core::IsCopyOrMoveArgument<value_type, Args &&...>())> value_type &Insert(
     const_iterator LowerBoundIter, const key_type &Key, Args &&...  Arguments) {
     auto KeysIter = Keys_.Begin() + (LowerBoundIter - Entries_.Data());
-    auto EntriesIter = Entries_.LinearBegin() + (LowerBoundIter - Entries_.Data());
+    auto EntriesIter = Entries_.Begin() + (LowerBoundIter - Entries_.Data());
     if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
       Keys_.Insert(KeysIter, Key);
       EntriesIter = Entries_.Insert(EntriesIter, Key, std::forward<Args>(Arguments)...);
@@ -424,7 +424,7 @@ public:
 
   void Erase(const key_type &Key) {
     auto KeysIter = Keys_.LowerBound(Key);
-    auto EntriesIter = Entries_.LinearBegin() + (KeysIter - Keys_.Begin());
+    auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
     if (KeysIter != Keys_.End() && !Keys_.Less(Key, *KeysIter)) {
       Keys_.Erase(KeysIter);
       Entries_.Erase(EntriesIter);
@@ -433,10 +433,10 @@ public:
 
   iterator Erase(const_iterator Pos) {
     auto KeysIter = Keys_.Begin() + (Pos - Entries_.Data());
-    auto EntriesIter = Entries_.LinearBegin() + (Pos - Entries_.Data());
+    auto EntriesIter = Entries_.Begin() + (Pos - Entries_.Data());
     Keys_.Erase(KeysIter);
     EntriesIter = Entries_.Erase(EntriesIter);
-    return Entries_.Data(EntriesIter - Entries_.LinearBegin());
+    return Entries_.Data(EntriesIter - Entries_.Begin());
   }
 
   void Clear() {
@@ -504,7 +504,7 @@ public:
 
   value_type &Get(const key_type &Key, const value_type &InsertValue) {
     auto KeysIter = Keys_.LowerBound(Key);
-    auto EntriesIter = Entries_.LinearBegin() + (KeysIter - Keys_.Begin());
+    auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
     if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
       Keys_.Insert(KeysIter, Key);
       EntriesIter = Entries_.Insert(EntriesIter, Key, InsertValue);
@@ -514,7 +514,7 @@ public:
 
   value_type &Get(const key_type &Key, value_type &&InsertValue) {
     auto KeysIter = Keys_.LowerBound(Key);
-    auto EntriesIter = Entries_.LinearBegin() + (KeysIter - Keys_.Begin());
+    auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
     if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
       Keys_.Insert(KeysIter, Key);
       EntriesIter = Entries_.Insert(EntriesIter, Key, std::move(InsertValue));
@@ -526,7 +526,7 @@ public:
     >::value && !core::IsCopyOrMoveArgument<value_type, Args &&...>())> value_type &Get(const
     key_type &Key, Args &&... Arguments) {
     auto KeysIter = Keys_.LowerBound(Key);
-    auto EntriesIter = Entries_.LinearBegin() + (KeysIter - Keys_.Begin());
+    auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
     if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
       Keys_.Insert(KeysIter, Key);
       EntriesIter = Entries_.Insert(EntriesIter, Key, std::forward<Args>(Arguments)...);

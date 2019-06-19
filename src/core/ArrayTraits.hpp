@@ -209,13 +209,13 @@ template <typename ArrayRefType, OVK_FUNCTION_REQUIRES(IsArray<remove_cvref<Arra
 }
 
 template <typename ArrayRefType, OVK_FUNCTION_REQUIRES(IsArray<remove_cvref<ArrayRefType>>())> auto
-  ArrayLinearBegin(ArrayRefType &&Array) -> decltype(MakeForwardingIterator<array_access_type<
+  ArrayBegin(ArrayRefType &&Array) -> decltype(MakeForwardingIterator<array_access_type<
   ArrayRefType &&>>(ArrayData(Array))) {
   return MakeForwardingIterator<array_access_type<ArrayRefType &&>>(ArrayData(Array));
 }
 
 template <typename ArrayRefType, OVK_FUNCTION_REQUIRES(IsArray<remove_cvref<ArrayRefType>>())> auto
-  ArrayLinearEnd(ArrayRefType &&Array) -> decltype(MakeForwardingIterator<array_access_type<
+  ArrayEnd(ArrayRefType &&Array) -> decltype(MakeForwardingIterator<array_access_type<
   ArrayRefType &&>>(core::ArrayData(Array)+ArrayCount(Array))) {
   return MakeForwardingIterator<array_access_type<ArrayRefType &&>>(ArrayData(Array)+
     ArrayCount(Array));

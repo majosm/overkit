@@ -82,7 +82,7 @@ template <typename T> void StringPrintAppend(std::string &String, const std::str
   int WriteSize = std::snprintf(Buffer.Data(), 1, Format.c_str(), Arg);
   Buffer.Resize({WriteSize+1});
   std::sprintf(Buffer.Data(), Format.c_str(), Arg);
-  String.append(Buffer.LinearBegin(), Buffer.LinearBegin()+WriteSize);
+  String.append(Buffer.Begin(), Buffer.Begin()+WriteSize);
 }
 
 // Specialization for std::string to avoid explicit use of .c_str() everywhere
@@ -92,7 +92,7 @@ inline void StringPrintAppend(std::string &String, const std::string &Format, co
   int WriteSize = std::snprintf(Buffer.Data(), 1, Format.c_str(), Arg.c_str());
   Buffer.Resize({WriteSize+1});
   std::sprintf(Buffer.Data(), Format.c_str(), Arg.c_str());
-  String.append(Buffer.LinearBegin(), Buffer.LinearBegin()+WriteSize);
+  String.append(Buffer.Begin(), Buffer.Begin()+WriteSize);
 }
 
 template <typename T1, typename T2, typename... Ts> void StringPrintAppend(std::string &String,

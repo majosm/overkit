@@ -294,33 +294,33 @@ public:
   }
 
   iterator Insert(const_iterator Pos, const value_type &Value) {
-    auto ValuesPos = Values_.Begin() + (Pos - View_.LinearBegin());
+    auto ValuesPos = Values_.Begin() + (Pos - View_.Begin());
     auto ValuesIter = Values_.Insert(ValuesPos, Value);
     View_ = view_type(Values_.Data(), {View_.Extents().Begin(0), View_.Extents().End(0)+1});
-    return View_.LinearBegin() + (ValuesIter - Values_.Begin());
+    return View_.Begin() + (ValuesIter - Values_.Begin());
   }
 
   iterator Insert(const_iterator Pos, value_type &&Value) {
-    auto ValuesPos = Values_.Begin() + (Pos - View_.LinearBegin());
+    auto ValuesPos = Values_.Begin() + (Pos - View_.Begin());
     auto ValuesIter = Values_.Insert(ValuesPos, std::move(Value));
     View_ = view_type(Values_.Data(), {View_.Extents().Begin(0), View_.Extents().End(0)+1});
-    return View_.LinearBegin() + (ValuesIter - Values_.Begin());
+    return View_.Begin() + (ValuesIter - Values_.Begin());
   }
 
   template <typename... Args, OVK_FUNCTION_REQUIRES(std::is_constructible<value_type, Args &&...
     >::value && !core::IsCopyOrMoveArgument<value_type, Args &&...>())> iterator Insert(
     const_iterator Pos, Args &&... Arguments) {
-    auto ValuesPos = Values_.Begin() + (Pos - View_.LinearBegin());
+    auto ValuesPos = Values_.Begin() + (Pos - View_.Begin());
     auto ValuesIter = Values_.Insert(ValuesPos, std::forward<Args>(Arguments)...);
     View_ = view_type(Values_.Data(), {View_.Extents().Begin(0), View_.Extents().End(0)+1});
-    return View_.LinearBegin() + (ValuesIter - Values_.Begin());
+    return View_.Begin() + (ValuesIter - Values_.Begin());
   }
 
   iterator Erase(const_iterator Pos) {
-    auto ValuesPos = Values_.Begin() + (Pos - View_.LinearBegin());
+    auto ValuesPos = Values_.Begin() + (Pos - View_.Begin());
     auto ValuesIter = Values_.Erase(ValuesPos);
     View_ = view_type(Values_.Data(), {View_.Extents().Begin(0), View_.Extents().End(0)-1});
-    return View_.LinearBegin() + (ValuesIter - Values_.Begin());
+    return View_.Begin() + (ValuesIter - Values_.Begin());
   }
 
 };
@@ -432,13 +432,13 @@ public:
 
   template <typename U, OVK_FUNCTION_REQUIRES(std::is_convertible<typename std::remove_const<U>::
     type, value_type>::value)> array(const array_view<U, Rank, Layout> &View):
-    parent_type(View.Extents(), View.LinearBegin())
+    parent_type(View.Extents(), View.Begin())
   {}
 
   template <typename U, OVK_FUNCTION_REQUIRES(std::is_convertible<typename std::remove_const<U>::
     type, value_type>::value)> array(const interval_type &Extents, const array_view<U, Rank, Layout>
     &View):
-    parent_type(Extents, View.LinearBegin())
+    parent_type(Extents, View.Begin())
   {}
 
   // Intel 17 didn't like using Rank and Layout instead of Rank_ and Layout_
@@ -447,7 +447,7 @@ public:
     core::ArrayHasFootprint<core::remove_cvref<ArrayRefType>, Rank_, Layout_>() &&
     std::is_convertible<core::array_access_type<ArrayRefType &&>, value_type>::value)>
     array(ArrayRefType &&Array):
-    parent_type(core::ArrayExtents(Array), core::ArrayLinearBegin(std::forward<ArrayRefType>(
+    parent_type(core::ArrayExtents(Array), core::ArrayBegin(std::forward<ArrayRefType>(
       Array)))
   {}
 
@@ -458,7 +458,7 @@ public:
     core::remove_cvref<ArrayRefType>, Rank_, Layout_>() && std::is_convertible<
     core::array_access_type<ArrayRefType &&>, value_type>::value)> array(const interval_type
     &Extents, ArrayRefType &&Array):
-    parent_type(Extents, core::ArrayLinearBegin(std::forward<ArrayRefType>(Array)))
+    parent_type(Extents, core::ArrayBegin(std::forward<ArrayRefType>(Array)))
   {}
 
   array(const array &Other) = default;
@@ -479,7 +479,7 @@ public:
 
   template <typename U, OVK_FUNCTION_REQUIRES(std::is_convertible<typename std::remove_const<U>::
     type, value_type>::value)> array &operator=(const array_view<U, Rank, Layout> &View) {
-    parent_type::Assign(View.Extents(), View.LinearBegin());
+    parent_type::Assign(View.Extents(), View.Begin());
     return *this;
   }
 
@@ -489,7 +489,7 @@ public:
     core::ArrayHasFootprint<core::remove_cvref<ArrayRefType>, Rank_, Layout_>() &&
     std::is_convertible<core::array_access_type<ArrayRefType &&>, value_type>::value)> array
     &operator=(ArrayRefType &&Array) {
-    parent_type::Assign(core::ArrayExtents(Array), core::ArrayLinearBegin(std::forward<
+    parent_type::Assign(core::ArrayExtents(Array), core::ArrayBegin(std::forward<
       ArrayRefType>(Array)));
     return *this;
   }
@@ -513,14 +513,14 @@ public:
 
   template <typename U, OVK_FUNCTION_REQUIRES(std::is_convertible<typename std::remove_const<U>::
     type, value_type>::value)> array &Assign(const array_view<U, Rank, Layout> &View) {
-    parent_type::Assign(View.Extents(), View.LinearBegin());
+    parent_type::Assign(View.Extents(), View.Begin());
     return *this;
   }
 
   template <typename U, OVK_FUNCTION_REQUIRES(std::is_convertible<typename std::remove_const<U>::
     type, value_type>::value)> array &Assign(const interval_type &Extents, const array_view<U, Rank,
     Layout> &View) {
-    parent_type::Assign(Extents, View.LinearBegin());
+    parent_type::Assign(Extents, View.Begin());
     return *this;
   }
 
@@ -530,8 +530,8 @@ public:
     core::ArrayHasFootprint<core::remove_cvref<ArrayRefType>, Rank_, Layout_>() &&
     std::is_convertible<core::array_access_type<ArrayRefType &&>, value_type>::value)>
     array &Assign(ArrayRefType &&Array) {
-    parent_type::Assign(core::ArrayExtents(Array), core::ArrayLinearBegin(std::forward<
-      ArrayRefType>(Array)));
+    parent_type::Assign(core::ArrayExtents(Array), core::ArrayBegin(std::forward<ArrayRefType
+      >(Array)));
     return *this;
   }
 
@@ -542,7 +542,7 @@ public:
     core::remove_cvref<ArrayRefType>, Rank_, Layout_>() && std::is_convertible<
     core::array_access_type<ArrayRefType &&>, value_type>::value)> array &Assign(const
     interval_type &Extents, ArrayRefType &&Array) {
-    parent_type::Assign(Extents, core::ArrayLinearBegin(std::forward<ArrayRefType>(Array)));
+    parent_type::Assign(Extents, core::ArrayBegin(std::forward<ArrayRefType>(Array)));
     return *this;
   }
 
@@ -701,17 +701,17 @@ public:
     return View_.Data(Array);
   }
 
-  const_iterator LinearBegin() const { return View_.LinearBegin(); }
-  iterator LinearBegin() { return View_.LinearBegin(); }
-  const_iterator LinearEnd() const { return View_.LinearEnd(); }
-  iterator LinearEnd() { return View_.LinearEnd(); }
+  const_iterator Begin() const { return View_.Begin(); }
+  iterator Begin() { return View_.Begin(); }
+  const_iterator End() const { return View_.End(); }
+  iterator End() { return View_.End(); }
 
   // Google Test doesn't use free begin/end functions and instead expects container to have
   // lowercase begin/end methods
-  const_iterator begin() const { return LinearBegin(); }
-  iterator begin() { return LinearBegin(); }
-  const_iterator end() const { return LinearEnd(); }
-  iterator end() { return LinearEnd(); }
+  const_iterator begin() const { return Begin(); }
+  iterator begin() { return Begin(); }
+  const_iterator end() const { return End(); }
+  iterator end() { return End(); }
 
 private:
 
@@ -736,22 +736,22 @@ template <typename T, int Rank_, array_layout Layout_> struct array_traits<array
 
 template <typename T, int Rank, array_layout Layout> typename array<T, Rank, Layout>::iterator
   begin(array<T, Rank, Layout> &Array) {
-  return Array.LinearBegin();
+  return Array.Begin();
 }
 
 template <typename T, int Rank, array_layout Layout> typename array<T, Rank, Layout>::const_iterator
   begin(const array<T, Rank, Layout> &Array) {
-  return Array.LinearBegin();
+  return Array.Begin();
 }
 
 template <typename T, int Rank, array_layout Layout> typename array<T, Rank, Layout>::iterator
   end(array<T, Rank, Layout> &Array) {
-  return Array.LinearEnd();
+  return Array.End();
 }
 
 template <typename T, int Rank, array_layout Layout> typename array<T, Rank, Layout>::const_iterator
   end(const array<T, Rank, Layout> &Array) {
-  return Array.LinearEnd();
+  return Array.End();
 }
 
 }

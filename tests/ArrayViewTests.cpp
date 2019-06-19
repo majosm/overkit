@@ -1205,7 +1205,7 @@ TEST_F(ArrayViewTests, Data) {
 
 }
 
-TEST_F(ArrayViewTests, LinearBeginEnd) {
+TEST_F(ArrayViewTests, BeginEnd) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -1217,8 +1217,8 @@ TEST_F(ArrayViewTests, LinearBeginEnd) {
   {
     multidim_array Array({{1,2,3}, {4,5,6}}, 1);
     array_view_const View(Array);
-    EXPECT_EQ(View.LinearBegin(), &Array[0]);
-    EXPECT_EQ(View.LinearEnd(), &Array[0] + 27);
+    EXPECT_EQ(View.Begin(), &Array[0]);
+    EXPECT_EQ(View.End(), &Array[0] + 27);
     int Sum = 0;
     for (auto &Value : View) Sum += Value;
     EXPECT_EQ(Sum, 27);
@@ -1228,8 +1228,8 @@ TEST_F(ArrayViewTests, LinearBeginEnd) {
   {
     multidim_array Array({{1,2,3}, {4,5,6}}, 0);
     array_view View(Array);
-    EXPECT_EQ(View.LinearBegin(), &Array[0]);
-    EXPECT_EQ(View.LinearEnd(), &Array[0] + 27);
+    EXPECT_EQ(View.Begin(), &Array[0]);
+    EXPECT_EQ(View.End(), &Array[0] + 27);
     for (auto &Value : View) Value = 1;
     int Sum = 0;
     for (int i = 0; i < 27; ++i) Sum += Array[i];

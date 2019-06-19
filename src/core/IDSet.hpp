@@ -34,7 +34,7 @@ public:
   void Insert(IDTypes... IDs) {
     value_type Value(IDs...);
     auto ValuesIter = LowerBound_(Value);
-    if (ValuesIter == Values_.LinearEnd() || Less(Value, *ValuesIter)) {
+    if (ValuesIter == Values_.End() || Less(Value, *ValuesIter)) {
       ValuesIter = Values_.Insert(ValuesIter, Value);
     }
   }
@@ -42,7 +42,7 @@ public:
   void Erase(IDTypes... IDs) {
     value_type Value(IDs...);
     auto ValuesIter = LowerBound_(Value);
-    if (ValuesIter != Values_.LinearEnd() && !Less(Value, *ValuesIter)) {
+    if (ValuesIter != Values_.End() && !Less(Value, *ValuesIter)) {
       Values_.Erase(ValuesIter);
     }
   }
@@ -50,28 +50,28 @@ public:
   bool Contains(IDTypes... IDs) const {
     value_type Value(IDs...);
     auto ValuesIter = LowerBound_(Value);
-    return ValuesIter != Values_.LinearEnd() && !Less(Value, *ValuesIter);
+    return ValuesIter != Values_.End() && !Less(Value, *ValuesIter);
   }
 
   iterator Find(IDTypes... IDs) const {
     value_type Value(IDs...);
     auto ValuesIter = LowerBound_(Value);
-    if (ValuesIter != Values_.LinearEnd() && Less(Value, *ValuesIter)) {
-      ValuesIter = Values_.LinearEnd();
+    if (ValuesIter != Values_.End() && Less(Value, *ValuesIter)) {
+      ValuesIter = Values_.End();
     }
-    return Values_.Data() + (ValuesIter - Values_.LinearBegin());
+    return Values_.Data() + (ValuesIter - Values_.Begin());
   }
 
   iterator LowerBound(IDTypes... IDs) const {
     value_type Value(IDs...);
     auto ValuesIter = LowerBound_(Value);
-    return Values_.Data() + (ValuesIter - Values_.LinearBegin());
+    return Values_.Data() + (ValuesIter - Values_.Begin());
   }
 
   iterator UpperBound(IDTypes... IDs) const {
     value_type Value(IDs...);
     auto ValuesIter = UpperBound_(Value);
-    return Values_.Data() + (ValuesIter - Values_.LinearBegin());
+    return Values_.Data() + (ValuesIter - Values_.Begin());
   }
 
   static constexpr bool Less(const value_type &Left, const value_type &Right) {
@@ -88,28 +88,28 @@ protected:
     auto Compare = [](const value_type &Left, const value_type &Right) -> bool {
       return Less(Left, Right);
     };
-    return std::lower_bound(Values_.LinearBegin(), Values_.LinearEnd(), Value, Compare);
+    return std::lower_bound(Values_.Begin(), Values_.End(), Value, Compare);
   }
 
   typename array<value_type>::iterator LowerBound_(const value_type &Value) {
     auto Compare = [](const value_type &Left, const value_type &Right) -> bool {
       return Less(Left, Right);
     };
-    return std::lower_bound(Values_.LinearBegin(), Values_.LinearEnd(), Value, Compare);
+    return std::lower_bound(Values_.Begin(), Values_.End(), Value, Compare);
   }
 
   typename array<value_type>::const_iterator UpperBound_(const value_type &Value) const {
     auto Compare = [](const value_type &Left, const value_type &Right) -> bool {
       return Less(Left, Right);
     };
-    return std::upper_bound(Values_.LinearBegin(), Values_.LinearEnd(), Value, Compare);
+    return std::upper_bound(Values_.Begin(), Values_.End(), Value, Compare);
   }
 
   typename array<value_type>::iterator UpperBound_(const value_type &Value) {
     auto Compare = [](const value_type &Left, const value_type &Right) -> bool {
       return Less(Left, Right);
     };
-    return std::upper_bound(Values_.LinearBegin(), Values_.LinearEnd(), Value, Compare);
+    return std::upper_bound(Values_.Begin(), Values_.End(), Value, Compare);
   }
 
   template <int N> static constexpr OVK_FORCE_INLINE bool Less_(const value_type &Left, const
@@ -205,29 +205,29 @@ public:
 
   void Insert(const value_type &Value) {
     auto ValuesIter = LowerBound_(Value);
-    if (ValuesIter == Values_.LinearEnd() || Less(Value, *ValuesIter)) {
+    if (ValuesIter == Values_.End() || Less(Value, *ValuesIter)) {
       ValuesIter = Values_.Insert(ValuesIter, Value);
     }
   }
 
   void Insert(iterator LowerBoundIter, const value_type &Value) {
-    auto ValuesIter = Values_.LinearBegin() + (LowerBoundIter - Values_.Data());
-    if (ValuesIter == Values_.LinearEnd() || Less(Value, *ValuesIter)) {
+    auto ValuesIter = Values_.Begin() + (LowerBoundIter - Values_.Data());
+    if (ValuesIter == Values_.End() || Less(Value, *ValuesIter)) {
       ValuesIter = Values_.Insert(ValuesIter, Value);
     }
   }
 
   void Erase(const value_type &Value) {
     auto ValuesIter = LowerBound_(Value);
-    if (ValuesIter != Values_.LinearEnd() && !Less(Value, *ValuesIter)) {
+    if (ValuesIter != Values_.End() && !Less(Value, *ValuesIter)) {
       Values_.Erase(ValuesIter);
     }
   }
 
   iterator Erase(iterator Pos) {
-    auto ValuesIter = Values_.LinearBegin() + (Pos - Values_.Data());
+    auto ValuesIter = Values_.Begin() + (Pos - Values_.Data());
     ValuesIter = Values_.Erase(ValuesIter);
-    return Values_.Data(ValuesIter - Values_.LinearBegin());
+    return Values_.Data(ValuesIter - Values_.Begin());
   }
 
   void Clear() {
@@ -236,25 +236,25 @@ public:
 
   bool Contains(const value_type &Value) const {
     auto ValuesIter = LowerBound_(Value);
-    return ValuesIter != Values_.LinearEnd() && !Less(Value, *ValuesIter);
+    return ValuesIter != Values_.End() && !Less(Value, *ValuesIter);
   }
 
   iterator Find(const value_type &Value) const {
     auto ValuesIter = LowerBound_(Value);
-    if (ValuesIter != Values_.LinearEnd() && Less(Value, *ValuesIter)) {
-      ValuesIter = Values_.LinearEnd();
+    if (ValuesIter != Values_.End() && Less(Value, *ValuesIter)) {
+      ValuesIter = Values_.End();
     }
-    return Values_.Data() + (ValuesIter - Values_.LinearBegin());
+    return Values_.Data() + (ValuesIter - Values_.Begin());
   }
 
   iterator LowerBound(const value_type &Value) const {
     auto ValuesIter = LowerBound_(Value);
-    return Values_.Data() + (ValuesIter - Values_.LinearBegin());
+    return Values_.Data() + (ValuesIter - Values_.Begin());
   }
 
   iterator UpperBound(const value_type &Value) const {
     auto ValuesIter = UpperBound_(Value);
-    return Values_.Data() + (ValuesIter - Values_.LinearBegin());
+    return Values_.Data() + (ValuesIter - Values_.Begin());
   }
 
   // Not sure if this is actually useful for Rank > 1

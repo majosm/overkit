@@ -29,7 +29,7 @@ void BroadcastString(std::string &String, int Root, comm_view Comm) {
 
   MPI_Bcast(StringChars.Data(), StringLength, MPI_CHAR, Root, Comm);
 
-  String.assign(StringChars.LinearBegin(), StringChars.LinearEnd());
+  String.assign(StringChars.Begin(), StringChars.End());
 
 }
 
@@ -56,7 +56,7 @@ void BroadcastStringAnySource(std::string &String, bool IsSource, comm_view Comm
     array<char> StringChars({StringLength});
     MPI_Recv(StringChars.Data(), StringLength, MPI_CHAR, MPI_ANY_SOURCE, 0, Comm,
       MPI_STATUS_IGNORE);
-    String.assign(StringChars.LinearBegin(), StringChars.LinearEnd());
+    String.assign(StringChars.Begin(), StringChars.End());
   } else if (Comm.Rank() != 0 && IsSource) {
     int StringLength = String.length();
     MPI_Send(&StringLength, 1, MPI_INT, 0, 0, Comm);

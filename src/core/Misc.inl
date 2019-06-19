@@ -15,7 +15,7 @@ template <typename ArrayType, OVK_FUNCDEF_REQUIRES(IsArray<ArrayType>() && Array
     return Array[Left] < Array[Right];
   };
 
-  std::sort(Permutation.LinearBegin(), Permutation.LinearEnd(), Compare);
+  std::sort(Permutation.Begin(), Permutation.End(), Compare);
 
 }
 

@@ -337,13 +337,13 @@ public:
     return Ptr_+Indexer_.ToIndex(Array);
   }
 
-  constexpr OVK_FORCE_INLINE iterator LinearBegin() const { return Ptr_; }
-  constexpr OVK_FORCE_INLINE iterator LinearEnd() const { return Ptr_ + NumValues_; }
+  constexpr OVK_FORCE_INLINE iterator Begin() const { return Ptr_; }
+  constexpr OVK_FORCE_INLINE iterator End() const { return Ptr_ + NumValues_; }
 
   // Google Test doesn't use free begin/end functions and instead expects container to have
   // lowercase begin/end methods
-  constexpr OVK_FORCE_INLINE iterator begin() const { return LinearBegin(); }
-  constexpr OVK_FORCE_INLINE iterator end() const { return LinearEnd(); }
+  constexpr OVK_FORCE_INLINE iterator begin() const { return Begin(); }
+  constexpr OVK_FORCE_INLINE iterator end() const { return End(); }
 
 private:
 
@@ -355,12 +355,12 @@ private:
 
 template <typename T, int Rank, array_layout Layout> constexpr OVK_FORCE_INLINE typename
   array_view<T, Rank, Layout>::iterator begin(const array_view<T, Rank, Layout> &View) {
-  return View.LinearBegin();
+  return View.Begin();
 }
 
 template <typename T, int Rank, array_layout Layout> constexpr OVK_FORCE_INLINE typename
   array_view<T, Rank, Layout>::iterator end(const array_view<T, Rank, Layout> &View) {
-  return View.LinearEnd();
+  return View.End();
 }
 
 template <typename ArrayRefType, OVK_FUNCDEF_REQUIRES(core::IsArray<core::remove_cvref<

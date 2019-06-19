@@ -2357,7 +2357,7 @@ TEST_F(ArrayTests, Insert) {
   {
     array Array({1,5}, {0,1,3,4});
     int SourceValue = 2;
-    auto Iter = Array.Insert(Array.LinearBegin()+2, SourceValue);
+    auto Iter = Array.Insert(Array.Begin()+2, SourceValue);
     auto &View = helper::GetView(Array);
     auto &Values = helper::GetValues(Array);
     EXPECT_THAT(View.Extents().Begin(), ElementsAre(1));
@@ -2371,7 +2371,7 @@ TEST_F(ArrayTests, Insert) {
     array_noncopyable Array;
     Array.Append(2);
     noncopyable<int> Value(1);
-    auto Iter = Array.Insert(Array.LinearBegin(), std::move(Value));
+    auto Iter = Array.Insert(Array.Begin(), std::move(Value));
     auto &View = helper_noncopyable::GetView(Array);
     auto &Values = helper_noncopyable::GetValues(Array);
     EXPECT_THAT(View.Extents().Begin(), ElementsAre(0));
@@ -2385,7 +2385,7 @@ TEST_F(ArrayTests, Insert) {
   // In-place
   {
     array_multiargument Array({1}, {{3, 4}});
-    auto Iter = Array.Insert(Array.LinearBegin(), 1, 2);
+    auto Iter = Array.Insert(Array.Begin(), 1, 2);
     auto &View = helper_multiargument::GetView(Array);
     auto &Values = helper_multiargument::GetValues(Array);
     EXPECT_THAT(View.Extents().Begin(), ElementsAre(0));
@@ -2400,7 +2400,7 @@ TEST_F(ArrayTests, Insert) {
   {
     array_nondefaultconstructible Array({1}, {{2}});
     nondefaultconstructible<int> SourceValue(1);
-    auto Iter = Array.Insert(Array.LinearBegin(), SourceValue);
+    auto Iter = Array.Insert(Array.Begin(), SourceValue);
     auto &View = helper_nondefaultconstructible::GetView(Array);
     auto &Values = helper_nondefaultconstructible::GetValues(Array);
     EXPECT_THAT(View.Extents().Begin(), ElementsAre(0));
@@ -2415,7 +2415,7 @@ TEST_F(ArrayTests, Insert) {
   {
     array_nondefaultconstructible Array({1}, {{2}});
     nondefaultconstructible<int> SourceValue(1);
-    auto Iter = Array.Insert(Array.LinearBegin(), std::move(SourceValue));
+    auto Iter = Array.Insert(Array.Begin(), std::move(SourceValue));
     auto &View = helper_nondefaultconstructible::GetView(Array);
     auto &Values = helper_nondefaultconstructible::GetValues(Array);
     EXPECT_THAT(View.Extents().Begin(), ElementsAre(0));
@@ -2429,7 +2429,7 @@ TEST_F(ArrayTests, Insert) {
   // Non-default-constructible, in-place
   {
     array_nondefaultconstructible Array({1}, {{2}});
-    auto Iter = Array.Insert(Array.LinearBegin(), 1);
+    auto Iter = Array.Insert(Array.Begin(), 1);
     auto &View = helper_nondefaultconstructible::GetView(Array);
     auto &Values = helper_nondefaultconstructible::GetValues(Array);
     EXPECT_THAT(View.Extents().Begin(), ElementsAre(0));
@@ -2456,7 +2456,7 @@ TEST_F(ArrayTests, Erase) {
   // Regular type
   {
     array Array({1,6}, {0,1,2,3,4});
-    auto Iter = Array.Erase(Array.LinearBegin()+2);
+    auto Iter = Array.Erase(Array.Begin()+2);
     auto &View = helper::GetView(Array);
     auto &Values = helper::GetValues(Array);
     EXPECT_THAT(View.Extents().Begin(), ElementsAre(1));
@@ -2470,7 +2470,7 @@ TEST_F(ArrayTests, Erase) {
     array_noncopyable Array;
     Array.Append(1);
     Array.Append(2);
-    auto Iter = Array.Erase(Array.LinearBegin());
+    auto Iter = Array.Erase(Array.Begin());
     auto &View = helper_noncopyable::GetView(Array);
     auto &Values = helper_noncopyable::GetValues(Array);
     EXPECT_THAT(View.Extents().Begin(), ElementsAre(0));
@@ -2484,7 +2484,7 @@ TEST_F(ArrayTests, Erase) {
   // Non-default-constructible
   {
     array_nondefaultconstructible Array({2}, {{1},{2}});
-    auto Iter = Array.Erase(Array.LinearBegin());
+    auto Iter = Array.Erase(Array.Begin());
     auto &View = helper_nondefaultconstructible::GetView(Array);
     auto &Values = helper_nondefaultconstructible::GetValues(Array);
     EXPECT_THAT(View.Extents().Begin(), ElementsAre(0));
@@ -2785,7 +2785,7 @@ TEST_F(ArrayTests, Data) {
 
 }
 
-TEST_F(ArrayTests, LinearBeginEnd) {
+TEST_F(ArrayTests, BeginEnd) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -2796,8 +2796,8 @@ TEST_F(ArrayTests, LinearBeginEnd) {
   {
     const array Array({{1,2,3}, {2,4,6}}, {0,1,2,3,4,5});
     auto &Values = helper::GetValues(Array);
-    EXPECT_EQ(Array.LinearBegin(), &Values[0]);
-    EXPECT_EQ(Array.LinearEnd(), &Values[0] + 6);
+    EXPECT_EQ(Array.Begin(), &Values[0]);
+    EXPECT_EQ(Array.End(), &Values[0] + 6);
     int Sum = 0;
     for (auto &Value : Array) Sum += Value;
     EXPECT_EQ(Sum, 15);
@@ -2807,8 +2807,8 @@ TEST_F(ArrayTests, LinearBeginEnd) {
   {
     array Array({{1,2,3}, {2,4,6}}, {0,1,2,3,4,5});
     auto &Values = helper::GetValues(Array);
-    EXPECT_EQ(Array.LinearBegin(), &Values[0]);
-    EXPECT_EQ(Array.LinearEnd(), &Values[0] + 6);
+    EXPECT_EQ(Array.Begin(), &Values[0]);
+    EXPECT_EQ(Array.End(), &Values[0] + 6);
     for (auto &Value : Array) Value = 1;
     int Sum = 0;
     for (int i = 0; i < 6; ++i) Sum += Values[i];

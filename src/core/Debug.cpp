@@ -35,7 +35,7 @@ void ovk_core_DebugExit(const char *File, int Line, const char *Format, ...) {
 
   va_end(ArgList2);
 
-  std::string Message(MessageChars.LinearBegin(), MessageChars.LinearEnd());
+  std::string Message(MessageChars.Begin(), MessageChars.End());
 
   ovk::core::DebugExit(File, Line, Message);
 
