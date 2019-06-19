@@ -63,6 +63,11 @@ set(SOURCES
   VectorTests.cpp
   fixtures/Interface.cpp
 )
+if(XPACC)
+list(APPEND SOURCES
+  XINTOUTTests.cpp
+)
+endif()
 
 set(HEADERS
   MPIPrinter.hpp
@@ -152,6 +157,22 @@ set_source_files_properties(${BUILT_HEADERS} PROPERTIES GENERATED TRUE)
 
 add_custom_target(tests-headers ALL DEPENDS ${BUILT_HEADERS})
 list(APPEND LOCAL_TARGETS tests-headers)
+
+#-------------
+# Data target
+#-------------
+
+set(BUILT_DATA ${CMAKE_BINARY_DIR}/tests/data)
+set(DATA ${CMAKE_CURRENT_SOURCE_DIR}/data)
+# Seems to run every time if I don't include the touch command; not sure why
+add_custom_command(OUTPUT ${BUILT_DATA}
+  MAIN_DEPENDENCY ${DATA}
+  COMMAND "${CMAKE_COMMAND}" -E copy_directory "${DATA}" "${BUILT_DATA}"
+  COMMAND "${CMAKE_COMMAND}" -E touch "${BUILT_DATA}"
+)
+
+add_custom_target(tests-data ALL DEPENDS ${BUILT_DATA})
+list(APPEND LOCAL_TARGETS tests-data)
 
 #==============
 # Finalization
