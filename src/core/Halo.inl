@@ -130,7 +130,8 @@ template <typename T> halo_exchanger_for_type<T>::exchange_request::exchange_req
   ArrayData_(ArrayData)
 {}
 
-template <typename T> void halo_exchanger_for_type<T>::exchange_request::Finish(int iMPIRequest) {
+template <typename T> void halo_exchanger_for_type<T>::exchange_request::OnMPIRequestComplete(int
+  iMPIRequest) {
 
   halo_exchanger_for_type &HaloExchanger = *HaloExchanger_;
   const halo_map &HaloMap = *HaloExchanger.HaloMap_;
@@ -154,29 +155,9 @@ template <typename T> void halo_exchanger_for_type<T>::exchange_request::Finish(
 
 }
 
-template <typename T> void halo_exchanger_for_type<T>::exchange_request::Wait() {
+template <typename T> void halo_exchanger_for_type<T>::exchange_request::OnComplete() {
 
-  halo_exchanger_for_type &HaloExchanger = *HaloExchanger_;
-
-  profiler &Profiler = HaloExchanger.Context_->core_Profiler();
-
-  Profiler.Start(WAIT_TIME);
-
-  while (true) {
-    int iMPIRequest;
-    Profiler.Start(MPI_TIME);
-    MPI_Waitany(HaloExchanger.MPIRequests_.Count(), HaloExchanger.MPIRequests_.Data(), &iMPIRequest,
-      MPI_STATUSES_IGNORE);
-    Profiler.Stop(MPI_TIME);
-    if (iMPIRequest == MPI_UNDEFINED) {
-      break;
-    }
-    Finish(iMPIRequest);
-  }
-
-  HaloExchanger.Active_ = false;
-
-  Profiler.Stop(WAIT_TIME);
+  HaloExchanger_->Active_ = false;
 
 }
 

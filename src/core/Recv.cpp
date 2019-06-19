@@ -40,23 +40,16 @@ private:
       Recv_(Recv.FloatingRefGenerator_.Generate())
     {}
     array_view<MPI_Request> MPIRequests() { return Recv_->MPIRequests_; }
-    void Finish(int) { /* Can't finish until all requests are done */ }
-    void Wait() {
+    void OnMPIRequestComplete(int) {}
+    void OnComplete() {
 
       recv_impl &Recv = *Recv_;
       const recv_map &RecvMap = *Recv.RecvMap_;
 
       profiler &Profiler = Recv.Context_->core_Profiler();
 
-      Profiler.Start(WAIT_TIME);
-
       long long NumValues = RecvMap.Count();
 
-      Profiler.Start(MPI_TIME);
-
-      MPI_Waitall(Recv.MPIRequests_.Count(), Recv.MPIRequests_.Data(), MPI_STATUSES_IGNORE);
-
-      Profiler.Stop(MPI_TIME);
       Profiler.Start(UNPACK_TIME);
 
       const array<int> &RecvOrder = RecvMap.RecvOrder();
@@ -77,7 +70,6 @@ private:
       }
 
       Profiler.Stop(UNPACK_TIME);
-      Profiler.Stop(WAIT_TIME);
 
     }
     void StartWaitTime() const {

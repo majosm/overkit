@@ -187,8 +187,8 @@ private:
   public:
     exchange_request(halo_exchanger_for_type &HaloExchanger, value_type *ArrayData);
     array_view<MPI_Request> MPIRequests() { return HaloExchanger_->MPIRequests_; }
-    void Finish(int iMPIRequest);
-    void Wait();
+    void OnMPIRequestComplete(int iMPIRequest);
+    void OnComplete();
     void StartWaitTime() const {
       profiler &Profiler = HaloExchanger_->Context_->core_Profiler();
       Profiler.Start(WAIT_TIME);

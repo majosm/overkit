@@ -59,6 +59,7 @@ set(SOURCES
   OptionalTests.cpp
   PartitionTests.cpp
   RangeTests.cpp
+  RequestTests.cpp
   TupleTests.cpp
   UnitTestMain.cpp
   VectorTests.cpp

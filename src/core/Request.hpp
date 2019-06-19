@@ -29,7 +29,7 @@ public:
   {}
 
   ~request() noexcept {
-    if (Request_) Request_->Wait();
+    Wait();
   }
 
   request(const request &Other) = delete;
@@ -46,10 +46,7 @@ public:
 
   explicit operator bool() { return static_cast<bool>(Request_); }
 
-  void Wait() {
-    Request_->Wait();
-    Request_.reset();
-  }
+  void Wait();
 
   static void internal_WaitAll(array_view<request> Requests);
   static void internal_WaitAny(array_view<request> Requests, int &Index);
@@ -63,8 +60,8 @@ private:
   public:
     virtual ~concept() noexcept {}
     virtual array_view<MPI_Request> MPIRequests() = 0;
-    virtual void Finish(int iMPIRequest) = 0;
-    virtual void Wait() = 0;
+    virtual void OnMPIRequestComplete(int iMPIRequest) = 0;
+    virtual void OnComplete() = 0;
     virtual void StartWaitTime() const = 0;
     virtual void StopWaitTime() const = 0;
     virtual void StartMPITime() const = 0;
@@ -79,11 +76,11 @@ private:
     virtual array_view<MPI_Request> MPIRequests() override {
       return Request_.MPIRequests();
     }
-    virtual void Finish(int iMPIRequest) override {
-      Request_.Finish(iMPIRequest);
+    virtual void OnMPIRequestComplete(int iMPIRequest) override {
+      Request_.OnMPIRequestComplete(iMPIRequest);
     }
-    virtual void Wait() override {
-      Request_.Wait();
+    virtual void OnComplete() override {
+      Request_.OnComplete();
     }
     virtual void StartWaitTime() const override {
       Request_.StartWaitTime();
@@ -107,8 +104,12 @@ private:
     return Request_->MPIRequests();
   }
 
-  void Finish_(int iMPIRequest) {
-    Request_->Finish(iMPIRequest);
+  void OnMPIRequestComplete_(int iMPIRequest) {
+    Request_->OnMPIRequestComplete(iMPIRequest);
+  }
+
+  void OnComplete_() {
+    Request_->OnComplete();
   }
 
   void StartWaitTime_() {
@@ -125,6 +126,10 @@ private:
 
   void StopMPITime_() {
     Request_->StopMPITime();
+  }
+
+  void Reset_() {
+    Request_.reset();
   }
 
 };

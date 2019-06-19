@@ -42,22 +42,8 @@ private:
       Send_(Send.FloatingRefGenerator_.Generate())
     {}
     array_view<MPI_Request> MPIRequests() { return Send_->MPIRequests_; }
-    void Finish(int) { /* Nothing to finish */ }
-    void Wait() {
-
-      send_impl &Send = *Send_;
-
-      profiler &Profiler = Send.Context_->core_Profiler();
-
-      Profiler.Start(WAIT_TIME);
-      Profiler.Start(MPI_TIME);
-
-      MPI_Waitall(Send.MPIRequests_.Count(), Send.MPIRequests_.Data(), MPI_STATUSES_IGNORE);
-
-      Profiler.Stop(MPI_TIME);
-      Profiler.Stop(WAIT_TIME);
-
-    }
+    void OnMPIRequestComplete(int) {}
+    void OnComplete() {}
     void StartWaitTime() const {
       profiler &Profiler = Send_->Context_->core_Profiler();
       Profiler.Start(WAIT_TIME);
