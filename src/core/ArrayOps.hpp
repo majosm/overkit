@@ -98,7 +98,7 @@ template <typename T, typename U, int Rank, array_layout Layout, OVK_FUNCTION_RE
 
 template <typename ArrayType, typename SourceArrayRefType, OVK_FUNCTION_REQUIRES(core::IsArray<
   ArrayType>() && core::IsArray<core::remove_cvref<SourceArrayRefType>>() && !core::IsIterator<
-  typename std::decay<SourceArrayRefType>::type>() && core::ArraysAreSimilar<ArrayType,
+  typename std::decay<SourceArrayRefType>::type>() && core::ArraysAreCongruent<ArrayType,
   core::remove_cvref<SourceArrayRefType>>() && std::is_convertible<core::array_access_type<
   SourceArrayRefType &&>, core::array_value_type<ArrayType>>::value)> void ArrayFill(ArrayType
   &Array, SourceArrayRefType &&SourceArray) {

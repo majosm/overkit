@@ -112,12 +112,12 @@ template <typename T, int Rank, array_layout Layout, OVK_FUNCTION_REQUIRES(!IsAr
 }
 
 template <typename T, typename U, OVK_FUNCTION_REQUIRES(IsArray<T>() && IsArray<U>())>
-  constexpr bool ArraysAreSimilar() {
+  constexpr bool ArraysAreCongruent() {
   return ArrayRank<T>() == ArrayRank<U>() && (ArrayRank<T>() == 1 || ArrayLayout<T>() ==
     ArrayLayout<U>());
 }
 template <typename T, typename U, OVK_FUNCTION_REQUIRES(!IsArray<T>() || !IsArray<U>())>
-  constexpr bool ArraysAreSimilar() {
+  constexpr bool ArraysAreCongruent() {
   return false;
 }
 
