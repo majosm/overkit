@@ -109,7 +109,7 @@ void ovkGetGridGlobalRange(const ovk_grid *Grid, int *GlobalBegin, int *GlobalEn
   OVK_DEBUG_ASSERT(GlobalEnd, "Invalid global end pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-  for (int iDim = 0; iDim < GridCPP.Dimension(); ++iDim) {
+  for (int iDim = 0; iDim < ovk::MAX_DIMS; ++iDim) {
     GlobalBegin[iDim] = GridCPP.GlobalRange().Begin(iDim);
     GlobalEnd[iDim] = GridCPP.GlobalRange().End(iDim);
   }
@@ -123,7 +123,7 @@ void ovkGetGridLocalRange(const ovk_grid *Grid, int *LocalBegin, int *LocalEnd) 
   OVK_DEBUG_ASSERT(LocalEnd, "Invalid local end pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-  for (int iDim = 0; iDim < GridCPP.Dimension(); ++iDim) {
+  for (int iDim = 0; iDim < ovk::MAX_DIMS; ++iDim) {
     LocalBegin[iDim] = GridCPP.LocalRange().Begin(iDim);
     LocalEnd[iDim] = GridCPP.LocalRange().End(iDim);
   }
@@ -155,7 +155,7 @@ void ovkGetGridSize(const ovk_grid *Grid, int *Size) {
   OVK_DEBUG_ASSERT(Grid, "Invalid grid pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-  for (int iDim = 0; iDim < GridCPP.Dimension(); ++iDim) {
+  for (int iDim = 0; iDim < ovk::MAX_DIMS; ++iDim) {
     Size[iDim] = GridCPP.Size(iDim);
   }
 
@@ -166,7 +166,7 @@ void ovkGetGridPeriodic(const ovk_grid *Grid, bool *Periodic) {
   OVK_DEBUG_ASSERT(Grid, "Invalid grid pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-  for (int iDim = 0; iDim < GridCPP.Dimension(); ++iDim) {
+  for (int iDim = 0; iDim < ovk::MAX_DIMS; ++iDim) {
     Periodic[iDim] = GridCPP.Periodic(iDim);
   }
 
@@ -187,7 +187,7 @@ void ovkGetGridPeriodicLength(const ovk_grid *Grid, double *PeriodicLength) {
   OVK_DEBUG_ASSERT(Grid, "Invalid grid pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-  for (int iDim = 0; iDim < GridCPP.Dimension(); ++iDim) {
+  for (int iDim = 0; iDim < ovk::MAX_DIMS; ++iDim) {
     PeriodicLength[iDim] = GridCPP.PeriodicLength(iDim);
   }
 
@@ -291,7 +291,7 @@ void ovkGetGridParamGlobalRange(const ovk_grid_params *Params, int *GlobalBegin,
   OVK_DEBUG_ASSERT(GlobalEnd, "Invalid global end pointer.");
 
   auto &ParamsCPP = *reinterpret_cast<const ovk::grid::params *>(Params);
-  for (int iDim = 0; iDim < ParamsCPP.Dimension(); ++iDim) {
+  for (int iDim = 0; iDim < ovk::MAX_DIMS; ++iDim) {
     GlobalBegin[iDim] = ParamsCPP.GlobalRange().Begin(iDim);
     GlobalEnd[iDim] = ParamsCPP.GlobalRange().End(iDim);
   }
@@ -324,7 +324,7 @@ void ovkGetGridParamLocalRange(const ovk_grid_params *Params, int *LocalBegin, i
   OVK_DEBUG_ASSERT(LocalEnd, "Invalid local end pointer.");
 
   auto &ParamsCPP = *reinterpret_cast<const ovk::grid::params *>(Params);
-  for (int iDim = 0; iDim < ParamsCPP.Dimension(); ++iDim) {
+  for (int iDim = 0; iDim < ovk::MAX_DIMS; ++iDim) {
     LocalBegin[iDim] = ParamsCPP.LocalRange().Begin(iDim);
     LocalEnd[iDim] = ParamsCPP.LocalRange().End(iDim);
   }
@@ -355,7 +355,7 @@ void ovkGetGridParamPeriodic(const ovk_grid_params *Params, bool *Periodic) {
   OVK_DEBUG_ASSERT(Periodic, "Invalid periodic pointer.");
 
   auto &ParamsCPP = *reinterpret_cast<const ovk::grid::params *>(Params);
-  for (int iDim = 0; iDim < ParamsCPP.Dimension(); ++iDim) {
+  for (int iDim = 0; iDim < ovk::MAX_DIMS; ++iDim) {
     Periodic[iDim] = ParamsCPP.Periodic()[iDim];
   }
 
@@ -417,7 +417,7 @@ void ovkSetGridParamPeriodicLength(ovk_grid_params *Params, const double *Period
   auto &ParamsCPP = *reinterpret_cast<ovk::grid::params *>(Params);
 
   ovk::tuple<double> PeriodicLengthCPP = ovk::MakeUniformTuple<double>(ParamsCPP.Dimension(), 0.);
-  for (int iDim = 0; iDim < ParamsCPP.Dimension(); ++iDim) {
+  for (int iDim = 0; iDim < ovk::MAX_DIMS; ++iDim) {
     PeriodicLengthCPP[iDim] = PeriodicLength[iDim]; 
   }
 
@@ -481,7 +481,7 @@ void ovkGetGridInfoGlobalRange(const ovk_grid_info *Info, int *GlobalBegin, int 
   OVK_DEBUG_ASSERT(GlobalEnd, "Invalid global end pointer.");
 
   auto &InfoCPP = *reinterpret_cast<const ovk::grid_info *>(Info);
-  for (int iDim = 0; iDim < InfoCPP.Cart().Dimension(); ++iDim) {
+  for (int iDim = 0; iDim < ovk::MAX_DIMS; ++iDim) {
     GlobalBegin[iDim] = InfoCPP.Cart().Range().Begin(iDim);
     GlobalEnd[iDim] = InfoCPP.Cart().Range().End(iDim);
   }
@@ -494,7 +494,7 @@ void ovkGetGridInfoSize(const ovk_grid_info *Info, int *Size) {
   OVK_DEBUG_ASSERT(Size, "Invalid size pointer.");
 
   auto &InfoCPP = *reinterpret_cast<const ovk::grid_info *>(Info);
-  for (int iDim = 0; iDim < InfoCPP.Cart().Dimension(); ++iDim) {
+  for (int iDim = 0; iDim < ovk::MAX_DIMS; ++iDim) {
     Size[iDim] = InfoCPP.Cart().Range().Size(iDim);
   }
 
@@ -506,7 +506,7 @@ void ovkGetGridInfoPeriodic(const ovk_grid_info *Info, bool *Periodic) {
   OVK_DEBUG_ASSERT(Periodic, "Invalid periodic pointer.");
 
   auto &InfoCPP = *reinterpret_cast<const ovk::grid_info *>(Info);
-  for (int iDim = 0; iDim < InfoCPP.Cart().Dimension(); ++iDim) {
+  for (int iDim = 0; iDim < ovk::MAX_DIMS; ++iDim) {
     Periodic[iDim] = InfoCPP.Cart().Periodic(iDim);
   }
 
@@ -528,7 +528,7 @@ void ovkGetGridInfoPeriodicLength(const ovk_grid_info *Info, double *PeriodicLen
   OVK_DEBUG_ASSERT(Info, "Invalid info pointer.");
 
   auto &InfoCPP = *reinterpret_cast<const ovk::grid_info *>(Info);
-  for (int iDim = 0; iDim < InfoCPP.Cart().Dimension(); ++iDim) {
+  for (int iDim = 0; iDim < ovk::MAX_DIMS; ++iDim) {
     PeriodicLength[iDim] = InfoCPP.PeriodicLength()[iDim];
   }
 
