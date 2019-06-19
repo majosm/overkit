@@ -33,13 +33,13 @@ void ovkGetGridComm(const ovk_grid *Grid, MPI_Comm *Comm);
 void ovkGetGridCommSize(const ovk_grid *Grid, int *CommSize);
 void ovkGetGridCommRank(const ovk_grid *Grid, int *CommRank);
 
-void ovkGetGridSize(const ovk_grid *Grid, int *Size);
-
 void ovkGetGridGlobalRange(const ovk_grid *Grid, int *GlobalBegin, int *GlobalEnd);
 void ovkGetGridLocalRange(const ovk_grid *Grid, int *LocalBegin, int *LocalEnd);
 
 void ovkGetGridGlobalCount(const ovk_grid *Grid, long long *NumGlobal);
 void ovkGetGridLocalCount(const ovk_grid *Grid, long long *NumLocal);
+
+void ovkGetGridSize(const ovk_grid *Grid, int *Size);
 
 void ovkGetGridPeriodic(const ovk_grid *Grid, bool *Periodic);
 void ovkGetGridPeriodicStorage(const ovk_grid *Grid, ovk_periodic_storage *PeriodicStorage);
@@ -74,6 +74,7 @@ void ovkSetGridParamGeometryType(ovk_grid_params *Params, ovk_geometry_type Geom
 void ovkGetGridInfoName(const ovk_grid_info *Info, char *Name);
 void ovkGetGridInfoRootRank(const ovk_grid_info *Info, int *RootRank);
 void ovkGetGridInfoDimension(const ovk_grid_info *Info, int *NumDims);
+void ovkGetGridInfoGlobalRange(const ovk_grid_info *Info, int *GlobalBegin, int *GlobalEnd);
 void ovkGetGridInfoSize(const ovk_grid_info *Info, int *Size);
 void ovkGetGridInfoPeriodic(const ovk_grid_info *Info, bool *Periodic);
 void ovkGetGridInfoPeriodicStorage(const ovk_grid_info *Info, ovk_periodic_storage *PeriodicStorage);

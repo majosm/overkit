@@ -173,9 +173,11 @@ public:
   const std::string &Name() const { return *Name_; }
   int RootRank() const { return RootRank_; }
   const cart &Cart() const { return Cart_; }
+  const range &GlobalRange() const { return Cart_.Range(); }
+  tuple<int> Size() const { return Cart_.Range().Size(); }
+  int Size(int iDim) const { return Cart_.Range().Size(iDim); }
   const tuple<double> &PeriodicLength() const { return PeriodicLength_; }
   geometry_type GeometryType() const { return GeometryType_; }
-  const range &GlobalRange() const { return Cart_.Range(); }
   bool IsLocal() const { return IsLocal_; }
 
   static grid_info internal_Create(grid *MaybeGrid, comm_view Comm);
