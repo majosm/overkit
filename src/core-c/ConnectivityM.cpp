@@ -169,7 +169,7 @@ void ovkGetConnectivityMExtents(const ovk_connectivity_m *ConnectivityM, int Dim
   **Begins, const int **Ends) {
 
   OVK_DEBUG_ASSERT(ConnectivityM, "Invalid connectivity M pointer.");
-  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < OVK_MAX_DIMS, "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < ovk::MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Begins, "Invalid begins pointer.");
   OVK_DEBUG_ASSERT(Ends, "Invalid ends pointer.");
 
@@ -192,7 +192,7 @@ void ovkEditConnectivityMExtents(ovk_connectivity_m *ConnectivityM, int Dimensio
   int **Ends) {
 
   OVK_DEBUG_ASSERT(ConnectivityM, "Invalid connectivity M pointer.");
-  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < OVK_MAX_DIMS, "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < ovk::MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Begins, "Invalid begins pointer.");
   OVK_DEBUG_ASSERT(Ends, "Invalid ends pointer.");
 
@@ -210,7 +210,7 @@ void ovkRestoreConnectivityMExtents(ovk_connectivity_m *ConnectivityM, int Dimen
   int **Ends) {
 
   OVK_DEBUG_ASSERT(ConnectivityM, "Invalid connectivity M pointer.");
-  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < OVK_MAX_DIMS, "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < ovk::MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Begins, "Invalid begins pointer.");
   OVK_DEBUG_ASSERT(Ends, "Invalid ends pointer.");
 
@@ -226,7 +226,7 @@ void ovkGetConnectivityMCoords(const ovk_connectivity_m *ConnectivityM, int Dime
   double **Coords) {
 
   OVK_DEBUG_ASSERT(ConnectivityM, "Invalid connectivity M pointer.");
-  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < OVK_MAX_DIMS, "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < ovk::MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Coords, "Invalid coords pointer.");
 
   auto &ConnectivityMCPP = *reinterpret_cast<const ovk::connectivity_m *>(ConnectivityM);
@@ -246,7 +246,7 @@ bool ovkEditingConnectivityMCoords(const ovk_connectivity_m *ConnectivityM) {
 void ovkEditConnectivityMCoords(ovk_connectivity_m *ConnectivityM, int Dimension, double **Coords) {
 
   OVK_DEBUG_ASSERT(ConnectivityM, "Invalid connectivity M pointer.");
-  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < OVK_MAX_DIMS, "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < ovk::MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Coords, "Invalid coords pointer.");
 
   auto &ConnectivityMCPP = *reinterpret_cast<ovk::connectivity_m *>(ConnectivityM);
@@ -262,7 +262,7 @@ void ovkRestoreConnectivityMCoords(ovk_connectivity_m *ConnectivityM, int Dimens
   **Coords) {
 
   OVK_DEBUG_ASSERT(ConnectivityM, "Invalid connectivity M pointer.");
-  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < OVK_MAX_DIMS, "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < ovk::MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Coords, "Invalid coords pointer.");
 
   auto &ConnectivityMCPP = *reinterpret_cast<ovk::connectivity_m *>(ConnectivityM);
@@ -276,7 +276,7 @@ void ovkGetConnectivityMInterpCoefs(const ovk_connectivity_m *ConnectivityM, int
   Point, const double **InterpCoefs) {
 
   OVK_DEBUG_ASSERT(ConnectivityM, "Invalid connectivity M pointer.");
-  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < OVK_MAX_DIMS, "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < ovk::MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(InterpCoefs, "Invalid interp coefs pointer.");
 
   auto &ConnectivityMCPP = *reinterpret_cast<const ovk::connectivity_m *>(ConnectivityM);
@@ -300,7 +300,7 @@ void ovkEditConnectivityMInterpCoefs(ovk_connectivity_m *ConnectivityM, int Dime
   double **InterpCoefs) {
 
   OVK_DEBUG_ASSERT(ConnectivityM, "Invalid connectivity M pointer.");
-  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < OVK_MAX_DIMS, "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < ovk::MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(InterpCoefs, "Invalid interp coefs pointer.");
 
   auto &ConnectivityMCPP = *reinterpret_cast<ovk::connectivity_m *>(ConnectivityM);
@@ -318,7 +318,7 @@ void ovkRestoreConnectivityMInterpCoefs(ovk_connectivity_m *ConnectivityM, int D
   double **InterpCoefs) {
 
   OVK_DEBUG_ASSERT(ConnectivityM, "Invalid connectivity M pointer.");
-  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < OVK_MAX_DIMS, "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < ovk::MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(InterpCoefs, "Invalid interp coefs pointer.");
 
   auto &ConnectivityMCPP = *reinterpret_cast<ovk::connectivity_m *>(ConnectivityM);
@@ -335,7 +335,7 @@ void ovkGetConnectivityMDestinations(const ovk_connectivity_m *ConnectivityM, in
   int **Destinations) {
 
   OVK_DEBUG_ASSERT(ConnectivityM, "Invalid connectivity M pointer.");
-  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < OVK_MAX_DIMS, "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < ovk::MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Destinations, "Invalid destinations pointer.");
 
   auto &ConnectivityMCPP = *reinterpret_cast<const ovk::connectivity_m *>(ConnectivityM);
@@ -356,7 +356,7 @@ void ovkEditConnectivityMDestinations(ovk_connectivity_m *ConnectivityM, int Dim
   **Destinations) {
 
   OVK_DEBUG_ASSERT(ConnectivityM, "Invalid connectivity M pointer.");
-  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < OVK_MAX_DIMS, "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < ovk::MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Destinations, "Invalid destinations pointer.");
 
   auto &ConnectivityMCPP = *reinterpret_cast<ovk::connectivity_m *>(ConnectivityM);
@@ -372,7 +372,7 @@ void ovkRestoreConnectivityMDestinations(ovk_connectivity_m *ConnectivityM, int 
   **Destinations) {
 
   OVK_DEBUG_ASSERT(ConnectivityM, "Invalid connectivity M pointer.");
-  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < OVK_MAX_DIMS, "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < ovk::MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Destinations, "Invalid destinations pointer.");
 
   auto &ConnectivityMCPP = *reinterpret_cast<ovk::connectivity_m *>(ConnectivityM);

@@ -157,7 +157,7 @@ void ovkGetConnectivityNPoints(const ovk_connectivity_n *ConnectivityN, int Dime
   **Points) {
 
   OVK_DEBUG_ASSERT(ConnectivityN, "Invalid connectivity N pointer.");
-  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < OVK_MAX_DIMS, "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < ovk::MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Points, "Invalid points pointer.");
 
   auto &ConnectivityNCPP = *reinterpret_cast<const ovk::connectivity_n *>(ConnectivityN);
@@ -177,7 +177,7 @@ bool ovkEditingConnectivityNPoints(const ovk_connectivity_n *ConnectivityN) {
 void ovkEditConnectivityNPoints(ovk_connectivity_n *ConnectivityN, int Dimension, int **Points) {
 
   OVK_DEBUG_ASSERT(ConnectivityN, "Invalid connectivity N pointer.");
-  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < OVK_MAX_DIMS, "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < ovk::MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Points, "Invalid points pointer.");
 
   auto &ConnectivityNCPP = *reinterpret_cast<ovk::connectivity_n *>(ConnectivityN);
@@ -192,7 +192,7 @@ void ovkEditConnectivityNPoints(ovk_connectivity_n *ConnectivityN, int Dimension
 void ovkRestoreConnectivityNPoints(ovk_connectivity_n *ConnectivityN, int Dimension, int **Points) {
 
   OVK_DEBUG_ASSERT(ConnectivityN, "Invalid connectivity N pointer.");
-  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < OVK_MAX_DIMS, "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < ovk::MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Points, "Invalid points pointer.");
 
   auto &ConnectivityNCPP = *reinterpret_cast<ovk::connectivity_n *>(ConnectivityN);
@@ -206,7 +206,7 @@ void ovkGetConnectivityNSources(const ovk_connectivity_n *ConnectivityN, int Dim
   **Sources) {
 
   OVK_DEBUG_ASSERT(ConnectivityN, "Invalid connectivity N pointer.");
-  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < OVK_MAX_DIMS, "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < ovk::MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Sources, "Invalid sources pointer.");
 
   auto &ConnectivityNCPP = *reinterpret_cast<const ovk::connectivity_n *>(ConnectivityN);
@@ -226,7 +226,7 @@ bool ovkEditingConnectivityNSources(const ovk_connectivity_n *ConnectivityN) {
 void ovkEditConnectivityNSources(ovk_connectivity_n *ConnectivityN, int Dimension, int **Sources) {
 
   OVK_DEBUG_ASSERT(ConnectivityN, "Invalid connectivity N pointer.");
-  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < OVK_MAX_DIMS, "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < ovk::MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Sources, "Invalid sources pointer.");
 
   auto &ConnectivityNCPP = *reinterpret_cast<ovk::connectivity_n *>(ConnectivityN);
@@ -242,7 +242,7 @@ void ovkRestoreConnectivityNSources(ovk_connectivity_n *ConnectivityN, int Dimen
   {
 
   OVK_DEBUG_ASSERT(ConnectivityN, "Invalid connectivity N pointer.");
-  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < OVK_MAX_DIMS, "Invalid dimension.");
+  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < ovk::MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Sources, "Invalid sources pointer.");
 
   auto &ConnectivityNCPP = *reinterpret_cast<ovk::connectivity_n *>(ConnectivityN);

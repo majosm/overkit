@@ -24,7 +24,7 @@ inline tuple<int> cart::GetPeriod(const tuple<int> &Tuple) const {
 
   switch (PeriodicStorage_) {
   case periodic_storage::UNIQUE:
-    for (int iDim = 0; iDim < OVK_MAX_DIMS; ++iDim) {
+    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
       if (Periodic_(iDim)) {
         int PeriodSize = Range_.Size(iDim);
         int Offset = Tuple(iDim) - Range_.Begin(iDim);
@@ -33,7 +33,7 @@ inline tuple<int> cart::GetPeriod(const tuple<int> &Tuple) const {
     }
     break;
   case periodic_storage::DUPLICATED:
-    for (int iDim = 0; iDim < OVK_MAX_DIMS; ++iDim) {
+    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
       if (Periodic_(iDim)) {
         int PeriodSize = Range_.Size(iDim)-1;
         int Offset = Tuple(iDim) - Range_.Begin(iDim);
@@ -53,7 +53,7 @@ inline tuple<int> cart::PeriodicAdjust(const tuple<int> &Tuple) const {
 
   switch (PeriodicStorage_) {
   case periodic_storage::UNIQUE:
-    for (int iDim = 0; iDim < OVK_MAX_DIMS; ++iDim) {
+    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
       if (Periodic_(iDim)) {
         int PeriodSize = Range_.Size(iDim);
         int Mod = (Tuple(iDim) - Range_.Begin(iDim)) % PeriodSize;
@@ -62,7 +62,7 @@ inline tuple<int> cart::PeriodicAdjust(const tuple<int> &Tuple) const {
     }
     break;
   case periodic_storage::DUPLICATED:
-    for (int iDim = 0; iDim < OVK_MAX_DIMS; ++iDim) {
+    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
       if (Periodic_(iDim)) {
         int PeriodSize = Range_.Size(iDim)-1;
         int Mod = (Tuple(iDim) - Range_.Begin(iDim)) % PeriodSize;

@@ -29,7 +29,7 @@ class HaloTests : public tests::mpi_test {};
 
 using support::CartesianDecomp;
 
-template <typename T> using field_data = ovk::array<T,OVK_MAX_DIMS,ovk::array_layout::GRID>;
+template <typename T> using field_data = ovk::array<T,ovk::MAX_DIMS,ovk::array_layout::GRID>;
 
 TEST_F(HaloTests, Exchange) {
 
