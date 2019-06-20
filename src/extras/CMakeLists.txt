@@ -49,10 +49,8 @@ endif()
 add_library(overkit-extras OBJECT ${SOURCES})
 list(APPEND LOCAL_TARGETS overkit-extras)
 
-# Build core stuff first
-add_dependencies(overkit-extras overkit-core)
-
 # Generate/copy headers to build tree before compiling
+add_dependencies(overkit-extras core-headers)
 add_dependencies(overkit-extras extras-headers)
 
 #-------------------

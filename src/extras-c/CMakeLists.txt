@@ -43,13 +43,10 @@ set(INTERNAL_HEADERS
 add_library(overkit-extras-c OBJECT ${SOURCES})
 list(APPEND LOCAL_TARGETS overkit-extras-c)
 
-# Build core stuff first
-add_dependencies(overkit-extras-c overkit-core overkit-core-c)
-
-# Build extras first
-add_dependencies(overkit-extras-c overkit-extras)
-
 # Generate/copy headers to build tree before compiling
+add_dependencies(overkit-extras-c core-headers)
+add_dependencies(overkit-extras-c core-c-headers)
+add_dependencies(overkit-extras-c extras-headers)
 add_dependencies(overkit-extras-c extras-c-headers)
 
 #-------------------
