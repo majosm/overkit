@@ -62,6 +62,18 @@ inline MPI_Datatype DataTypeToMPI(data_type DataType) {
 
 namespace core {
 
+template <typename T> constexpr bool IsSupportedDataType() { return false; }
+template <> constexpr bool IsSupportedDataType<bool>() { return true; }
+template <> constexpr bool IsSupportedDataType<unsigned char>() { return true; }
+template <> constexpr bool IsSupportedDataType<int>() { return true; }
+template <> constexpr bool IsSupportedDataType<long>() { return true; }
+template <> constexpr bool IsSupportedDataType<long long>() { return true; }
+template <> constexpr bool IsSupportedDataType<unsigned int>() { return true; }
+template <> constexpr bool IsSupportedDataType<unsigned long>() { return true; }
+template <> constexpr bool IsSupportedDataType<unsigned long long>() { return true; }
+template <> constexpr bool IsSupportedDataType<float>() { return true; }
+template <> constexpr bool IsSupportedDataType<double>() { return true; }
+
 template <typename T> constexpr data_type GetDataType();
 template <> constexpr data_type GetDataType<bool>() { return data_type::BOOL; }
 template <> constexpr data_type GetDataType<unsigned char>() { return data_type::BYTE; }
