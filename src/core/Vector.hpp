@@ -125,10 +125,17 @@ public:
   {}
 
   vector(const vector &Other) = default;
-  vector(vector &&Other) noexcept = default;
+  // Can't use "= default" because std::vector is not noexcept movable until C++17
+  vector(vector &&Other) noexcept:
+    Values_(std::move(Other.Values_))
+  {}
 
   vector &operator=(const vector &Other) = default;
-  vector &operator=(vector &&Other) noexcept = default;
+  // Can't use "= default" because std::vector is not noexcept movable until C++17
+  vector &operator=(vector &&Other) noexcept {
+    Values_ = std::move(Other.Values_);
+    return *this;
+  }
 
   vector &operator=(std::initializer_list<value_type> ValuesList) {
     vector_internal::AssignInitializerList(Values_, ValuesList);
