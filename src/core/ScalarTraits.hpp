@@ -23,14 +23,15 @@ template <typename T> struct scalar_traits<T, OVK_SPECIALIZATION_REQUIRES(
 
 namespace core {
 
-namespace scalar_traits_internal {
-template <typename T> constexpr std::true_type IsScalarTest(typename scalar_traits<T>::type *) {
+namespace is_scalar_internal {
+template <typename T> using maybe_int = int;
+template <typename T> constexpr std::true_type Test(maybe_int<typename scalar_traits<T>::type>) {
   return {};
 }
-template <typename T> constexpr std::false_type IsScalarTest(...) { return {}; }
+template <typename T> constexpr std::false_type Test(...) { return {}; }
 }
 template <typename T> constexpr bool IsScalar() {
-  return decltype(scalar_traits_internal::IsScalarTest<T>(nullptr))::value;
+  return decltype(is_scalar_internal::Test<T>(0))::value;
 }
 
 }

@@ -10,25 +10,26 @@
 namespace ovk {
 namespace core {
 
-namespace iterator_traits_internal {
-template <typename T> constexpr std::true_type IsIteratorTest(typename std::iterator_traits<T>::
-  iterator_category *) { return {}; }
-template <typename T> constexpr std::false_type IsIteratorTest(...) { return {}; }
+namespace is_iterator_internal {
+template <typename T> using maybe_int = int;
+template <typename T> constexpr std::true_type Test(maybe_int<typename std::iterator_traits<T>::
+  iterator_category>) { return {}; }
+template <typename T> constexpr std::false_type Test(...) { return {}; }
 }
 template <typename T> constexpr bool IsIterator() {
-  return decltype(iterator_traits_internal::IsIteratorTest<T>(nullptr))::value;
+  return decltype(is_iterator_internal::Test<T>(0))::value;
 }
 
-namespace iterator_traits_internal {
-template <typename T, typename=void> struct alias_helper;
-template <typename T> struct alias_helper<T, OVK_SPECIALIZATION_REQUIRES(IsIterator<T>())> {
+namespace iterator_aliases_internal {
+template <typename T, typename=void> struct helper;
+template <typename T> struct helper<T, OVK_SPECIALIZATION_REQUIRES(IsIterator<T>())> {
   using difference_type = typename std::iterator_traits<T>::difference_type;
   using value_type = typename std::iterator_traits<T>::value_type;
   using pointer = typename std::iterator_traits<T>::pointer;
   using reference = typename std::iterator_traits<T>::reference;
   using iterator_category = typename std::iterator_traits<T>::iterator_category;
 };
-template <typename T> struct alias_helper<T, OVK_SPECIALIZATION_REQUIRES(!IsIterator<T>())> {
+template <typename T> struct helper<T, OVK_SPECIALIZATION_REQUIRES(!IsIterator<T>())> {
   using difference_type = std::false_type;
   using value_type = std::false_type;
   using pointer = std::false_type;
@@ -36,16 +37,16 @@ template <typename T> struct alias_helper<T, OVK_SPECIALIZATION_REQUIRES(!IsIter
   using iterator_category = std::false_type;
 };
 }
-template <typename T> using iterator_difference_type = typename iterator_traits_internal::
-  alias_helper<T>::difference_type;
-template <typename T> using iterator_value_type = typename iterator_traits_internal::
-  alias_helper<T>::value_type;
-template <typename T> using iterator_pointer_type = typename iterator_traits_internal::
-  alias_helper<T>::pointer;
-template <typename T> using iterator_reference_type = typename iterator_traits_internal::
-  alias_helper<T>::reference;
-template <typename T> using iterator_category = typename iterator_traits_internal::
-  alias_helper<T>::iterator_category;
+template <typename T> using iterator_difference_type = typename iterator_aliases_internal::
+  helper<T>::difference_type;
+template <typename T> using iterator_value_type = typename iterator_aliases_internal::
+  helper<T>::value_type;
+template <typename T> using iterator_pointer_type = typename iterator_aliases_internal::
+  helper<T>::pointer;
+template <typename T> using iterator_reference_type = typename iterator_aliases_internal::
+  helper<T>::reference;
+template <typename T> using iterator_category = typename iterator_aliases_internal::
+  helper<T>::iterator_category;
 
 template <typename T, OVK_FUNCTION_REQUIRES(IsIterator<T>())> constexpr bool IsInputIterator() {
   return
