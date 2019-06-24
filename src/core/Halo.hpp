@@ -13,6 +13,7 @@
 #include <ovk/core/DataType.hpp>
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
+#include <ovk/core/IDMap.hpp>
 #include <ovk/core/PartitionBase.hpp>
 #include <ovk/core/Profiler.hpp>
 #include <ovk/core/Range.hpp>
@@ -147,7 +148,7 @@ private:
 
   halo_map HaloMap_;
 
-  mutable std::map<type_id_type, array<halo_exchanger>> HaloExchangers_;
+  mutable id_map<1,array<halo_exchanger>> HaloExchangers_;
 
   static constexpr int TOTAL_TIME = profiler::HALO_TIME;
   static constexpr int SETUP_TIME = profiler::HALO_SETUP_TIME;

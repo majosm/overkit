@@ -16,7 +16,7 @@ extern "C" {
 #endif
 
 typedef enum {
-  OVK_BOOL,
+  OVK_BOOL = 1,
   OVK_BYTE,
   OVK_INT,
   OVK_LONG,

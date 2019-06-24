@@ -13,7 +13,7 @@
 
 namespace ovk {
 
-enum class data_type {
+enum class data_type : int {
   BOOL = OVK_BOOL,
   BYTE = OVK_BYTE,
   INT = OVK_INT,

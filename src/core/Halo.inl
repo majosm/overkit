@@ -13,12 +13,16 @@ template <typename ArrayType, OVK_FUNCDEF_REQUIRES(IsArray<ArrayType>() && Array
 
   using value_type = array_value_type<ArrayType>;
 
+  OVK_DEBUG_ASSERT(IsSupportedDataType<value_type>(), "Unsupported data type.");
+
   core::profiler &Profiler = Context_->core_Profiler();
 
   Profiler.StartSync(TOTAL_TIME, Comm_);
   Profiler.Start(EXCHANGE_TIME);
 
-  array<halo_exchanger> &HaloExchangersForType = HaloExchangers_[GetTypeID<value_type>()];
+  data_type DataType = GetDataType<value_type>();
+
+  array<halo_exchanger> &HaloExchangersForType = HaloExchangers_.Get(int(DataType));
 
   int iHaloExchanger = 0;
   while (iHaloExchanger < HaloExchangersForType.Count() && HaloExchangersForType(iHaloExchanger).
