@@ -32,7 +32,7 @@ include(CMakePackageConfigHelpers)
 
 project(OverkitParallel CXX C)
 set(OverkitParallel_VERSION_MAJOR 0)
-set(OverkitParallel_VERSION_MINOR 1)
+set(OverkitParallel_VERSION_MINOR 2)
 set(OverkitParallel_VERSION_PATCH 0)
 set(OverkitParallel_VERSION ${OverkitParallel_VERSION_MAJOR}.${OverkitParallel_VERSION_MINOR}.${OverkitParallel_VERSION_PATCH})
 
