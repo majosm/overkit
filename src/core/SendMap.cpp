@@ -4,6 +4,7 @@
 #include "ovk/core/SendMap.hpp"
 
 #include "ovk/core/Array.hpp"
+#include "ovk/core/ArrayView.hpp"
 #include "ovk/core/FloatingRef.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Profiler.hpp"
@@ -20,8 +21,8 @@ send_map::send_map():
   FloatingRefGenerator_(*this)
 {}
 
-send_map::send_map(long long NumValues, array<long long> SendOrder, const array<int>
-  &DestinationRanks):
+send_map::send_map(long long NumValues, array<long long> SendOrder, array_view<const int>
+  DestinationRanks):
   FloatingRefGenerator_(*this),
   SendOrder_(std::move(SendOrder))
 {

@@ -5,7 +5,6 @@
 #define OVK_CORE_COLLECT_MAP_HPP_INCLUDED
 
 #include <ovk/core/Array.hpp>
-#include <ovk/core/ArrayView.hpp>
 #include <ovk/core/Cart.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/FloatingRef.hpp>

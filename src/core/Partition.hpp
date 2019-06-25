@@ -5,6 +5,7 @@
 #define OVK_CORE_PARTITION_HPP_INCLUDED
 
 #include <ovk/core/Array.hpp>
+#include <ovk/core/ArrayView.hpp>
 #include <ovk/core/Cart.hpp>
 #include <ovk/core/Context.hpp>
 #include <ovk/core/Global.hpp>
@@ -29,7 +30,7 @@ class partition {
 public:
 
   partition(std::shared_ptr<context> Context, const cart &Cart, comm_view Comm, const range
-    &LocalRange, int ExtendAmount, int NumSubregions, const array<int> &NeighborRanks);
+    &LocalRange, int ExtendAmount, int NumSubregions, array_view<const int> NeighborRanks);
 
   partition(const partition &Other) = delete;
   partition(partition &&Other) noexcept = default;

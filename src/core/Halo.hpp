@@ -38,7 +38,7 @@ public:
 
   halo_map();
   halo_map(const cart &Cart, const range &LocalRange, const range &ExtendedRange,
-    const array<partition_info> &Neighbors);
+    array_view<partition_info> Neighbors);
 
   floating_ref<const halo_map> GetFloatingRef() const {
     return FloatingRefGenerator_.Generate();
@@ -118,7 +118,7 @@ class halo {
 public:
 
   halo(std::shared_ptr<context> Context, const cart &Cart, comm_view Comm, const range &LocalRange,
-    const range &ExtendedRange, const array<partition_info> &Neighbors);
+    const range &ExtendedRange, array_view<const partition_info> Neighbors);
 
   halo(const halo &Other) = delete;
   halo(halo &&Other) noexcept = default;

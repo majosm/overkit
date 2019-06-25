@@ -29,7 +29,7 @@ halo_map::halo_map():
 {}
 
 halo_map::halo_map(const cart &Cart, const range &LocalRange, const range &ExtendedRange,
-  const array<partition_info> &Neighbors):
+  array_view<const partition_info> Neighbors):
   FloatingRefGenerator_(*this)
 {
 
@@ -182,7 +182,7 @@ halo_map::halo_map(const cart &Cart, const range &LocalRange, const range &Exten
 }
 
 halo::halo(std::shared_ptr<context> Context, const cart &Cart, comm_view Comm, const range
-  &LocalRange, const range &ExtendedRange, const array<partition_info> &Neighbors):
+  &LocalRange, const range &ExtendedRange, array_view<const partition_info> Neighbors):
   Context_(std::move(Context)),
   Comm_(Comm)
 {

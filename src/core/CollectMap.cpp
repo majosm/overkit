@@ -4,7 +4,6 @@
 #include "ovk/core/CollectMap.hpp"
 
 #include "ovk/core/Array.hpp"
-#include "ovk/core/ArrayView.hpp"
 #include "ovk/core/Cart.hpp"
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Debug.hpp"

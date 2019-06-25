@@ -4,6 +4,7 @@
 #ifndef OVK_CORE_PARTITION_BASE_HPP_INCLUDED
 #define OVK_CORE_PARTITION_BASE_HPP_INCLUDED
 
+#include <ovk/core/ArrayView.hpp>
 #include <ovk/core/Cart.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Global.hpp>
@@ -24,8 +25,8 @@ range ExtendLocalRange(const cart &Cart, const range &LocalRange, int ExtendAmou
 array<int> DetectNeighbors(const cart &Cart, comm_view Comm, const range &LocalRange, const
   partition_hash &Hash);
 
-array<partition_info> RetrievePartitionInfo(comm_view Comm, const array<int> &Ranks, const range
-  &LocalRange, const range &ExtendedRange);
+array<partition_info> RetrievePartitionInfo(comm_view Comm, array_view<const int> Ranks, const
+  range &LocalRange, const range &ExtendedRange);
 
 }}
 

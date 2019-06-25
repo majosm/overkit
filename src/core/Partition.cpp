@@ -4,6 +4,7 @@
 #include "ovk/core/Partition.hpp"
 
 #include "ovk/core/Array.hpp"
+#include "ovk/core/ArrayView.hpp"
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Context.hpp"
 #include "ovk/core/Debug.hpp"
@@ -33,7 +34,7 @@ array<range> CreateSubregions(int NumDims, const range &Range, int NumSubregions
 }
 
 partition::partition(std::shared_ptr<context> Context, const cart &Cart, comm_view Comm, const range
-  &LocalRange, int ExtendAmount, int NumSubregions, const array<int> &NeighborRanks):
+  &LocalRange, int ExtendAmount, int NumSubregions, array_view<const int> NeighborRanks):
   Context_(std::move(Context)),
   Cart_(Cart),
   Comm_(Comm),
@@ -123,10 +124,10 @@ array<int> DetectNeighbors(const cart &Cart, comm_view Comm, const range &LocalR
 
 }
 
-array<partition_info> RetrievePartitionInfo(comm_view Comm, const array<int> &Ranks, const range
+array<partition_info> RetrievePartitionInfo(comm_view Comm, array_view<const int> Ranks, const range
   &LocalRange, const range &ExtendedRange) {
 
-  const array<int> &RecvFromRanks = Ranks;
+  array_view<const int> &RecvFromRanks = Ranks;
   array<int> SendToRanks = core::DynamicHandshake(Comm, RecvFromRanks);
 
   int NumSends = SendToRanks.Count();
