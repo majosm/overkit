@@ -13,6 +13,7 @@
 #include <ovk/core/DomainBase.hpp>
 #include <ovk/core/Editor.hpp>
 #include <ovk/core/Event.hpp>
+#include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Grid.hpp>
 #include <ovk/core/IDMap.hpp>
@@ -92,9 +93,9 @@ public:
   ~domain() noexcept;
 
   floating_ref<const domain> GetFloatingRef() const {
-    return FloatingRefGenerator_.Generate<const domain>();
+    return FloatingRefGenerator_.Generate(*this);
   }
-  floating_ref<domain> GetFloatingRef() { return FloatingRefGenerator_.Generate<domain>(); }
+  floating_ref<domain> GetFloatingRef() { return FloatingRefGenerator_.Generate(*this); }
 
   const id_set<1> &ComponentIDs() const { return Components_.Keys(); }
 

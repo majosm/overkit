@@ -3,143 +3,79 @@
 
 namespace ovk {
 
-template <typename T> floating_ref_generator<T>::floating_ref_generator(T &Target):
-  Resource_(new resource(&Target))
+inline floating_ref_generator::floating_ref_generator():
+  ReferenceLoc_(new void *(this))
 {}
 
-template <typename T> floating_ref_generator<T>::floating_ref_generator(const floating_ref_generator
+inline floating_ref_generator::floating_ref_generator(const floating_ref_generator &Other):
+  ReferenceLoc_(new void *(this))
+{}
+
+inline floating_ref_generator::floating_ref_generator(floating_ref_generator &&Other) noexcept:
+  ReferenceLoc_(std::move(Other.ReferenceLoc_))
+{
+  *ReferenceLoc_ = this;
+}
+
+inline floating_ref_generator &floating_ref_generator::operator=(const floating_ref_generator
   &Other) {
 
-  if (Other.Resource_) {
-
-    auto OtherTarget = static_cast<T *>(Other.Resource_->Target);
-
-    std::ptrdiff_t Offset = reinterpret_cast<byte_ptr>(OtherTarget) -
-      reinterpret_cast<byte_ptr>(&Other);
-
-    auto Target = reinterpret_cast<T *>(reinterpret_cast<byte_ptr>(this) + Offset);
-
-    Resource_.reset(new resource(Target));
-
-  } else {
-
-    Resource_.reset();
-
-  }
+  return *this;
 
 }
 
-template <typename T> floating_ref_generator<T>::floating_ref_generator(floating_ref_generator
-  &&Other) noexcept {
+inline floating_ref_generator &floating_ref_generator::operator=(floating_ref_generator &&Other)
+  noexcept {
 
-  if (Other.Resource_) {
+  ReferenceLoc_ = std::move(Other.ReferenceLoc_);
 
-    auto OtherTarget = static_cast<T *>(Other.Resource_->Target);
-
-    std::ptrdiff_t Offset = reinterpret_cast<byte_ptr>(OtherTarget) -
-      reinterpret_cast<byte_ptr>(&Other);
-
-    auto Target = reinterpret_cast<T *>(reinterpret_cast<byte_ptr>(this) + Offset);
-
-    Resource_ = std::move(Other.Resource_);
-    Resource_->Target = Target;
-
-  } else {
-
-    Resource_.reset();
-
-  }
-
-}
-
-template <typename T> floating_ref_generator<T> &floating_ref_generator<T>::operator=(const
-  floating_ref_generator &Other) {
-
-  if (Other.Resource_) {
-
-    auto OtherTarget = static_cast<T *>(Other.Resource_->Target);
-
-    std::ptrdiff_t Offset = reinterpret_cast<byte_ptr>(OtherTarget) -
-      reinterpret_cast<byte_ptr>(&Other);
-
-    auto Target = reinterpret_cast<T *>(reinterpret_cast<byte_ptr>(this) + Offset);
-
-    Resource_.reset(new resource(Target));
-
-  } else {
-
-    Resource_.reset();
-
-  }
+  *ReferenceLoc_ = this;
 
   return *this;
 
 }
 
-template <typename T> floating_ref_generator<T> &floating_ref_generator<T>::operator=(
-  floating_ref_generator &&Other) noexcept {
+template <typename T> floating_ref<T> floating_ref_generator::Generate(T &Target) const {
 
-  if (Other.Resource_) {
-
-    auto OtherTarget = static_cast<T *>(Other.Resource_->Target);
-
-    std::ptrdiff_t Offset = reinterpret_cast<byte_ptr>(OtherTarget) -
-      reinterpret_cast<byte_ptr>(&Other);
-
-    auto Target = reinterpret_cast<T *>(reinterpret_cast<byte_ptr>(this) + Offset);
-
-    Resource_ = std::move(Other.Resource_);
-    Resource_->Target = Target;
-
-  } else {
-
-    Resource_.reset();
-
-  }
-
-  return *this;
+  return {ReferenceLoc_.get(), Target};
 
 }
 
-template <typename T> template <typename U, OVK_FUNCDEF_REQUIRES(std::is_convertible<T *,
-  U *>::value || std::is_base_of<T, U>::value)> floating_ref<U> floating_ref_generator<T>::
-  Generate() const {
+template <typename T> floating_ref<T>::floating_ref(void * const *ReferenceLoc, T &Target):
+  ReferenceLoc_(ReferenceLoc),
+  Offset_(reinterpret_cast<byte_ptr>(&Target) - reinterpret_cast<byte_ptr>(*ReferenceLoc_))
+{}
 
-  return static_cast<floating_ref<U>>(floating_ref<T>(*Resource_));
-
-}
-
-template <typename T> template <typename U, OVK_FUNCDEF_REQUIRES(std::is_convertible<U *,
-  T *>::value)> floating_ref<T>::floating_ref(const floating_ref<U> &Other):
-  Resource_(Other.Resource_)
+template <typename T> template <typename U, OVK_FUNCDEF_REQUIRES(!std::is_same<U, T>::value &&
+  std::is_convertible<U *, T *>::value)> floating_ref<T>::floating_ref(const floating_ref<U>
+  &Other):
+  ReferenceLoc_(Other.ReferenceLoc_)
 {
 
   using other_byte_ptr = typename floating_ref<U>::byte_ptr;
 
-  auto OtherTarget = reinterpret_cast<U *>(reinterpret_cast<other_byte_ptr>(Resource_->Target) +
-    Other.TypeOffset_);
+  auto OtherTarget = reinterpret_cast<U *>(reinterpret_cast<other_byte_ptr>(*ReferenceLoc_) +
+    Other.Offset_);
   auto Target = static_cast<T *>(OtherTarget);
 
-  TypeOffset_ = Other.TypeOffset_ + (reinterpret_cast<byte_ptr>(Target) -
+  Offset_ = Other.Offset_ + (reinterpret_cast<byte_ptr>(Target) -
     reinterpret_cast<other_byte_ptr>(OtherTarget));
 
 }
 
 template <typename T> floating_ref<T>::floating_ref(floating_ref &&Other) noexcept:
-  Resource_(Other.Resource_),
-  TypeOffset_(Other.TypeOffset_)
+  ReferenceLoc_(Other.ReferenceLoc_),
+  Offset_(Other.Offset_)
 {
-  Other.Resource_ = nullptr;
-  Other.TypeOffset_ = 0;
+  Other.ReferenceLoc_ = nullptr;
 }
 
 template <typename T> floating_ref<T> &floating_ref<T>::operator=(floating_ref &&Other) noexcept {
 
-  Resource_ = Other.Resource_;
-  TypeOffset_ = Other.TypeOffset_;
+  ReferenceLoc_ = Other.ReferenceLoc_;
+  Offset_ = Other.Offset_;
 
-  Other.Resource_ = nullptr;
-  Other.TypeOffset_ = 0;
+  Other.ReferenceLoc_ = nullptr;
 
   return *this;
 
@@ -147,33 +83,34 @@ template <typename T> floating_ref<T> &floating_ref<T>::operator=(floating_ref &
 
 template <typename T> T &floating_ref<T>::operator*() const {
 
-  return *reinterpret_cast<T *>(reinterpret_cast<byte_ptr>(Resource_->Target) + TypeOffset_);
+  return *reinterpret_cast<T *>(reinterpret_cast<byte_ptr>(*ReferenceLoc_) + Offset_);
 
 }
 
 template <typename T> T *floating_ref<T>::operator->() const {
 
-  return reinterpret_cast<T *>(reinterpret_cast<byte_ptr>(Resource_->Target) + TypeOffset_);
+  return reinterpret_cast<T *>(reinterpret_cast<byte_ptr>(*ReferenceLoc_) + Offset_);
 
 }
 
 template <typename T> T &floating_ref<T>::Get() const {
 
-  return *reinterpret_cast<T *>(reinterpret_cast<byte_ptr>(Resource_->Target) + TypeOffset_);
+  return *reinterpret_cast<T *>(reinterpret_cast<byte_ptr>(*ReferenceLoc_) + Offset_);
 
 }
 
-template <typename T> template <typename U, OVK_FUNCDEF_REQUIRES(std::is_base_of<T, U>::value)>
-  floating_ref<T>::operator floating_ref<U>() const {
+template <typename T> template <typename U, OVK_FUNCDEF_REQUIRES(!std::is_same<U, T>::value &&
+  !std::is_convertible<T *, U *>::value && std::is_base_of<T, U>::value)> floating_ref<T>::operator
+  floating_ref<U>() const {
 
   using other_byte_ptr = typename floating_ref<U>::byte_ptr;
 
-  auto Target = reinterpret_cast<T *>(reinterpret_cast<byte_ptr>(Resource_->Target) + TypeOffset_);
+  auto Target = reinterpret_cast<T *>(reinterpret_cast<byte_ptr>(*ReferenceLoc_) + Offset_);
   auto OtherTarget = static_cast<U *>(Target);
 
   floating_ref<U> Other;
-  Other.Resource_ = Resource_;
-  Other.TypeOffset_ = TypeOffset_ + (reinterpret_cast<other_byte_ptr>(OtherTarget) -
+  Other.ReferenceLoc_ = ReferenceLoc_;
+  Other.Offset_ = Offset_ + (reinterpret_cast<other_byte_ptr>(OtherTarget) -
     reinterpret_cast<byte_ptr>(Target));
 
   return Other;

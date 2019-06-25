@@ -3,10 +3,6 @@
 
 namespace ovk {
 
-inline editor::editor():
-  FloatingRefGenerator_(*this)
-{}
-
 inline editor::editor(editor &&Other) noexcept:
   FloatingRefGenerator_(std::move(Other.FloatingRefGenerator_)),
   RefCount_(Other.RefCount_),
@@ -62,7 +58,7 @@ inline void editor::Decrement_() {
 }
 
 template <typename T> edit_handle<T>::edit_handle(editor &Editor, T &Target):
-  Editor_(Editor.FloatingRefGenerator_.Generate()),
+  Editor_(Editor.FloatingRefGenerator_.Generate(Editor)),
   Target_(&Target)
 {
   Editor.Increment_();

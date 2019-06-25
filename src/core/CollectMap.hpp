@@ -31,13 +31,13 @@ public:
     long long NumPoints;
   };
 
-  collect_map();
+  collect_map() = default;
   collect_map(const cart &Cart, const partition &Partition, array<int,3> CellExtents);
 
   floating_ref<const collect_map> GetFloatingRef() const {
-    return FloatingRefGenerator_.Generate();
+    return FloatingRefGenerator_.Generate(*this);
   }
-  floating_ref<collect_map> GetFloatingRef() { return FloatingRefGenerator_.Generate(); }
+  floating_ref<collect_map> GetFloatingRef() { return FloatingRefGenerator_.Generate(*this); }
 
   long long Count() const { return CellExtents_.Size(2); }
 
@@ -57,7 +57,7 @@ public:
 
 private:
 
-  floating_ref_generator<collect_map> FloatingRefGenerator_;
+  floating_ref_generator FloatingRefGenerator_;
 
   array<int,3> CellExtents_;
   int MaxVertices_ = 0;

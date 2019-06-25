@@ -108,8 +108,8 @@ public:
 
   ~grid() noexcept;
 
-  floating_ref<const grid> GetFloatingRef() const { return FloatingRefGenerator_.Generate(); }
-  floating_ref<grid> GetFloatingRef() { return FloatingRefGenerator_.Generate(); }
+  floating_ref<const grid> GetFloatingRef() const { return FloatingRefGenerator_.Generate(*this); }
+  floating_ref<grid> GetFloatingRef() { return FloatingRefGenerator_.Generate(*this); }
 
   const context &Context() const { return *Context_; }
   context &Context() { return *Context_; }
@@ -144,7 +144,7 @@ public:
 
 private:
 
-  floating_ref_generator<grid> FloatingRefGenerator_;
+  floating_ref_generator FloatingRefGenerator_;
 
   int NumDims_;
   cart Cart_;

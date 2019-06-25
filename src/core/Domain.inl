@@ -47,7 +47,7 @@ template <typename T> edit_handle<T> domain::EditComponent(int ComponentID) {
   if (!Editor.Active()) {
     MPI_Barrier(Comm_);
     Component.StartEdit();
-    floating_ref<domain> FloatingRef = FloatingRefGenerator_.Generate<domain>();
+    floating_ref<domain> FloatingRef = FloatingRefGenerator_.Generate(*this);
     auto DeactivateFunc = [FloatingRef, ComponentID] {
       domain &Domain = *FloatingRef;
       component_data &Data = Domain.Components_(ComponentID);

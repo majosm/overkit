@@ -162,7 +162,7 @@ private:
     id_map<1,core::disperse> Disperses;
   };
 
-  floating_ref_generator<exchanger> FloatingRefGenerator_;
+  floating_ref_generator FloatingRefGenerator_;
 
   std::shared_ptr<context> Context_;
 

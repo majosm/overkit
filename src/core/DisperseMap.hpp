@@ -17,13 +17,13 @@ class disperse_map {
 
 public:
 
-  disperse_map();
+  disperse_map() = default;
   disperse_map(array<int,2> Points);
 
   floating_ref<const disperse_map> GetFloatingRef() const {
-    return FloatingRefGenerator_.Generate();
+    return FloatingRefGenerator_.Generate(*this);
   }
-  floating_ref<disperse_map> GetFloatingRef() { return FloatingRefGenerator_.Generate(); }
+  floating_ref<disperse_map> GetFloatingRef() { return FloatingRefGenerator_.Generate(*this); }
 
   long long Count() const { return Points_.Size(2); }
 
@@ -31,7 +31,7 @@ public:
 
 private:
 
-  floating_ref_generator<disperse_map> FloatingRefGenerator_;
+  floating_ref_generator FloatingRefGenerator_;
 
   array<int,2> Points_;
 

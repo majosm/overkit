@@ -8,7 +8,6 @@
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/DataType.hpp"
 #include "ovk/core/Debug.hpp"
-#include "ovk/core/FloatingRef.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
 #include "ovk/core/IDMap.hpp"
@@ -51,7 +50,6 @@ domain_base_1::~domain_base_1() noexcept {
 domain_base::domain_base(std::shared_ptr<context> &&Context, std::string &&Name, int NumDims,
   MPI_Comm Comm):
   domain_base_1(std::move(Context), std::move(Name), Comm),
-  FloatingRefGenerator_(*this),
   NumDims_(NumDims)
 {}
 

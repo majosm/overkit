@@ -124,9 +124,11 @@ public:
   connectivity_component &operator=(connectivity_component &&Other) noexcept = default;
 
   floating_ref<const connectivity_component> GetFloatingRef() const {
-    return FloatingRefGenerator_.Generate();
+    return FloatingRefGenerator_.Generate(*this);
   }
-  floating_ref<connectivity_component> GetFloatingRef() { return FloatingRefGenerator_.Generate(); }
+  floating_ref<connectivity_component> GetFloatingRef() {
+    return FloatingRefGenerator_.Generate(*this);
+  }
 
   const std::string &Name() const { return *Name_; }
 
@@ -180,7 +182,7 @@ private:
   struct local_m {
     connectivity_m Connectivity;
     connectivity_event_flags EventFlags;
-    floating_ref_generator<connectivity_event_flags> EventFlagsFloatingRefGenerator;
+    floating_ref_generator FloatingRefGenerator;
     event_listener_handle ResizeEventListener;
     event_listener_handle ExtentsEventListener;
     event_listener_handle CoordsEventListener;
@@ -194,7 +196,7 @@ private:
   struct local_n {
     connectivity_n Connectivity;
     connectivity_event_flags EventFlags;
-    floating_ref_generator<connectivity_event_flags> EventFlagsFloatingRefGenerator;
+    floating_ref_generator FloatingRefGenerator;
     event_listener_handle ResizeEventListener;
     event_listener_handle PointsEventListener;
     event_listener_handle SourcesEventListener;
@@ -203,7 +205,7 @@ private:
     explicit local_n(connectivity_n Connectivity);
   };
 
-  floating_ref_generator<connectivity_component> FloatingRefGenerator_;
+  floating_ref_generator FloatingRefGenerator_;
 
   id_map<1,grid_event_flags> GridEventFlags_;
   event_listener_handle GridEventListener_;

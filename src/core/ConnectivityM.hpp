@@ -67,9 +67,9 @@ public:
   ~connectivity_m() noexcept;
 
   floating_ref<const connectivity_m> GetFloatingRef() const {
-    return FloatingRefGenerator_.Generate();
+    return FloatingRefGenerator_.Generate(*this);
   }
-  floating_ref<connectivity_m> GetFloatingRef() { return FloatingRefGenerator_.Generate(); }
+  floating_ref<connectivity_m> GetFloatingRef() { return FloatingRefGenerator_.Generate(*this); }
 
   const context &Context() const { return *Context_; }
   context &Context() { return *Context_; }
@@ -144,7 +144,7 @@ public:
 
 private:
 
-  floating_ref_generator<connectivity_m> FloatingRefGenerator_;
+  floating_ref_generator FloatingRefGenerator_;
 
   int NumDims_;
 

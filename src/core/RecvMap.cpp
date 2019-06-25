@@ -5,7 +5,6 @@
 
 #include "ovk/core/Array.hpp"
 #include "ovk/core/ArrayView.hpp"
-#include "ovk/core/FloatingRef.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Profiler.hpp"
 
@@ -17,13 +16,8 @@
 namespace ovk {
 namespace core {
 
-recv_map::recv_map():
-  FloatingRefGenerator_(*this)
-{}
-
 recv_map::recv_map(long long NumValues, array<long long> RecvOrder, array_view<const int>
   SourceRanks):
-  FloatingRefGenerator_(*this),
   RecvOrder_(std::move(RecvOrder))
 {
 

@@ -14,12 +14,7 @@
 namespace ovk {
 namespace core {
 
-disperse_map::disperse_map():
-  FloatingRefGenerator_(*this)
-{}
-
 disperse_map::disperse_map(array<int,2> Points):
-  FloatingRefGenerator_(*this),
   Points_(std::move(Points))
 {}
 

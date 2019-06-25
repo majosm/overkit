@@ -9,6 +9,7 @@
 #include <ovk/core/Context.hpp>
 #include <ovk/core/Editor.hpp>
 #include <ovk/core/Event.hpp>
+#include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Grid.hpp>
 #include <ovk/core/Requires.hpp>
@@ -72,9 +73,9 @@ public:
   ~connectivity_n() noexcept;
 
   floating_ref<const connectivity_n> GetFloatingRef() const {
-    return FloatingRefGenerator_.Generate();
+    return FloatingRefGenerator_.Generate(*this);
   }
-  floating_ref<connectivity_n> GetFloatingRef() { return FloatingRefGenerator_.Generate(); }
+  floating_ref<connectivity_n> GetFloatingRef() { return FloatingRefGenerator_.Generate(*this); }
 
   const context &Context() const { return *Context_; }
   context &Context() { return *Context_; }
@@ -130,7 +131,7 @@ public:
 
 private:
 
-  floating_ref_generator<connectivity_n> FloatingRefGenerator_;
+  floating_ref_generator FloatingRefGenerator_;
 
   int NumDims_;
 

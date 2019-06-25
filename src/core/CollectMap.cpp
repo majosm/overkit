@@ -23,12 +23,7 @@
 namespace ovk {
 namespace core {
 
-collect_map::collect_map():
-  FloatingRefGenerator_(*this)
-{}
-
 collect_map::collect_map(const cart &Cart, const partition &Partition, array<int,3> CellExtents):
-  FloatingRefGenerator_(*this),
   CellExtents_(std::move(CellExtents))
 {
 

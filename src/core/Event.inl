@@ -3,10 +3,6 @@
 
 namespace ovk {
 
-template <typename... Args> event<void(Args...)>::event():
-  FloatingRefGenerator_(*this)
-{}
-
 template <typename... Args> template <typename F, OVK_FUNCDEF_REQUIRES(core::IsCallableWith<F,
   Args...>())> event_listener_handle event<void(Args...)>::AddListener(F Listener) {
 
@@ -32,7 +28,7 @@ template <typename FuncSignature> event_listener_handle::event_listener_handle(e
   ID_(ID)
 {
 
-  floating_ref<event<FuncSignature>> EventRef = Event.FloatingRefGenerator_.Generate();
+  floating_ref<event<FuncSignature>> EventRef = Event.FloatingRefGenerator_.Generate(Event);
 
   RemoveFunc_.reset(new std::function<void(int)>([EventRef](int ID) {
     EventRef->Listeners_.Erase(ID);

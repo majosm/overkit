@@ -6,7 +6,6 @@
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Error.hpp"
-#include "ovk/core/FloatingRef.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Logger.hpp"
 #include "ovk/core/TextProcessing.hpp"
@@ -49,7 +48,6 @@ context_base::~context_base() noexcept {
 
 context::context(params &&Params):
   context_base(Params.Comm_, Params.LogLevel_),
-  FloatingRefGenerator_(*this),
   Profiler_(Comm_)
 {
 

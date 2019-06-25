@@ -24,7 +24,7 @@ template <typename... Args> class event<void(Args...)> {
 
 public:
 
-  event();
+  event() = default;
 
   template <typename F, OVK_FUNCDECL_REQUIRES(core::IsCallableWith<F, Args...>())>
     event_listener_handle AddListener(F Listener);
@@ -35,7 +35,7 @@ private:
 
   using listener = std::function<void(Args...)>;
 
-  floating_ref_generator<event> FloatingRefGenerator_;
+  floating_ref_generator FloatingRefGenerator_;
 
   // Set non-contiguous because std::function is not noexcept movable until C++20
   id_map<1,listener,false> Listeners_;

@@ -53,11 +53,10 @@ connectivity_component_base::~connectivity_component_base() noexcept {
 }
 
 connectivity_component::connectivity_component(const core::domain_base &Domain, params Params):
-  connectivity_component_base(Domain, std::move(*Params.Name_)),
-  FloatingRefGenerator_(*this)
+  connectivity_component_base(Domain, std::move(*Params.Name_))
 {
 
-  floating_ref<connectivity_component> FloatingRef = FloatingRefGenerator_.Generate();
+  floating_ref<connectivity_component> FloatingRef = FloatingRefGenerator_.Generate(*this);
 
   GridEventListener_ = Domain.AddGridEventListener([FloatingRef](int GridID, grid_event_flags Flags,
     bool LastInSequence) {
@@ -898,11 +897,10 @@ void connectivity_component::RestoreConnectivityN(int MGridID, int NGridID) {
 
 connectivity_component::local_m::local_m(connectivity_m Connectivity_):
   Connectivity(std::move(Connectivity_)),
-  EventFlags(connectivity_event_flags::NONE),
-  EventFlagsFloatingRefGenerator(EventFlags)
+  EventFlags(connectivity_event_flags::NONE)
 {
 
-  floating_ref<connectivity_event_flags> EventFlagsRef = EventFlagsFloatingRefGenerator.Generate();
+  floating_ref<connectivity_event_flags> EventFlagsRef = FloatingRefGenerator.Generate(EventFlags);
 
   ResizeEventListener = Connectivity.AddResizeEventListener([EventFlagsRef] {
     *EventFlagsRef |= connectivity_event_flags::RESIZE_M;
@@ -932,11 +930,10 @@ connectivity_component::local_m::local_m(connectivity_m Connectivity_):
 
 connectivity_component::local_n::local_n(connectivity_n Connectivity_):
   Connectivity(std::move(Connectivity_)),
-  EventFlags(connectivity_event_flags::NONE),
-  EventFlagsFloatingRefGenerator(EventFlags)
+  EventFlags(connectivity_event_flags::NONE)
 {
 
-  floating_ref<connectivity_event_flags> EventFlagsRef = EventFlagsFloatingRefGenerator.Generate();
+  floating_ref<connectivity_event_flags> EventFlagsRef = FloatingRefGenerator.Generate(EventFlags);
 
   ResizeEventListener = Connectivity.AddResizeEventListener([EventFlagsRef] {
     *EventFlagsRef |= connectivity_event_flags::RESIZE_N;

@@ -52,7 +52,6 @@ namespace halo_internal {
 
 template <typename T> halo_exchanger_for_type<T>::halo_exchanger_for_type(context &Context,
   comm_view Comm, const halo_map &HaloMap):
-  FloatingRefGenerator_(*this),
   Context_(Context.GetFloatingRef()),
   Comm_(Comm),
   HaloMap_(HaloMap.GetFloatingRef())
@@ -130,7 +129,7 @@ template <typename T> request halo_exchanger_for_type<T>::Exchange(value_type *A
 
 template <typename T> halo_exchanger_for_type<T>::exchange_request::exchange_request(
   halo_exchanger_for_type &HaloExchanger, value_type *ArrayData):
-  HaloExchanger_(HaloExchanger.FloatingRefGenerator_.Generate()),
+  HaloExchanger_(HaloExchanger.FloatingRefGenerator_.Generate(HaloExchanger)),
   ArrayData_(ArrayData)
 {}
 

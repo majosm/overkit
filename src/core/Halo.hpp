@@ -36,16 +36,16 @@ class halo_map {
 
 public:
 
-  halo_map();
+  halo_map() = default;
   halo_map(const cart &Cart, const range &LocalRange, const range &ExtendedRange,
     array_view<const partition_info> Neighbors);
 
   floating_ref<const halo_map> GetFloatingRef() const {
-    return FloatingRefGenerator_.Generate();
+    return FloatingRefGenerator_.Generate(*this);
   }
 
   floating_ref<halo_map> GetFloatingRef() {
-    return FloatingRefGenerator_.Generate();
+    return FloatingRefGenerator_.Generate(*this);
   }
 
   const array<int> &NeighborRanks() const { return NeighborRanks_; }
@@ -64,7 +64,7 @@ public:
 
 private:
 
-  floating_ref_generator<halo_map> FloatingRefGenerator_;
+  floating_ref_generator FloatingRefGenerator_;
 
   array<int> NeighborRanks_;
   array<array<long long>> NeighborSendIndices_;
@@ -212,7 +212,7 @@ private:
     static constexpr int WAIT_TIME = profiler::HALO_EXCHANGE_TIME;
   };
 
-  floating_ref_generator<halo_exchanger_for_type> FloatingRefGenerator_;
+  floating_ref_generator FloatingRefGenerator_;
 
   floating_ref<context> Context_;
 

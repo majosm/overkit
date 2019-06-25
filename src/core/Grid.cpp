@@ -8,7 +8,6 @@
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Context.hpp"
 #include "ovk/core/Debug.hpp"
-#include "ovk/core/FloatingRef.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Logger.hpp"
 #include "ovk/core/Misc.hpp"
@@ -49,7 +48,6 @@ grid_base::~grid_base() noexcept {
 
 grid::grid(std::shared_ptr<context> &&Context, params &&Params):
   grid_base(std::move(Context), std::move(*Params.Name_), Params.Comm_),
-  FloatingRefGenerator_(*this),
   NumDims_(Params.NumDims_),
   Cart_(Params.Cart_),
   PeriodicLength_(Params.PeriodicLength_),

@@ -110,8 +110,10 @@ public:
 
   ~context() noexcept;
 
-  floating_ref<const context> GetFloatingRef() const { return FloatingRefGenerator_.Generate(); }
-  floating_ref<context> GetFloatingRef() { return FloatingRefGenerator_.Generate(); }
+  floating_ref<const context> GetFloatingRef() const {
+    return FloatingRefGenerator_.Generate(*this);
+  }
+  floating_ref<context> GetFloatingRef() { return FloatingRefGenerator_.Generate(*this); }
 
   const comm &Comm() const { return Comm_; }
 
@@ -129,7 +131,7 @@ public:
 
 private:
 
-  floating_ref_generator<context> FloatingRefGenerator_;
+  floating_ref_generator FloatingRefGenerator_;
 
   // TODO: Maybe mutability should be encapsulated inside?
   mutable core::profiler Profiler_;

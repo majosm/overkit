@@ -21,7 +21,7 @@ class editor {
 
 public:
 
-  editor();
+  editor() = default;
 
   editor(const editor &Other) = delete;
   editor(editor &&Other) noexcept;
@@ -40,7 +40,7 @@ public:
 
 private:
 
-  floating_ref_generator<editor> FloatingRefGenerator_;
+  floating_ref_generator FloatingRefGenerator_;
 
   int RefCount_ = 0;
   // std::function is not noexcept movable until C++20

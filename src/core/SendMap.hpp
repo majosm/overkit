@@ -21,11 +21,13 @@ public:
     long long NumValues;
   };
 
-  send_map();
+  send_map() = default;
   send_map(long long NumValues, array<long long> SendOrder, array_view<const int> DestinationRanks);
 
-  floating_ref<const send_map> GetFloatingRef() const { return FloatingRefGenerator_.Generate(); }
-  floating_ref<send_map> GetFloatingRef() { return FloatingRefGenerator_.Generate(); }
+  floating_ref<const send_map> GetFloatingRef() const {
+    return FloatingRefGenerator_.Generate(*this);
+  }
+  floating_ref<send_map> GetFloatingRef() { return FloatingRefGenerator_.Generate(*this); }
 
   long long Count() const { return SendOrder_.Count(); }
 
@@ -36,7 +38,7 @@ public:
 
 private:
 
-  floating_ref_generator<send_map> FloatingRefGenerator_;
+  floating_ref_generator FloatingRefGenerator_;
 
   array<send> Sends_;
   array<long long> SendOrder_;

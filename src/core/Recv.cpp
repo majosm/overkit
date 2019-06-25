@@ -37,7 +37,7 @@ private:
   class recv_request {
   public:
     recv_request(recv_impl &Recv):
-      Recv_(Recv.FloatingRefGenerator_.Generate())
+      Recv_(Recv.FloatingRefGenerator_.Generate(Recv))
     {}
     array_view<MPI_Request> MPIRequests() { return Recv_->MPIRequests_; }
     void OnMPIRequestComplete(int) {}
@@ -97,7 +97,6 @@ public:
 
   recv_impl(std::shared_ptr<context> &&Context, comm_view Comm, const recv_map &RecvMap, int Count,
     int Tag):
-    FloatingRefGenerator_(*this),
     Context_(std::move(Context)),
     Comm_(Comm),
     RecvMap_(RecvMap.GetFloatingRef()),
@@ -161,7 +160,7 @@ public:
 
 private:
 
-  floating_ref_generator<recv_impl> FloatingRefGenerator_;
+  floating_ref_generator FloatingRefGenerator_;
 
   std::shared_ptr<context> Context_;
 

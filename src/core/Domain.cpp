@@ -7,7 +7,6 @@
 #include "ovk/core/Component.hpp"
 #include "ovk/core/Context.hpp"
 #include "ovk/core/DataType.hpp"
-#include "ovk/core/FloatingRef.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/IDMap.hpp"
 #include "ovk/core/Logger.hpp"

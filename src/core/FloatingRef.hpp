@@ -16,24 +16,13 @@
 
 namespace ovk {
 
-namespace floating_ref_internal {
-
-struct resource {
-  void *Target;
-  explicit resource(void *Target_):
-    Target(Target_)
-  {}
-};
-
-}
-
 template <typename T> class floating_ref;
 
-template <typename T> class floating_ref_generator {
+class floating_ref_generator {
 
 public:
 
-  floating_ref_generator(T &Target);
+  floating_ref_generator();
 
   floating_ref_generator(const floating_ref_generator &Other);
   floating_ref_generator(floating_ref_generator &&Other) noexcept;
@@ -41,18 +30,11 @@ public:
   floating_ref_generator &operator=(const floating_ref_generator &Other);
   floating_ref_generator &operator=(floating_ref_generator &&Other) noexcept;
 
-  T &Target() const { return *static_cast<T *>(Resource_->Target); }
-
-  template <typename U=T, OVK_FUNCDECL_REQUIRES(std::is_convertible<T *, U *>::value ||
-    std::is_base_of<T, U>::value)> floating_ref<U> Generate() const;
+  template <typename T> floating_ref<T> Generate(T &Target) const;
 
 private:
 
-  using resource = floating_ref_internal::resource;
-
-  using byte_ptr = core::mimic_cvref<T, unsigned char> *;
-
-  std::unique_ptr<resource> Resource_;
+  std::unique_ptr<void *> ReferenceLoc_;
 
 };
 
@@ -62,8 +44,8 @@ public:
 
   floating_ref() = default;
 
-  template <typename U, OVK_FUNCDECL_REQUIRES(std::is_convertible<U *, T *>::value)>
-    floating_ref(const floating_ref<U> &Other);
+  template <typename U, OVK_FUNCDECL_REQUIRES(!std::is_same<U, T>::value && std::is_convertible<
+    U *, T *>::value)> floating_ref(const floating_ref<U> &Other);
 
   floating_ref(const floating_ref &Other) = default;
   floating_ref(floating_ref &&Other) noexcept;
@@ -71,7 +53,7 @@ public:
   floating_ref &operator=(const floating_ref &Other) = default;
   floating_ref &operator=(floating_ref &&Other) noexcept;
 
-  explicit operator bool() const { return Resource_ != nullptr; }
+  explicit operator bool() const { return ReferenceLoc_ != nullptr; }
 
   T &operator*() const;
 
@@ -79,26 +61,22 @@ public:
 
   T &Get() const;
 
-  void Reset() { Resource_ = nullptr; }
+  template <typename U, OVK_FUNCDECL_REQUIRES(!std::is_same<U, T>::value && !std::is_convertible<
+    T *, U *>::value && std::is_base_of<T, U>::value)> explicit operator floating_ref<U>() const;
 
-  template <typename U, OVK_FUNCDECL_REQUIRES(std::is_base_of<T, U>::value)> explicit operator
-    floating_ref<U>() const;
+  void Reset() { ReferenceLoc_ = nullptr; }
 
 private:
 
-  using resource = floating_ref_internal::resource;
-
   using byte_ptr = core::mimic_cvref<T, unsigned char> *;
 
-  resource *Resource_ = nullptr;
-  std::ptrdiff_t TypeOffset_ = 0;
+  void * const *ReferenceLoc_ = nullptr;
+  std::ptrdiff_t Offset_ = 0;
 
-  explicit floating_ref(resource &Resource):
-    Resource_(&Resource)
-  {}
+  floating_ref(void * const *ReferenceLoc, T &Target);
 
+  friend class floating_ref_generator;
   template <typename U> friend class floating_ref;
-  template <typename U> friend class floating_ref_generator;
 
 };
 

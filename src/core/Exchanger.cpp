@@ -48,7 +48,6 @@ array<long long> GetSendRecvOrder(const array<int,2> &ReceiverPoints, const rang
 }
 
 exchanger::exchanger(std::shared_ptr<context> &&Context, params &&Params):
-  FloatingRefGenerator_(*this),
   Context_(std::move(Context)),
   Name_(std::move(*Params.Name_))
 {}
@@ -111,7 +110,7 @@ void exchanger::Bind(const domain &Domain, bindings Bindings) {
   OVK_DEBUG_ASSERT(Domain.ComponentExists(ConnectivityComponentID), "Component %i does not "
     "exist.", ConnectivityComponentID);
 
-  floating_ref<exchanger> FloatingRef = FloatingRefGenerator_.Generate();
+  floating_ref<exchanger> FloatingRef = FloatingRefGenerator_.Generate(*this);
 
   const connectivity_component &ConnectivityComponent = Domain.Component<connectivity_component>(
     ConnectivityComponentID);
@@ -1386,7 +1385,6 @@ void exchanger::CreateDisperse(int MGridID, int NGridID, int DisperseID, dispers
   OVK_DEBUG_ASSERT(GridValuesRange.Includes(NGrid.LocalRange()), "Invalid grid values range.");
 
   local_n &LocalN = LocalNs_(MGridID,NGridID);
-  const connectivity_n &ConnectivityN = *LocalN.Connectivity;
   const core::disperse_map &DisperseMap = LocalN.DisperseMap;
   id_map<1,core::disperse> &Disperses = LocalN.Disperses;
 

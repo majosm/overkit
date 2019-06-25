@@ -9,6 +9,7 @@
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Editor.hpp"
 #include "ovk/core/Event.hpp"
+#include "ovk/core/FloatingRef.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
 #include "ovk/core/Logger.hpp"
@@ -50,7 +51,6 @@ connectivity_n_base::~connectivity_n_base() noexcept {
 connectivity_n::connectivity_n(std::shared_ptr<context> &&Context, int GridID, const grid &Grid,
   int SourceGridID, grid_info &&SourceGridInfo):
   connectivity_n_base(std::move(Context), GridID, Grid, SourceGridID, std::move(SourceGridInfo)),
-  FloatingRefGenerator_(*this),
   NumDims_(Grid_->Dimension()),
   Count_(0),
   Points_({{MAX_DIMS,0}}),
@@ -133,7 +133,7 @@ edit_handle<array<int,2>> connectivity_n::EditPoints() {
 
   if (!PointsEditor_.Active()) {
     MPI_Barrier(Comm_);
-    floating_ref<connectivity_n> FloatingRef = FloatingRefGenerator_.Generate();
+    floating_ref<connectivity_n> FloatingRef = FloatingRefGenerator_.Generate(*this);
     auto DeactivateFunc = [FloatingRef] {
       connectivity_n &ConnectivityN = *FloatingRef;
       MPI_Barrier(ConnectivityN.Comm_);
@@ -165,7 +165,7 @@ edit_handle<array<int,2>> connectivity_n::EditSources() {
 
   if (!SourcesEditor_.Active()) {
     MPI_Barrier(Comm_);
-    floating_ref<connectivity_n> FloatingRef = FloatingRefGenerator_.Generate();
+    floating_ref<connectivity_n> FloatingRef = FloatingRefGenerator_.Generate(*this);
     auto DeactivateFunc = [FloatingRef] {
       connectivity_n &ConnectivityN = *FloatingRef;
       MPI_Barrier(ConnectivityN.Comm_);
@@ -198,7 +198,7 @@ edit_handle<array<int>> connectivity_n::EditSourceRanks() {
 
   if (!SourceRanksEditor_.Active()) {
     MPI_Barrier(Comm_);
-    floating_ref<connectivity_n> FloatingRef = FloatingRefGenerator_.Generate();
+    floating_ref<connectivity_n> FloatingRef = FloatingRefGenerator_.Generate(*this);
     auto DeactivateFunc = [FloatingRef] {
       connectivity_n &ConnectivityN = *FloatingRef;
       MPI_Barrier(ConnectivityN.Comm_);

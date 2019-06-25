@@ -39,7 +39,7 @@ private:
   class send_request {
   public:
     send_request(send_impl &Send):
-      Send_(Send.FloatingRefGenerator_.Generate())
+      Send_(Send.FloatingRefGenerator_.Generate(Send))
     {}
     array_view<MPI_Request> MPIRequests() { return Send_->MPIRequests_; }
     void OnMPIRequestComplete(int) {}
@@ -69,7 +69,6 @@ public:
 
   send_impl(std::shared_ptr<context> &&Context, comm_view Comm, const send_map &SendMap, int Count,
     int Tag):
-    FloatingRefGenerator_(*this),
     Context_(std::move(Context)),
     Comm_(Comm),
     SendMap_(SendMap.GetFloatingRef()),
@@ -153,7 +152,7 @@ public:
 
 private:
 
-  floating_ref_generator<send_impl> FloatingRefGenerator_;
+  floating_ref_generator FloatingRefGenerator_;
 
   std::shared_ptr<context> Context_;
 

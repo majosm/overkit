@@ -24,14 +24,8 @@ namespace core {
 
 namespace halo_internal {
 
-halo_map::halo_map():
-  FloatingRefGenerator_(*this)
-{}
-
 halo_map::halo_map(const cart &Cart, const range &LocalRange, const range &ExtendedRange,
-  array_view<const partition_info> Neighbors):
-  FloatingRefGenerator_(*this)
-{
+  array_view<const partition_info> Neighbors) {
 
   const range &GlobalRange = Cart.Range();
   int NumNeighbors = Neighbors.Count();

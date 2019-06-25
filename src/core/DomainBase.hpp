@@ -100,9 +100,9 @@ public:
   domain_base &operator=(domain_base &&Other) noexcept = default;
 
   floating_ref<const domain_base> GetFloatingRef() const {
-    return FloatingRefGenerator_.Generate();
+    return FloatingRefGenerator_.Generate(*this);
   }
-  floating_ref<domain_base> GetFloatingRef() { return FloatingRefGenerator_.Generate(); }
+  floating_ref<domain_base> GetFloatingRef() { return FloatingRefGenerator_.Generate(*this); }
 
   const context &Context() const { return *Context_; }
   context &Context() { return *Context_; }
@@ -154,7 +154,7 @@ protected:
     {}
   };
 
-  floating_ref_generator<domain_base> FloatingRefGenerator_;
+  floating_ref_generator FloatingRefGenerator_;
 
   int NumDims_;
 

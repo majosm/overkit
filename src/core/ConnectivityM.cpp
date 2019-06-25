@@ -9,6 +9,7 @@
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Editor.hpp"
 #include "ovk/core/Event.hpp"
+#include "ovk/core/FloatingRef.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
 #include "ovk/core/Logger.hpp"
@@ -51,7 +52,6 @@ connectivity_m::connectivity_m(std::shared_ptr<context> &&Context, int GridID, c
   int DestinationGridID, grid_info &&DestinationGridInfo):
   connectivity_m_base(std::move(Context), GridID, Grid, DestinationGridID,
     std::move(DestinationGridInfo)),
-  FloatingRefGenerator_(*this),
   NumDims_(Grid_->Dimension()),
   Count_(0),
   MaxSize_(1),
@@ -168,7 +168,7 @@ edit_handle<array<int,3>> connectivity_m::EditExtents() {
 
   if (!ExtentsEditor_.Active()) {
     MPI_Barrier(Comm_);
-    floating_ref<connectivity_m> FloatingRef = FloatingRefGenerator_.Generate();
+    floating_ref<connectivity_m> FloatingRef = FloatingRefGenerator_.Generate(*this);
     auto DeactivateFunc = [FloatingRef] {
       connectivity_m &ConnectivityM = *FloatingRef;
       MPI_Barrier(ConnectivityM.Comm_);
@@ -201,7 +201,7 @@ edit_handle<array<double,2>> connectivity_m::EditCoords() {
 
   if (!CoordsEditor_.Active()) {
     MPI_Barrier(Comm_);
-    floating_ref<connectivity_m> FloatingRef = FloatingRefGenerator_.Generate();
+    floating_ref<connectivity_m> FloatingRef = FloatingRefGenerator_.Generate(*this);
     auto DeactivateFunc = [FloatingRef] {
       connectivity_m &ConnectivityM = *FloatingRef;
       MPI_Barrier(ConnectivityM.Comm_);
@@ -233,7 +233,7 @@ edit_handle<array<double,3>> connectivity_m::EditInterpCoefs() {
 
   if (!InterpCoefsEditor_.Active()) {
     MPI_Barrier(Comm_);
-    floating_ref<connectivity_m> FloatingRef = FloatingRefGenerator_.Generate();
+    floating_ref<connectivity_m> FloatingRef = FloatingRefGenerator_.Generate(*this);
     auto DeactivateFunc = [FloatingRef] {
       connectivity_m &ConnectivityM = *FloatingRef;
       MPI_Barrier(ConnectivityM.Comm_);
@@ -266,7 +266,7 @@ edit_handle<array<int,2>> connectivity_m::EditDestinations() {
 
   if (!DestinationsEditor_.Active()) {
     MPI_Barrier(Comm_);
-    floating_ref<connectivity_m> FloatingRef = FloatingRefGenerator_.Generate();
+    floating_ref<connectivity_m> FloatingRef = FloatingRefGenerator_.Generate(*this);
     auto DeactivateFunc = [FloatingRef] {
       connectivity_m &ConnectivityM = *FloatingRef;
       MPI_Barrier(ConnectivityM.Comm_);
@@ -299,7 +299,7 @@ edit_handle<array<int>> connectivity_m::EditDestinationRanks() {
 
   if (!DestinationsEditor_.Active()) {
     MPI_Barrier(Comm_);
-    floating_ref<connectivity_m> FloatingRef = FloatingRefGenerator_.Generate();
+    floating_ref<connectivity_m> FloatingRef = FloatingRefGenerator_.Generate(*this);
     auto DeactivateFunc = [FloatingRef] {
       connectivity_m &ConnectivityM = *FloatingRef;
       MPI_Barrier(ConnectivityM.Comm_);
