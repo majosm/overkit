@@ -14,6 +14,7 @@
 #include <ovk/core/ConnectivityN.hpp>
 #include <ovk/core/Context.hpp>
 #include <ovk/core/Disperse.hpp>
+#include <ovk/core/DisperseMap.hpp>
 #include <ovk/core/Domain.hpp>
 #include <ovk/core/Event.hpp>
 #include <ovk/core/Exchanger.h>
@@ -156,6 +157,7 @@ private:
     const connectivity_n *Connectivity;
     array<int> SourceRanks;
     core::recv_map RecvMap;
+    core::disperse_map DisperseMap;
     id_map<1,core::recv> Recvs;
     id_map<1,core::disperse> Disperses;
   };

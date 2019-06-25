@@ -38,7 +38,7 @@ public:
 
   halo_map();
   halo_map(const cart &Cart, const range &LocalRange, const range &ExtendedRange,
-    array_view<partition_info> Neighbors);
+    array_view<const partition_info> Neighbors);
 
   floating_ref<const halo_map> GetFloatingRef() const {
     return FloatingRefGenerator_.Generate();

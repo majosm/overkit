@@ -28,6 +28,7 @@ set(SOURCES
   Debug.cpp
   Disperse.cpp
   DisperseBase.cpp
+  DisperseMap.cpp
   Domain.cpp
   DomainBase.cpp
   Error.cpp
@@ -107,6 +108,7 @@ set(INTERNAL_HEADERS
   Disperse.hpp
   DisperseAppend.hpp
   DisperseBase.hpp
+  DisperseMap.hpp
   DisperseOverwrite.hpp
   Domain.h
   Domain.inl

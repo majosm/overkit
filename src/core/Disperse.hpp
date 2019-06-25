@@ -4,9 +4,9 @@
 #ifndef OVK_CORE_DISPERSE_HPP_INCLUDED
 #define OVK_CORE_DISPERSE_HPP_INCLUDED
 
-#include <ovk/core/Array.hpp>
 #include <ovk/core/Context.hpp>
 #include <ovk/core/DataType.hpp>
+#include <ovk/core/DisperseMap.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Range.hpp>
 #include <ovk/core/TypeTraits.hpp>
@@ -71,9 +71,9 @@ private:
 
 };
 
-disperse CreateDisperseOverwrite(std::shared_ptr<context> Context, const array<int,2> &Points,
+disperse CreateDisperseOverwrite(std::shared_ptr<context> Context, const disperse_map &DisperseMap,
   data_type ValueType, int Count, const range &FieldValuesRange, array_layout FieldValuesLayout);
-disperse CreateDisperseAppend(std::shared_ptr<context> Context, const array<int,2> &Points,
+disperse CreateDisperseAppend(std::shared_ptr<context> Context, const disperse_map &DisperseMap,
   data_type ValueType, int Count, const range &FieldValuesRange, array_layout FieldValuesLayout);
 
 }}

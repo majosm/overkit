@@ -14,6 +14,7 @@
 #include "ovk/core/DataType.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Disperse.hpp"
+#include "ovk/core/DisperseMap.hpp"
 #include "ovk/core/FloatingRef.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
@@ -817,6 +818,7 @@ void exchanger::PurgeExchanges_() {
         array<long long> Order = GetSendRecvOrder(ConnectivityN.Points(), NGrid.GlobalRange());
         LocalN.RecvMap = core::recv_map(ConnectivityN.Count(), std::move(Order),
           LocalN.SourceRanks);
+        LocalN.DisperseMap = core::disperse_map(ConnectivityN.Points());
       }
     }
   }
@@ -1385,6 +1387,7 @@ void exchanger::CreateDisperse(int MGridID, int NGridID, int DisperseID, dispers
 
   local_n &LocalN = LocalNs_(MGridID,NGridID);
   const connectivity_n &ConnectivityN = *LocalN.Connectivity;
+  const core::disperse_map &DisperseMap = LocalN.DisperseMap;
   id_map<1,core::disperse> &Disperses = LocalN.Disperses;
 
   OVK_DEBUG_ASSERT(!Disperses.Contains(DisperseID), "Disperse %i already exists.", DisperseID);
@@ -1393,11 +1396,11 @@ void exchanger::CreateDisperse(int MGridID, int NGridID, int DisperseID, dispers
 
   switch (DisperseOp) {
   case disperse_op::OVERWRITE:
-    Disperse = core::CreateDisperseOverwrite(Context_, ConnectivityN.Points(), ValueType, Count,
+    Disperse = core::CreateDisperseOverwrite(Context_, DisperseMap, ValueType, Count,
       GridValuesRange, GridValuesLayout);
     break;
   case disperse_op::APPEND:
-    Disperse = core::CreateDisperseAppend(Context_, ConnectivityN.Points(), ValueType, Count,
+    Disperse = core::CreateDisperseAppend(Context_, DisperseMap, ValueType, Count,
       GridValuesRange, GridValuesLayout);
     break;
   }
