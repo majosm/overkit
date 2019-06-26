@@ -51,8 +51,8 @@ install(TARGETS overkit-parallel
 
 # MPI
 if(EXTERNAL_MPI)
-  target_include_directories(overkit-parallel SYSTEM PUBLIC ${MPI_INCLUDE_PATH})
-  target_link_libraries(overkit-parallel PUBLIC ${MPI_C_LIBRARIES})
+  target_include_directories(overkit-parallel SYSTEM PUBLIC ${MPI_INCLUDES})
+  target_link_libraries(overkit-parallel PUBLIC ${MPI_LIBS})
 endif()
 
 # C math library

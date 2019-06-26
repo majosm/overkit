@@ -112,8 +112,8 @@ foreach(EXAMPLE ${C_TARGETS} ${CXX_TARGETS})
 
   # MPI
   if(EXTERNAL_MPI)
-    target_include_directories(${EXAMPLE} SYSTEM PRIVATE ${MPI_INCLUDE_PATH})
-    target_link_libraries(${EXAMPLE} PRIVATE ${MPI_C_LIBRARIES} ${MPI_CXX_LIBRARIES})
+    target_include_directories(${EXAMPLE} SYSTEM PRIVATE ${MPI_INCLUDES})
+    target_link_libraries(${EXAMPLE} PRIVATE ${MPI_LIBS})
   endif()
 
   # C math library

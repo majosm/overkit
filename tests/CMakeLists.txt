@@ -130,8 +130,8 @@ target_link_libraries(unit-tests PRIVATE support)
 
 # MPI
 if(EXTERNAL_MPI)
-  target_include_directories(unit-tests SYSTEM PRIVATE ${MPI_INCLUDE_PATH})
-  target_link_libraries(unit-tests PRIVATE ${MPI_C_LIBRARIES})
+  target_include_directories(unit-tests SYSTEM PRIVATE ${MPI_INCLUDES})
+  target_link_libraries(unit-tests PRIVATE ${MPI_LIBS})
 endif()
 
 # C math library

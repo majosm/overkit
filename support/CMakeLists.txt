@@ -71,8 +71,8 @@ target_link_libraries(support PRIVATE overkit-parallel)
 
 # MPI
 if(EXTERNAL_MPI)
-  target_include_directories(support SYSTEM PRIVATE ${MPI_INCLUDE_PATH})
-  target_link_libraries(support PRIVATE ${MPI_C_LIBRARIES})
+  target_include_directories(support SYSTEM PRIVATE ${MPI_INCLUDES})
+  target_link_libraries(support PRIVATE ${MPI_LIBS})
 endif()
 
 # C math library

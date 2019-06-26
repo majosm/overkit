@@ -95,7 +95,7 @@ endif()
 
 # MPI
 if(EXTERNAL_MPI)
-  target_include_directories(overkit-extras SYSTEM PUBLIC ${MPI_INCLUDE_PATH})
+  target_include_directories(overkit-extras SYSTEM PUBLIC ${MPI_INCLUDES})
 endif()
 
 #----------------
