@@ -80,14 +80,7 @@ void BroadcastStringAnySource(std::string &String, bool IsSource, comm_view Comm
 // but who has time for that?
 
 signal::signal(comm_view Comm):
-#ifdef OVK_HAVE_MPI_IBARRIER
-  Comm_(Comm),
-  Request_(MPI_REQUEST_NULL)
-#else
-  Comm_(DuplicateComm(Comm)),
-  Requests_({MPI_REQUEST_NULL, MPI_REQUEST_NULL}),
-  NumCompleted_(0)
-#endif
+  Comm_(DuplicateComm(Comm))
 {}
 
 void signal::Start() {
@@ -96,8 +89,8 @@ void signal::Start() {
   MPI_Ibarrier(Comm_, &Request_);
 #else
   if (Comm_.Rank() > 0) {
-    MPI_Isend(SendBuffer_, 1, MPI_CHAR, 0, 0, Comm_, Requests_);
-    MPI_Issend(SendBuffer_+1, 1, MPI_CHAR, 0, 1, Comm_, Requests_+1);
+    MPI_Isend(SendBuffer_, 1, MPI_UNSIGNED_CHAR, 0, 0, Comm_, Requests_);
+    MPI_Issend(SendBuffer_+1, 1, MPI_UNSIGNED_CHAR, 0, 1, Comm_, Requests_+1);
   }
 #endif
 
@@ -123,13 +116,13 @@ bool signal::Check() {
       MPI_Status Status;
       MPI_Iprobe(MPI_ANY_SOURCE, 0, Comm_, &IncomingMessage, &Status);
       if (!IncomingMessage) break;
-      MPI_Recv(RecvBuffer_, 1, MPI_CHAR, Status.MPI_SOURCE, 0, Comm_, MPI_STATUS_IGNORE);
+      MPI_Recv(RecvBuffer_, 1, MPI_UNSIGNED_CHAR, Status.MPI_SOURCE, 0, Comm_, MPI_STATUS_IGNORE);
       ++NumCompleted_;
     }
     if (NumCompleted_ == Comm_.Size()-1) {
       int OtherRank;
       for (OtherRank = 1; OtherRank < Comm_.Size(); ++OtherRank) {
-        MPI_Recv(RecvBuffer_, 1, MPI_CHAR, OtherRank, 1, Comm_, MPI_STATUS_IGNORE);
+        MPI_Recv(RecvBuffer_, 1, MPI_UNSIGNED_CHAR, OtherRank, 1, Comm_, MPI_STATUS_IGNORE);
       }
       Done = true;
     }
@@ -145,22 +138,35 @@ bool signal::Check() {
 
 }
 
-array<int> DynamicHandshake(comm_view Comm, array_view<const int> Ranks) {
+array<int> DynamicHandshake(comm_view Comm_, array_view<const int> Ranks) {
 
-  char SendBuffer[1], RecvBuffer[1];
+  // Duplicate comm to avoid matching with any sends/recvs before and after
+  comm Comm = DuplicateComm(Comm_);
 
-  int NumRanks = Ranks.Count();
+  unsigned char SendData = 0;
+  unsigned char RecvData;
+
+  int Rank = Comm.Rank();
+
+  std::set<int> MatchedRanksSet;
+
+  for (int OtherRank : Ranks) {
+    if (OtherRank == Rank) {
+      MatchedRanksSet.insert(Rank);
+    }
+  }
 
   array<MPI_Request> SendRequests;
-  SendRequests.Reserve(NumRanks);
-  for (int iRank = 0; iRank < NumRanks; ++iRank) {
-    MPI_Request &Request = SendRequests.Append();
-    MPI_Issend(SendBuffer, 1, MPI_CHAR, Ranks(iRank), 0, Comm, &Request);
+  SendRequests.Reserve(Ranks.Count());
+  for (int OtherRank : Ranks) {
+    if (OtherRank != Rank) {
+      MPI_Issend(&SendData, 1, MPI_UNSIGNED_CHAR, OtherRank, 0, Comm, &SendRequests.Append());
+    }
   }
 
   signal AllSendsDoneSignal(Comm);
 
-  std::set<int> MatchedRanksSet;
+  array<MPI_Request> RecvRequests;
 
   bool Done = false;
   int SendsDone = false;
@@ -171,20 +177,20 @@ array<int> DynamicHandshake(comm_view Comm, array_view<const int> Ranks) {
       MPI_Iprobe(MPI_ANY_SOURCE, 0, Comm, &IncomingMessage, &Status);
       if (!IncomingMessage) break;
       int MatchedRank = Status.MPI_SOURCE;
-      MPI_Recv(RecvBuffer, 1, MPI_CHAR, MatchedRank, 0, Comm, MPI_STATUS_IGNORE);
+      MPI_Irecv(&RecvData, 1, MPI_UNSIGNED_CHAR, MatchedRank, 0, Comm, &RecvRequests.Append());
       MatchedRanksSet.insert(MatchedRank);
     }
     if (SendsDone) {
       Done = AllSendsDoneSignal.Check();
     } else {
-      MPI_Testall(NumRanks, SendRequests.Data(), &SendsDone, MPI_STATUSES_IGNORE);
+      MPI_Testall(SendRequests.Count(), SendRequests.Data(), &SendsDone, MPI_STATUSES_IGNORE);
       if (SendsDone) {
         AllSendsDoneSignal.Start();
       }
     }
   }
 
-  MPI_Barrier(Comm);
+  MPI_Waitall(RecvRequests.Count(), RecvRequests.Data(), MPI_STATUSES_IGNORE);
 
   return {{int(MatchedRanksSet.size())}, MatchedRanksSet.begin()};
 

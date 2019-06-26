@@ -40,14 +40,14 @@ public:
 
 private:
 
-#ifdef OVK_HAVE_MPI_IBARRIER
-  comm_view Comm_;
-  MPI_Request Request_;
-#else
   comm Comm_;
-  char SendBuffer_[2], RecvBuffer_[1];
-  MPI_Request Requests_[2];
-  int NumCompleted_;
+#ifdef OVK_HAVE_MPI_IBARRIER
+  MPI_Request Request_ = MPI_REQUEST_NULL;
+#else
+  unsigned char SendBuffer_[2] = {0, 0};
+  unsigned char RecvBuffer_[1] = {0};
+  MPI_Request Requests_[2] = {MPI_REQUEST_NULL, MPI_REQUEST_NULL};
+  int NumCompleted_ = 0;
 #endif
 
 };
