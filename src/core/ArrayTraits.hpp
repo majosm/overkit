@@ -121,84 +121,93 @@ template <typename T, typename U, OVK_FUNCTION_REQUIRES(!IsArray<T>() || !IsArra
 }
 
 namespace array_extents_internal {
-template <typename ArrayType, std::size_t... Indices> constexpr interval<long long,ArrayRank<
-  ArrayType>()> StaticHelper(core::index_sequence<Indices...>) {
-  return {{array_traits<ArrayType>::template ExtentBegin<Indices>()...}, {array_traits<ArrayType>::
-    template ExtentEnd<Indices>()...}};
+template <typename TupleElementType, typename ArrayType, std::size_t... Indices> constexpr
+  interval<TupleElementType,ArrayRank<ArrayType>()> StaticHelper(core::index_sequence<Indices...>) {
+  return {
+    {TupleElementType(array_traits<ArrayType>::template ExtentBegin<Indices>())...},
+    {TupleElementType(array_traits<ArrayType>::template ExtentEnd<Indices>())...}
+  };
 }
-template <typename ArrayType, std::size_t... Indices> interval<long long,ArrayRank<ArrayType>()>
-  RuntimeHelper(core::index_sequence<Indices...>, const ArrayType &Array) {
-  return {{array_traits<ArrayType>::template ExtentBegin<Indices>(Array)...}, {array_traits<
-    ArrayType>::template ExtentEnd<Indices>(Array)...}};
+template <typename TupleElementType, typename ArrayType, std::size_t... Indices> interval<
+  TupleElementType,ArrayRank<ArrayType>()> RuntimeHelper(core::index_sequence<Indices...>, const
+  ArrayType &Array) {
+  return {
+    {TupleElementType(array_traits<ArrayType>::template ExtentBegin<Indices>(Array))...},
+    {TupleElementType(array_traits<ArrayType>::template ExtentEnd<Indices>(Array))...}
+  };
 }
 }
-template <typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<ArrayType>() &&
-  ArrayHasStaticExtents<ArrayType>())> constexpr interval<long long,ArrayRank<ArrayType>()>
-  ArrayExtents(const ArrayType &) {
-  return array_extents_internal::StaticHelper<ArrayType>(core::index_sequence_of_size<ArrayRank<
-    ArrayType>()>());
+template <typename TupleElementType=long long, typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<
+  ArrayType>() && ArrayHasStaticExtents<ArrayType>())> constexpr interval<TupleElementType,
+  ArrayRank<ArrayType>()> ArrayExtents(const ArrayType &) {
+  return array_extents_internal::StaticHelper<TupleElementType, ArrayType>(
+    core::index_sequence_of_size<ArrayRank<ArrayType>()>());
 }
-template <typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<ArrayType>() &&
-  ArrayHasRuntimeExtents<ArrayType>())> interval<long long,ArrayRank<ArrayType>()> ArrayExtents(
-  const ArrayType &Array) {
-  return array_extents_internal::RuntimeHelper<ArrayType>(core::index_sequence_of_size<ArrayRank<
-    ArrayType>()>(), Array);
+template <typename TupleElementType=long long, typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<
+  ArrayType>() && ArrayHasRuntimeExtents<ArrayType>())> interval<TupleElementType,ArrayRank<
+  ArrayType>()> ArrayExtents(const ArrayType &Array) {
+  return array_extents_internal::RuntimeHelper<TupleElementType, ArrayType>(
+    core::index_sequence_of_size<ArrayRank<ArrayType>()>(), Array);
 }
 
 namespace array_size_internal {
-template <typename ArrayType, std::size_t... Indices> constexpr elem<long long,ArrayRank<
-  ArrayType>()> StaticHelper(core::index_sequence<Indices...>) {
-  return {array_traits<ArrayType>::template ExtentEnd<Indices>() - array_traits<ArrayType>::template
-  ExtentBegin<Indices>()...};
+template <typename TupleElementType, typename ArrayType, std::size_t... Indices> constexpr
+  elem<TupleElementType,ArrayRank<ArrayType>()> StaticHelper(core::index_sequence<Indices...>) {
+  return {TupleElementType(array_traits<ArrayType>::template ExtentEnd<Indices>() -
+    array_traits<ArrayType>::template ExtentBegin<Indices>())...};
 }
-template <typename ArrayType, std::size_t... Indices> elem<long long,ArrayRank<ArrayType>()>
-  RuntimeHelper(core::index_sequence<Indices...>, const ArrayType &Array) {
-  return {array_traits<ArrayType>::template ExtentEnd<Indices>(Array) - array_traits<ArrayType>::
-    template ExtentBegin<Indices>(Array)...};
-}
-}
-template <typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<ArrayType>() &&
-  ArrayHasStaticExtents<ArrayType>())> constexpr elem<long long,ArrayRank<ArrayType>()> ArraySize(
-  const ArrayType &) {
-  return array_size_internal::StaticHelper<ArrayType>(core::index_sequence_of_size<ArrayRank<
-    ArrayType>()>());
-}
-template <typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<ArrayType>() &&
-  ArrayHasRuntimeExtents<ArrayType>())> elem<long long,ArrayRank<ArrayType>()> ArraySize(const
+template <typename TupleElementType, typename ArrayType, std::size_t... Indices> elem<
+  TupleElementType,ArrayRank<ArrayType>()> RuntimeHelper(core::index_sequence<Indices...>, const
   ArrayType &Array) {
-  return array_size_internal::RuntimeHelper<ArrayType>(core::index_sequence_of_size<ArrayRank<
-    ArrayType>()>(), Array);
+  return {TupleElementType(array_traits<ArrayType>::template ExtentEnd<Indices>(Array) -
+    array_traits<ArrayType>::template ExtentBegin<Indices>(Array))...};
+}
+}
+template <typename TupleElementType=long long, typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<
+  ArrayType>() && ArrayHasStaticExtents<ArrayType>())> constexpr elem<TupleElementType,ArrayRank<
+  ArrayType>()> ArraySize(const ArrayType &) {
+  return array_size_internal::StaticHelper<TupleElementType, ArrayType>(
+    core::index_sequence_of_size<ArrayRank<ArrayType>()>());
+}
+template <typename TupleElementType=long long, typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<
+  ArrayType>() && ArrayHasRuntimeExtents<ArrayType>())> elem<TupleElementType,ArrayRank<ArrayType>()
+  > ArraySize(const ArrayType &Array) {
+  return array_size_internal::RuntimeHelper<TupleElementType, ArrayType>(
+    core::index_sequence_of_size<ArrayRank<ArrayType>()>(), Array);
 }
 
 namespace array_count_internal {
-template <typename ArrayType, int Index, OVK_FUNCTION_REQUIRES(Index == ArrayRank<
-  ArrayType>()-1)> constexpr long long StaticHelper() {
-  return array_traits<ArrayType>::template ExtentEnd<Index>() -
-    array_traits<ArrayType>::template ExtentBegin<Index>();
+template <typename IndexType, typename ArrayType, int Index, OVK_FUNCTION_REQUIRES(Index ==
+  ArrayRank<ArrayType>()-1)> constexpr IndexType StaticHelper() {
+  return IndexType(array_traits<ArrayType>::template ExtentEnd<Index>() -
+    array_traits<ArrayType>::template ExtentBegin<Index>());
 }
-template <typename ArrayType, int Index, OVK_FUNCTION_REQUIRES(Index < ArrayRank<
-  ArrayType>()-1)> constexpr long long StaticHelper() {
-  return (array_traits<ArrayType>::template ExtentEnd<Index>() - array_traits<ArrayType>::template
-  ExtentBegin<Index>()) * StaticHelper<ArrayType, Index+1>();
+template <typename IndexType, typename ArrayType, int Index, OVK_FUNCTION_REQUIRES(Index <
+  ArrayRank<ArrayType>()-1)> constexpr IndexType StaticHelper() {
+  return IndexType(array_traits<ArrayType>::template ExtentEnd<Index>() - array_traits<ArrayType>::
+  template ExtentBegin<Index>()) * StaticHelper<IndexType, ArrayType, Index+1>();
 }
-template <typename ArrayType, int Index, OVK_FUNCTION_REQUIRES(Index == ArrayRank<
-  ArrayType>()-1)> long long RuntimeHelper(const ArrayType &Array) {
-  return array_traits<ArrayType>::template ExtentEnd<Index>(Array) -
-    array_traits<ArrayType>::template ExtentBegin<Index>(Array);
+template <typename IndexType, typename ArrayType, int Index, OVK_FUNCTION_REQUIRES(Index ==
+  ArrayRank<ArrayType>()-1)> IndexType RuntimeHelper(const ArrayType &Array) {
+  return IndexType(array_traits<ArrayType>::template ExtentEnd<Index>(Array) -
+    array_traits<ArrayType>::template ExtentBegin<Index>(Array));
 }
-template <typename ArrayType, int Index, OVK_FUNCTION_REQUIRES(Index < ArrayRank<
-  ArrayType>()-1)> long long RuntimeHelper(const ArrayType &Array) {
-  return (array_traits<ArrayType>::template ExtentEnd<Index>(Array) - array_traits<ArrayType>::
-    template ExtentBegin<Index>(Array)) * RuntimeHelper<ArrayType, Index+1>(Array);
+template <typename IndexType, typename ArrayType, int Index, OVK_FUNCTION_REQUIRES(Index <
+  ArrayRank<ArrayType>()-1)> IndexType RuntimeHelper(const ArrayType &Array) {
+  return IndexType(array_traits<ArrayType>::template ExtentEnd<Index>(Array) - array_traits<
+    ArrayType>::template ExtentBegin<Index>(Array)) * RuntimeHelper<IndexType, ArrayType, Index+1>(
+    Array);
 }
 }
-template <typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<ArrayType>() &&
-  ArrayHasStaticExtents<ArrayType>())> constexpr long long ArrayCount(const ArrayType &) {
-  return array_count_internal::StaticHelper<ArrayType, 0>();
+template <typename IndexType=long long, typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<
+  ArrayType>() && ArrayHasStaticExtents<ArrayType>())> constexpr IndexType ArrayCount(const
+  ArrayType &) {
+  return array_count_internal::StaticHelper<IndexType, ArrayType, 0>();
 }
-template <typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<ArrayType>() &&
-  ArrayHasRuntimeExtents<ArrayType>())> long long ArrayCount(const ArrayType &Array) {
-  return array_count_internal::RuntimeHelper<ArrayType, 0>(Array);
+template <typename IndexType=long long, typename ArrayType, OVK_FUNCTION_REQUIRES(IsArray<
+  ArrayType>() && ArrayHasRuntimeExtents<ArrayType>())> IndexType ArrayCount(const ArrayType
+  &Array) {
+  return array_count_internal::RuntimeHelper<IndexType, ArrayType, 0>(Array);
 }
 
 template <typename ArrayRefType, OVK_FUNCTION_REQUIRES(IsArray<remove_cvref<ArrayRefType>>())> auto
