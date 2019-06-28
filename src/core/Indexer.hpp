@@ -21,7 +21,7 @@ namespace indexer_internal {
 
 // Can't specialize inside class, so abuse overloads instead
 template <array_layout Layout> struct layout_tag {};
-template <std::size_t Index> struct index_tag {};
+template <std::size_t Dim> struct dim_tag {};
 
 // Slightly faster than using constexpr recursion (compiles a bit faster too)
 // May be able to replace with C++17 fold expressions once they are widely supported
@@ -315,34 +315,34 @@ public:
 
 private:
 
-  template <std::size_t Index, typename BeginType, typename EndType> constexpr OVK_FORCE_INLINE
+  template <std::size_t Dim, typename BeginType, typename EndType> constexpr OVK_FORCE_INLINE
     index_type MakeStrideElement_(layout_tag<array_layout::ROW_MAJOR> LayoutTag,
-    index_tag<Index>, const BeginType &Begin, const EndType &End) const {
-    return index_type(End[Index+1]-Begin[Index+1])*MakeStrideElement_(LayoutTag,
-      index_tag<Index+1>(), Begin, End);
+    dim_tag<Dim>, const BeginType &Begin, const EndType &End) const {
+    return index_type(End[Dim+1]-Begin[Dim+1])*MakeStrideElement_(LayoutTag, dim_tag<Dim+1>(),
+      Begin, End);
   }
   template <typename BeginType, typename EndType> constexpr OVK_FORCE_INLINE index_type
-    MakeStrideElement_(layout_tag<array_layout::ROW_MAJOR>, index_tag<Rank-1>, const BeginType &,
+    MakeStrideElement_(layout_tag<array_layout::ROW_MAJOR>, dim_tag<Rank-1>, const BeginType &,
     const EndType &) const {
     return 1;
   }
 
-  template <std::size_t Index, typename BeginType, typename EndType> constexpr OVK_FORCE_INLINE
+  template <std::size_t Dim, typename BeginType, typename EndType> constexpr OVK_FORCE_INLINE
     index_type MakeStrideElement_(layout_tag<array_layout::COLUMN_MAJOR> LayoutTag,
-    index_tag<Index>, const BeginType &Begin, const EndType &End) const {
-    return index_type(End[Index-1]-Begin[Index-1])*MakeStrideElement_(LayoutTag,
-      index_tag<Index-1>(), Begin, End);
+    dim_tag<Dim>, const BeginType &Begin, const EndType &End) const {
+    return index_type(End[Dim-1]-Begin[Dim-1])*MakeStrideElement_(LayoutTag, dim_tag<Dim-1>(),
+      Begin, End);
   }
   template <typename BeginType, typename EndType> constexpr OVK_FORCE_INLINE index_type
-    MakeStrideElement_(layout_tag<array_layout::COLUMN_MAJOR>, index_tag<0>, const BeginType &,
+    MakeStrideElement_(layout_tag<array_layout::COLUMN_MAJOR>, dim_tag<0>, const BeginType &,
     const EndType &) const {
     return 1;
   }
 
-  template <std::size_t... Indices, typename BeginType, typename EndType> constexpr OVK_FORCE_INLINE
-    stride_type MakeStride_(core::index_sequence<Indices...>, const BeginType &Begin, const EndType
+  template <std::size_t... Dims, typename BeginType, typename EndType> constexpr OVK_FORCE_INLINE
+    stride_type MakeStride_(core::index_sequence<Dims...>, const BeginType &Begin, const EndType
     &End) const {
-    return {MakeStrideElement_(layout_tag<Layout>(), index_tag<Indices>(), Begin, End)...};
+    return {MakeStrideElement_(layout_tag<Layout>(), dim_tag<Dims>(), Begin, End)...};
   }
 
   tuple_type IndexToTuple_(layout_tag<array_layout::ROW_MAJOR>, index_type Index) const {

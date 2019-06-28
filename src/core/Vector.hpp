@@ -228,11 +228,11 @@ public:
 
   bool Empty() const { return Values_.empty(); }
 
-  OVK_FORCE_INLINE const value_type &operator[](index_type Index) const {
-    return reinterpret_cast<const value_type &>(Values_[Index]);
+  OVK_FORCE_INLINE const value_type &operator[](index_type iValue) const {
+    return reinterpret_cast<const value_type &>(Values_[iValue]);
   }
-  OVK_FORCE_INLINE value_type &operator[](index_type Index) {
-    return reinterpret_cast<value_type &>(Values_[Index]);
+  OVK_FORCE_INLINE value_type &operator[](index_type iValue) {
+    return reinterpret_cast<value_type &>(Values_[iValue]);
   }
 
   const value_type &Front() const {

@@ -177,25 +177,25 @@ template <typename TupleElementType=long long, typename ArrayType, OVK_FUNCTION_
 }
 
 namespace array_count_internal {
-template <typename IndexType, typename ArrayType, int Index, OVK_FUNCTION_REQUIRES(Index ==
+template <typename IndexType, typename ArrayType, int Dim, OVK_FUNCTION_REQUIRES(Dim ==
   ArrayRank<ArrayType>()-1)> constexpr IndexType StaticHelper() {
-  return IndexType(array_traits<ArrayType>::template ExtentEnd<Index>() -
-    array_traits<ArrayType>::template ExtentBegin<Index>());
+  return IndexType(array_traits<ArrayType>::template ExtentEnd<Dim>() -
+    array_traits<ArrayType>::template ExtentBegin<Dim>());
 }
-template <typename IndexType, typename ArrayType, int Index, OVK_FUNCTION_REQUIRES(Index <
+template <typename IndexType, typename ArrayType, int Dim, OVK_FUNCTION_REQUIRES(Dim <
   ArrayRank<ArrayType>()-1)> constexpr IndexType StaticHelper() {
-  return IndexType(array_traits<ArrayType>::template ExtentEnd<Index>() - array_traits<ArrayType>::
-  template ExtentBegin<Index>()) * StaticHelper<IndexType, ArrayType, Index+1>();
+  return IndexType(array_traits<ArrayType>::template ExtentEnd<Dim>() - array_traits<ArrayType>::
+  template ExtentBegin<Dim>()) * StaticHelper<IndexType, ArrayType, Dim+1>();
 }
-template <typename IndexType, typename ArrayType, int Index, OVK_FUNCTION_REQUIRES(Index ==
+template <typename IndexType, typename ArrayType, int Dim, OVK_FUNCTION_REQUIRES(Dim ==
   ArrayRank<ArrayType>()-1)> IndexType RuntimeHelper(const ArrayType &Array) {
-  return IndexType(array_traits<ArrayType>::template ExtentEnd<Index>(Array) -
-    array_traits<ArrayType>::template ExtentBegin<Index>(Array));
+  return IndexType(array_traits<ArrayType>::template ExtentEnd<Dim>(Array) -
+    array_traits<ArrayType>::template ExtentBegin<Dim>(Array));
 }
-template <typename IndexType, typename ArrayType, int Index, OVK_FUNCTION_REQUIRES(Index <
+template <typename IndexType, typename ArrayType, int Dim, OVK_FUNCTION_REQUIRES(Dim <
   ArrayRank<ArrayType>()-1)> IndexType RuntimeHelper(const ArrayType &Array) {
-  return IndexType(array_traits<ArrayType>::template ExtentEnd<Index>(Array) - array_traits<
-    ArrayType>::template ExtentBegin<Index>(Array)) * RuntimeHelper<IndexType, ArrayType, Index+1>(
+  return IndexType(array_traits<ArrayType>::template ExtentEnd<Dim>(Array) - array_traits<
+    ArrayType>::template ExtentBegin<Dim>(Array)) * RuntimeHelper<IndexType, ArrayType, Dim+1>(
     Array);
 }
 }

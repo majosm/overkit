@@ -96,23 +96,23 @@ template <typename T> constexpr bool ArrayHasRuntimeExtents() {
 }
 
 namespace static_array_has_extents_begin_internal {
-template <typename T, long long BeginElement, std::size_t Index, OVK_FUNCTION_REQUIRES(IsArray<T>()
+template <typename T, long long BeginElement, std::size_t Dim, OVK_FUNCTION_REQUIRES(IsArray<T>()
   && ArrayHasStaticExtents<T>())> constexpr bool Helper(integer_sequence<long long, BeginElement>,
-  index_sequence<Index>) {
-  return array_traits<T>::template ExtentBegin<Index>() == BeginElement;
+  index_sequence<Dim>) {
+  return array_traits<T>::template ExtentBegin<Dim>() == BeginElement;
 }
 template <typename T, long long BeginElement1, long long BeginElement2, long long...
-  RemainingElements, std::size_t Index1, std::size_t Index2, std::size_t... RemainingIndices,
+  RemainingElements, std::size_t Dim1, std::size_t Dim2, std::size_t... RemainingDims,
   OVK_FUNCTION_REQUIRES(IsArray<T>() && ArrayHasStaticExtents<T>())> constexpr bool Helper(
   integer_sequence<long long, BeginElement1, BeginElement2, RemainingElements...>, index_sequence<
-  Index1, Index2, RemainingIndices...>) {
-  return array_traits<T>::template ExtentBegin<Index1>() == BeginElement1 && Helper<T>(
-    integer_sequence<long long, BeginElement2, RemainingElements...>(), index_sequence<Index2,
-    RemainingIndices...>());
+  Dim1, Dim2, RemainingDims...>) {
+  return array_traits<T>::template ExtentBegin<Dim1>() == BeginElement1 && Helper<T>(
+    integer_sequence<long long, BeginElement2, RemainingElements...>(), index_sequence<Dim2,
+    RemainingDims...>());
 }
-template <typename T, typename BeginElementSequence, typename IndexSequence, OVK_FUNCTION_REQUIRES(
+template <typename T, typename BeginElementSequence, typename DimSequence, OVK_FUNCTION_REQUIRES(
   !IsArray<T>() || ArrayHasRuntimeExtents<T>())> constexpr bool Helper(BeginElementSequence,
-  IndexSequence) {
+  DimSequence) {
   return false;
 }
 }
@@ -122,22 +122,22 @@ template <typename T, long long... BeginElements> constexpr bool StaticArrayHasE
 }
 
 namespace static_array_has_extents_end_internal {
-template <typename T, long long EndElement, std::size_t Index, OVK_FUNCTION_REQUIRES(IsArray<T>() &&
+template <typename T, long long EndElement, std::size_t Dim, OVK_FUNCTION_REQUIRES(IsArray<T>() &&
   ArrayHasStaticExtents<T>())> constexpr bool Helper(integer_sequence<long long, EndElement>,
-  index_sequence<Index>) {
-  return array_traits<T>::template ExtentEnd<Index>() == EndElement;
+  index_sequence<Dim>) {
+  return array_traits<T>::template ExtentEnd<Dim>() == EndElement;
 }
 template <typename T, long long EndElement1, long long EndElement2, long long...  RemainingElements,
-  std::size_t Index1, std::size_t Index2, std::size_t... RemainingIndices, OVK_FUNCTION_REQUIRES(
+  std::size_t Dim1, std::size_t Dim2, std::size_t... RemainingDims, OVK_FUNCTION_REQUIRES(
   IsArray<T>() && ArrayHasStaticExtents<T>())> constexpr bool Helper(integer_sequence<long long,
-  EndElement1, EndElement2, RemainingElements...>, index_sequence<Index1, Index2, RemainingIndices...
+  EndElement1, EndElement2, RemainingElements...>, index_sequence<Dim1, Dim2, RemainingDims...
   >) {
-  return array_traits<T>::template ExtentEnd<Index1>() == EndElement1 && Helper<T>(integer_sequence<
-    long long, EndElement2, RemainingElements...>(), index_sequence<Index2, RemainingIndices...>());
+  return array_traits<T>::template ExtentEnd<Dim1>() == EndElement1 && Helper<T>(integer_sequence<
+    long long, EndElement2, RemainingElements...>(), index_sequence<Dim2, RemainingDims...>());
 }
-template <typename T, typename EndElementSequence, typename IndexSequence, OVK_FUNCTION_REQUIRES(
+template <typename T, typename EndElementSequence, typename DimSequence, OVK_FUNCTION_REQUIRES(
   !IsArray<T>() || ArrayHasRuntimeExtents<T>())> constexpr bool Helper(EndElementSequence,
-    IndexSequence) {
+    DimSequence) {
   return false;
 }
 }
@@ -147,24 +147,24 @@ template <typename T, long long... EndElements> constexpr bool StaticArrayHasExt
 }
 
 namespace static_array_has_size_internal {
-template <typename T, long long SizeElement, std::size_t Index, OVK_FUNCTION_REQUIRES(IsArray<T>()
+template <typename T, long long SizeElement, std::size_t Dim, OVK_FUNCTION_REQUIRES(IsArray<T>()
   && ArrayHasStaticExtents<T>())> constexpr bool Helper(integer_sequence<long long, SizeElement>,
-  index_sequence<Index>) {
-  return (array_traits<T>::template ExtentEnd<Index>() - array_traits<T>::template ExtentBegin<
-    Index>()) == SizeElement;
+  index_sequence<Dim>) {
+  return (array_traits<T>::template ExtentEnd<Dim>() - array_traits<T>::template ExtentBegin<
+    Dim>()) == SizeElement;
 }
 template <typename T, long long SizeElement1, long long SizeElement2, long long...
-  RemainingElements, std::size_t Index1, std::size_t Index2, std::size_t... RemainingIndices,
+  RemainingElements, std::size_t Dim1, std::size_t Dim2, std::size_t... RemainingDims,
   OVK_FUNCTION_REQUIRES(IsArray<T>() && ArrayHasStaticExtents<T>())> constexpr bool Helper(
   integer_sequence<long long, SizeElement1, SizeElement2, RemainingElements...>, index_sequence<
-  Index1, Index2, RemainingIndices...>) {
-  return (array_traits<T>::template ExtentEnd<Index1>() - array_traits<T>::template ExtentBegin<
-    Index1>()) == SizeElement1 && Helper<T>(integer_sequence<long long, SizeElement2,
-    RemainingElements...>(), index_sequence<Index2, RemainingIndices...>());
+  Dim1, Dim2, RemainingDims...>) {
+  return (array_traits<T>::template ExtentEnd<Dim1>() - array_traits<T>::template ExtentBegin<
+    Dim1>()) == SizeElement1 && Helper<T>(integer_sequence<long long, SizeElement2,
+    RemainingElements...>(), index_sequence<Dim2, RemainingDims...>());
 }
-template <typename T, typename SizeElementSequence, typename IndexSequence, OVK_FUNCTION_REQUIRES(
+template <typename T, typename SizeElementSequence, typename DimSequence, OVK_FUNCTION_REQUIRES(
   !IsArray<T>() || ArrayHasRuntimeExtents<T>())> constexpr bool Helper(SizeElementSequence,
-  IndexSequence) {
+  DimSequence) {
   return false;
 }
 }

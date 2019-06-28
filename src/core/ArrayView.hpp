@@ -315,7 +315,7 @@ public:
     return Ptr_[Indexer_.ToIndex(Array)];
   }
 
-  constexpr OVK_FORCE_INLINE value_type &operator[](int Index) const { return Ptr_[Index]; }
+  constexpr OVK_FORCE_INLINE value_type &operator[](int iValue) const { return Ptr_[iValue]; }
 
   constexpr OVK_FORCE_INLINE value_type *Data() const { return Ptr_; }
 

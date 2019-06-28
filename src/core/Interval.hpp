@@ -66,26 +66,26 @@ public:
 
 protected:
 
-  template <typename ResultType=value_type, std::size_t Index1, std::size_t Index2, std::size_t...
-    RemainingIndices> constexpr OVK_FORCE_INLINE ResultType VolumeCountHelper_(core::index_sequence<
-    Index1, Index2, RemainingIndices...>) const {
-    return ResultType(Size(Index1)) * VolumeCountHelper_<ResultType>(core::index_sequence<Index2,
-      RemainingIndices...>());
+  template <typename ResultType=value_type, std::size_t Dim1, std::size_t Dim2, std::size_t...
+    RemainingDims> constexpr OVK_FORCE_INLINE ResultType VolumeCountHelper_(core::index_sequence<
+    Dim1, Dim2, RemainingDims...>) const {
+    return ResultType(Size(Dim1)) * VolumeCountHelper_<ResultType>(core::index_sequence<Dim2,
+      RemainingDims...>());
   }
-  template <typename ResultType=value_type, std::size_t Index> constexpr OVK_FORCE_INLINE
-    value_type VolumeCountHelper_(core::index_sequence<Index>) const {
-    return ResultType(Size(Index));
+  template <typename ResultType=value_type, std::size_t Dim> constexpr OVK_FORCE_INLINE
+    value_type VolumeCountHelper_(core::index_sequence<Dim>) const {
+    return ResultType(Size(Dim));
   }
 
-  template <std::size_t Index1, std::size_t Index2, std::size_t... RemainingIndices>
-    constexpr OVK_FORCE_INLINE bool IncludesHelper_(core::index_sequence<Index1, Index2,
-    RemainingIndices...>, const interval_base_1 &Other) const {
-    return (Begin_(Index1) <= Other.Begin_(Index1) && End_(Index1) >= Other.End_(Index1)) &&
-      IncludesHelper_(core::index_sequence<Index2, RemainingIndices...>(), Other);
+  template <std::size_t Dim1, std::size_t Dim2, std::size_t... RemainingDims> constexpr
+    OVK_FORCE_INLINE bool IncludesHelper_(core::index_sequence<Dim1, Dim2, RemainingDims...>,
+    const interval_base_1 &Other) const {
+    return (Begin_(Dim1) <= Other.Begin_(Dim1) && End_(Dim1) >= Other.End_(Dim1)) &&
+      IncludesHelper_(core::index_sequence<Dim2, RemainingDims...>(), Other);
   }
-  template <std::size_t Index> constexpr OVK_FORCE_INLINE bool IncludesHelper_(core::index_sequence<
-    Index>, const interval_base_1 &Other) const {
-    return Begin_(Index) <= Other.Begin_(Index) && End_(Index) >= Other.End_(Index);
+  template <std::size_t Dim> constexpr OVK_FORCE_INLINE bool IncludesHelper_(core::index_sequence<
+    Dim>, const interval_base_1 &Other) const {
+    return Begin_(Dim) <= Other.Begin_(Dim) && End_(Dim) >= Other.End_(Dim);
   }
 
   template <typename U, int M> friend class interval_base_1;
@@ -140,26 +140,24 @@ public:
 
 private:
 
-  template <std::size_t Index1, std::size_t Index2, std::size_t... RemainingIndices>
-    constexpr OVK_FORCE_INLINE bool Empty_(core::index_sequence<Index1, Index2,
-    RemainingIndices...>) const {
-    return (End_(Index1) <= Begin_(Index1)) || Empty_(core::index_sequence<Index2,
-      RemainingIndices...>());
+  template <std::size_t Dim1, std::size_t Dim2, std::size_t... RemainingDims> constexpr
+    OVK_FORCE_INLINE bool Empty_(core::index_sequence<Dim1, Dim2, RemainingDims...>) const {
+    return (End_(Dim1) <= Begin_(Dim1)) || Empty_(core::index_sequence<Dim2, RemainingDims...>());
   }
-  template <std::size_t Index> constexpr OVK_FORCE_INLINE bool Empty_(core::index_sequence<Index>)
+  template <std::size_t Dim> constexpr OVK_FORCE_INLINE bool Empty_(core::index_sequence<Dim>)
     const {
-    return End_(Index) <= Begin_(Index);
+    return End_(Dim) <= Begin_(Dim);
   }
 
-  template <std::size_t Index1, std::size_t Index2, std::size_t... RemainingIndices>
-    constexpr OVK_FORCE_INLINE bool Contains_(core::index_sequence<Index1, Index2,
-    RemainingIndices...>, const tuple_type &Tuple) const {
-    return (Tuple(Index1) >= Begin_(Index1) && Tuple(Index1) < End_(Index1)) && Contains_(
-      core::index_sequence<Index2, RemainingIndices...>(), Tuple);
+  template <std::size_t Dim1, std::size_t Dim2, std::size_t... RemainingDims> constexpr
+    OVK_FORCE_INLINE bool Contains_(core::index_sequence<Dim1, Dim2, RemainingDims...>, const
+    tuple_type &Tuple) const {
+    return (Tuple(Dim1) >= Begin_(Dim1) && Tuple(Dim1) < End_(Dim1)) && Contains_(
+      core::index_sequence<Dim2, RemainingDims...>(), Tuple);
   }
-  template <std::size_t Index> constexpr OVK_FORCE_INLINE bool Contains_(core::index_sequence<Index>,
+  template <std::size_t Dim> constexpr OVK_FORCE_INLINE bool Contains_(core::index_sequence<Dim>,
     const tuple_type &Tuple) const {
-    return Tuple(Index) >= Begin_(Index) && Tuple(Index) < End_(Index);
+    return Tuple(Dim) >= Begin_(Dim) && Tuple(Dim) < End_(Dim);
   }
 
 };
@@ -211,26 +209,24 @@ public:
 
 private:
 
-  template <std::size_t Index1, std::size_t Index2, std::size_t... RemainingIndices>
-    constexpr OVK_FORCE_INLINE bool Empty_(core::index_sequence<Index1, Index2,
-    RemainingIndices...>) const {
-    return (End_(Index1) < Begin_(Index1)) || Empty_(core::index_sequence<Index2,
-      RemainingIndices...>());
+  template <std::size_t Dim1, std::size_t Dim2, std::size_t... RemainingDims> constexpr
+    OVK_FORCE_INLINE bool Empty_(core::index_sequence<Dim1, Dim2, RemainingDims...>) const {
+    return (End_(Dim1) < Begin_(Dim1)) || Empty_(core::index_sequence<Dim2, RemainingDims...>());
   }
-  template <std::size_t Index> constexpr OVK_FORCE_INLINE bool Empty_(core::index_sequence<Index>)
+  template <std::size_t Dim> constexpr OVK_FORCE_INLINE bool Empty_(core::index_sequence<Dim>)
     const {
-    return End_(Index) < Begin_(Index);
+    return End_(Dim) < Begin_(Dim);
   }
 
-  template <std::size_t Index1, std::size_t Index2, std::size_t... RemainingIndices>
-    constexpr OVK_FORCE_INLINE bool Contains_(core::index_sequence<Index1, Index2,
-    RemainingIndices...>, const tuple_type &Tuple) const {
-    return (Tuple(Index1) >= Begin_(Index1) && Tuple(Index1) <= End_(Index1)) && Contains_(
-      core::index_sequence<Index2, RemainingIndices...>(), Tuple);
+  template <std::size_t Dim1, std::size_t Dim2, std::size_t... RemainingDims> constexpr
+    OVK_FORCE_INLINE bool Contains_(core::index_sequence<Dim1, Dim2, RemainingDims...>, const
+    tuple_type &Tuple) const {
+    return (Tuple(Dim1) >= Begin_(Dim1) && Tuple(Dim1) <= End_(Dim1)) && Contains_(
+      core::index_sequence<Dim2, RemainingDims...>(), Tuple);
   }
-  template <std::size_t Index> constexpr OVK_FORCE_INLINE bool Contains_(core::index_sequence<Index>,
+  template <std::size_t Dim> constexpr OVK_FORCE_INLINE bool Contains_(core::index_sequence<Dim>,
     const tuple_type &Tuple) const {
-    return Tuple(Index) >= Begin_(Index) && Tuple(Index) <= End_(Index);
+    return Tuple(Dim) >= Begin_(Dim) && Tuple(Dim) <= End_(Dim);
   }
 
 };

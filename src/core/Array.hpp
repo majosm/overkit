@@ -663,8 +663,8 @@ public:
     return View_(Array);
   }
 
-  const value_type &operator[](int Index) const { return View_[Index]; }
-  value_type &operator[](int Index) { return View_[Index]; }
+  const value_type &operator[](int iValue) const { return View_[iValue]; }
+  value_type &operator[](int iValue) { return View_[iValue]; }
 
   OVK_FORCE_INLINE const value_type *Data() const { return View_.Data(); }
   OVK_FORCE_INLINE value_type *Data() { return View_.Data(); }
