@@ -558,23 +558,23 @@ private:
 
 };
 
-template <typename T, int Rank, bool Contiguous> typename id_map<Rank, T>::iterator begin(
-  id_map<Rank, T, Contiguous> &Map) {
+template <int Rank, typename T, bool Contiguous> typename id_map<Rank, T, Contiguous>::iterator
+  begin(id_map<Rank, T, Contiguous> &Map) {
   return Map.Begin();
 }
 
-template <typename T, int Rank, bool Contiguous> typename id_map<Rank, T>::const_iterator begin(
-  const id_map<Rank, T, Contiguous> &Map) {
+template <int Rank, typename T, bool Contiguous> typename id_map<Rank, T, Contiguous>::
+  const_iterator begin(const id_map<Rank, T, Contiguous> &Map) {
   return Map.Begin();
 }
 
-template <typename T, int Rank, bool Contiguous> typename id_map<Rank, T>::iterator end(id_map<Rank,
-  T, Contiguous> &Map) {
+template <int Rank, typename T, bool Contiguous> typename id_map<Rank, T, Contiguous>::iterator
+  end(id_map<Rank, T, Contiguous> &Map) {
   return Map.End();
 }
 
-template <typename T, int Rank, bool Contiguous> typename id_map<Rank, T>::const_iterator end(const
-  id_map<Rank, T, Contiguous> &Map) {
+template <int Rank, typename T, bool Contiguous> typename id_map<Rank, T, Contiguous>::
+  const_iterator end(const id_map<Rank, T, Contiguous> &Map) {
   return Map.End();
 }
 
