@@ -120,6 +120,11 @@ set(INTERNAL_HEADERS
   Exchanger.h
   FloatingRef.inl
   ForEach.hpp
+  GeometryOps.hpp
+  GeometryOps.inl
+  GeometryOpsLine.inl
+  GeometryOpsQuad.inl
+  GeometryOpsHex.inl
   Global.h
   Grid.h
   Halo.hpp

@@ -51,6 +51,7 @@ set(SOURCES
   ElemTests.cpp
   ExchangerTests.cpp
   ForEachTests.cpp
+  GeometryOpsTests.cpp
   HaloTests.cpp
   IDMapTests.cpp
   IDSetTests.cpp
