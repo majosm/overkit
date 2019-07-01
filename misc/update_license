@@ -6,11 +6,11 @@ files=
 files="$files $(find . -name LICENSE.txt)"
 files="$files $(find . -name CMakeLists.txt)"
 files="$files $(find config -name \*.cmake)"
-files="$files $(find examples -name \*.c -o -name \*.cpp -o -name \*.h -o -name \*.hpp)"
-files="$files $(find src -name \*.c -o -name \*.cpp -o -name \*.h -o -name \*.hpp)"
-files="$files $(find tests -name \*.c -o -name \*.cpp -o -name \*.h -o -name \*.hpp)"
-files="$files $(find support -name \*.c -o -name \*.cpp -o -name \*.h -o -name \*.hpp)"
-files="$files $(find utils -name \*.c -o -name \*.cpp -o -name \*.h -o -name \*.hpp)"
+files="$files $(find examples -name \*.c -o -name \*.cpp -o -name \*.h -o -name \*.hpp -o -name \*.inl -o -name \*.h.in -o -name \*.hpp.in)"
+files="$files $(find src -name \*.c -o -name \*.cpp -o -name \*.h -o -name \*.hpp -o -name \*.inl -o -name \*.h.in -o -name \*.hpp.in)"
+files="$files $(find tests -name \*.c -o -name \*.cpp -o -name \*.h -o -name \*.hpp -o -name \*.inl -o -name \*.h.in -o -name \*.hpp.in)"
+files="$files $(find support -name \*.c -o -name \*.cpp -o -name \*.h -o -name \*.hpp -o -name \*.inl -o -name \*.h.in -o -name \*.hpp.in)"
+files="$files $(find utils -name \*.c -o -name \*.cpp -o -name \*.h -o -name \*.hpp -o -name \*.inl -o -name \*.h.in -o -name \*.hpp.in)"
 
 name="Matthew J. Smith and Overkit contributors"
 
