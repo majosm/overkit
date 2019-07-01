@@ -233,6 +233,8 @@ public:
   using interval_type = interval<tuple_element_type,Rank>;
   using indexer_type = indexer<index_type, tuple_element_type, Rank, Layout>;
   using iterator = value_type *;
+  // Has pointer semantics, so iterator and const_iterator are the same
+  using const_iterator = value_type *;
 
   using parent_type::operator();
   using parent_type::Data;
