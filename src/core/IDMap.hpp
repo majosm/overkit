@@ -5,6 +5,7 @@
 #define OVK_CORE_ID_MAP_HPP_INCLUDED
 
 #include <ovk/core/Array.hpp>
+#include <ovk/core/ArrayTraits.hpp>
 #include <ovk/core/Elem.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/IDSet.hpp>
@@ -577,6 +578,19 @@ template <int Rank, typename T, bool Contiguous> typename id_map<Rank, T, Contig
   const_iterator end(const id_map<Rank, T, Contiguous> &Map) {
   return Map.End();
 }
+
+template <int Rank_, typename T, bool Contiguous> struct array_traits<id_map<Rank_, T, Contiguous>>
+  {
+  using value_type = typename id_map<Rank_, T, Contiguous>::entry;
+  static constexpr int Rank = 1;
+  static constexpr array_layout Layout = array_layout::ROW_MAJOR;
+  template <int> static long long ExtentBegin(const id_map<Rank_, T, Contiguous> &) { return 0; }
+  template <int> static long long ExtentEnd(const id_map<Rank_, T, Contiguous> &Map) {
+    return Map.Count();
+  }
+  static const value_type *Data(const id_map<Rank_, T, Contiguous> &Map) { return Map.Data(); }
+  static value_type *Data(id_map<Rank_, T, Contiguous> &Map) { return Map.Data(); }
+};
 
 }
 

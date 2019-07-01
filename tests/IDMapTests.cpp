@@ -2027,3 +2027,21 @@ TEST_F(IDMapTests, KeyLess) {
   }
 
 }
+
+TEST_F(IDMapTests, ArrayTraits) {
+
+  if (TestComm().Rank() != 0) return;
+
+  using id_map = ovk::id_map<2,int>;
+
+  EXPECT_TRUE(ovk::core::IsArray<id_map>());
+  EXPECT_TRUE((std::is_same<ovk::core::array_value_type<id_map>, typename id_map::entry>::value));
+  EXPECT_EQ(ovk::core::ArrayRank<id_map>(), 1);
+  EXPECT_TRUE(ovk::core::ArrayHasRuntimeExtents<id_map>());
+
+  id_map IDMap = {{{1,2}, 1}, {{1,3}, 2}};
+  EXPECT_THAT(ovk::core::ArrayExtents(IDMap).Begin(), ElementsAre(0));
+  EXPECT_THAT(ovk::core::ArrayExtents(IDMap).End(), ElementsAre(2));
+  EXPECT_EQ(ovk::core::ArrayData(IDMap), IDMap.Data());
+
+}

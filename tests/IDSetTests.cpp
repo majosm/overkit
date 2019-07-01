@@ -647,3 +647,22 @@ TEST_F(IDSetTests, Less) {
   }
 
 }
+
+TEST_F(IDSetTests, ArrayTraits) {
+
+  if (TestComm().Rank() != 0) return;
+
+  using id_set = ovk::id_set<2>;
+
+  EXPECT_TRUE(ovk::core::IsArray<id_set>());
+  EXPECT_TRUE((std::is_same<ovk::core::array_value_type<id_set>, typename id_set::value_type>::
+    value));
+  EXPECT_EQ(ovk::core::ArrayRank<id_set>(), 1);
+  EXPECT_TRUE(ovk::core::ArrayHasRuntimeExtents<id_set>());
+
+  id_set IDSet = {{1,2}, {1,3}};
+  EXPECT_THAT(ovk::core::ArrayExtents(IDSet).Begin(), ElementsAre(0));
+  EXPECT_THAT(ovk::core::ArrayExtents(IDSet).End(), ElementsAre(2));
+  EXPECT_EQ(ovk::core::ArrayData(IDSet), IDSet.Data());
+
+}

@@ -5,6 +5,7 @@
 #define OVK_CORE_ID_SET_HPP_INCLUDED
 
 #include <ovk/core/Array.hpp>
+#include <ovk/core/ArrayTraits.hpp>
 #include <ovk/core/Elem.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/IteratorTraits.hpp>
@@ -301,6 +302,16 @@ template <int Rank> typename id_set<Rank>::iterator begin(const id_set<Rank> &Se
 template <int Rank> typename id_set<Rank>::iterator end(const id_set<Rank> &Set) {
   return Set.End();
 }
+
+template <int Rank_> struct array_traits<id_set<Rank_>> {
+  using value_type = typename id_set<Rank_>::value_type;
+  static constexpr int Rank = 1;
+  static constexpr array_layout Layout = array_layout::ROW_MAJOR;
+  template <int> static long long ExtentBegin(const id_set<Rank_> &) { return 0; }
+  template <int> static long long ExtentEnd(const id_set<Rank_> &Set) { return Set.Count(); }
+  static const value_type *Data(const id_set<Rank_> &Set) { return Set.Data(); }
+  // No non-const Data access
+};
 
 }
 
