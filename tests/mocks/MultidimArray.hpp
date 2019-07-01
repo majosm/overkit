@@ -16,6 +16,9 @@ namespace tests {
 namespace multidim_array_internal {
 template <typename T> class base {
 public:
+  using value_type = T;
+  using iterator = T *;
+  using const_iterator = const T *;
   base(const ovk::interval<long long,3> &Extents, T Value=T()):
     Values_(Extents.Count(), Value),
     Extents_(Extents)
@@ -24,10 +27,13 @@ public:
     Values_(ValuesList),
     Extents_(Extents)
   {}
-  long long Begin(int iDim) const { return Extents_.Begin(iDim); }
-  long long End(int iDim) const { return Extents_.End(iDim); }
+  const ovk::interval<long long,3> &Extents() const { return Extents_; }
   const T &operator[](long long l) const { return Values_[l]; }
   T &operator[](long long l) { return Values_[l]; }
+  const T *begin() const { return Values_.data(); }
+  const T *end() const { return Values_.data() + Extents_.Count(); }
+  T *begin() { return Values_.data(); }
+  T *end() { return Values_.data() + Extents_.Count(); }
 protected:
   std::vector<T> Values_;
   ovk::interval<long long,3> Extents_;
@@ -80,10 +86,10 @@ public:
   static constexpr int Rank = 3;
   static constexpr array_layout Layout = array_layout::ROW_MAJOR;
   template <int iDim> static long long ExtentBegin(const array_type &Array) {
-    return Array.Begin(iDim);
+    return Array.Extents().Begin(iDim);
   }
   template <int iDim> static long long ExtentEnd(const array_type &Array) {
-    return Array.End(iDim);
+    return Array.Extents().End(iDim);
   }
   static const value_type *Data(const array_type &Array) { return &Array[0]; }
   static value_type *Data(array_type &Array) { return &Array[0]; }
@@ -97,10 +103,10 @@ public:
   static constexpr int Rank = 3;
   static constexpr array_layout Layout = array_layout::COLUMN_MAJOR;
   template <int iDim> static long long ExtentBegin(const array_type &Array) {
-    return Array.Begin(iDim);
+    return Array.Extents().Begin(iDim);
   }
   template <int iDim> static long long ExtentEnd(const array_type &Array) {
-    return Array.End(iDim);
+    return Array.Extents().End(iDim);
   }
   static const value_type *Data(const array_type &Array) { return &Array[0]; }
   static value_type *Data(array_type &Array) { return &Array[0]; }

@@ -21,12 +21,157 @@
 #include <vector>
 
 using testing::ElementsAre;
+using testing::ElementsAreArray;
 
 class ArrayOpsTests : public tests::mpi_test {};
 
 using tests::multidim_array_row;
 using tests::multidim_array_col;
 using tests::noncopyable;
+
+TEST_F(ArrayOpsTests, ForEach) {
+
+  if (TestComm().Rank() != 0) return;
+
+  using multidim_array = multidim_array_row<int>;
+  using array_view = ovk::array_view<int,3>;
+
+  // Array
+  {
+    multidim_array Array({{1,2,3}, {3,4,5}}, {0,1,2,3,4,5,6,7});
+    ovk::ArrayForEach(Array, [](int &Value) { Value += 1; });
+    EXPECT_THAT(Array, ElementsAreArray({1,2,3,4,5,6,7,8}));
+  }
+
+  // Array view
+  {
+    multidim_array Array({{1,2,3}, {3,4,5}}, {0,1,2,3,4,5,6,7});
+    array_view View(Array);
+    ovk::ArrayForEach(View, [](int &Value) { Value += 1; });
+    EXPECT_THAT(View, ElementsAreArray({1,2,3,4,5,6,7,8}));
+  }
+
+//   // Function takes value and index, default index type, array
+//   {
+//     multidim_array Array({{1,2,3}, {3,4,5}}, {0,1,2,3,4,5,6,7});
+//     ovk::ArrayForEach(Array, [](int &Value, long long iValue) { Value += (iValue % 2); });
+//     EXPECT_THAT(Array, ElementsAreArray({0,2,2,4,4,6,6,8}));
+//   }
+
+//   // Function takes value and index, default index type, array view
+//   {
+//     multidim_array Array({{1,2,3}, {3,4,5}}, {0,1,2,3,4,5,6,7});
+//     array_view View(Array);
+//     ovk::ArrayForEach(View, [](int &Value, long long iValue) { Value += (iValue % 2); });
+//     EXPECT_THAT(View, ElementsAreArray({0,2,2,4,4,6,6,8}));
+//   }
+
+//   // Function takes value and index, explicit index type, array
+//   {
+//     multidim_array Array({{1,2,3}, {3,4,5}}, {0,1,2,3,4,5,6,7});
+//     ovk::ArrayForEach<int>(Array, [](int &Value, int iValue) { Value += (iValue % 2); });
+//     EXPECT_THAT(Array, ElementsAreArray({0,2,2,4,4,6,6,8}));
+//   }
+
+//   // Function takes value and index, explicit index type, array view
+//   {
+//     multidim_array Array({{1,2,3}, {3,4,5}}, {0,1,2,3,4,5,6,7});
+//     array_view View(Array);
+//     ovk::ArrayForEach<int>(View, [](int &Value, int iValue) { Value += (iValue % 2); });
+//     EXPECT_THAT(View, ElementsAreArray({0,2,2,4,4,6,6,8}));
+//   }
+
+//   // Function takes value and tuple, default tuple element type, array
+//   {
+//     multidim_array Array({{1,2,3}, {3,4,5}}, {0,1,2,3,4,5,6,7});
+//     ovk::ArrayForEach(Array, [](int &Value, const ovk::elem<long long,3> &Tuple) {
+//       Value += (Tuple(0)-1) + (Tuple(1)-2) + (Tuple(2)-3);
+//     });
+//     EXPECT_THAT(Array, ElementsAreArray({0,2,3,5,5,7,8,10}));
+//   }
+
+//   // Function takes value and tuple, default tuple element type, array view
+//   {
+//     multidim_array Array({{1,2,3}, {3,4,5}}, {0,1,2,3,4,5,6,7});
+//     array_view View(Array);
+//     ovk::ArrayForEach(View, [](int &Value, const ovk::elem<long long,3> &Tuple) {
+//       Value += (Tuple(0)-1) + (Tuple(1)-2) + (Tuple(2)-3);
+//     });
+//     EXPECT_THAT(View, ElementsAreArray({0,2,3,5,5,7,8,10}));
+//   }
+
+//   // Function takes value and tuple, explicit tuple element type, array
+//   {
+//     multidim_array Array({{1,2,3}, {3,4,5}}, {0,1,2,3,4,5,6,7});
+//     ovk::ArrayForEach<int>(Array, [](int &Value, const ovk::elem<int,3> &Tuple) {
+//       Value += (Tuple(0)-1) + (Tuple(1)-2) + (Tuple(2)-3);
+//     });
+//     EXPECT_THAT(Array, ElementsAreArray({0,2,3,5,5,7,8,10}));
+//   }
+
+//   // Function takes value and tuple, explicit tuple element type, array view
+//   {
+//     multidim_array Array({{1,2,3}, {3,4,5}}, {0,1,2,3,4,5,6,7});
+//     array_view View(Array);
+//     ovk::ArrayForEach<int>(View, [](int &Value, const ovk::elem<int,3> &Tuple) {
+//       Value += (Tuple(0)-1) + (Tuple(1)-2) + (Tuple(2)-3);
+//     });
+//     EXPECT_THAT(View, ElementsAreArray({0,2,3,5,5,7,8,10}));
+//   }
+
+}
+
+TEST_F(ArrayOpsTests, Reduce) {
+
+  if (TestComm().Rank() != 0) return;
+
+  using multidim_array = multidim_array_row<int>;
+  using array_view = ovk::array_view<int,3>;
+
+  // Array
+  {
+    multidim_array Array({{1,2,3}, {3,4,5}}, {0,1,2,3,4,5,6,7});
+    bool Result = ovk::ArrayReduce(Array, false, [](bool &Partial, int Value) {
+      Partial = Partial ^ ((Value % 3) == 0);
+    });
+    EXPECT_TRUE(Result);
+  }
+
+  // Array view
+  {
+    multidim_array Array({{1,2,3}, {3,4,5}}, {0,1,2,3,4,5,6,7});
+    array_view View(Array);
+    bool Result = ovk::ArrayReduce(View, false, [](bool &Partial, int Value) {
+      Partial = Partial ^ ((Value % 3) == 0);
+    });
+    EXPECT_TRUE(Result);
+  }
+
+}
+
+TEST_F(ArrayOpsTests, Collapse) {
+
+  if (TestComm().Rank() != 0) return;
+
+  using multidim_array = multidim_array_row<int>;
+  using array_view = ovk::array_view<int,3>;
+
+  // Array
+  {
+    multidim_array Array({{1,2,3}, {3,4,5}}, {0,1,2,3,4,5,6,7});
+    int Sum = ovk::ArrayCollapse(Array, [](int &Partial, int Value) { Partial += Value; });
+    EXPECT_EQ(Sum, 28);
+  }
+
+  // Array view
+  {
+    multidim_array Array({{1,2,3}, {3,4,5}}, {0,1,2,3,4,5,6,7});
+    array_view View(Array);
+    int Sum = ovk::ArrayCollapse(View, [](int &Partial, int Value) { Partial += Value; });
+    EXPECT_EQ(Sum, 28);
+  }
+
+}
 
 TEST_F(ArrayOpsTests, Fill) {
 
@@ -183,7 +328,13 @@ TEST_F(ArrayOpsTests, None) {
   using multidim_array = multidim_array_row<int>;
   using array_view = ovk::array_view<int,3>;
 
-  // Convertible to bool, array
+  // Convertible to bool, array, empty
+  {
+    multidim_array Array({{1,2,3}, {4,2,6}}, 1);
+    EXPECT_TRUE(ovk::ArrayNone(Array));
+  }
+
+  // Convertible to bool, array, non-empty
   {
     multidim_array Array({{1,2,3}, {4,5,6}}, 0);
     EXPECT_TRUE(ovk::ArrayNone(Array));
@@ -191,7 +342,14 @@ TEST_F(ArrayOpsTests, None) {
     EXPECT_FALSE(ovk::ArrayNone(Array));
   }
 
-  // Convertible to bool, array view
+  // Convertible to bool, array view, empty
+  {
+    multidim_array Array({{1,2,3}, {4,2,6}}, 1);
+    array_view View(Array);
+    EXPECT_TRUE(ovk::ArrayNone(View));
+  }
+
+  // Convertible to bool, array view, non-empty
   {
     multidim_array Array({{1,2,3}, {4,5,6}}, 0);
     array_view View(Array);
@@ -200,7 +358,13 @@ TEST_F(ArrayOpsTests, None) {
     EXPECT_FALSE(ovk::ArrayNone(View));
   }
 
-  // With condition function, array
+  // With condition function, array, empty
+  {
+    multidim_array Array({{1,2,3}, {4,2,6}}, 5);
+    EXPECT_TRUE(ovk::ArrayNone(Array, [](int Value) -> bool { return Value == 5; }));
+  }
+
+  // With condition function, array, non-empty
   {
     multidim_array Array({{1,2,3}, {4,5,6}}, 1);
     EXPECT_TRUE(ovk::ArrayNone(Array, [](int Value) -> bool { return Value == 5; }));
@@ -208,7 +372,14 @@ TEST_F(ArrayOpsTests, None) {
     EXPECT_FALSE(ovk::ArrayNone(Array, [](int Value) -> bool { return Value == 5; }));
   }
 
-  // With condition function, array view
+  // With condition function, array view, empty
+  {
+    multidim_array Array({{1,2,3}, {4,2,6}}, 5);
+    array_view View(Array);
+    EXPECT_TRUE(ovk::ArrayNone(View, [](int Value) -> bool { return Value == 5; }));
+  }
+
+  // With condition function, array view, non-empty
   {
     multidim_array Array({{1,2,3}, {4,5,6}}, 1);
     array_view View(Array);
@@ -226,7 +397,13 @@ TEST_F(ArrayOpsTests, Any) {
   using multidim_array = multidim_array_row<int>;
   using array_view = ovk::array_view<int,3>;
 
-  // Convertible to bool, array
+  // Convertible to bool, array, empty
+  {
+    multidim_array Array({{1,2,3}, {4,2,6}}, 1);
+    EXPECT_FALSE(ovk::ArrayAny(Array));
+  }
+
+  // Convertible to bool, array, non-empty
   {
     multidim_array Array({{1,2,3}, {4,5,6}}, 0);
     EXPECT_FALSE(ovk::ArrayAny(Array));
@@ -234,7 +411,14 @@ TEST_F(ArrayOpsTests, Any) {
     EXPECT_TRUE(ovk::ArrayAny(Array));
   }
 
-  // Convertible to bool, array view
+  // Convertible to bool, array view, empty
+  {
+    multidim_array Array({{1,2,3}, {4,2,6}}, 1);
+    array_view View(Array);
+    EXPECT_FALSE(ovk::ArrayAny(View));
+  }
+
+  // Convertible to bool, array view, non-empty
   {
     multidim_array Array({{1,2,3}, {4,5,6}}, 0);
     array_view View(Array);
@@ -243,7 +427,13 @@ TEST_F(ArrayOpsTests, Any) {
     EXPECT_TRUE(ovk::ArrayAny(View));
   }
 
-  // With condition function, array
+  // With condition function, array, empty
+  {
+    multidim_array Array({{1,2,3}, {4,2,6}}, 5);
+    EXPECT_FALSE(ovk::ArrayAny(Array, [](int Value) -> bool { return Value == 5; }));
+  }
+
+  // With condition function, array, non-empty
   {
     multidim_array Array({{1,2,3}, {4,5,6}}, 1);
     EXPECT_FALSE(ovk::ArrayAny(Array, [](int Value) -> bool { return Value == 5; }));
@@ -251,7 +441,14 @@ TEST_F(ArrayOpsTests, Any) {
     EXPECT_TRUE(ovk::ArrayAny(Array, [](int Value) -> bool { return Value == 5; }));
   }
 
-  // With condition function, array view
+  // With condition function, array view, empty
+  {
+    multidim_array Array({{1,2,3}, {4,2,6}}, 5);
+    array_view View(Array);
+    EXPECT_FALSE(ovk::ArrayAny(View, [](int Value) -> bool { return Value == 5; }));
+  }
+
+  // With condition function, array view, non-empty
   {
     multidim_array Array({{1,2,3}, {4,5,6}}, 1);
     array_view View(Array);
@@ -269,7 +466,13 @@ TEST_F(ArrayOpsTests, NotAll) {
   using multidim_array = multidim_array_row<int>;
   using array_view = ovk::array_view<int,3>;
 
-  // Convertible to bool, array
+  // Convertible to bool, array, empty
+  {
+    multidim_array Array({{1,2,3}, {4,2,6}}, 0);
+    EXPECT_FALSE(ovk::ArrayNotAll(Array));
+  }
+
+  // Convertible to bool, array, non-empty
   {
     multidim_array Array({{1,2,3}, {4,5,6}}, 1);
     EXPECT_FALSE(ovk::ArrayNotAll(Array));
@@ -277,7 +480,14 @@ TEST_F(ArrayOpsTests, NotAll) {
     EXPECT_TRUE(ovk::ArrayNotAll(Array));
   }
 
-  // Convertible to bool, array view
+  // Convertible to bool, array view, empty
+  {
+    multidim_array Array({{1,2,3}, {4,2,6}}, 0);
+    array_view View(Array);
+    EXPECT_FALSE(ovk::ArrayNotAll(View));
+  }
+
+  // Convertible to bool, array view, non-empty
   {
     multidim_array Array({{1,2,3}, {4,5,6}}, 1);
     array_view View(Array);
@@ -286,7 +496,13 @@ TEST_F(ArrayOpsTests, NotAll) {
     EXPECT_TRUE(ovk::ArrayNotAll(View));
   }
 
-  // With condition function, array
+  // With condition function, array, empty
+  {
+    multidim_array Array({{1,2,3}, {4,2,6}}, 5);
+    EXPECT_FALSE(ovk::ArrayNotAll(Array, [](int Value) -> bool { return Value == 1; }));
+  }
+
+  // With condition function, array, non-empty
   {
     multidim_array Array({{1,2,3}, {4,5,6}}, 1);
     EXPECT_FALSE(ovk::ArrayNotAll(Array, [](int Value) -> bool { return Value == 1; }));
@@ -294,7 +510,14 @@ TEST_F(ArrayOpsTests, NotAll) {
     EXPECT_TRUE(ovk::ArrayNotAll(Array, [](int Value) -> bool { return Value == 1; }));
   }
 
-  // With condition function, array view
+  // With condition function, array view, empty
+  {
+    multidim_array Array({{1,2,3}, {4,2,6}}, 5);
+    array_view View(Array);
+    EXPECT_FALSE(ovk::ArrayNotAll(View, [](int Value) -> bool { return Value == 1; }));
+  }
+
+  // With condition function, array view, non-empty
   {
     multidim_array Array({{1,2,3}, {4,5,6}}, 1);
     array_view View(Array);
@@ -312,7 +535,13 @@ TEST_F(ArrayOpsTests, All) {
   using multidim_array = multidim_array_row<int>;
   using array_view = ovk::array_view<int,3>;
 
-  // Convertible to bool, array
+  // Convertible to bool, array, empty
+  {
+    multidim_array Array({{1,2,3}, {4,2,6}}, 0);
+    EXPECT_TRUE(ovk::ArrayAll(Array));
+  }
+
+  // Convertible to bool, array, non-empty
   {
     multidim_array Array({{1,2,3}, {4,5,6}}, 1);
     EXPECT_TRUE(ovk::ArrayAll(Array));
@@ -320,7 +549,14 @@ TEST_F(ArrayOpsTests, All) {
     EXPECT_FALSE(ovk::ArrayAll(Array));
   }
 
-  // Convertible to bool, array view
+  // Convertible to bool, array view, empty
+  {
+    multidim_array Array({{1,2,3}, {4,2,6}}, 0);
+    array_view View(Array);
+    EXPECT_TRUE(ovk::ArrayAll(View));
+  }
+
+  // Convertible to bool, array view, non-empty
   {
     multidim_array Array({{1,2,3}, {4,5,6}}, 1);
     array_view View(Array);
@@ -329,7 +565,13 @@ TEST_F(ArrayOpsTests, All) {
     EXPECT_FALSE(ovk::ArrayAll(View));
   }
 
-  // With condition function, array
+  // With condition function, array, empty
+  {
+    multidim_array Array({{1,2,3}, {4,2,6}}, 5);
+    EXPECT_TRUE(ovk::ArrayAll(Array, [](int Value) -> bool { return Value == 1; }));
+  }
+
+  // With condition function, array, non-empty
   {
     multidim_array Array({{1,2,3}, {4,5,6}}, 1);
     EXPECT_TRUE(ovk::ArrayAll(Array, [](int Value) -> bool { return Value == 1; }));
@@ -337,7 +579,14 @@ TEST_F(ArrayOpsTests, All) {
     EXPECT_FALSE(ovk::ArrayAll(Array, [](int Value) -> bool { return Value == 1; }));
   }
 
-  // With condition function, array view
+  // With condition function, array view, empty
+  {
+    multidim_array Array({{1,2,3}, {4,2,6}}, 5);
+    array_view View(Array);
+    EXPECT_TRUE(ovk::ArrayAll(View, [](int Value) -> bool { return Value == 1; }));
+  }
+
+  // With condition function, array view, non-empty
   {
     multidim_array Array({{1,2,3}, {4,5,6}}, 1);
     array_view View(Array);
