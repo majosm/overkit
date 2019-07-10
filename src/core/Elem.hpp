@@ -222,15 +222,18 @@ template <typename T, int N> constexpr OVK_FORCE_INLINE bool operator==(const el
 template <typename T, int N> constexpr OVK_FORCE_INLINE bool operator!=(const elem<T,N> &Left,
   const elem<T,N> &Right);
 
-template <typename T, int N, OVK_FUNCDECL_REQUIRES(core::IsScalar<T>())> OVK_FORCE_INLINE elem<T,N>
-  operator+(const elem<T,N> &Left, const elem<T,N> &Right);
-template <typename T, int N, OVK_FUNCDECL_REQUIRES(core::IsScalar<T>())> OVK_FORCE_INLINE elem<T,N>
-  operator-(const elem<T,N> &Left, const elem<T,N> &Right);
+template <typename T, int N, OVK_FUNCDECL_REQUIRES(core::IsScalar<T>())> constexpr OVK_FORCE_INLINE
+  elem<T,N> operator+(const elem<T,N> &Left, const elem<T,N> &Right);
+template <typename T, int N, OVK_FUNCDECL_REQUIRES(core::IsScalar<T>())> constexpr OVK_FORCE_INLINE
+  elem<T,N> operator-(const elem<T,N> &Left, const elem<T,N> &Right);
 
-template <typename T, int N, OVK_FUNCDECL_REQUIRES(core::IsScalar<T>())> OVK_FORCE_INLINE elem<T,N>
-  Min(const elem<T,N> &Left, const elem<T,N> &Right);
-template <typename T, int N, OVK_FUNCDECL_REQUIRES(core::IsScalar<T>())> OVK_FORCE_INLINE elem<T,N>
-  Max(const elem<T,N> &Left, const elem<T,N> &Right);
+template <typename T, int N, OVK_FUNCDECL_REQUIRES(core::IsScalar<T>())> constexpr OVK_FORCE_INLINE
+  elem<T,N> Min(const elem<T,N> &Left, const elem<T,N> &Right);
+template <typename T, int N, OVK_FUNCDECL_REQUIRES(core::IsScalar<T>())> constexpr OVK_FORCE_INLINE
+  elem<T,N> Max(const elem<T,N> &Left, const elem<T,N> &Right);
+
+template <typename T, int N1, int N2> constexpr OVK_FORCE_INLINE elem<T,N1+N2> ConcatElems(const
+  elem<T,N1> &Left, const elem<T,N2> &Right);
 
 }
 

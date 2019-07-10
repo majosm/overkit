@@ -61,8 +61,8 @@ template <typename T, int N, std::size_t... Indices> constexpr OVK_FORCE_INLINE 
   return {Left(Indices)+Right(Indices)...};
 }
 }
-template <typename T, int N, OVK_FUNCDEF_REQUIRES(core::IsScalar<T>())> OVK_FORCE_INLINE elem<T,N>
-  operator+(const elem<T,N> &Left, const elem<T,N> &Right) {
+template <typename T, int N, OVK_FUNCDEF_REQUIRES(core::IsScalar<T>())> constexpr OVK_FORCE_INLINE
+  elem<T,N> operator+(const elem<T,N> &Left, const elem<T,N> &Right) {
   return elem_internal::PlusHelper(core::index_sequence_of_size<N>(), Left, Right);
 }
 
@@ -72,8 +72,8 @@ template <typename T, int N, std::size_t... Indices> constexpr OVK_FORCE_INLINE 
   return {Left(Indices)-Right(Indices)...};
 }
 }
-template <typename T, int N, OVK_FUNCDEF_REQUIRES(core::IsScalar<T>())> OVK_FORCE_INLINE elem<T,N>
-  operator-(const elem<T,N> &Left, const elem<T,N> &Right) {
+template <typename T, int N, OVK_FUNCDEF_REQUIRES(core::IsScalar<T>())> constexpr OVK_FORCE_INLINE
+  elem<T,N> operator-(const elem<T,N> &Left, const elem<T,N> &Right) {
   return elem_internal::MinusHelper(core::index_sequence_of_size<N>(), Left, Right);
 }
 
@@ -83,8 +83,8 @@ template <typename T, int N, std::size_t... Indices> constexpr OVK_FORCE_INLINE 
   return {Min(Left(Indices),Right(Indices))...};
 }
 }
-template <typename T, int N, OVK_FUNCDEF_REQUIRES(core::IsScalar<T>())> OVK_FORCE_INLINE elem<T,N>
-  Min(const elem<T,N> &Left, const elem<T,N> &Right) {
+template <typename T, int N, OVK_FUNCDEF_REQUIRES(core::IsScalar<T>())> constexpr OVK_FORCE_INLINE
+  elem<T,N> Min(const elem<T,N> &Left, const elem<T,N> &Right) {
   return elem_internal::MinHelper(core::index_sequence_of_size<N>(), Left, Right);
 }
 
@@ -94,9 +94,22 @@ template <typename T, int N, std::size_t... Indices> constexpr OVK_FORCE_INLINE 
   return {Max(Left(Indices),Right(Indices))...};
 }
 }
-template <typename T, int N, OVK_FUNCDEF_REQUIRES(core::IsScalar<T>())> OVK_FORCE_INLINE elem<T,N>
-  Max(const elem<T,N> &Left, const elem<T,N> &Right) {
+template <typename T, int N, OVK_FUNCDEF_REQUIRES(core::IsScalar<T>())> constexpr OVK_FORCE_INLINE
+  elem<T,N> Max(const elem<T,N> &Left, const elem<T,N> &Right) {
   return elem_internal::MaxHelper(core::index_sequence_of_size<N>(), Left, Right);
+}
+
+namespace elem_internal {
+template <typename T, int N1, int N2, std::size_t... Indices1, std::size_t... Indices2> constexpr
+  OVK_FORCE_INLINE elem<T,N1+N2> ConcatHelper(core::index_sequence<Indices1...>,
+  core::index_sequence<Indices2...>, const elem<T,N1> &Left, const elem<T,N2> &Right) {
+  return {Left(Indices1)..., Right(Indices2)...};
+}
+}
+template <typename T, int N1, int N2> constexpr OVK_FORCE_INLINE elem<T,N1+N2> ConcatElems(const
+  elem<T,N1> &Left, const elem<T,N2> &Right) {
+  return elem_internal::ConcatHelper(core::index_sequence_of_size<N1>(),
+    core::index_sequence_of_size<N2>(), Left, Right);
 }
 
 }

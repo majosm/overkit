@@ -464,3 +464,16 @@ TEST_F(IntervalTests, Includes) {
   }
 
 }
+
+TEST_F(IntervalTests, Concat) {
+
+  if (TestComm().Rank() != 0) return;
+
+  ovk::interval<int,3> Interval1 = {{1,2,3}, {6,7,8}};
+  ovk::interval<int,2> Interval2 = {{4,5}, {9,10}};
+  ovk::interval<int,5> Concat = ovk::ConcatIntervals(Interval1, Interval2);
+
+  EXPECT_THAT(Concat.Begin(), ElementsAre(1,2,3,4,5));
+  EXPECT_THAT(Concat.End(), ElementsAre(6,7,8,9,10));
+
+}

@@ -424,3 +424,15 @@ TEST_F(ElemTests, Max) {
   EXPECT_THAT(Max, ElementsAre(3,2,3));
 
 }
+
+TEST_F(ElemTests, Concat) {
+
+  if (TestComm().Rank() != 0) return;
+
+  ovk::elem<int,3> Elem1 = {1,2,3};
+  ovk::elem<int,2> Elem2 = {4,5};
+  ovk::elem<int,5> Concat = ovk::ConcatElems(Elem1, Elem2);
+
+  EXPECT_THAT(Concat, ElementsAre(1,2,3,4,5));
+
+}

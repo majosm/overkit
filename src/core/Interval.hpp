@@ -277,6 +277,11 @@ template <typename T, int N> constexpr bool operator!=(const interval<T,N> &Left
   return !(Left == Right);
 }
 
+template <typename T, int N1, int N2> constexpr interval<T,N1+N2> ConcatIntervals(const interval<T,
+  N1> &Left, const interval<T,N2> &Right) {
+  return {ConcatElems(Left.Begin(), Right.Begin()), ConcatElems(Left.End(), Right.End())};
+}
+
 }
 
 #endif
