@@ -4,7 +4,6 @@
 #ifndef OVK_CORE_CONNECTIVITY_COMPONENT_HPP_INCLUDED
 #define OVK_CORE_CONNECTIVITY_COMPONENT_HPP_INCLUDED
 
-#include <ovk/core/Array.hpp>
 #include <ovk/core/ArrayView.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/ConnectivityComponent.h>
@@ -115,7 +114,7 @@ public:
     friend class connectivity_component;
   };
 
-  connectivity_component(const core::domain_base &Domain, params Params = {});
+  connectivity_component(const core::domain_base &Domain, params Params={});
 
   connectivity_component(const connectivity_component &Other) = delete;
   connectivity_component(connectivity_component &&Other) noexcept = default;

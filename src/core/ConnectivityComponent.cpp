@@ -403,16 +403,18 @@ void connectivity_component::DestroyConnectivity(int MGridID, int NGridID) {
     MGridID, NGridID);
 
   if (OVK_DEBUG) {
+    const grid_info &MGridInfo = Domain.GridInfo(MGridID);
+    const grid_info &NGridInfo = Domain.GridInfo(NGridID);
     int Editing = 0;
-    if (Domain.GridIsLocal(MGridID)) {
+    if (MGridInfo.IsLocal()) {
       Editing = Editing || LocalMs_(MGridID,NGridID).Editor.Active();
     }
-    if (Domain.GridIsLocal(NGridID)) {
+    if (NGridInfo.IsLocal()) {
       Editing = Editing || LocalNs_(MGridID,NGridID).Editor.Active();
     }
     MPI_Allreduce(MPI_IN_PLACE, &Editing, 1, MPI_INT, MPI_LOR, Domain.Comm());
-    OVK_DEBUG_ASSERT(!Editing, "Cannot destroy connectivity (%i,%i); still being edited.", MGridID,
-      NGridID);
+    OVK_DEBUG_ASSERT(!Editing, "Cannot destroy connectivity %s.(%s,%s); still being edited.",
+      Domain.Name(), MGridInfo.Name(), NGridInfo.Name());
   }
 
   SyncEdits_();
@@ -481,8 +483,10 @@ void connectivity_component::DestroyConnectivities(array_view<const int> MGridID
     for (int iDestroy = 0; iDestroy < NumDestroys; ++iDestroy) {
       int MGridID = MGridIDs(iDestroy);
       int NGridID = NGridIDs(iDestroy);
-      OVK_DEBUG_ASSERT(!Editing(iDestroy), "Cannot destroy connectivity (%i,%i); still being "
-        "edited.", MGridID, NGridID);
+      const grid_info &MGridInfo = Domain.GridInfo(MGridID);
+      const grid_info &NGridInfo = Domain.GridInfo(NGridID);
+      OVK_DEBUG_ASSERT(!Editing(iDestroy), "Cannot destroy connectivity %s.(%s,%s); still being "
+        "edited.", Domain.Name(), MGridInfo.Name(), NGridInfo.Name());
     }
   }
 
@@ -571,8 +575,10 @@ void connectivity_component::ClearConnectivities() {
     for (auto &IDPair : ConnectivityRecords_.Keys()) {
       int MGridID = IDPair(0);
       int NGridID = IDPair(1);
-      OVK_DEBUG_ASSERT(!Editing(iConnectivity), "Cannot destroy connectivity (%i,%i); still being "
-        "edited.", MGridID, NGridID);
+      const grid_info &MGridInfo = Domain.GridInfo(MGridID);
+      const grid_info &NGridInfo = Domain.GridInfo(NGridID);
+      OVK_DEBUG_ASSERT(!Editing(iConnectivity), "Cannot destroy connectivity %s.(%s,%s); still "
+        "being edited.", Domain.Name(), MGridInfo.Name(), NGridInfo.Name());
       ++iConnectivity;
     }
   }
@@ -719,8 +725,12 @@ void connectivity_component::RestoreConnectivityM(int MGridID, int NGridID) {
   local_m &LocalM = LocalMs_(MGridID,NGridID);
   editor &Editor = LocalM.Editor;
 
-  OVK_DEBUG_ASSERT(Editor.Active(), "Unable to restore connectivity M (%i,%i); not currently "
-    "being edited.", MGridID, NGridID);
+  if (OVK_DEBUG) {
+    const grid_info &MGridInfo = Domain.GridInfo(MGridID);
+    const grid_info &NGridInfo = Domain.GridInfo(NGridID);
+    OVK_DEBUG_ASSERT(Editor.Active(), "Unable to restore connectivity M %s.(%s,%s); not currently "
+      "being edited.", Domain.Name(), MGridInfo.Name(), NGridInfo.Name());
+  }
 
   Editor.Restore();
 
@@ -844,8 +854,12 @@ void connectivity_component::RestoreConnectivityN(int MGridID, int NGridID) {
   local_n &LocalN = LocalNs_(MGridID,NGridID);
   editor &Editor = LocalN.Editor;
 
-  OVK_DEBUG_ASSERT(Editor.Active(), "Unable to restore connectivity N (%i,%i); not currently "
-    "being edited.", MGridID, NGridID);
+  if (OVK_DEBUG) {
+    const grid_info &MGridInfo = Domain.GridInfo(MGridID);
+    const grid_info &NGridInfo = Domain.GridInfo(NGridID);
+    OVK_DEBUG_ASSERT(Editor.Active(), "Unable to restore connectivity N %s.(%s,%s); not currently "
+      "being edited.", Domain.Name(), MGridInfo.Name(), NGridInfo.Name());
+  }
 
   Editor.Restore();
 
