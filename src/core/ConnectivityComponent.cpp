@@ -224,23 +224,17 @@ void connectivity_component::SyncEdits_() {
 
 int connectivity_component::ConnectivityCount() const {
 
-  OVK_DEBUG_ASSERT(Domain_, "Connectivity component is not bound to a domain.");
-
   return ConnectivityRecords_.Count();
 
 }
 
 const id_set<2> &connectivity_component::ConnectivityIDs() const {
 
-  OVK_DEBUG_ASSERT(Domain_, "Connectivity component is not bound to a domain.");
-
   return ConnectivityRecords_.Keys();
 
 }
 
 bool connectivity_component::ConnectivityExists(int MGridID, int NGridID) const {
-
-  OVK_DEBUG_ASSERT(Domain_, "Connectivity component is not bound to a domain.");
 
   const core::domain_base &Domain = *Domain_;
 
@@ -254,8 +248,6 @@ bool connectivity_component::ConnectivityExists(int MGridID, int NGridID) const 
 }
 
 void connectivity_component::CreateConnectivity(int MGridID, int NGridID) {
-
-  OVK_DEBUG_ASSERT(Domain_, "Connectivity component is not bound to a domain.");
 
   const core::domain_base &Domain = *Domain_;
 
@@ -309,8 +301,6 @@ void connectivity_component::CreateConnectivity(int MGridID, int NGridID) {
 
 void connectivity_component::CreateConnectivities(array_view<const int> MGridIDs, array_view<const
   int> NGridIDs) {
-
-  OVK_DEBUG_ASSERT(Domain_, "Connectivity component is not bound to a domain.");
 
   const core::domain_base &Domain = *Domain_;
 
@@ -401,8 +391,6 @@ void connectivity_component::CreateConnectivities(array_view<const int> MGridIDs
 
 void connectivity_component::DestroyConnectivity(int MGridID, int NGridID) {
 
-  OVK_DEBUG_ASSERT(Domain_, "Connectivity component is not bound to a domain.");
-
   const core::domain_base &Domain = *Domain_;
 
   MPI_Barrier(Domain.Comm());
@@ -455,8 +443,6 @@ void connectivity_component::DestroyConnectivity(int MGridID, int NGridID) {
 
 void connectivity_component::DestroyConnectivities(array_view<const int> MGridIDs, array_view<const
   int> NGridIDs) {
-
-  OVK_DEBUG_ASSERT(Domain_, "Connectivity component is not bound to a domain.");
 
   const core::domain_base &Domain = *Domain_;
 
@@ -554,8 +540,6 @@ void connectivity_component::DestroyConnectivities(array_view<const int> MGridID
 
 void connectivity_component::ClearConnectivities() {
 
-  OVK_DEBUG_ASSERT(Domain_, "Connectivity component is not bound to a domain.");
-
   const core::domain_base &Domain = *Domain_;
 
   MPI_Barrier(Domain.Comm());
@@ -619,15 +603,11 @@ void connectivity_component::ClearConnectivities() {
 
 int connectivity_component::LocalConnectivityMCount() const {
 
-  OVK_DEBUG_ASSERT(Domain_, "Connectivity component is not bound to a domain.");
-
   return LocalMs_.Count();
 
 }
 
 int connectivity_component::LocalConnectivityMCountForGrid(int MGridID) const {
-
-  OVK_DEBUG_ASSERT(Domain_, "Connectivity component is not bound to a domain.");
 
   const core::domain_base &Domain = *Domain_;
 
@@ -646,15 +626,11 @@ int connectivity_component::LocalConnectivityMCountForGrid(int MGridID) const {
 
 const id_set<2> &connectivity_component::LocalConnectivityMIDs() const {
 
-  OVK_DEBUG_ASSERT(Domain_, "Connectivity component is not bound to a domain.");
-
   return LocalMs_.Keys();
 
 }
 
 const connectivity_m &connectivity_component::ConnectivityM(int MGridID, int NGridID) const {
-
-  OVK_DEBUG_ASSERT(Domain_, "Connectivity component is not bound to a domain.");
 
   const core::domain_base &Domain = *Domain_;
 
@@ -674,8 +650,6 @@ const connectivity_m &connectivity_component::ConnectivityM(int MGridID, int NGr
 }
 
 bool connectivity_component::EditingConnectivityM(int MGridID, int NGridID) const {
-
-  OVK_DEBUG_ASSERT(Domain_, "Connectivity component is not bound to a domain.");
 
   const core::domain_base &Domain = *Domain_;
 
@@ -698,8 +672,6 @@ bool connectivity_component::EditingConnectivityM(int MGridID, int NGridID) cons
 }
 
 edit_handle<connectivity_m> connectivity_component::EditConnectivityM(int MGridID, int NGridID) {
-
-  OVK_DEBUG_ASSERT(Domain_, "Connectivity component is not bound to a domain.");
 
   const core::domain_base &Domain = *Domain_;
 
@@ -731,8 +703,6 @@ edit_handle<connectivity_m> connectivity_component::EditConnectivityM(int MGridI
 
 void connectivity_component::RestoreConnectivityM(int MGridID, int NGridID) {
 
-  OVK_DEBUG_ASSERT(Domain_, "Connectivity component is not bound to a domain.");
-
   const core::domain_base &Domain = *Domain_;
 
   OVK_DEBUG_ASSERT(MGridID >= 0, "Invalid M grid ID.");
@@ -758,15 +728,11 @@ void connectivity_component::RestoreConnectivityM(int MGridID, int NGridID) {
 
 int connectivity_component::LocalConnectivityNCount() const {
 
-  OVK_DEBUG_ASSERT(Domain_, "Connectivity component is not bound to a domain.");
-
   return LocalNs_.Count();
 
 }
 
 int connectivity_component::LocalConnectivityNCountForGrid(int NGridID) const {
-
-  OVK_DEBUG_ASSERT(Domain_, "Connectivity component is not bound to a domain.");
 
   const core::domain_base &Domain = *Domain_;
 
@@ -785,15 +751,11 @@ int connectivity_component::LocalConnectivityNCountForGrid(int NGridID) const {
 
 const id_set<2> &connectivity_component::LocalConnectivityNIDs() const {
 
-  OVK_DEBUG_ASSERT(Domain_, "Connectivity component is not bound to a domain.");
-
   return LocalNs_.Keys();
 
 }
 
 const connectivity_n &connectivity_component::ConnectivityN(int MGridID, int NGridID) const {
-
-  OVK_DEBUG_ASSERT(Domain_, "Connectivity component is not bound to a domain.");
 
   const core::domain_base &Domain = *Domain_;
 
@@ -813,8 +775,6 @@ const connectivity_n &connectivity_component::ConnectivityN(int MGridID, int NGr
 }
 
 bool connectivity_component::EditingConnectivityN(int MGridID, int NGridID) const {
-
-  OVK_DEBUG_ASSERT(Domain_, "Connectivity component is not bound to a domain.");
 
   const core::domain_base &Domain = *Domain_;
 
@@ -837,8 +797,6 @@ bool connectivity_component::EditingConnectivityN(int MGridID, int NGridID) cons
 }
 
 edit_handle<connectivity_n> connectivity_component::EditConnectivityN(int MGridID, int NGridID) {
-
-  OVK_DEBUG_ASSERT(Domain_, "Connectivity component is not bound to a domain.");
 
   const core::domain_base &Domain = *Domain_;
 
@@ -869,8 +827,6 @@ edit_handle<connectivity_n> connectivity_component::EditConnectivityN(int MGridI
 }
 
 void connectivity_component::RestoreConnectivityN(int MGridID, int NGridID) {
-
-  OVK_DEBUG_ASSERT(Domain_, "Connectivity component is not bound to a domain.");
 
   const core::domain_base &Domain = *Domain_;
 
