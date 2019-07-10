@@ -23,11 +23,8 @@ void ovkGetConnectivityMContext(ovk_connectivity_m *ConnectivityM, ovk_context *
 void ovkGetConnectivityMSharedContext(ovk_connectivity_m *ConnectivityM, ovk_shared_context
   **Context);
 
-void ovkGetConnectivityMGridID(const ovk_connectivity_m *ConnectivityM, int *GridID);
 void ovkGetConnectivityMGrid(const ovk_connectivity_m *ConnectivityM, const ovk_grid **Grid);
 
-void ovkGetConnectivityMDestinationGridID(const ovk_connectivity_m *ConnectivityM, int
-  *DestinationGridID);
 void ovkGetConnectivityMDestinationGridInfo(const ovk_connectivity_m *ConnectivityM, ovk_grid_info
   **DestinationGridInfo);
 

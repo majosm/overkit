@@ -53,16 +53,6 @@ void ovkGetConnectivityNSharedContext(ovk_connectivity_n *ConnectivityN, ovk_sha
 
 }
 
-void ovkGetConnectivityNGridID(const ovk_connectivity_n *ConnectivityN, int *GridID) {
-
-  OVK_DEBUG_ASSERT(ConnectivityN, "Invalid connectivity N pointer.");
-  OVK_DEBUG_ASSERT(GridID, "Invalid grid ID pointer.");
-
-  auto &ConnectivityNCPP = *reinterpret_cast<const ovk::connectivity_n *>(ConnectivityN);
-  *GridID = ConnectivityNCPP.GridID();
-
-}
-
 void ovkGetConnectivityNGrid(const ovk_connectivity_n *ConnectivityN, const ovk_grid **Grid) {
 
   OVK_DEBUG_ASSERT(ConnectivityN, "Invalid connectivity N pointer.");
@@ -70,16 +60,6 @@ void ovkGetConnectivityNGrid(const ovk_connectivity_n *ConnectivityN, const ovk_
 
   auto &ConnectivityNCPP = *reinterpret_cast<const ovk::connectivity_n *>(ConnectivityN);
   *Grid = reinterpret_cast<const ovk_grid *>(&ConnectivityNCPP.Grid());
-
-}
-
-void ovkGetConnectivityNSourceGridID(const ovk_connectivity_n *ConnectivityN, int *SourceGridID) {
-
-  OVK_DEBUG_ASSERT(ConnectivityN, "Invalid connectivity N pointer.");
-  OVK_DEBUG_ASSERT(SourceGridID, "Invalid source grid ID pointer.");
-
-  auto &ConnectivityNCPP = *reinterpret_cast<const ovk::connectivity_n *>(ConnectivityN);
-  *SourceGridID = ConnectivityNCPP.SourceGridID();
 
 }
 

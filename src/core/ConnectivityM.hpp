@@ -29,8 +29,8 @@ class connectivity_m_base {
 
 protected:
 
-  connectivity_m_base(std::shared_ptr<context> &&Context, int GridID, const grid &Grid, int
-    DestinationGridID, grid_info &&DestinationGridInfo);
+  connectivity_m_base(std::shared_ptr<context> &&Context, const grid &Grid, grid_info
+    &&DestinationGridInfo);
 
   connectivity_m_base(const connectivity_m_base &Other) = delete;
   connectivity_m_base(connectivity_m_base &&Other) noexcept = default;
@@ -42,10 +42,8 @@ protected:
 
   std::shared_ptr<context> Context_;
 
-  int GridID_;
   const grid *Grid_;
 
-  int DestinationGridID_;
   grid_info DestinationGridInfo_;
 
   comm_view Comm_;
@@ -75,10 +73,8 @@ public:
   context &Context() { return *Context_; }
   const std::shared_ptr<context> &SharedContext() const { return Context_; }
 
-  int GridID() const { return GridID_; }
   const grid &Grid() const { return *Grid_; }
 
-  int DestinationGridID() const { return DestinationGridID_; }
   const grid_info &DestinationGridInfo() const { return DestinationGridInfo_; }
 
   int Dimension() const { return NumDims_; }
@@ -139,8 +135,8 @@ public:
     return DestinationRanksEvent_.AddListener(std::move(Listener));
   }
 
-  static connectivity_m internal_Create(std::shared_ptr<context> &&Context, int GridID, const grid
-    &Grid, int DestinationGridID, grid_info &&DestinationGridInfo);
+  static connectivity_m internal_Create(std::shared_ptr<context> &&Context, const grid &Grid,
+    grid_info &&DestinationGridInfo);
 
 private:
 
@@ -172,14 +168,14 @@ private:
   editor DestinationRanksEditor_;
   mutable event<void()> DestinationRanksEvent_;
 
-  connectivity_m(std::shared_ptr<context> &&Context, int GridID, const grid &Grid, int
-    DestinationGridID, grid_info &&DestinationGridInfo);
+  connectivity_m(std::shared_ptr<context> &&Context, const grid &Grid, grid_info
+    &&DestinationGridInfo);
 
 };
 
 namespace core {
-connectivity_m CreateConnectivityM(std::shared_ptr<context> Context, int GridID, const grid &Grid,
-  int DestinationGridID, grid_info DestinationGridInfo);
+connectivity_m CreateConnectivityM(std::shared_ptr<context> Context, const grid &Grid, grid_info
+  DestinationGridInfo);
 }
 
 }

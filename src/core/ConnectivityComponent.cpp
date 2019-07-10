@@ -274,15 +274,13 @@ void connectivity_component::CreateConnectivity(int MGridID, int NGridID) {
 
   if (MGridInfo.IsLocal()) {
     const grid &MGrid = Domain.Grid(MGridID);
-    connectivity_m ConnectivityM = core::CreateConnectivityM(SharedContext, MGridID, MGrid, NGridID,
-      NGridInfo);
+    connectivity_m ConnectivityM = core::CreateConnectivityM(SharedContext, MGrid, NGridInfo);
     LocalMs_.Insert({MGridID,NGridID}, std::move(ConnectivityM));
   }
 
   if (NGridInfo.IsLocal()) {
     const grid &NGrid = Domain.Grid(NGridID);
-    connectivity_n ConnectivityN = core::CreateConnectivityN(SharedContext, NGridID, NGrid, MGridID,
-      MGridInfo);
+    connectivity_n ConnectivityN = core::CreateConnectivityN(SharedContext, NGrid, MGridInfo);
     LocalNs_.Insert({MGridID,NGridID}, std::move(ConnectivityN));
   }
 
@@ -347,14 +345,12 @@ void connectivity_component::CreateConnectivities(array_view<const int> MGridIDs
     const grid_info &NGridInfo = Domain.GridInfo(NGridID);
     if (MGridInfo.IsLocal()) {
       const grid &MGrid = Domain.Grid(MGridID);
-      connectivity_m ConnectivityM = core::CreateConnectivityM(SharedContext, MGridID, MGrid,
-        NGridID, NGridInfo);
+      connectivity_m ConnectivityM = core::CreateConnectivityM(SharedContext, MGrid, NGridInfo);
       LocalMs_.Insert({MGridID,NGridID}, std::move(ConnectivityM));
     }
     if (NGridInfo.IsLocal()) {
       const grid &NGrid = Domain.Grid(NGridID);
-      connectivity_n ConnectivityN = core::CreateConnectivityN(SharedContext, NGridID, NGrid,
-        MGridID, MGridInfo);
+      connectivity_n ConnectivityN = core::CreateConnectivityN(SharedContext, NGrid, MGridInfo);
       LocalNs_.Insert({MGridID,NGridID}, std::move(ConnectivityN));
     }
   }

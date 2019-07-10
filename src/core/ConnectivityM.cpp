@@ -23,12 +23,10 @@ namespace ovk {
 
 namespace connectivity_m_internal {
 
-connectivity_m_base::connectivity_m_base(std::shared_ptr<context> &&Context, int GridID, const
-  grid &Grid, int DestinationGridID, grid_info &&DestinationGridInfo):
+connectivity_m_base::connectivity_m_base(std::shared_ptr<context> &&Context, const grid &Grid,
+  grid_info &&DestinationGridInfo):
   Context_(std::move(Context)),
-  GridID_(GridID),
   Grid_(&Grid),
-  DestinationGridID_(DestinationGridID),
   DestinationGridInfo_(std::move(DestinationGridInfo)),
   Comm_(Grid_->Comm())
 {
@@ -48,10 +46,9 @@ connectivity_m_base::~connectivity_m_base() noexcept {
 
 }
 
-connectivity_m::connectivity_m(std::shared_ptr<context> &&Context, int GridID, const grid &Grid,
-  int DestinationGridID, grid_info &&DestinationGridInfo):
-  connectivity_m_base(std::move(Context), GridID, Grid, DestinationGridID,
-    std::move(DestinationGridInfo)),
+connectivity_m::connectivity_m(std::shared_ptr<context> &&Context, const grid &Grid, grid_info
+  &&DestinationGridInfo):
+  connectivity_m_base(std::move(Context), Grid, std::move(DestinationGridInfo)),
   NumDims_(Grid_->Dimension()),
   Count_(0),
   MaxSize_(1),
@@ -79,22 +76,21 @@ connectivity_m::~connectivity_m() noexcept {
 
 }
 
-connectivity_m connectivity_m::internal_Create(std::shared_ptr<context> &&Context, int GridID, const
-  grid &Grid, int DestinationGridID, grid_info &&DestinationGridInfo) {
+connectivity_m connectivity_m::internal_Create(std::shared_ptr<context> &&Context, const grid &Grid,
+  grid_info &&DestinationGridInfo) {
 
-  return {std::move(Context), GridID, Grid, DestinationGridID, std::move(DestinationGridInfo)};
+  return {std::move(Context), Grid, std::move(DestinationGridInfo)};
 
 }
 
 namespace core {
 
-connectivity_m CreateConnectivityM(std::shared_ptr<context> Context, int GridID, const grid &Grid,
-  int DestinationGridID, grid_info DestinationGridInfo) {
+connectivity_m CreateConnectivityM(std::shared_ptr<context> Context, const grid &Grid, grid_info
+  DestinationGridInfo) {
 
   OVK_DEBUG_ASSERT(Context, "Invalid context.");
 
-  return connectivity_m::internal_Create(std::move(Context), GridID, Grid, DestinationGridID,
-    std::move(DestinationGridInfo));
+  return connectivity_m::internal_Create(std::move(Context), Grid, std::move(DestinationGridInfo));
 
 }
 

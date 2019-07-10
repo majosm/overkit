@@ -23,12 +23,10 @@ namespace ovk {
 
 namespace connectivity_n_internal {
 
-connectivity_n_base::connectivity_n_base(std::shared_ptr<context> &&Context, int GridID, const
-  grid &Grid, int SourceGridID, grid_info &&SourceGridInfo):
+connectivity_n_base::connectivity_n_base(std::shared_ptr<context> &&Context, const grid &Grid,
+  grid_info &&SourceGridInfo):
   Context_(std::move(Context)),
-  GridID_(GridID),
   Grid_(&Grid),
-  SourceGridID_(SourceGridID),
   SourceGridInfo_(std::move(SourceGridInfo)),
   Comm_(Grid_->Comm())
 {
@@ -48,9 +46,9 @@ connectivity_n_base::~connectivity_n_base() noexcept {
 
 }
 
-connectivity_n::connectivity_n(std::shared_ptr<context> &&Context, int GridID, const grid &Grid,
-  int SourceGridID, grid_info &&SourceGridInfo):
-  connectivity_n_base(std::move(Context), GridID, Grid, SourceGridID, std::move(SourceGridInfo)),
+connectivity_n::connectivity_n(std::shared_ptr<context> &&Context, const grid &Grid, grid_info
+  &&SourceGridInfo):
+  connectivity_n_base(std::move(Context), Grid, std::move(SourceGridInfo)),
   NumDims_(Grid_->Dimension()),
   Count_(0),
   Points_({{MAX_DIMS,0}}),
@@ -75,22 +73,21 @@ connectivity_n::~connectivity_n() noexcept {
 
 }
 
-connectivity_n connectivity_n::internal_Create(std::shared_ptr<context> &&Context, int GridID, const
-  grid &Grid, int SourceGridID, grid_info &&SourceGridInfo) {
+connectivity_n connectivity_n::internal_Create(std::shared_ptr<context> &&Context, const grid &Grid,
+  grid_info &&SourceGridInfo) {
 
-  return {std::move(Context), GridID, Grid, SourceGridID, std::move(SourceGridInfo)};
+  return {std::move(Context), Grid, std::move(SourceGridInfo)};
 
 }
 
 namespace core {
 
-connectivity_n CreateConnectivityN(std::shared_ptr<context> Context, int GridID, const grid &Grid,
-  int SourceGridID, grid_info SourceGridInfo) {
+connectivity_n CreateConnectivityN(std::shared_ptr<context> Context, const grid &Grid, grid_info
+  SourceGridInfo) {
 
   OVK_DEBUG_ASSERT(Context, "Invalid context.");
 
-  return connectivity_n::internal_Create(std::move(Context), GridID, Grid, SourceGridID,
-    std::move(SourceGridInfo));
+  return connectivity_n::internal_Create(std::move(Context), Grid, std::move(SourceGridInfo));
 
 }
 

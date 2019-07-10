@@ -194,9 +194,9 @@ void ImportConnectivityData(int NumGrids, int NumLocalGrids, const array<int> &L
   &Domain, int ConnectivityComponentID);
 
 void ImportDonors(const donor_data &GridDonors, comm_view Comm, const array<edit_handle<
-  connectivity_m>> &ConnectivityMs);
+  connectivity_m>> &ConnectivityMs, const array<int> &DestinationGridIDs);
 void ImportReceivers(const receiver_data &GridReceivers, comm_view Comm, const array<edit_handle<
-  connectivity_n>> &ConnectivityNs);
+  connectivity_n>> &ConnectivityNs, const array<int> &SourceGridIDs);
 
 void CreateDonorData(donor_data &Data, long long Count, int MaxSize);
 void CreateReceiverData(receiver_data &Data, long long Count);
@@ -2469,24 +2469,30 @@ void ImportConnectivityData(int NumGrids, int NumLocalGrids, const array<int> &L
 
     array<edit_handle<connectivity_m>> ConnectivityMs;
     array<edit_handle<connectivity_n>> ConnectivityNs;
+    array<int> DestinationGridIDs;
+    array<int> SourceGridIDs;
 
     ConnectivityMs.Reserve(NumConnectivityMs);
     ConnectivityNs.Reserve(NumConnectivityNs);
+    DestinationGridIDs.Reserve(NumConnectivityMs);
+    SourceGridIDs.Reserve(NumConnectivityNs);
 
     for (int jGrid = 0; jGrid < NumGrids; ++jGrid) {
       int OtherGridID = jGrid+1;
       if (NumConnections(iGrid,jGrid) > 0) {
         ConnectivityMs.Append(ConnectivityComponent->EditConnectivityM(LocalGridID,
           OtherGridID));
+        DestinationGridIDs.Append(OtherGridID);
       }
       if (NumConnections(jGrid,iGrid) > 0) {
         ConnectivityNs.Append(ConnectivityComponent->EditConnectivityN(OtherGridID,
           LocalGridID));
+        SourceGridIDs.Append(OtherGridID);
       }
     }
 
-    ImportDonors(LocalDonorData(iLocalGrid), GridComm, ConnectivityMs);
-    ImportReceivers(LocalReceiverData(iLocalGrid), GridComm, ConnectivityNs);
+    ImportDonors(LocalDonorData(iLocalGrid), GridComm, ConnectivityMs, DestinationGridIDs);
+    ImportReceivers(LocalReceiverData(iLocalGrid), GridComm, ConnectivityNs, SourceGridIDs);
 
   }
 
@@ -2500,7 +2506,7 @@ void ImportConnectivityData(int NumGrids, int NumLocalGrids, const array<int> &L
 }
 
 void ImportDonors(const donor_data &GridDonors, comm_view Comm, const array<edit_handle<
-    connectivity_m>> &ConnectivityMs) {
+    connectivity_m>> &ConnectivityMs, const array<int> &DestinationGridIDs) {
 
   int NumDestinationGrids = ConnectivityMs.Count();
 
@@ -2509,8 +2515,7 @@ void ImportDonors(const donor_data &GridDonors, comm_view Comm, const array<edit
   id_map<1,int> DestinationGridIDToIndex;
 
   for (int iDestinationGrid = 0; iDestinationGrid < NumDestinationGrids; ++iDestinationGrid) {
-    connectivity_m &ConnectivityM = *ConnectivityMs(iDestinationGrid);
-    DestinationGridIDToIndex.Insert(ConnectivityM.DestinationGridID(), iDestinationGrid);
+    DestinationGridIDToIndex.Insert(DestinationGridIDs(iDestinationGrid), iDestinationGrid);
   }
 
   array<long long> Counts({NumDestinationGrids}, 0);
@@ -2579,7 +2584,7 @@ void ImportDonors(const donor_data &GridDonors, comm_view Comm, const array<edit
 }
 
 void ImportReceivers(const receiver_data &GridReceivers, comm_view Comm, const array<edit_handle<
-  connectivity_n>> &ConnectivityNs) {
+  connectivity_n>> &ConnectivityNs, const array<int> &SourceGridIDs) {
 
   int NumSourceGrids = ConnectivityNs.Count();
 
@@ -2588,8 +2593,7 @@ void ImportReceivers(const receiver_data &GridReceivers, comm_view Comm, const a
   id_map<1,int> SourceGridIDToIndex;
 
   for (int iSourceGrid = 0; iSourceGrid < NumSourceGrids; ++iSourceGrid) {
-    connectivity_n &ConnectivityN = *ConnectivityNs(iSourceGrid);
-    SourceGridIDToIndex.Insert(ConnectivityN.SourceGridID(), iSourceGrid);
+    SourceGridIDToIndex.Insert(SourceGridIDs(iSourceGrid), iSourceGrid);
   }
 
   array<long long> Counts({NumSourceGrids}, 0);

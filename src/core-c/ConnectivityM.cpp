@@ -53,16 +53,6 @@ void ovkGetConnectivityMSharedContext(ovk_connectivity_m *ConnectivityM, ovk_sha
 
 }
 
-void ovkGetConnectivityMGridID(const ovk_connectivity_m *ConnectivityM, int *GridID) {
-
-  OVK_DEBUG_ASSERT(ConnectivityM, "Invalid connectivity M pointer.");
-  OVK_DEBUG_ASSERT(GridID, "Invalid grid ID pointer.");
-
-  auto &ConnectivityMCPP = *reinterpret_cast<const ovk::connectivity_m *>(ConnectivityM);
-  *GridID = ConnectivityMCPP.GridID();
-
-}
-
 void ovkGetConnectivityMGrid(const ovk_connectivity_m *ConnectivityM, const ovk_grid **Grid) {
 
   OVK_DEBUG_ASSERT(ConnectivityM, "Invalid connectivity M pointer.");
@@ -70,17 +60,6 @@ void ovkGetConnectivityMGrid(const ovk_connectivity_m *ConnectivityM, const ovk_
 
   auto &ConnectivityMCPP = *reinterpret_cast<const ovk::connectivity_m *>(ConnectivityM);
   *Grid = reinterpret_cast<const ovk_grid*>(&ConnectivityMCPP.Grid());
-
-}
-
-void ovkGetConnectivityMDestinationGridID(const ovk_connectivity_m *ConnectivityM, int
-  *DestinationGridID) {
-
-  OVK_DEBUG_ASSERT(ConnectivityM, "Invalid connectivity M pointer.");
-  OVK_DEBUG_ASSERT(DestinationGridID, "Invalid destination grid ID pointer.");
-
-  auto &ConnectivityMCPP = *reinterpret_cast<const ovk::connectivity_m *>(ConnectivityM);
-  *DestinationGridID = ConnectivityMCPP.DestinationGridID();
 
 }
 

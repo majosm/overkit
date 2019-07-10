@@ -29,8 +29,8 @@ class connectivity_n_base {
 
 protected:
 
-  connectivity_n_base(std::shared_ptr<context> &&Context, int GridID, const grid &Grid, int
-    SourceGridID, grid_info &&SourceGridInfo);
+  connectivity_n_base(std::shared_ptr<context> &&Context, const grid &Grid, grid_info
+    &&SourceGridInfo);
 
   connectivity_n_base(const connectivity_n_base &Other) = delete;
   connectivity_n_base(connectivity_n_base &&Other) noexcept = default;
@@ -42,10 +42,8 @@ protected:
 
   std::shared_ptr<context> Context_;
 
-  int GridID_;
   const grid *Grid_;
 
-  int SourceGridID_;
   grid_info SourceGridInfo_;
 
   comm_view Comm_;
@@ -81,10 +79,8 @@ public:
   context &Context() { return *Context_; }
   const std::shared_ptr<context> &SharedContext() const { return Context_; }
 
-  int GridID() const { return GridID_; }
   const grid &Grid() const { return *Grid_; }
 
-  int SourceGridID() const { return SourceGridID_; }
   const grid_info &SourceGridInfo() const { return SourceGridInfo_; }
   
   int Dimension() const { return NumDims_; }
@@ -126,8 +122,8 @@ public:
     return SourceRanksEvent_.AddListener(std::move(Listener));
   }
 
-  static connectivity_n internal_Create(std::shared_ptr<context> &&Context, int GridID, const grid
-    &Grid, int SourceGridID, grid_info &&SourceGridInfo);
+  static connectivity_n internal_Create(std::shared_ptr<context> &&Context, const grid &Grid,
+    grid_info &&SourceGridInfo);
 
 private:
 
@@ -150,14 +146,13 @@ private:
   editor SourceRanksEditor_;
   mutable event<void()> SourceRanksEvent_;
 
-  connectivity_n(std::shared_ptr<context> &&Context, int GridID, const grid &Grid, int SourceGridID,
-    grid_info &&SourceGridInfo);
+  connectivity_n(std::shared_ptr<context> &&Context, const grid &Grid, grid_info &&SourceGridInfo);
 
 };
 
 namespace core {
-connectivity_n CreateConnectivityN(std::shared_ptr<context> Context, int GridID, const grid &Grid,
-  int SourceGridID, grid_info SourceGridInfo);
+connectivity_n CreateConnectivityN(std::shared_ptr<context> Context, const grid &Grid, grid_info
+  SourceGridInfo);
 }
 
 }
