@@ -105,13 +105,14 @@ void domain_base::CreateGrid(int GridID, optional<grid::params> MaybeParams) {
     MaybeGrid = &LocalGrids_.Insert(GridID, std::move(Grid));
   }
 
-  grid_info Info = core::CreateGridInfo(MaybeGrid, Comm_);
-  GridRecords_.Insert(GridID, std::move(Info));
+  grid_info GridInfo = core::CreateGridInfo(MaybeGrid, Comm_);
+  GridRecords_.Insert(GridID, std::move(GridInfo));
 
   MPI_Barrier(Comm_);
 
   grid_record &Record = GridRecords_(GridID);
-  Logger.LogStatus(Comm_.Rank() == 0, 0, "Done creating grid %s.%s.", *Name_, Record.Info.Name());
+  Logger.LogStatus(Comm_.Rank() == 0, 0, "Done creating grid %s.%s.", *Name_,
+    Record.GridInfo.Name());
 
   GridEvent_.Trigger(GridID, grid_event_flags::CREATE, true);
 
@@ -176,8 +177,8 @@ void domain_base::CreateGrids(array_view<const int> GridIDs, array<optional<grid
     if (IsLocal(iCreate)) {
       MaybeGrid = &LocalGrids_(GridID);
     }
-    grid_info Info = core::CreateGridInfo(MaybeGrid, Comm_);
-    GridRecords_.Insert(GridID, std::move(Info));
+    grid_info GridInfo = core::CreateGridInfo(MaybeGrid, Comm_);
+    GridRecords_.Insert(GridID, std::move(GridInfo));
   }
 
   MPI_Barrier(Comm_);
@@ -187,7 +188,7 @@ void domain_base::CreateGrids(array_view<const int> GridIDs, array<optional<grid
       int GridID = GridIDs(iCreate);
       grid_record &Record = GridRecords_(GridID);
       Logger.LogStatus(Comm_.Rank() == 0, 0, "Done creating grid %s.%s.", *Name_,
-        Record.Info.Name());
+        Record.GridInfo.Name());
     }
   }
 
@@ -216,7 +217,7 @@ void domain_base::DestroyGrid(int GridID) {
   std::string GridName;
   if (Logger.LoggingStatus()) {
     grid_record &Record = GridRecords_(GridID);
-    GridName = Record.Info.Name();
+    GridName = Record.GridInfo.Name();
     Logger.LogStatus(Comm_.Rank() == 0, 0, "Destroying grid %s.%s...", *Name_, GridName);
   }
 
@@ -261,7 +262,7 @@ void domain_base::DestroyGrids(array_view<const int> GridIDs) {
     for (int iDestroy = 0; iDestroy < NumDestroys; ++iDestroy) {
       int GridID = GridIDs(iDestroy);
       grid_record &Record = GridRecords_(GridID);
-      GridNames(iDestroy) = Record.Info.Name();
+      GridNames(iDestroy) = Record.GridInfo.Name();
       Logger.LogStatus(Comm_.Rank() == 0, 0, "Destroying grid %s.%s...", *Name_,
         GridNames(iDestroy));
     }
@@ -293,7 +294,7 @@ const grid_info &domain_base::GridInfo(int GridID) const {
   OVK_DEBUG_ASSERT(GridID >= 0, "Invalid grid ID.");
   OVK_DEBUG_ASSERT(GridExists(GridID), "Grid %i does not exist.", GridID);
 
-  return GridRecords_(GridID).Info;
+  return GridRecords_(GridID).GridInfo;
 
 }
 
@@ -311,8 +312,8 @@ const grid &domain_base::Grid(int GridID) const {
   OVK_DEBUG_ASSERT(GridID >= 0, "Invalid grid ID.");
   OVK_DEBUG_ASSERT(GridExists(GridID), "Grid %i does not exist.", GridID);
   if (OVK_DEBUG) {
-    const grid_info &Info = GridRecords_(GridID).Info;
-    OVK_DEBUG_ASSERT(Info.IsLocal(), "Grid %s is not local to rank @rank@.", Info.Name());
+    const grid_info &GridInfo = GridRecords_(GridID).GridInfo;
+    OVK_DEBUG_ASSERT(GridInfo.IsLocal(), "Grid %s is not local to rank @rank@.", GridInfo.Name());
   }
 
   return LocalGrids_(GridID);

@@ -647,8 +647,8 @@ const connectivity_m &connectivity_component::ConnectivityM(int MGridID, int NGr
   OVK_DEBUG_ASSERT(ConnectivityExists(MGridID, NGridID), "Connectivity (%i,%i) does not exist.",
     MGridID, NGridID);
   if (OVK_DEBUG) {
-    const grid_info &Info = Domain.GridInfo(MGridID);
-    OVK_DEBUG_ASSERT(Info.IsLocal(), "M grid %s is not local to rank @rank@.", Info.Name());
+    const grid_info &GridInfo = Domain.GridInfo(MGridID);
+    OVK_DEBUG_ASSERT(GridInfo.IsLocal(), "M grid %s is not local to rank @rank@.", GridInfo.Name());
   }
 
   return LocalMs_(MGridID,NGridID).Connectivity;
@@ -666,8 +666,8 @@ bool connectivity_component::EditingConnectivityM(int MGridID, int NGridID) cons
   OVK_DEBUG_ASSERT(ConnectivityExists(MGridID, NGridID), "Connectivity (%i,%i) does not exist.",
     MGridID, NGridID);
   if (OVK_DEBUG) {
-    const grid_info &Info = Domain.GridInfo(MGridID);
-    OVK_DEBUG_ASSERT(Info.IsLocal(), "M grid %s is not local to rank @rank@.", Info.Name());
+    const grid_info &GridInfo = Domain.GridInfo(MGridID);
+    OVK_DEBUG_ASSERT(GridInfo.IsLocal(), "M grid %s is not local to rank @rank@.", GridInfo.Name());
   }
 
   const local_m &LocalM = LocalMs_(MGridID,NGridID);
@@ -688,8 +688,8 @@ edit_handle<connectivity_m> connectivity_component::EditConnectivityM(int MGridI
   OVK_DEBUG_ASSERT(ConnectivityExists(MGridID, NGridID), "Connectivity (%i,%i) does not exist.",
     MGridID, NGridID);
   if (OVK_DEBUG) {
-    const grid_info &Info = Domain.GridInfo(MGridID);
-    OVK_DEBUG_ASSERT(Info.IsLocal(), "M grid %s is not local to rank @rank@.", Info.Name());
+    const grid_info &GridInfo = Domain.GridInfo(MGridID);
+    OVK_DEBUG_ASSERT(GridInfo.IsLocal(), "M grid %s is not local to rank @rank@.", GridInfo.Name());
   }
 
   local_m &LocalM = LocalMs_(MGridID,NGridID);
@@ -718,8 +718,8 @@ void connectivity_component::RestoreConnectivityM(int MGridID, int NGridID) {
   OVK_DEBUG_ASSERT(ConnectivityExists(MGridID, NGridID), "Connectivity (%i,%i) does not exist.",
     MGridID, NGridID);
   if (OVK_DEBUG) {
-    const grid_info &Info = Domain.GridInfo(MGridID);
-    OVK_DEBUG_ASSERT(Info.IsLocal(), "M grid %s is not local to rank @rank@.", Info.Name());
+    const grid_info &GridInfo = Domain.GridInfo(MGridID);
+    OVK_DEBUG_ASSERT(GridInfo.IsLocal(), "M grid %s is not local to rank @rank@.", GridInfo.Name());
   }
 
   local_m &LocalM = LocalMs_(MGridID,NGridID);
@@ -776,8 +776,8 @@ const connectivity_n &connectivity_component::ConnectivityN(int MGridID, int NGr
   OVK_DEBUG_ASSERT(ConnectivityExists(MGridID, NGridID), "Connectivity (%i,%i) does not exist.",
     MGridID, NGridID);
   if (OVK_DEBUG) {
-    const grid_info &Info = Domain.GridInfo(NGridID);
-    OVK_DEBUG_ASSERT(Info.IsLocal(), "N grid %s is not local to rank @rank@.", Info.Name());
+    const grid_info &GridInfo = Domain.GridInfo(NGridID);
+    OVK_DEBUG_ASSERT(GridInfo.IsLocal(), "N grid %s is not local to rank @rank@.", GridInfo.Name());
   }
 
   return LocalNs_(MGridID,NGridID).Connectivity;
@@ -795,8 +795,8 @@ bool connectivity_component::EditingConnectivityN(int MGridID, int NGridID) cons
   OVK_DEBUG_ASSERT(ConnectivityExists(MGridID, NGridID), "Connectivity (%i,%i) does not exist.",
     MGridID, NGridID);
   if (OVK_DEBUG) {
-    const grid_info &Info = Domain.GridInfo(NGridID);
-    OVK_DEBUG_ASSERT(Info.IsLocal(), "N grid %s is not local to rank @rank@.", Info.Name());
+    const grid_info &GridInfo = Domain.GridInfo(NGridID);
+    OVK_DEBUG_ASSERT(GridInfo.IsLocal(), "N grid %s is not local to rank @rank@.", GridInfo.Name());
   }
 
   const local_n &LocalN = LocalNs_(MGridID,NGridID);
@@ -817,8 +817,8 @@ edit_handle<connectivity_n> connectivity_component::EditConnectivityN(int MGridI
   OVK_DEBUG_ASSERT(ConnectivityExists(MGridID, NGridID), "Connectivity (%i,%i) does not exist.",
     MGridID, NGridID);
   if (OVK_DEBUG) {
-    const grid_info &Info = Domain.GridInfo(NGridID);
-    OVK_DEBUG_ASSERT(Info.IsLocal(), "N grid %s is not local to rank @rank@.", Info.Name());
+    const grid_info &GridInfo = Domain.GridInfo(NGridID);
+    OVK_DEBUG_ASSERT(GridInfo.IsLocal(), "N grid %s is not local to rank @rank@.", GridInfo.Name());
   }
 
   local_n &LocalN = LocalNs_(MGridID,NGridID);
@@ -847,8 +847,8 @@ void connectivity_component::RestoreConnectivityN(int MGridID, int NGridID) {
   OVK_DEBUG_ASSERT(ConnectivityExists(MGridID, NGridID), "Connectivity (%i,%i) does not exist.",
     MGridID, NGridID);
   if (OVK_DEBUG) {
-    const grid_info &Info = Domain.GridInfo(NGridID);
-    OVK_DEBUG_ASSERT(Info.IsLocal(), "N grid %s is not local to rank @rank@.", Info.Name());
+    const grid_info &GridInfo = Domain.GridInfo(NGridID);
+    OVK_DEBUG_ASSERT(GridInfo.IsLocal(), "N grid %s is not local to rank @rank@.", GridInfo.Name());
   }
 
   local_n &LocalN = LocalNs_(MGridID,NGridID);

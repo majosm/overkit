@@ -148,9 +148,9 @@ public:
 protected:
 
   struct grid_record {
-    grid_info Info;
-    explicit grid_record(grid_info &&Info_):
-      Info(std::move(Info_))
+    grid_info GridInfo;
+    explicit grid_record(grid_info &&GridInfo_):
+      GridInfo(std::move(GridInfo_))
     {}
   };
 

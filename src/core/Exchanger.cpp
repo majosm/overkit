@@ -316,8 +316,8 @@ void exchanger::UpdateSourceDestRanks_() {
 
   long long TotalPoints = 0;
   for (int GridID : Domain.GridIDs()) {
-    const grid_info &Info = Domain.GridInfo(GridID);
-    TotalPoints += Info.Cart().Range().Count();
+    const grid_info &GridInfo = Domain.GridInfo(GridID);
+    TotalPoints += GridInfo.Cart().Range().Count();
   }
 
   struct linear_partition {
@@ -337,9 +337,9 @@ void exchanger::UpdateSourceDestRanks_() {
   id_map<1,long long> NumPointsBeforeGrid;
   long long NumPointsPartial = 0;
   for (int GridID : Domain.GridIDs()) {
-    const grid_info &Info = Domain.GridInfo(GridID);
+    const grid_info &GridInfo = Domain.GridInfo(GridID);
     NumPointsBeforeGrid.Insert(GridID, NumPointsPartial);
-    NumPointsPartial += Info.Cart().Range().Count();
+    NumPointsPartial += GridInfo.Cart().Range().Count();
   }
 
   struct send_recv {

@@ -167,14 +167,14 @@ array<partition_info> RetrievePartitionInfo(comm_view Comm, array_view<const int
     if (iRequest == MPI_UNDEFINED) break;
     if (iRequest < NumRecvs) {
       int iRecv = iRequest;
-      partition_info &Info = RetrievedPartitionInfo(iRecv);
-      Info.Rank = RecvFromRanks(iRecv);
+      partition_info &PartitionInfo = RetrievedPartitionInfo(iRecv);
+      PartitionInfo.Rank = RecvFromRanks(iRecv);
       tuple<int> LocalBegin(RetrievedRangeValues.Data(iRecv,0,0,0));
       tuple<int> LocalEnd(RetrievedRangeValues.Data(iRecv,0,1,0));
       tuple<int> ExtendedBegin(RetrievedRangeValues.Data(iRecv,1,0,0));
       tuple<int> ExtendedEnd(RetrievedRangeValues.Data(iRecv,1,1,0));
-      Info.LocalRange = {LocalBegin, LocalEnd};
-      Info.ExtendedRange = {ExtendedBegin, ExtendedEnd};
+      PartitionInfo.LocalRange = {LocalBegin, LocalEnd};
+      PartitionInfo.ExtendedRange = {ExtendedBegin, ExtendedEnd};
     }
   }
 
