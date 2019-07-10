@@ -56,12 +56,6 @@ class connectivity_n : private connectivity_n_internal::connectivity_n_base {
 
 public:
 
-  struct edits {
-    bool Count = false;
-    bool Points = false;
-    bool Sources = false;
-  };
-
   connectivity_n(const connectivity_n &Other) = delete;
   connectivity_n(connectivity_n &&Other) noexcept = default;
 
