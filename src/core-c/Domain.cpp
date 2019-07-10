@@ -5,6 +5,7 @@
 
 #include "ovk/core-c/ConnectivityComponent.h"
 #include "ovk/core-c/Context.h"
+#include "ovk/core-c/GeometryComponent.h"
 #include "ovk/core-c/Global.h"
 #include "ovk/core-c/Grid.h"
 #include "ovk/core/Array.hpp"
@@ -13,6 +14,7 @@
 #include "ovk/core/Context.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Domain.hpp"
+#include "ovk/core/GeometryComponent.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
 #include "ovk/core/Optional.hpp"
@@ -378,6 +380,9 @@ void ovkCreateComponent(ovk_domain *Domain, int ComponentID, ovk_component_type 
   OVK_DEBUG_ASSERT(ovkValidComponentType(ComponentType), "Invalid component type.");
 
   switch (ComponentType) {
+  case OVK_COMPONENT_TYPE_GEOMETRY:
+    CreateComponent<ovk_geometry_component, ovk::geometry_component, ovk_geometry_component_params,
+      ovk::geometry_component::params>(Domain, ComponentID, Params);
   case OVK_COMPONENT_TYPE_CONNECTIVITY:
     CreateComponent<ovk_connectivity_component, ovk::connectivity_component,
       ovk_connectivity_component_params, ovk::connectivity_component::params>(Domain, ComponentID,
@@ -424,6 +429,8 @@ void ovkGetComponent(const ovk_domain *Domain, int ComponentID, ovk_component_ty
   OVK_DEBUG_ASSERT(ovkValidComponentType(ComponentType), "Invalid component type.");
 
   switch (ComponentType) {
+  case OVK_COMPONENT_TYPE_GEOMETRY:
+    GetComponent<ovk_geometry_component, ovk::geometry_component>(Domain, ComponentID, Component);
   case OVK_COMPONENT_TYPE_CONNECTIVITY:
     GetComponent<ovk_connectivity_component, ovk::connectivity_component>(Domain, ComponentID,
       Component);
@@ -463,6 +470,8 @@ void ovkEditComponent(ovk_domain *Domain, int ComponentID, ovk_component_type Co
   OVK_DEBUG_ASSERT(ovkValidComponentType(ComponentType), "Invalid component type.");
 
   switch (ComponentType) {
+  case OVK_COMPONENT_TYPE_GEOMETRY:
+    EditComponent<ovk_geometry_component, ovk::geometry_component>(Domain, ComponentID, Component);
   case OVK_COMPONENT_TYPE_CONNECTIVITY:
     EditComponent<ovk_connectivity_component, ovk::connectivity_component>(Domain, ComponentID,
       Component);
@@ -500,6 +509,9 @@ void ovkRestoreComponent(ovk_domain *Domain, int ComponentID, ovk_component_type
   OVK_DEBUG_ASSERT(ovkValidComponentType(ComponentType), "Invalid component type.");
 
   switch (ComponentType) {
+  case OVK_COMPONENT_TYPE_GEOMETRY:
+    RestoreComponent<ovk_geometry_component, ovk::geometry_component>(Domain, ComponentID,
+      Component);
   case OVK_COMPONENT_TYPE_CONNECTIVITY:
     RestoreComponent<ovk_connectivity_component, ovk::connectivity_component>(Domain, ComponentID,
       Component);

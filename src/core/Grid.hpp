@@ -10,7 +10,6 @@
 #include <ovk/core/Context.hpp>
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
-#include <ovk/core/Grid.h>
 #include <ovk/core/Partition.hpp>
 #include <ovk/core/PartitionHash.hpp>
 #include <ovk/core/Range.hpp>
@@ -22,18 +21,6 @@
 #include <string>
 
 namespace ovk {
-
-enum class geometry_type {
-  UNIFORM = OVK_GEOMETRY_TYPE_UNIFORM,
-  ORIENTED_UNIFORM = OVK_GEOMETRY_TYPE_ORIENTED_UNIFORM,
-  RECTILINEAR = OVK_GEOMETRY_TYPE_RECTILINEAR,
-  ORIENTED_RECTILINEAR = OVK_GEOMETRY_TYPE_ORIENTED_RECTILINEAR,
-  CURVILINEAR = OVK_GEOMETRY_TYPE_CURVILINEAR
-};
-
-inline bool ValidGeometryType(geometry_type GeometryType) {
-  return ovkValidGeometryType(ovk_geometry_type(GeometryType));
-}
 
 namespace grid_internal {
 
@@ -85,17 +72,11 @@ public:
     params &SetPeriodic(const tuple<bool> &Periodic);
     periodic_storage PeriodicStorage() const { return Cart_.PeriodicStorage(); }
     params &SetPeriodicStorage(periodic_storage PeriodicStorage);
-    const tuple<double> &PeriodicLength() const { return PeriodicLength_; }
-    params &SetPeriodicLength(const tuple<double> &PeriodicLength);
-    geometry_type GeometryType() const { return GeometryType_; }
-    params &SetGeometryType(geometry_type GeometryType);
   private:
     core::string_wrapper Name_ = "Grid";
     int NumDims_ = 2;
     MPI_Comm Comm_ = MPI_COMM_NULL;
     cart Cart_ = cart(2, {{1,1,1}}, {false, false, false}, periodic_storage::UNIQUE);
-    tuple<double> PeriodicLength_ = {0., 0., 0.};
-    geometry_type GeometryType_ = geometry_type::CURVILINEAR;
     range LocalRange_ = {{0,0,0}, {1,1,1}};
     friend class grid;
   };
@@ -132,10 +113,6 @@ public:
   const tuple<bool> &Periodic() const { return Cart_.Periodic(); }
   bool Periodic(int iDim) const { return Cart_.Periodic(iDim); }
   periodic_storage PeriodicStorage() const { return Cart_.PeriodicStorage(); }
-  const tuple<double> &PeriodicLength() const { return PeriodicLength_; }
-  double PeriodicLength(int iDim) const { return PeriodicLength_[iDim]; }
-
-  geometry_type GeometryType() const { return GeometryType_; }
 
   const core::partition_hash &core_PartitionHash() const { return PartitionHash_; }
   const std::shared_ptr<core::partition> &core_PartitionShared() const { return Partition_; }
@@ -149,8 +126,6 @@ private:
 
   int NumDims_;
   cart Cart_;
-  tuple<double> PeriodicLength_;
-  geometry_type GeometryType_;
 
   core::partition_hash PartitionHash_;
   std::shared_ptr<core::partition> Partition_;
@@ -177,8 +152,6 @@ public:
   const range &GlobalRange() const { return Cart_.Range(); }
   tuple<int> Size() const { return Cart_.Range().Size(); }
   int Size(int iDim) const { return Cart_.Range().Size(iDim); }
-  const tuple<double> &PeriodicLength() const { return PeriodicLength_; }
-  geometry_type GeometryType() const { return GeometryType_; }
   bool IsLocal() const { return IsLocal_; }
 
   static grid_info internal_Create(grid *MaybeGrid, comm_view Comm);
@@ -188,8 +161,6 @@ private:
   core::string_wrapper Name_;
   int RootRank_ = -1;
   cart Cart_ = MakeEmptyCart(2);
-  tuple<double> PeriodicLength_ = MakeUniformTuple<double>(2, 0.);
-  geometry_type GeometryType_ = geometry_type::CURVILINEAR;
   bool IsLocal_ = false;
 
   grid_info(grid *MaybeGrid, comm_view Comm);

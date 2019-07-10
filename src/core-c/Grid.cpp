@@ -177,6 +177,7 @@ void ovkGetGridExtendedCount(const ovk_grid *Grid, long long *NumExtended) {
 void ovkGetGridSize(const ovk_grid *Grid, int *Size) {
 
   OVK_DEBUG_ASSERT(Grid, "Invalid grid pointer.");
+  OVK_DEBUG_ASSERT(Size, "Invalid size pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
   for (int iDim = 0; iDim < ovk::MAX_DIMS; ++iDim) {
@@ -188,6 +189,7 @@ void ovkGetGridSize(const ovk_grid *Grid, int *Size) {
 void ovkGetGridPeriodic(const ovk_grid *Grid, bool *Periodic) {
 
   OVK_DEBUG_ASSERT(Grid, "Invalid grid pointer.");
+  OVK_DEBUG_ASSERT(Periodic, "Invalid periodic pointer.");
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
   for (int iDim = 0; iDim < ovk::MAX_DIMS; ++iDim) {
@@ -203,27 +205,6 @@ void ovkGetGridPeriodicStorage(const ovk_grid *Grid, ovk_periodic_storage *Perio
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
   *PeriodicStorage = ovk_periodic_storage(GridCPP.PeriodicStorage());
-
-}
-
-void ovkGetGridPeriodicLength(const ovk_grid *Grid, double *PeriodicLength) {
-
-  OVK_DEBUG_ASSERT(Grid, "Invalid grid pointer.");
-
-  auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-  for (int iDim = 0; iDim < ovk::MAX_DIMS; ++iDim) {
-    PeriodicLength[iDim] = GridCPP.PeriodicLength(iDim);
-  }
-
-}
-
-void ovkGetGridGeometryType(const ovk_grid *Grid, ovk_geometry_type *GeometryType) {
-
-  OVK_DEBUG_ASSERT(Grid, "Invalid grid pointer.");
-  OVK_DEBUG_ASSERT(GeometryType, "Invalid geometry type pointer.");
-
-  auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-  *GeometryType = ovk_geometry_type(GridCPP.GeometryType());
 
 }
 
@@ -330,14 +311,7 @@ void ovkSetGridParamGlobalRange(ovk_grid_params *Params, const int *GlobalBegin,
   OVK_DEBUG_ASSERT(GlobalEnd, "Invalid global end pointer.");
 
   auto &ParamsCPP = *reinterpret_cast<ovk::grid::params *>(Params);
-
-  ovk::range GlobalRange = ovk::MakeEmptyRange(ParamsCPP.Dimension());
-  for (int iDim = 0; iDim < ParamsCPP.Dimension(); ++iDim) {
-    GlobalRange.Begin(iDim) = GlobalBegin[iDim];
-    GlobalRange.End(iDim) = GlobalEnd[iDim];
-  }
-
-  ParamsCPP.SetGlobalRange(GlobalRange);
+  ParamsCPP.SetGlobalRange({GlobalBegin, GlobalEnd});
 
 }
 
@@ -362,14 +336,7 @@ void ovkSetGridParamLocalRange(ovk_grid_params *Params, const int *LocalBegin, c
   OVK_DEBUG_ASSERT(LocalEnd, "Invalid local end pointer.");
 
   auto &ParamsCPP = *reinterpret_cast<ovk::grid::params *>(Params);
-
-  ovk::range LocalRange = ovk::MakeEmptyRange(ParamsCPP.Dimension());
-  for (int iDim = 0; iDim < ParamsCPP.Dimension(); ++iDim) {
-    LocalRange.Begin(iDim) = LocalBegin[iDim];
-    LocalRange.End(iDim) = LocalEnd[iDim];
-  }
-
-  ParamsCPP.SetLocalRange(LocalRange);
+  ParamsCPP.SetLocalRange({LocalBegin, LocalEnd});
 
 }
 
@@ -391,13 +358,7 @@ void ovkSetGridParamPeriodic(ovk_grid_params *Params, const bool *Periodic) {
   OVK_DEBUG_ASSERT(Periodic, "Invalid periodic pointer.");
 
   auto &ParamsCPP = *reinterpret_cast<ovk::grid::params *>(Params);
-
-  ovk::tuple<bool> PeriodicCPP = ovk::MakeUniformTuple<bool>(ParamsCPP.Dimension(), false);
-  for (int iDim = 0; iDim < ParamsCPP.Dimension(); ++iDim) {
-    PeriodicCPP[iDim] = Periodic[iDim]; 
-  }
-
-  ParamsCPP.SetPeriodic(PeriodicCPP);
+  ParamsCPP.SetPeriodic(Periodic);
 
 }
 
@@ -418,53 +379,6 @@ void ovkSetGridParamPeriodicStorage(ovk_grid_params *Params, ovk_periodic_storag
 
   auto &ParamsCPP = *reinterpret_cast<ovk::grid::params *>(Params);
   ParamsCPP.SetPeriodicStorage(ovk::periodic_storage(PeriodicStorage));
-
-}
-
-void ovkGetGridParamPeriodicLength(const ovk_grid_params *Params, double *PeriodicLength) {
-
-  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
-  OVK_DEBUG_ASSERT(PeriodicLength, "Invalid periodic length pointer.");
-
-  auto &ParamsCPP = *reinterpret_cast<const ovk::grid::params *>(Params);
-  for (int iDim = 0; iDim < ParamsCPP.Dimension(); ++iDim) {
-    PeriodicLength[iDim] = ParamsCPP.PeriodicLength()[iDim];
-  }
-
-}
-
-void ovkSetGridParamPeriodicLength(ovk_grid_params *Params, const double *PeriodicLength) {
-
-  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
-  OVK_DEBUG_ASSERT(PeriodicLength, "Invalid periodic length pointer.");
-
-  auto &ParamsCPP = *reinterpret_cast<ovk::grid::params *>(Params);
-
-  ovk::tuple<double> PeriodicLengthCPP = ovk::MakeUniformTuple<double>(ParamsCPP.Dimension(), 0.);
-  for (int iDim = 0; iDim < ovk::MAX_DIMS; ++iDim) {
-    PeriodicLengthCPP[iDim] = PeriodicLength[iDim]; 
-  }
-
-  ParamsCPP.SetPeriodicLength(PeriodicLengthCPP);
-
-}
-
-void ovkGetGridParamGeometryType(const ovk_grid_params *Params, ovk_geometry_type *GeometryType) {
-
-  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
-  OVK_DEBUG_ASSERT(GeometryType, "Invalid geometry type pointer.");
-
-  auto &ParamsCPP = *reinterpret_cast<const ovk::grid::params *>(Params);
-  *GeometryType = ovk_geometry_type(ParamsCPP.GeometryType());
-
-}
-
-void ovkSetGridParamGeometryType(ovk_grid_params *Params, ovk_geometry_type GeometryType) {
-
-  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
-
-  auto &ParamsCPP = *reinterpret_cast<ovk::grid::params *>(Params);
-  ParamsCPP.SetGeometryType(ovk::geometry_type(GeometryType));
 
 }
 
@@ -544,27 +458,6 @@ void ovkGetGridInfoPeriodicStorage(const ovk_grid_info *Info, ovk_periodic_stora
 
   auto &InfoCPP = *reinterpret_cast<const ovk::grid_info *>(Info);
   *PeriodicStorage = ovk_periodic_storage(InfoCPP.Cart().PeriodicStorage());
-
-}
-
-void ovkGetGridInfoPeriodicLength(const ovk_grid_info *Info, double *PeriodicLength) {
-
-  OVK_DEBUG_ASSERT(Info, "Invalid info pointer.");
-
-  auto &InfoCPP = *reinterpret_cast<const ovk::grid_info *>(Info);
-  for (int iDim = 0; iDim < ovk::MAX_DIMS; ++iDim) {
-    PeriodicLength[iDim] = InfoCPP.PeriodicLength()[iDim];
-  }
-
-}
-
-void ovkGetGridInfoGeometryType(const ovk_grid_info *Info, ovk_geometry_type *GeometryType) {
-
-  OVK_DEBUG_ASSERT(Info, "Invalid info pointer.");
-  OVK_DEBUG_ASSERT(GeometryType, "Invalid geometry type pointer.");
-
-  auto &InfoCPP = *reinterpret_cast<const ovk::grid_info *>(Info);
-  *GeometryType = ovk_geometry_type(InfoCPP.GeometryType());
 
 }
 

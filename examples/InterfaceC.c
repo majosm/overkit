@@ -188,7 +188,6 @@ static void Interface() {
     const int Zero[3] = {0,0,0};
     ovkSetGridParamGlobalRange(GridParams, Zero, Grid1Data.Size);
     ovkSetGridParamLocalRange(GridParams, Grid1Data.LocalRange, Grid1Data.LocalRange+3);
-    ovkSetGridParamGeometryType(GridParams, OVK_GEOMETRY_TYPE_UNIFORM);
   }
 
   if (Grid2IsLocal) {
@@ -200,7 +199,6 @@ static void Interface() {
     const int Zero[3] = {0,0,0};
     ovkSetGridParamGlobalRange(GridParams, Zero, Grid2Data.Size);
     ovkSetGridParamLocalRange(GridParams, Grid2Data.LocalRange, Grid2Data.LocalRange+3);
-    ovkSetGridParamGeometryType(GridParams, OVK_GEOMETRY_TYPE_UNIFORM);
   }
 
   ovkCreateGrids(Domain, 2, GridIDs, MaybeGridParams);

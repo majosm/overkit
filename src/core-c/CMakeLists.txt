@@ -23,6 +23,8 @@ set(SOURCES
   Context.cpp
   Domain.cpp
   Exchanger.cpp
+  Geometry.cpp
+  GeometryComponent.cpp
   Grid.cpp
   Request.cpp
 )
@@ -38,6 +40,8 @@ set(PUBLIC_HEADERS
   Error.h
   Exchanger.h
   Global.h
+  Geometry.h
+  GeometryComponent.h
   Grid.h
   Request.h
 )

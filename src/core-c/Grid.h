@@ -6,7 +6,6 @@
 
 #include <ovk/core-c/Context.h>
 #include <ovk/core-c/Global.h>
-#include <ovk/core/Grid.h>
 
 #include <mpi.h>
 
@@ -45,9 +44,6 @@ void ovkGetGridSize(const ovk_grid *Grid, int *Size);
 
 void ovkGetGridPeriodic(const ovk_grid *Grid, bool *Periodic);
 void ovkGetGridPeriodicStorage(const ovk_grid *Grid, ovk_periodic_storage *PeriodicStorage);
-void ovkGetGridPeriodicLength(const ovk_grid *Grid, double *PeriodicLength);
-
-void ovkGetGridGeometryType(const ovk_grid *Grid, ovk_geometry_type *GeometryType);
 
 void ovkCreateGridParams(ovk_grid_params **Params);
 void ovkDestroyGridParams(ovk_grid_params **Params);
@@ -68,10 +64,6 @@ void ovkSetGridParamPeriodic(ovk_grid_params *Params, const bool *Periodic);
 void ovkGetGridParamPeriodicStorage(const ovk_grid_params *Params, ovk_periodic_storage
   *PeriodicStorage);
 void ovkSetGridParamPeriodicStorage(ovk_grid_params *Params, ovk_periodic_storage PeriodicStorage);
-void ovkGetGridParamPeriodicLength(const ovk_grid_params *Params, double *PeriodicLength);
-void ovkSetGridParamPeriodicLength(ovk_grid_params *Params, const double *PeriodicLength);
-void ovkGetGridParamGeometryType(const ovk_grid_params *Params, ovk_geometry_type *GeometryType);
-void ovkSetGridParamGeometryType(ovk_grid_params *Params, ovk_geometry_type GeometryType);
 
 void ovkGetGridInfoName(const ovk_grid_info *Info, char *Name);
 void ovkGetGridInfoRootRank(const ovk_grid_info *Info, int *RootRank);
@@ -80,8 +72,6 @@ void ovkGetGridInfoGlobalRange(const ovk_grid_info *Info, int *GlobalBegin, int 
 void ovkGetGridInfoSize(const ovk_grid_info *Info, int *Size);
 void ovkGetGridInfoPeriodic(const ovk_grid_info *Info, bool *Periodic);
 void ovkGetGridInfoPeriodicStorage(const ovk_grid_info *Info, ovk_periodic_storage *PeriodicStorage);
-void ovkGetGridInfoPeriodicLength(const ovk_grid_info *Info, double *PeriodicLength);
-void ovkGetGridInfoGeometryType(const ovk_grid_info *Info, ovk_geometry_type *GeometryType);
 void ovkGetGridInfoIsLocal(const ovk_grid_info *Info, bool *IsLocal);
 
 #ifdef __cplusplus

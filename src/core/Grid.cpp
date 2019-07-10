@@ -50,8 +50,6 @@ grid::grid(std::shared_ptr<context> &&Context, params &&Params):
   grid_base(std::move(Context), std::move(*Params.Name_), Params.Comm_),
   NumDims_(Params.NumDims_),
   Cart_(Params.Cart_),
-  PeriodicLength_(Params.PeriodicLength_),
-  GeometryType_(Params.GeometryType_),
   PartitionHash_(NumDims_, Comm_, Cart_.Range(), Params.LocalRange_),
   Partition_(std::make_shared<core::partition>(Context_, Cart_, Comm_, Params.LocalRange_, 1,
     1, core::DetectNeighbors(Cart_, Comm_, Params.LocalRange_, PartitionHash_)))
@@ -173,7 +171,6 @@ grid::params &grid::params::SetDimension(int NumDims) {
   Cart_ = cart(NumDims, GlobalRange, Periodic, Cart_.PeriodicStorage());
 
   for (int iDim = NumDims_; iDim < MAX_DIMS; ++iDim) {
-    PeriodicLength_(iDim) = 0.;
     LocalRange_.Begin(iDim) = 0;
     LocalRange_.End(iDim) = 1;
   }
@@ -270,33 +267,6 @@ grid::params &grid::params::SetPeriodicStorage(periodic_storage PeriodicStorage)
 
 }
 
-grid::params &grid::params::SetPeriodicLength(const tuple<double> &PeriodicLength) {
-
-  if (OVK_DEBUG) {
-    for (int iDim = 0; iDim < NumDims_; ++iDim) {
-      OVK_DEBUG_ASSERT(PeriodicLength(iDim) >= 0., "Periodic length must be nonnegative.");
-    }
-    for (int iDim = NumDims_; iDim < MAX_DIMS; ++iDim) {
-      OVK_DEBUG_ASSERT(PeriodicLength(iDim) == 0., "Periodic length has incorrect dimension.");
-    }
-  }
-
-  PeriodicLength_ = PeriodicLength;
-
-  return *this;
-
-}
-
-grid::params &grid::params::SetGeometryType(geometry_type GeometryType) {
-
-  OVK_DEBUG_ASSERT(ValidGeometryType(GeometryType), "Invalid geometry type.");
-
-  GeometryType_ = GeometryType;
-
-  return *this;
-
-}
-
 grid_info::grid_info(grid *MaybeGrid, comm_view Comm) {
 
   IsLocal_ = MaybeGrid != nullptr;
@@ -338,18 +308,6 @@ grid_info::grid_info(grid *MaybeGrid, comm_view Comm) {
   }
   MPI_Bcast(&PeriodicStorageInt, 1, MPI_INT, RootRank_, Comm);
   Cart_.PeriodicStorage() = periodic_storage(PeriodicStorageInt);
-
-  if (IsRoot) {
-    PeriodicLength_ = MaybeGrid->PeriodicLength();
-  }
-  MPI_Bcast(PeriodicLength_.Data(), MAX_DIMS, MPI_DOUBLE, RootRank_, Comm);
-
-  int GeometryTypeInt;
-  if (IsRoot) {
-    GeometryTypeInt = int(MaybeGrid->GeometryType());
-  }
-  MPI_Bcast(&GeometryTypeInt, 1, MPI_INT, RootRank_, Comm);
-  GeometryType_ = geometry_type(GeometryTypeInt);
 
 }
 

@@ -33,6 +33,8 @@ set(SOURCES
   DomainBase.cpp
   Error.cpp
   Exchanger.cpp
+  Geometry.cpp
+  GeometryComponent.cpp
   Grid.cpp
   Halo.cpp
   Logger.cpp
@@ -70,6 +72,8 @@ set(PUBLIC_HEADERS
   Exchanger.hpp
   Field.hpp
   FloatingRef.hpp
+  Geometry.hpp
+  GeometryComponent.hpp
   Global.hpp
   Grid.hpp
   IDMap.hpp
@@ -121,13 +125,14 @@ set(INTERNAL_HEADERS
   Exchanger.h
   FloatingRef.inl
   ForEach.hpp
+  Geometry.h
+  GeometryComponent.h
   GeometryOps.hpp
   GeometryOps.inl
   GeometryOpsLine.inl
   GeometryOpsQuad.inl
   GeometryOpsHex.inl
   Global.h
-  Grid.h
   Halo.hpp
   Halo.inl
   IntegerSequence.hpp

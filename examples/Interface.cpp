@@ -156,8 +156,7 @@ void Interface() {
       .SetName("Left")
       .SetComm(Grid1Data.Comm)
       .SetGlobalRange({Grid1Data.Size})
-      .SetLocalRange({&Grid1Data.LocalRange[0], &Grid1Data.LocalRange[3]})
-      .SetGeometryType(ovk::geometry_type::UNIFORM);
+      .SetLocalRange({&Grid1Data.LocalRange[0], &Grid1Data.LocalRange[3]});
   }
 
   if (Grid2IsLocal) {
@@ -165,8 +164,7 @@ void Interface() {
       .SetName("Right")
       .SetComm(Grid2Data.Comm)
       .SetGlobalRange({Grid2Data.Size})
-      .SetLocalRange({&Grid2Data.LocalRange[0], &Grid2Data.LocalRange[3]})
-      .SetGeometryType(ovk::geometry_type::UNIFORM);
+      .SetLocalRange({&Grid2Data.LocalRange[0], &Grid2Data.LocalRange[3]});
   }
 
   Domain.CreateGrids(GridIDs, MaybeGridParams);

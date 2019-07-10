@@ -55,9 +55,7 @@ ovk::domain Interface2D(const ovk::comm &Comm, const ovk::box &Bounds, const ovk
       .SetComm(Grid1Comm)
       .SetGlobalRange({GridSize})
       .SetLocalRange(LocalRange)
-      .SetPeriodic(Periodic)
-      .SetPeriodicLength(Bounds.Size())
-      .SetGeometryType(ovk::geometry_type::UNIFORM);
+      .SetPeriodic(Periodic);
   }
 
   if (Grid2IsLocal) {
@@ -68,9 +66,7 @@ ovk::domain Interface2D(const ovk::comm &Comm, const ovk::box &Bounds, const ovk
       .SetComm(Grid2Comm)
       .SetGlobalRange({GridSize})
       .SetLocalRange(LocalRange)
-      .SetPeriodic(Periodic)
-      .SetPeriodicLength(Bounds.Size())
-      .SetGeometryType(ovk::geometry_type::UNIFORM);
+      .SetPeriodic(Periodic);
   }
 
   Domain.CreateGrids(GridIDs, MaybeGridParams);
@@ -274,9 +270,7 @@ ovk::domain Interface3D(const ovk::comm &Comm, const ovk::box &Bounds, const ovk
       .SetComm(Grid1Comm)
       .SetGlobalRange({GridSize})
       .SetLocalRange(LocalRange)
-      .SetPeriodic(Periodic)
-      .SetPeriodicLength(Bounds.Size())
-      .SetGeometryType(ovk::geometry_type::UNIFORM);
+      .SetPeriodic(Periodic);
   }
 
   if (Grid2IsLocal) {
@@ -287,9 +281,7 @@ ovk::domain Interface3D(const ovk::comm &Comm, const ovk::box &Bounds, const ovk
       .SetComm(Grid2Comm)
       .SetGlobalRange({GridSize})
       .SetLocalRange(LocalRange)
-      .SetPeriodic(Periodic)
-      .SetPeriodicLength(Bounds.Size())
-      .SetGeometryType(ovk::geometry_type::UNIFORM);
+      .SetPeriodic(Periodic);
   }
 
   Domain.CreateGrids(GridIDs, MaybeGridParams);
