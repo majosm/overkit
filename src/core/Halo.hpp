@@ -132,10 +132,11 @@ public:
 
 // Intel 17 didn't like this for some reason
 //   template <typename ArrayType, OVK_FUNCDECL_REQUIRES(IsArray<ArrayType>() && ArrayHasFootprint<
-//     ArrayType, MAX_DIMS, array_layout::GRID>())> request Exchange(ArrayType &Array) const;
+//     ArrayType, MAX_DIMS, array_layout::COLUMN_MAJOR>())> request Exchange(ArrayType &Array)
+//     const;
   template <typename ArrayType, OVK_FUNCDECL_REQUIRES(IsArray<ArrayType>() && ArrayRank<ArrayType>()
-    == MAX_DIMS && ArrayLayout<ArrayType>() == array_layout::GRID)> request Exchange(ArrayType
-    &Array) const;
+    == MAX_DIMS && ArrayLayout<ArrayType>() == array_layout::COLUMN_MAJOR)> request Exchange(
+    ArrayType &Array) const;
 
 private:
 

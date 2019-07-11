@@ -30,7 +30,7 @@ halo_map::halo_map(const cart &Cart, const range &LocalRange, const range &Exten
   const range &GlobalRange = Cart.Range();
   int NumNeighbors = Neighbors.Count();
 
-  using indexer_type = indexer<long long, int, MAX_DIMS, array_layout::GRID>;
+  using indexer_type = indexer<long long, int, MAX_DIMS, array_layout::COLUMN_MAJOR>;
   indexer_type ExtendedIndexer(ExtendedRange);
 
   NeighborRanks_.Resize({NumNeighbors});
@@ -56,7 +56,7 @@ halo_map::halo_map(const cart &Cart, const range &LocalRange, const range &Exten
         }
       }
     } else {
-      array<bool,MAX_DIMS,array_layout::GRID> SendMask(LocalRange, false);
+      array<bool,MAX_DIMS,array_layout::COLUMN_MAJOR> SendMask(LocalRange, false);
       long long NumSendPoints = 0;
       for (int k = NeighborExtendedRange.Begin(2); k < NeighborExtendedRange.End(2); ++k) {
         for (int j = NeighborExtendedRange.Begin(1); j < NeighborExtendedRange.End(1); ++j) {
@@ -99,7 +99,7 @@ halo_map::halo_map(const cart &Cart, const range &LocalRange, const range &Exten
       }
     }
   } else {
-    array<bool,MAX_DIMS,array_layout::GRID> RecvMask(ExtendedRange);
+    array<bool,MAX_DIMS,array_layout::COLUMN_MAJOR> RecvMask(ExtendedRange);
     for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
       RecvMask.Fill(false);
       const range &NeighborLocalRange = Neighbors(iNeighbor).LocalRange;
@@ -136,7 +136,7 @@ halo_map::halo_map(const cart &Cart, const range &LocalRange, const range &Exten
   // Source and destination may sometimes be on the same rank (e.g. if for a given
   // direction periodic==true and #procs==1)
   if (!GlobalRange.Includes(ExtendedRange)) {
-    array<bool,MAX_DIMS,array_layout::GRID> LocalToLocalMask(ExtendedRange, false);
+    array<bool,MAX_DIMS,array_layout::COLUMN_MAJOR> LocalToLocalMask(ExtendedRange, false);
     long long NumLocalToLocal = 0;
     for (int k = ExtendedRange.Begin(2); k < ExtendedRange.End(2); ++k) {
       for (int j = ExtendedRange.Begin(1); j < ExtendedRange.End(1); ++j) {

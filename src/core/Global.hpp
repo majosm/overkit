@@ -23,8 +23,7 @@ constexpr int ALL_GRIDS = OVK_ALL_GRIDS;
 
 enum class array_layout {
   ROW_MAJOR = OVK_ROW_MAJOR,
-  COLUMN_MAJOR = OVK_COLUMN_MAJOR,
-  GRID = OVK_GRID_LAYOUT
+  COLUMN_MAJOR = OVK_COLUMN_MAJOR
 };
 
 inline bool ValidArrayLayout(array_layout Layout) {

@@ -103,7 +103,7 @@ void collect_map::CreateSendData_(const cart &Cart, const partition &Partition) 
       }
     }
 
-    using range_indexer = indexer<long long, int, MAX_DIMS, array_layout::GRID>;
+    using range_indexer = indexer<long long, int, MAX_DIMS, array_layout::COLUMN_MAJOR>;
     array<range_indexer> SendToNeighborIndexers({NumNeighbors});
     for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
       const range &SendToNeighborRange = SendToNeighborRanges(iNeighbor);
@@ -261,7 +261,7 @@ void collect_map::CreateRecvData_(const cart &Cart, const partition &Partition) 
       }
     }
 
-    using range_indexer = indexer<long long, int, MAX_DIMS, array_layout::GRID>;
+    using range_indexer = indexer<long long, int, MAX_DIMS, array_layout::COLUMN_MAJOR>;
     array<range_indexer> RecvFromNeighborIndexers({NumNeighbors});
     for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
       const range &RecvFromNeighborRange = RecvFromNeighborRanges(iNeighbor);
@@ -400,7 +400,7 @@ void collect_map::CreateRecvData_(const cart &Cart, const partition &Partition) 
     array<int> CellRecvs({MaxVertices_});
     array<long long> CellRecvBufferIndices({MaxVertices_});
 
-    using donor_indexer = indexer<int, int, MAX_DIMS, array_layout::GRID>;
+    using donor_indexer = indexer<int, int, MAX_DIMS, array_layout::COLUMN_MAJOR>;
 
     for (long long iCell = 0; iCell < NumCells; ++iCell) {
       for (int iVertex = 0; iVertex < MaxVertices_; ++iVertex) {

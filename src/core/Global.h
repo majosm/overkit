@@ -24,8 +24,7 @@ enum {
 
 typedef enum {
   OVK_ROW_MAJOR,
-  OVK_COLUMN_MAJOR,
-  OVK_GRID_LAYOUT = OVK_COLUMN_MAJOR
+  OVK_COLUMN_MAJOR
 } ovk_array_layout;
 
 static inline bool ovkValidArrayLayout(ovk_array_layout Layout) {

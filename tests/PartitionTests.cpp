@@ -608,7 +608,7 @@ TEST_F(PartitionTests, ConstructPartition) {
     };
 
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 1);
-    ovk::array<int,ovk::MAX_DIMS,ovk::array_layout::GRID> Data(ExtendedRange, -1);
+    ovk::array<int,ovk::MAX_DIMS,ovk::array_layout::COLUMN_MAJOR> Data(ExtendedRange, -1);
     for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
       for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
         for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {

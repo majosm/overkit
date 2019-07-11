@@ -251,7 +251,7 @@ void exchanger::UpdateExchangesForModifiedConnectivities_() {
 
 void exchanger::UpdateSourceDestRanks_() {
 
-  using range_indexer = indexer<long long, int, 3, ovk::array_layout::GRID>;
+  using range_indexer = indexer<long long, int, 3, ovk::array_layout::COLUMN_MAJOR>;
 
   const domain &Domain = *Domain_;
   const comm &Comm = Domain.Comm();
@@ -1493,7 +1493,7 @@ array<long long> GetSendRecvOrder(const array<int,2> &ReceiverPoints, const rang
 
   array<long long> Order({NumReceivers});
 
-  using range_indexer = indexer<long long, int, MAX_DIMS, array_layout::GRID>;
+  using range_indexer = indexer<long long, int, MAX_DIMS, array_layout::COLUMN_MAJOR>;
   range_indexer ReceiverGridGlobalIndexer(ReceiverGridGlobalRange);
 
   array<long long> ReceiverIndices({NumReceivers});

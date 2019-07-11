@@ -31,7 +31,7 @@ public:
       PeriodicLength_(ovk::MakeUniformTuple<double>(2, 0.)),
       LocalRange_(ovk::MakeEmptyRange(2)),
       ExtendAmount_(0),
-      Layout_(ovk::array_layout::GRID)
+      Layout_(ovk::array_layout::COLUMN_MAJOR)
     {}
     params &SetID(int ID) { ID_ = ID; return *this; }
     params &SetName(std::string Name) { Name_ = std::move(Name); return *this; }
@@ -79,24 +79,24 @@ public:
 
   ovk::array_layout Layout() const { return Layout_; }
 
-  template <ovk::array_layout Layout=ovk::array_layout::GRID> ovk::array_view<const ovk::array<
-    double,OVK_MAX_DIMS,Layout>> XYZ() const {
+  template <ovk::array_layout Layout=ovk::array_layout::COLUMN_MAJOR> ovk::array_view<const
+    ovk::array<double,OVK_MAX_DIMS,Layout>> XYZ() const {
     OVK_DEBUG_ASSERT(Layout == Layout_, "Wrong grid layout.");
     return static_cast<const fields<Layout> *>(Fields_.get())->XYZ;
   }
-  template <ovk::array_layout Layout=ovk::array_layout::GRID> ovk::array_view<ovk::array<double,
-    OVK_MAX_DIMS,Layout>> XYZ() {
+  template <ovk::array_layout Layout=ovk::array_layout::COLUMN_MAJOR> ovk::array_view<ovk::array<
+    double, OVK_MAX_DIMS,Layout>> XYZ() {
     OVK_DEBUG_ASSERT(Layout == Layout_, "Wrong grid layout.");
     return static_cast<fields<Layout> *>(Fields_.get())->XYZ;
   }
 
-  template <ovk::array_layout Layout=ovk::array_layout::GRID> ovk::array_view<const int,
+  template <ovk::array_layout Layout=ovk::array_layout::COLUMN_MAJOR> ovk::array_view<const int,
     OVK_MAX_DIMS,Layout> IBlank() const {
     OVK_DEBUG_ASSERT(Layout == Layout_, "Wrong grid layout.");
     return static_cast<const fields<Layout> *>(Fields_.get())->IBlank;
   }
-  template <ovk::array_layout Layout=ovk::array_layout::GRID> ovk::array_view<int,OVK_MAX_DIMS,
-    Layout> IBlank() {
+  template <ovk::array_layout Layout=ovk::array_layout::COLUMN_MAJOR> ovk::array_view<int,
+    OVK_MAX_DIMS, Layout> IBlank() {
     OVK_DEBUG_ASSERT(Layout == Layout_, "Wrong grid layout.");
     return static_cast<fields<Layout> *>(Fields_.get())->IBlank;
   }
