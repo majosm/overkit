@@ -4,15 +4,10 @@
 namespace ovk {
 namespace core {
 
-// Intel 17 didn't like this for some reason
-// template <typename ArrayType, OVK_FUNCDEF_REQUIRES(IsArray<ArrayType>() && ArrayHasFootprint<
-//   ArrayType, MAX_DIMS, array_layout::COLUMN_MAJOR>())> request halo::Exchange(ArrayType &Array)
-//   const {
-template <typename ArrayType, OVK_FUNCDEF_REQUIRES(IsArray<ArrayType>() && ArrayRank<ArrayType>()
-  == MAX_DIMS && ArrayLayout<ArrayType>() == array_layout::COLUMN_MAJOR)> request halo::Exchange(
-  ArrayType &Array) const {
+template <typename FieldType, OVK_FUNCDEF_REQUIRES(IsField<FieldType>())> request halo::Exchange(
+  FieldType &Field) const {
 
-  using value_type = array_value_type<ArrayType>;
+  using value_type = array_value_type<FieldType>;
 
   OVK_DEBUG_ASSERT(IsSupportedDataType<value_type>(), "Unsupported data type.");
 
@@ -45,7 +40,7 @@ template <typename ArrayType, OVK_FUNCDEF_REQUIRES(IsArray<ArrayType>() && Array
     Profiler.Stop(TOTAL_TIME);
   });
 
-  return HaloExchanger.Exchange(ArrayData(Array));
+  return HaloExchanger.Exchange(ArrayData(Field));
 
 }
 
@@ -71,7 +66,7 @@ template <typename T> halo_exchanger_for_type<T>::halo_exchanger_for_type(contex
 
 }
 
-template <typename T> request halo_exchanger_for_type<T>::Exchange(value_type *ArrayData) {
+template <typename T> request halo_exchanger_for_type<T>::Exchange(value_type *FieldData) {
 
   const halo_map &HaloMap = *HaloMap_;
   const array<int> &NeighborRanks = HaloMap.NeighborRanks();
@@ -99,7 +94,7 @@ template <typename T> request halo_exchanger_for_type<T>::Exchange(value_type *A
     const array<long long> &SendIndices = HaloMap.NeighborSendIndices(iNeighbor);
     for (long long iSendPoint = 0; iSendPoint < SendIndices.Count(); ++iSendPoint) {
       long long iPoint = SendIndices(iSendPoint);
-      SendBuffers_(iNeighbor)(iSendPoint) = mpi_value_type(ArrayData[iPoint]);
+      SendBuffers_(iNeighbor)(iSendPoint) = mpi_value_type(FieldData[iPoint]);
     }
     Profiler.Stop(PACK_TIME);
     MPI_Request &Request = MPIRequests_.Append();
@@ -116,7 +111,7 @@ template <typename T> request halo_exchanger_for_type<T>::Exchange(value_type *A
   for (long long iLocalToLocal = 0; iLocalToLocal < NumLocalToLocal; ++iLocalToLocal) {
     long long iSource = LocalToLocalSourceIndices(iLocalToLocal);
     long long iDest = LocalToLocalDestIndices(iLocalToLocal);
-    ArrayData[iDest] = ArrayData[iSource];
+    FieldData[iDest] = FieldData[iSource];
   }
 
   Profiler.Stop(PACK_TIME);
@@ -124,14 +119,14 @@ template <typename T> request halo_exchanger_for_type<T>::Exchange(value_type *A
 
   Active_ = true;
 
-  return exchange_request(*this, ArrayData);
+  return exchange_request(*this, FieldData);
 
 }
 
 template <typename T> halo_exchanger_for_type<T>::exchange_request::exchange_request(
-  halo_exchanger_for_type &HaloExchanger, value_type *ArrayData):
+  halo_exchanger_for_type &HaloExchanger, value_type *FieldData):
   HaloExchanger_(HaloExchanger.FloatingRefGenerator_.Generate(HaloExchanger)),
-  ArrayData_(ArrayData)
+  FieldData_(FieldData)
 {}
 
 template <typename T> void halo_exchanger_for_type<T>::exchange_request::OnMPIRequestComplete(int
@@ -150,7 +145,7 @@ template <typename T> void halo_exchanger_for_type<T>::exchange_request::OnMPIRe
     const array<long long> &RecvIndices = HaloMap.NeighborRecvIndices(iNeighbor);
     for (long long iRecvPoint = 0; iRecvPoint < RecvIndices.Count(); ++iRecvPoint) {
       long long iPoint = RecvIndices(iRecvPoint);
-      ArrayData_[iPoint] = value_type(HaloExchanger.RecvBuffers_(iNeighbor)(iRecvPoint));
+      FieldData_[iPoint] = value_type(HaloExchanger.RecvBuffers_(iNeighbor)(iRecvPoint));
     }
 
     Profiler.Stop(UNPACK_TIME);

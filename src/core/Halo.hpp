@@ -11,6 +11,7 @@
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Context.hpp>
 #include <ovk/core/DataType.hpp>
+#include <ovk/core/Field.hpp>
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/IDMap.hpp>
@@ -84,14 +85,14 @@ public:
 
   bool Active() const { return HaloExchanger_->Active(); }
 
-  request Exchange(void *ArrayDataVoid) { return HaloExchanger_->Exchange(ArrayDataVoid); }
+  request Exchange(void *FieldDataVoid) { return HaloExchanger_->Exchange(FieldDataVoid); }
 
 private:
 
   struct concept {
     virtual ~concept() noexcept {}
     virtual bool Active() const = 0;
-    virtual request Exchange(void *ArrayDataVoid) = 0;
+    virtual request Exchange(void *FieldDataVoid) = 0;
   };
 
   template <typename T> struct model final : concept {
@@ -101,8 +102,8 @@ private:
     virtual bool Active() const override {
       return HaloExchanger_.Active();
     }
-    virtual request Exchange(void *ArrayDataVoid) override {
-      return HaloExchanger_.Exchange(static_cast<typename T::value_type *>(ArrayDataVoid));
+    virtual request Exchange(void *FieldDataVoid) override {
+      return HaloExchanger_.Exchange(static_cast<typename T::value_type *>(FieldDataVoid));
     }
     T HaloExchanger_;
   };
@@ -130,13 +131,8 @@ public:
   context &Context() { return *Context_; }
   const std::shared_ptr<context> &SharedContext() const { return Context_; }
 
-// Intel 17 didn't like this for some reason
-//   template <typename ArrayType, OVK_FUNCDECL_REQUIRES(IsArray<ArrayType>() && ArrayHasFootprint<
-//     ArrayType, MAX_DIMS, array_layout::COLUMN_MAJOR>())> request Exchange(ArrayType &Array)
-//     const;
-  template <typename ArrayType, OVK_FUNCDECL_REQUIRES(IsArray<ArrayType>() && ArrayRank<ArrayType>()
-    == MAX_DIMS && ArrayLayout<ArrayType>() == array_layout::COLUMN_MAJOR)> request Exchange(
-    ArrayType &Array) const;
+  template <typename FieldType, OVK_FUNCDECL_REQUIRES(IsField<FieldType>())> request Exchange(
+    FieldType &Field) const;
 
 private:
 
@@ -181,13 +177,13 @@ public:
 
   bool Active() const { return Active_; }
 
-  request Exchange(value_type *ArrayData);
+  request Exchange(value_type *FieldData);
 
 private:
 
   class exchange_request {
   public:
-    exchange_request(halo_exchanger_for_type &HaloExchanger, value_type *ArrayData);
+    exchange_request(halo_exchanger_for_type &HaloExchanger, value_type *FieldData);
     array_view<MPI_Request> MPIRequests() { return HaloExchanger_->MPIRequests_; }
     void OnMPIRequestComplete(int iMPIRequest);
     void OnComplete();
@@ -209,7 +205,7 @@ private:
     }
   private:
     floating_ref<halo_exchanger_for_type> HaloExchanger_;
-    value_type *ArrayData_;
+    value_type *FieldData_;
     static constexpr int WAIT_TIME = profiler::HALO_EXCHANGE_TIME;
   };
 

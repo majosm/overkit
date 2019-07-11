@@ -68,6 +68,7 @@ set(PUBLIC_HEADERS
   Error.hpp
   Event.hpp
   Exchanger.hpp
+  Field.hpp
   FloatingRef.hpp
   Global.hpp
   Grid.hpp

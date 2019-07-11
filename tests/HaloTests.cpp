@@ -13,6 +13,7 @@
 #include <ovk/core/Cart.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Context.hpp>
+#include <ovk/core/Field.hpp>
 #include <ovk/core/Partition.hpp>
 #include <ovk/core/Range.hpp>
 #include <ovk/core/ScalarOps.hpp>
@@ -28,9 +29,6 @@ using testing::ElementsAreArray;
 class HaloTests : public tests::mpi_test {};
 
 using support::CartesianDecomp;
-
-template <typename T> using field_data = ovk::array<T,ovk::MAX_DIMS,
-  ovk::array_layout::COLUMN_MAJOR>;
 
 TEST_F(HaloTests, Exchange) {
 
@@ -58,8 +56,8 @@ TEST_F(HaloTests, Exchange) {
   };
 
   auto CreateBeforeDataInt = [](ovk::comm_view Comm, const ovk::range &LocalRange, const
-    ovk::range &ExtendedRange) -> field_data<int> {
-    field_data<int> BeforeData(ExtendedRange, -1);
+    ovk::range &ExtendedRange) -> ovk::field<int> {
+    ovk::field<int> BeforeData(ExtendedRange, -1);
     for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
       for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
         for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
@@ -72,8 +70,8 @@ TEST_F(HaloTests, Exchange) {
 
   auto CreateAfterDataInt = [](const ovk::cart &Cart, ovk::comm_view Comm,
     const ovk::range &LocalRange, const ovk::range &ExtendedRange, const ovk::array<
-    ovk::core::partition_info> &Neighbors) -> field_data<int> {
-    field_data<int> AfterData(ExtendedRange);
+    ovk::core::partition_info> &Neighbors) -> ovk::field<int> {
+    ovk::field<int> AfterData(ExtendedRange);
     for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
       for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
         for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
@@ -105,8 +103,8 @@ TEST_F(HaloTests, Exchange) {
   };
 
   auto CreateBeforeDataDouble = [](ovk::comm_view Comm, const ovk::range &LocalRange, const
-    ovk::range &ExtendedRange) -> field_data<double> {
-    field_data<double> BeforeData(ExtendedRange, 0.);
+    ovk::range &ExtendedRange) -> ovk::field<double> {
+    ovk::field<double> BeforeData(ExtendedRange, 0.);
     for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
       for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
         for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
@@ -119,8 +117,8 @@ TEST_F(HaloTests, Exchange) {
 
   auto CreateAfterDataDouble = [](const ovk::cart &Cart, ovk::comm_view Comm,
     const ovk::range &LocalRange, const ovk::range &ExtendedRange, const ovk::array<
-    ovk::core::partition_info> &Neighbors) -> field_data<double> {
-    field_data<double> AfterData(ExtendedRange);
+    ovk::core::partition_info> &Neighbors) -> ovk::field<double> {
+    ovk::field<double> AfterData(ExtendedRange);
     for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
       for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
         for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
@@ -164,9 +162,9 @@ TEST_F(HaloTests, Exchange) {
     ovk::array<ovk::core::partition_info> Neighbors = CreateNeighbors(Cart, Comm, LocalRange,
       ExtendedRange);
     ovk::core::halo Halo(Context, Cart, Comm, LocalRange, ExtendedRange, Neighbors);
-    field_data<int> Data = CreateBeforeDataInt(Comm, LocalRange, ExtendedRange);
+    ovk::field<int> Data = CreateBeforeDataInt(Comm, LocalRange, ExtendedRange);
     Halo.Exchange(Data);
-    field_data<int> ExpectedData = CreateAfterDataInt(Cart, Comm, LocalRange, ExtendedRange,
+    ovk::field<int> ExpectedData = CreateAfterDataInt(Cart, Comm, LocalRange, ExtendedRange,
       Neighbors);
     EXPECT_THAT(Data, ElementsAreArray(ExpectedData));
   }
@@ -180,9 +178,9 @@ TEST_F(HaloTests, Exchange) {
     ovk::array<ovk::core::partition_info> Neighbors = CreateNeighbors(Cart, Comm, LocalRange,
       ExtendedRange);
     ovk::core::halo Halo(Context, Cart, Comm, LocalRange, ExtendedRange, Neighbors);
-    field_data<int> Data = CreateBeforeDataInt(Comm, LocalRange, ExtendedRange);
+    ovk::field<int> Data = CreateBeforeDataInt(Comm, LocalRange, ExtendedRange);
     Halo.Exchange(Data);
-    field_data<int> ExpectedData = CreateAfterDataInt(Cart, Comm, LocalRange, ExtendedRange,
+    ovk::field<int> ExpectedData = CreateAfterDataInt(Cart, Comm, LocalRange, ExtendedRange,
       Neighbors);
     EXPECT_THAT(Data, ElementsAreArray(ExpectedData));
   }
@@ -196,9 +194,9 @@ TEST_F(HaloTests, Exchange) {
     ovk::array<ovk::core::partition_info> Neighbors = CreateNeighbors(Cart, Comm, LocalRange,
       ExtendedRange);
     ovk::core::halo Halo(Context, Cart, Comm, LocalRange, ExtendedRange, Neighbors);
-    field_data<int> Data = CreateBeforeDataInt(Comm, LocalRange, ExtendedRange);
+    ovk::field<int> Data = CreateBeforeDataInt(Comm, LocalRange, ExtendedRange);
     Halo.Exchange(Data);
-    field_data<int> ExpectedData = CreateAfterDataInt(Cart, Comm, LocalRange, ExtendedRange,
+    ovk::field<int> ExpectedData = CreateAfterDataInt(Cart, Comm, LocalRange, ExtendedRange,
       Neighbors);
     EXPECT_THAT(Data, ElementsAreArray(ExpectedData));
   }
@@ -212,9 +210,9 @@ TEST_F(HaloTests, Exchange) {
     ovk::array<ovk::core::partition_info> Neighbors = CreateNeighbors(Cart, Comm, LocalRange,
       ExtendedRange);
     ovk::core::halo Halo(Context, Cart, Comm, LocalRange, ExtendedRange, Neighbors);
-    field_data<int> Data = CreateBeforeDataInt(Comm, LocalRange, ExtendedRange);
+    ovk::field<int> Data = CreateBeforeDataInt(Comm, LocalRange, ExtendedRange);
     Halo.Exchange(Data);
-    field_data<int> ExpectedData = CreateAfterDataInt(Cart, Comm, LocalRange, ExtendedRange,
+    ovk::field<int> ExpectedData = CreateAfterDataInt(Cart, Comm, LocalRange, ExtendedRange,
       Neighbors);
     EXPECT_THAT(Data, ElementsAreArray(ExpectedData));
   }
@@ -228,9 +226,9 @@ TEST_F(HaloTests, Exchange) {
     ovk::array<ovk::core::partition_info> Neighbors = CreateNeighbors(Cart, Comm, LocalRange,
       ExtendedRange);
     ovk::core::halo Halo(Context, Cart, Comm, LocalRange, ExtendedRange, Neighbors);
-    field_data<int> Data = CreateBeforeDataInt(Comm, LocalRange, ExtendedRange);
+    ovk::field<int> Data = CreateBeforeDataInt(Comm, LocalRange, ExtendedRange);
     Halo.Exchange(Data);
-    field_data<int> ExpectedData = CreateAfterDataInt(Cart, Comm, LocalRange, ExtendedRange,
+    ovk::field<int> ExpectedData = CreateAfterDataInt(Cart, Comm, LocalRange, ExtendedRange,
       Neighbors);
     EXPECT_THAT(Data, ElementsAreArray(ExpectedData));
   }
@@ -244,15 +242,15 @@ TEST_F(HaloTests, Exchange) {
     ovk::array<ovk::core::partition_info> Neighbors = CreateNeighbors(Cart, Comm, LocalRange,
       ExtendedRange);
     ovk::core::halo Halo(Context, Cart, Comm, LocalRange, ExtendedRange, Neighbors);
-    field_data<int> Data1 = CreateBeforeDataInt(Comm, LocalRange, ExtendedRange);
-    field_data<double> Data2 = CreateBeforeDataDouble(Comm, LocalRange, ExtendedRange);
+    ovk::field<int> Data1 = CreateBeforeDataInt(Comm, LocalRange, ExtendedRange);
+    ovk::field<double> Data2 = CreateBeforeDataDouble(Comm, LocalRange, ExtendedRange);
     ovk::array<ovk::request> Requests({2});
     Requests(0) = Halo.Exchange(Data1);
     Requests(1) = Halo.Exchange(Data2);
     ovk::WaitAll(Requests);
-    field_data<int> ExpectedData1 = CreateAfterDataInt(Cart, Comm, LocalRange, ExtendedRange,
+    ovk::field<int> ExpectedData1 = CreateAfterDataInt(Cart, Comm, LocalRange, ExtendedRange,
       Neighbors);
-    field_data<double> ExpectedData2 = CreateAfterDataDouble(Cart, Comm, LocalRange, ExtendedRange,
+    ovk::field<double> ExpectedData2 = CreateAfterDataDouble(Cart, Comm, LocalRange, ExtendedRange,
       Neighbors);
     EXPECT_THAT(Data1, ElementsAreArray(ExpectedData1));
     EXPECT_THAT(Data2, ElementsAreArray(ExpectedData2));
@@ -267,15 +265,15 @@ TEST_F(HaloTests, Exchange) {
     ovk::array<ovk::core::partition_info> Neighbors = CreateNeighbors(Cart, Comm, LocalRange,
       ExtendedRange);
     ovk::core::halo Halo(Context, Cart, Comm, LocalRange, ExtendedRange, Neighbors);
-    field_data<int> Data1 = CreateBeforeDataInt(Comm, LocalRange, ExtendedRange);
-    field_data<double> Data2 = CreateBeforeDataDouble(Comm, LocalRange, ExtendedRange);
+    ovk::field<int> Data1 = CreateBeforeDataInt(Comm, LocalRange, ExtendedRange);
+    ovk::field<double> Data2 = CreateBeforeDataDouble(Comm, LocalRange, ExtendedRange);
     ovk::array<ovk::request> Requests({2});
     Requests(0) = Halo.Exchange(Data1);
     Requests(1) = Halo.Exchange(Data2);
     ovk::WaitAll(Requests);
-    field_data<int> ExpectedData1 = CreateAfterDataInt(Cart, Comm, LocalRange, ExtendedRange,
+    ovk::field<int> ExpectedData1 = CreateAfterDataInt(Cart, Comm, LocalRange, ExtendedRange,
       Neighbors);
-    field_data<double> ExpectedData2 = CreateAfterDataDouble(Cart, Comm, LocalRange, ExtendedRange,
+    ovk::field<double> ExpectedData2 = CreateAfterDataDouble(Cart, Comm, LocalRange, ExtendedRange,
       Neighbors);
     EXPECT_THAT(Data1, ElementsAreArray(ExpectedData1));
     EXPECT_THAT(Data2, ElementsAreArray(ExpectedData2));
