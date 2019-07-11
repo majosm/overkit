@@ -119,8 +119,8 @@ template <typename T> template <typename U, OVK_FUNCDEF_REQUIRES(!std::is_same<U
 }
 
 template <typename U, typename T, OVK_FUNCDEF_REQUIRES(std::is_convertible<T *, U *>::value ||
-  std::is_base_of<T, U>::value)> floating_ref<U> floating_ref_cast(const floating_ref<T>
-  &FloatingRef) {
+  std::is_base_of<T, U>::value)> floating_ref<U> FloatingRefCast(const floating_ref<T> &FloatingRef)
+  {
 
   return static_cast<floating_ref<U>>(FloatingRef);
 

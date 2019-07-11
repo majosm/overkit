@@ -82,7 +82,7 @@ private:
 };
 
 template <typename U, typename T, OVK_FUNCDECL_REQUIRES(std::is_convertible<T *, U *>::value ||
-  std::is_base_of<T, U>::value)> floating_ref<U> floating_ref_cast(const floating_ref<T>
+  std::is_base_of<T, U>::value)> floating_ref<U> FloatingRefCast(const floating_ref<T>
   &FloatingRef);
 
 }
