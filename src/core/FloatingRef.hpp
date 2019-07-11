@@ -30,7 +30,8 @@ public:
   floating_ref_generator &operator=(const floating_ref_generator &Other);
   floating_ref_generator &operator=(floating_ref_generator &&Other) noexcept;
 
-  template <typename T> floating_ref<T> Generate(T &Target) const;
+  template <typename T> floating_ref<typename std::remove_reference<T>::type> Generate(T &&Target)
+    const;
 
 private:
 

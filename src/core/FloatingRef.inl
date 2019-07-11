@@ -35,9 +35,10 @@ inline floating_ref_generator &floating_ref_generator::operator=(floating_ref_ge
 
 }
 
-template <typename T> floating_ref<T> floating_ref_generator::Generate(T &Target) const {
+template <typename T> floating_ref<typename std::remove_reference<T>::type>
+  floating_ref_generator::Generate(T &&Target) const {
 
-  return {ReferenceLoc_.get(), Target};
+  return {ReferenceLoc_.get(), std::forward<T>(Target)};
 
 }
 
