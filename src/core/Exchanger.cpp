@@ -930,8 +930,12 @@ void exchanger::CreateCollect(int MGridID, int NGridID, int CollectID, collect_o
       CollectMap, ValueType, Count, GridValuesRange, GridValuesLayout);
     break;
   case collect_op::INTERPOLATE:
+    {
+    floating_ref<const array<double,3>> InterpCoefs = FloatingRefRebind(ConnectivityM.
+      GetFloatingRef(), ConnectivityM.InterpCoefs());
     Collect = core::CreateCollectInterp(Domain.SharedContext(), GridComm, Cart, LocalRange,
-      CollectMap, ValueType, Count, GridValuesRange, GridValuesLayout, ConnectivityM.InterpCoefs());
+      CollectMap, ValueType, Count, GridValuesRange, GridValuesLayout, InterpCoefs);
+    }
     break;
   }
 

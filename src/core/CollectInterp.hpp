@@ -10,6 +10,7 @@
 #include <ovk/core/CollectBase.hpp>
 #include <ovk/core/CollectMap.hpp>
 #include <ovk/core/Context.hpp>
+#include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Profiler.hpp>
 #include <ovk/core/Range.hpp>
@@ -44,7 +45,7 @@ public:
 
   collect_interp(std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart, const range
     &LocalRange, const collect_map &CollectMap, int Count, const range &FieldValuesRange,
-    array_view<const double,3> InterpCoefs):
+    floating_ref<const array<double,3>> InterpCoefs):
     parent_type(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count, FieldValuesRange),
     InterpCoefs_(InterpCoefs)
   {
@@ -66,6 +67,8 @@ public:
 
     profiler &Profiler = Context_->core_Profiler();
 
+    const array<double,3> &InterpCoefs = *InterpCoefs_;
+
     parent_type::SetBufferViews_(FieldValuesVoid, PackedValuesVoid);
     parent_type::RetrieveRemoteValues_(FieldValues_, RemoteValues_);
 
@@ -85,9 +88,9 @@ public:
           for (int i = CellRange.Begin(0); i < CellRange.End(0); ++i) {
             int iVertex = CellIndexer.ToIndex(i,j,k);
             VertexCoefs_(iVertex) =
-              InterpCoefs_(0,i-CellRange.Begin(0),iCell) *
-              InterpCoefs_(1,j-CellRange.Begin(1),iCell) *
-              InterpCoefs_(2,k-CellRange.Begin(2),iCell);
+              InterpCoefs(0,i-CellRange.Begin(0),iCell) *
+              InterpCoefs(1,j-CellRange.Begin(1),iCell) *
+              InterpCoefs(2,k-CellRange.Begin(2),iCell);
           }
         }
       }
@@ -107,7 +110,7 @@ public:
 
 private:
 
-  array_view<const double,3> InterpCoefs_;
+  floating_ref<const array<double,3>> InterpCoefs_;
   array<array<value_type,2>> RemoteValues_;
   array<value_type,2> VertexValues_;
   array<double> VertexCoefs_;

@@ -14,6 +14,7 @@
 #include "ovk/core/Context.hpp"
 #include "ovk/core/DataType.hpp"
 #include "ovk/core/Debug.hpp"
+#include "ovk/core/FloatingRef.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Range.hpp"
 
@@ -250,7 +251,7 @@ template <typename T> using collect_interp_row = collect_interp<T, array_layout:
 
 collect CreateCollectInterpRow(std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart,
   const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
-  range &FieldValuesRange, array_view<const double,3> InterpCoefs) {
+  range &FieldValuesRange, floating_ref<const array<double,3>> InterpCoefs) {
 
   collect Collect;
 

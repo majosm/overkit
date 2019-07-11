@@ -10,6 +10,7 @@
 #include <ovk/core/CollectMap.hpp>
 #include <ovk/core/Context.hpp>
 #include <ovk/core/DataType.hpp>
+#include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Profiler.hpp>
 #include <ovk/core/Range.hpp>
@@ -166,14 +167,14 @@ inline collect CreateCollectAll(std::shared_ptr<context> Context, comm_view Comm
 namespace collect_internal {
 collect CreateCollectInterpRow(std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart,
   const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
-  range &FieldValuesRange, array_view<const double,3> InterpCoefs);
+  range &FieldValuesRange, floating_ref<const array<double,3>> InterpCoefs);
 collect CreateCollectInterpCol(std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart,
   const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
-  range &FieldValuesRange, array_view<const double,3> InterpCoefs);
+  range &FieldValuesRange, floating_ref<const array<double,3>> InterpCoefs);
 }
 inline collect CreateCollectInterp(std::shared_ptr<context> Context, comm_view Comm, const cart
   &Cart, const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count,
-  const range &FieldValuesRange, array_layout FieldValuesLayout, array_view<const double,3>
+  const range &FieldValuesRange, array_layout FieldValuesLayout, floating_ref<const array<double,3>>
   InterpCoefs) {
   switch (FieldValuesLayout) {
   case array_layout::ROW_MAJOR:
