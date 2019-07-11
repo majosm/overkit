@@ -126,4 +126,11 @@ template <typename U, typename T, OVK_FUNCDEF_REQUIRES(std::is_convertible<T *, 
 
 }
 
+template <typename T, typename U> floating_ref<typename std::remove_reference<U>::type>
+  FloatingRefRebind(const floating_ref<T> &FloatingRef, U &&NewTarget) {
+
+  return {FloatingRef.ReferenceLoc_, std::forward<U>(NewTarget)};
+
+}
+
 }

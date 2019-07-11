@@ -39,6 +39,9 @@ private:
 
 };
 
+template <typename T, typename U> floating_ref<typename std::remove_reference<U>::type>
+  FloatingRefRebind(const floating_ref<T> &FloatingRef, U &&NewTarget);
+
 template <typename T> class floating_ref {
 
 public:
@@ -78,6 +81,9 @@ private:
 
   friend class floating_ref_generator;
   template <typename U> friend class floating_ref;
+
+  template <typename U, typename V> friend floating_ref<typename std::remove_reference<V>::type>
+    FloatingRefRebind(const floating_ref<U> &FloatingRef, V &&NewTarget);
 
 };
 
