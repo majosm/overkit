@@ -23,6 +23,7 @@ template <typename T> inline tuple<T> MakeUniformTuple(int NumDims, T Value, T P
   }
 
   return Tuple;
+
 }
 
 }
