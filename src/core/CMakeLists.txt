@@ -47,6 +47,8 @@ set(SOURCES
   Request.cpp
   Send.cpp
   SendMap.cpp
+  State.cpp
+  StateComponent.cpp
   TextProcessing.cpp
 )
 
@@ -86,6 +88,8 @@ set(PUBLIC_HEADERS
   Request.hpp
   ScalarOps.hpp
   ScalarTraits.hpp
+  State.hpp
+  StateComponent.hpp
   Tuple.hpp
 )
 
@@ -155,6 +159,8 @@ set(INTERNAL_HEADERS
   ScopeGuard.inl
   Send.hpp
   SendMap.hpp
+  State.h
+  StateComponent.h
   StringWrapper.hpp
   TextProcessing.hpp
   TextProcessing.inl

@@ -27,6 +27,8 @@ set(SOURCES
   GeometryComponent.cpp
   Grid.cpp
   Request.cpp
+  State.cpp
+  StateComponent.cpp
 )
 
 set(PUBLIC_HEADERS
@@ -44,6 +46,8 @@ set(PUBLIC_HEADERS
   GeometryComponent.h
   Grid.h
   Request.h
+  State.h
+  StateComponent.h
 )
 
 set(INTERNAL_HEADERS
