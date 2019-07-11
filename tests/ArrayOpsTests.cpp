@@ -121,6 +121,61 @@ TEST_F(ArrayOpsTests, ForEach) {
 
 }
 
+TEST_F(ArrayOpsTests, Transform) {
+
+  if (TestComm().Rank() != 0) return;
+
+  using multidim_array_1 = multidim_array_row<int>;
+  using multidim_array_2 = multidim_array_row<double>;
+  using array_view_1 = ovk::array_view<int,3>;
+  using array_view_2 = ovk::array_view<double,3>;
+
+  // Array, array
+  {
+    multidim_array_1 Array({{1,2,3}, {3,4,5}}, {0,1,2,3,4,5,6,7});
+    multidim_array_2 TransformedArray({{1,2,3}, {3,4,5}}, 0.);
+    ovk::ArrayTransform(Array, TransformedArray, [](int Value) -> double {
+      return double(Value+1);
+    });
+    EXPECT_THAT(TransformedArray, ElementsAreArray({1.,2.,3.,4.,5.,6.,7.,8.}));
+  }
+
+  // Array, array view
+  {
+    multidim_array_1 Array({{1,2,3}, {3,4,5}}, {0,1,2,3,4,5,6,7});
+    multidim_array_2 TransformedArray({{1,2,3}, {3,4,5}}, 0.);
+    array_view_2 TransformedView(TransformedArray);
+    ovk::ArrayTransform(Array, TransformedView, [](int Value) -> double {
+      return double(Value+1);
+    });
+    EXPECT_THAT(TransformedView, ElementsAreArray({1.,2.,3.,4.,5.,6.,7.,8.}));
+  }
+
+  // Array view, array
+  {
+    multidim_array_1 Array({{1,2,3}, {3,4,5}}, {0,1,2,3,4,5,6,7});
+    multidim_array_2 TransformedArray({{1,2,3}, {3,4,5}}, 0.);
+    array_view_1 View(Array);
+    ovk::ArrayTransform(View, TransformedArray, [](int Value) -> double {
+      return double(Value+1);
+    });
+    EXPECT_THAT(TransformedArray, ElementsAreArray({1.,2.,3.,4.,5.,6.,7.,8.}));
+  }
+
+  // Array view, array view
+  {
+    multidim_array_1 Array({{1,2,3}, {3,4,5}}, {0,1,2,3,4,5,6,7});
+    multidim_array_2 TransformedArray({{1,2,3}, {3,4,5}}, 0.);
+    array_view_1 View(Array);
+    array_view_2 TransformedView(TransformedArray);
+    ovk::ArrayTransform(View, TransformedView, [](int Value) -> double {
+      return double(Value+1);
+    });
+    EXPECT_THAT(TransformedView, ElementsAreArray({1.,2.,3.,4.,5.,6.,7.,8.}));
+  }
+
+}
+
 TEST_F(ArrayOpsTests, Reduce) {
 
   if (TestComm().Rank() != 0) return;

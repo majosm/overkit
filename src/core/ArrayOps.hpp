@@ -41,6 +41,64 @@ template <typename T, int Rank, array_layout Layout, typename FRef, OVK_FUNCTION
 
 }
 
+template <typename ArrayRefType, typename TransformedArrayType, typename FRef,
+  OVK_FUNCTION_REQUIRES(core::IsArray<core::remove_cvref<ArrayRefType>>() && core::IsArray<
+  TransformedArrayType>() && core::ArraysAreCongruent<core::remove_cvref<ArrayRefType>,
+  TransformedArrayType>() && core::IsCallableAs<FRef &&, core::array_value_type<
+  TransformedArrayType>(core::array_access_type<ArrayRefType &&>)>())> void ArrayTransform(
+  ArrayRefType &&Array, TransformedArrayType &TransformedArray, FRef &&Func) {
+
+  long long NumValues = core::ArrayCount(Array);
+
+  for (long long i = 0; i < NumValues; ++i) {
+    TransformedArray[i] = std::forward<FRef>(Func)(static_cast<core::array_access_type<ArrayRefType
+      &&>>(Array[i]));
+  }
+
+}
+
+template <typename ArrayRefType, typename T, int Rank, array_layout Layout, typename FRef,
+  OVK_FUNCTION_REQUIRES(core::IsArray<core::remove_cvref<ArrayRefType>>() && !std::is_const<T>::
+  value && core::ArrayHasFootprint<core::remove_cvref<ArrayRefType>, Rank, Layout>() &&
+  core::IsCallableAs<FRef &&, T(core::array_access_type<ArrayRefType &&>)>())> void ArrayTransform(
+  ArrayRefType &&Array, const array_view<T, Rank, Layout> &TransformedView, FRef &&Func) {
+
+  long long NumValues = core::ArrayCount(Array);
+
+  for (long long i = 0; i < NumValues; ++i) {
+    TransformedView[i] = std::forward<FRef>(Func)(static_cast<core::array_access_type<ArrayRefType
+      &&>>(Array[i]));
+  }
+
+}
+
+template <typename T, int Rank, array_layout Layout, typename TransformedArrayType, typename FRef,
+  OVK_FUNCTION_REQUIRES(core::IsArray<TransformedArrayType>() && core::ArrayHasFootprint<
+  TransformedArrayType, Rank, Layout>() && core::IsCallableAs<FRef &&, core::array_value_type<
+  TransformedArrayType>(T &)>())> void ArrayTransform(const array_view<T, Rank, Layout> &View,
+  TransformedArrayType &TransformedArray, FRef &&Func) {
+
+  long long NumValues = View.Count();
+
+  for (long long i = 0; i < NumValues; ++i) {
+    TransformedArray[i] = std::forward<FRef>(Func)(View[i]);
+  }
+
+}
+
+template <typename T, typename U, int Rank, array_layout Layout, typename FRef,
+  OVK_FUNCTION_REQUIRES(!std::is_const<U>::value && core::IsCallableAs<FRef &&, U(T &)>())> void
+  ArrayTransform(const array_view<T, Rank, Layout> &View, const array_view<U, Rank, Layout>
+  &TransformedView, FRef &&Func) {
+
+  long long NumValues = View.Count();
+
+  for (long long i = 0; i < NumValues; ++i) {
+    TransformedView[i] = std::forward<FRef>(Func)(View[i]);
+  }
+
+}
+
 // Not sure if I like these overloads (awkward due to different possible index and tuple element
 // types; revisit later. May want to consider taking separate arguments instead of (or in addition
 // to) tuple, like this:
