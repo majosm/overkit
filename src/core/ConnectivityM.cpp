@@ -114,25 +114,25 @@ void connectivity_m::Resize(long long Count, int MaxSize) {
   MaxSize_ = MaxSize;
 
   Extents_.Resize({{2,MAX_DIMS,Count}});
-  for (long long iDonor = 0; iDonor < Count; ++iDonor) {
+  for (long long iCell = 0; iCell < Count; ++iCell) {
     for (int iDim = 0; iDim < NumDims_; ++iDim) {
-      Extents_(0,iDim,iDonor) = 0;
-      Extents_(1,iDim,iDonor) = 0;
+      Extents_(0,iDim,iCell) = 0;
+      Extents_(1,iDim,iCell) = 0;
     }
     for (int iDim = NumDims_; iDim < MAX_DIMS; ++iDim) {
-      Extents_(0,iDim,iDonor) = 0;
-      Extents_(1,iDim,iDonor) = 1;
+      Extents_(0,iDim,iCell) = 0;
+      Extents_(1,iDim,iCell) = 1;
     }
   }
 
   Coords_.Resize({{MAX_DIMS,Count}}, 0.);
 
   InterpCoefs_.Resize({{MAX_DIMS,MaxSize,Count}});
-  for (long long iDonor = 0; iDonor < Count; ++iDonor) {
+  for (long long iCell = 0; iCell < Count; ++iCell) {
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      InterpCoefs_(iDim,0,iDonor) = 1.;
+      InterpCoefs_(iDim,0,iCell) = 1.;
       for (int iPoint = 1; iPoint < MaxSize; ++iPoint) {
-        InterpCoefs_(iDim,iPoint,iDonor) = 0.;
+        InterpCoefs_(iDim,iPoint,iCell) = 0.;
       }
     }
   }

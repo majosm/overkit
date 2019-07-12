@@ -95,7 +95,7 @@ connectivity_n CreateConnectivityN(std::shared_ptr<context> Context, const grid 
 
 void connectivity_n::Resize(long long Count) {
 
-  OVK_DEBUG_ASSERT(Count >= 0, "Invalid receiver count.");
+  OVK_DEBUG_ASSERT(Count >= 0, "Invalid count.");
 
   MPI_Barrier(Comm_);
 
