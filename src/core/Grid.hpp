@@ -124,6 +124,7 @@ public:
 
   const range &GlobalRange() const { return Cart_.Range(); }
   const range &LocalRange() const { return Partition_->LocalRange(); }
+  const range &ExtendedRange() const { return Partition_->ExtendedRange(); }
 
   tuple<int> Size() const { return Cart_.Range().Size(); }
   int Size(int iDim) const { return Cart_.Range().Size(iDim); }

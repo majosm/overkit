@@ -35,9 +35,11 @@ void ovkGetGridCommRank(const ovk_grid *Grid, int *CommRank);
 
 void ovkGetGridGlobalRange(const ovk_grid *Grid, int *GlobalBegin, int *GlobalEnd);
 void ovkGetGridLocalRange(const ovk_grid *Grid, int *LocalBegin, int *LocalEnd);
+void ovkGetGridExtendedRange(const ovk_grid *Grid, int *ExtendedBegin, int *ExtendedEnd);
 
 void ovkGetGridGlobalCount(const ovk_grid *Grid, long long *NumGlobal);
 void ovkGetGridLocalCount(const ovk_grid *Grid, long long *NumLocal);
+void ovkGetGridExtendedCount(const ovk_grid *Grid, long long *NumExtended);
 
 void ovkGetGridSize(const ovk_grid *Grid, int *Size);
 

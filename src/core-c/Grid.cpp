@@ -130,6 +130,20 @@ void ovkGetGridLocalRange(const ovk_grid *Grid, int *LocalBegin, int *LocalEnd) 
 
 }
 
+void ovkGetGridExtendedRange(const ovk_grid *Grid, int *ExtendedBegin, int *ExtendedEnd) {
+
+  OVK_DEBUG_ASSERT(Grid, "Invalid grid pointer.");
+  OVK_DEBUG_ASSERT(ExtendedBegin, "Invalid extended begin pointer.");
+  OVK_DEBUG_ASSERT(ExtendedEnd, "Invalid extended end pointer.");
+
+  auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
+  for (int iDim = 0; iDim < ovk::MAX_DIMS; ++iDim) {
+    ExtendedBegin[iDim] = GridCPP.ExtendedRange().Begin(iDim);
+    ExtendedEnd[iDim] = GridCPP.ExtendedRange().End(iDim);
+  }
+
+}
+
 void ovkGetGridGlobalCount(const ovk_grid *Grid, long long *NumGlobal) {
 
   OVK_DEBUG_ASSERT(Grid, "Invalid grid pointer.");
@@ -147,6 +161,16 @@ void ovkGetGridLocalCount(const ovk_grid *Grid, long long *NumLocal) {
 
   auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
   *NumLocal = GridCPP.LocalRange().Count();
+
+}
+
+void ovkGetGridExtendedCount(const ovk_grid *Grid, long long *NumExtended) {
+
+  OVK_DEBUG_ASSERT(Grid, "Invalid grid pointer.");
+  OVK_DEBUG_ASSERT(NumExtended, "Invalid num extended pointer.");
+
+  auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
+  *NumExtended = GridCPP.ExtendedRange().Count();
 
 }
 
