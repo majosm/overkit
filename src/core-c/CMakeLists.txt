@@ -26,6 +26,9 @@ set(SOURCES
   Geometry.cpp
   GeometryComponent.cpp
   Grid.cpp
+  OverlapComponent.cpp
+  OverlapM.cpp
+  OverlapN.cpp
   Request.cpp
   State.cpp
   StateComponent.cpp
@@ -45,6 +48,9 @@ set(PUBLIC_HEADERS
   Geometry.h
   GeometryComponent.h
   Grid.h
+  OverlapComponent.h
+  OverlapM.h
+  OverlapN.h
   Request.h
   State.h
   StateComponent.h

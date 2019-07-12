@@ -39,6 +39,9 @@ set(SOURCES
   Halo.cpp
   Logger.cpp
   Misc.cpp
+  OverlapComponent.cpp
+  OverlapM.cpp
+  OverlapN.cpp
   Partition.cpp
   PartitionHash.cpp
   Profiler.cpp
@@ -84,6 +87,9 @@ set(PUBLIC_HEADERS
   Interval.hpp
   Misc.hpp
   Optional.hpp
+  OverlapComponent.hpp
+  OverlapM.hpp
+  OverlapN.hpp
   Range.hpp
   Request.hpp
   ScalarOps.hpp
@@ -146,6 +152,7 @@ set(INTERNAL_HEADERS
   Misc.inl
   Moveabool.hpp
   Optional.inl
+  OverlapComponent.h
   Partition.hpp
   PartitionBase.hpp
   PartitionHash.hpp
