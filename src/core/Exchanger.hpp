@@ -23,14 +23,11 @@
 #include <ovk/core/Grid.hpp>
 #include <ovk/core/IDMap.hpp>
 #include <ovk/core/IDSet.hpp>
-#include <ovk/core/Optional.hpp>
 #include <ovk/core/Recv.hpp>
 #include <ovk/core/RecvMap.hpp>
-#include <ovk/core/Requires.hpp>
 #include <ovk/core/Send.hpp>
 #include <ovk/core/SendMap.hpp>
 #include <ovk/core/StringWrapper.hpp>
-#include <ovk/core/TypeTraits.hpp>
 
 #include <mpi.h>
 
@@ -78,10 +75,7 @@ public:
   public:
     bindings() = default;
     int ConnectivityComponentID() const { return ConnectivityComponentID_; }
-    bindings &SetConnectivityComponentID(int ConnectivityComponentID) {
-      ConnectivityComponentID_ = ConnectivityComponentID;
-      return *this;
-    }
+    bindings &SetConnectivityComponentID(int ConnectivityComponentID);
   private:
     int ConnectivityComponentID_ = -1;
     friend class exchanger;
@@ -162,6 +156,13 @@ private:
     id_map<1,core::disperse> Disperses;
   };
 
+  struct update_manifest {
+    id_set<2> CreateLocal;
+    id_set<2> DestroyLocal;
+    id_set<2> UpdateSourceDestRanks;
+    id_set<2> ResetExchanges;
+  };
+
   floating_ref_generator FloatingRefGenerator_;
 
   std::shared_ptr<context> Context_;
@@ -169,26 +170,29 @@ private:
   core::string_wrapper Name_;
 
   floating_ref<const domain> Domain_;
-  floating_ref<const connectivity_component> ConnectivityComponent_;
-
   event_listener_handle ComponentEventListener_;
 
-  id_map<2,connectivity_event_flags> ConnectivityEventFlags_;
+  int ConnectivityComponentID_ = -1;
+  floating_ref<const connectivity_component> ConnectivityComponent_;
   event_listener_handle ConnectivityEventListener_;
 
   id_map<2,local_m,false> LocalMs_;
   id_map<2,local_n,false> LocalNs_;
 
+  update_manifest UpdateManifest_;
+
   exchanger(std::shared_ptr<context> &&Context, params &&Params);
 
-  void OnConnectivityEvent_();
+  void OnComponentEvent_(int ComponentID, component_event_flags Flags);
+  void OnConnectivityEvent_(int MGridID, int NGridID, connectivity_event_flags Flags, bool
+    LastInSequence);
 
-  void DestroyExchangesForDyingConnectivities_();
-  void CreateExchangesForNewConnectivities_();
-  void UpdateExchangesForModifiedConnectivities_();
+  void Update_();
 
+  void CreateLocals_();
+  void DestroyLocals_();
   void UpdateSourceDestRanks_();
-  void PurgeExchanges_();
+  void ResetExchanges_();
 
   static constexpr int COLLECT_TIME = core::profiler::EXCHANGER_COLLECT_TIME;
   static constexpr int SEND_RECV_TIME = core::profiler::EXCHANGER_SEND_RECV_TIME;
