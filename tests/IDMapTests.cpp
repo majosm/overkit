@@ -1396,6 +1396,123 @@ TEST_F(IDMapTests, Erase) {
 
 }
 
+TEST_F(IDMapTests, EraseIf) {
+
+  if (TestComm().Rank() != 0) return;
+
+  using id_map = ovk::id_map<2,int>;
+  using helper = ovk::core::test_helper<id_map>;
+
+  // Function takes entry, match exists
+  {
+    id_map IDMap = {{{1,2}, 1}, {{1,3}, 2}, {{2,1}, 3}, {{1,4}, 4}};
+    IDMap.EraseIf([](const typename id_map::entry &Entry) -> bool {
+      return Entry.Key(1) == 2 || Entry.Value() == 3;
+    });
+    auto &Keys = helper::GetKeys(IDMap);
+    auto &Entries = helper::GetEntries(IDMap);
+    EXPECT_EQ(Keys.Count(), 2);
+    EXPECT_THAT(Keys[0], ElementsAre(1,3));
+    EXPECT_THAT(Keys[1], ElementsAre(1,4));
+    EXPECT_EQ(Entries.Count(), 2);
+    EXPECT_THAT(Entries(0).Key(), ElementsAre(1,3));
+    EXPECT_EQ(Entries(0).Value(), 2);
+    EXPECT_THAT(Entries(1).Key(), ElementsAre(1,4));
+    EXPECT_EQ(Entries(1).Value(), 4);
+  }
+
+  // Function takes entry, match doesn't exist
+  {
+    id_map IDMap = {{{1,3}, 2}, {{1,4}, 4}};
+    IDMap.EraseIf([](const typename id_map::entry &Entry) -> bool {
+      return Entry.Key(1) == 2 || Entry.Value() == 3;
+    });
+    auto &Keys = helper::GetKeys(IDMap);
+    auto &Entries = helper::GetEntries(IDMap);
+    EXPECT_EQ(Keys.Count(), 2);
+    EXPECT_THAT(Keys[0], ElementsAre(1,3));
+    EXPECT_THAT(Keys[1], ElementsAre(1,4));
+    EXPECT_EQ(Entries.Count(), 2);
+    EXPECT_THAT(Entries(0).Key(), ElementsAre(1,3));
+    EXPECT_EQ(Entries(0).Value(), 2);
+    EXPECT_THAT(Entries(1).Key(), ElementsAre(1,4));
+    EXPECT_EQ(Entries(1).Value(), 4);
+  }
+
+  // Function takes key, match exists
+  {
+    id_map IDMap = {{{1,2}, 1}, {{1,3}, 2}, {{2,1}, 3}, {{1,4}, 4}};
+    IDMap.EraseIf([](const ovk::elem<int,2> &Key) -> bool {
+      return Key(0) == 2 || Key(1) == 2;
+    });
+    auto &Keys = helper::GetKeys(IDMap);
+    auto &Entries = helper::GetEntries(IDMap);
+    EXPECT_EQ(Keys.Count(), 2);
+    EXPECT_THAT(Keys[0], ElementsAre(1,3));
+    EXPECT_THAT(Keys[1], ElementsAre(1,4));
+    EXPECT_EQ(Entries.Count(), 2);
+    EXPECT_THAT(Entries(0).Key(), ElementsAre(1,3));
+    EXPECT_EQ(Entries(0).Value(), 2);
+    EXPECT_THAT(Entries(1).Key(), ElementsAre(1,4));
+    EXPECT_EQ(Entries(1).Value(), 4);
+  }
+
+  // Function takes key, match doesn't exist
+  {
+    id_map IDMap = {{{1,3}, 2}, {{1,4}, 4}};
+    IDMap.EraseIf([](const ovk::elem<int,2> &Key) -> bool {
+      return Key(0) == 2 || Key(1) == 2;
+    });
+    auto &Keys = helper::GetKeys(IDMap);
+    auto &Entries = helper::GetEntries(IDMap);
+    EXPECT_EQ(Keys.Count(), 2);
+    EXPECT_THAT(Keys[0], ElementsAre(1,3));
+    EXPECT_THAT(Keys[1], ElementsAre(1,4));
+    EXPECT_EQ(Entries.Count(), 2);
+    EXPECT_THAT(Entries(0).Key(), ElementsAre(1,3));
+    EXPECT_EQ(Entries(0).Value(), 2);
+    EXPECT_THAT(Entries(1).Key(), ElementsAre(1,4));
+    EXPECT_EQ(Entries(1).Value(), 4);
+  }
+
+  // Function takes separate IDs, match exists
+  {
+    id_map IDMap = {{{1,2}, 1}, {{1,3}, 2}, {{2,1}, 3}, {{1,4},4}};
+    IDMap.EraseIf([](int M, int N) -> bool {
+      return M == 2 || N == 2;
+    });
+    auto &Keys = helper::GetKeys(IDMap);
+    auto &Entries = helper::GetEntries(IDMap);
+    EXPECT_EQ(Keys.Count(), 2);
+    EXPECT_THAT(Keys[0], ElementsAre(1,3));
+    EXPECT_THAT(Keys[1], ElementsAre(1,4));
+    EXPECT_EQ(Entries.Count(), 2);
+    EXPECT_THAT(Entries(0).Key(), ElementsAre(1,3));
+    EXPECT_EQ(Entries(0).Value(), 2);
+    EXPECT_THAT(Entries(1).Key(), ElementsAre(1,4));
+    EXPECT_EQ(Entries(1).Value(), 4);
+  }
+
+  // Function takes separate IDs, match doesn't exist
+  {
+    id_map IDMap = {{{1,3}, 2}, {{1,4}, 4}};
+    IDMap.EraseIf([](int M, int N) -> bool {
+      return M == 2 || N == 2;
+    });
+    auto &Keys = helper::GetKeys(IDMap);
+    auto &Entries = helper::GetEntries(IDMap);
+    EXPECT_EQ(Keys.Count(), 2);
+    EXPECT_THAT(Keys[0], ElementsAre(1,3));
+    EXPECT_THAT(Keys[1], ElementsAre(1,4));
+    EXPECT_EQ(Entries.Count(), 2);
+    EXPECT_THAT(Entries(0).Key(), ElementsAre(1,3));
+    EXPECT_EQ(Entries(0).Value(), 2);
+    EXPECT_THAT(Entries(1).Key(), ElementsAre(1,4));
+    EXPECT_EQ(Entries(1).Value(), 4);
+  }
+
+}
+
 TEST_F(IDMapTests, Clear) {
 
   if (TestComm().Rank() != 0) return;

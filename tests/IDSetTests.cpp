@@ -337,6 +337,63 @@ TEST_F(IDSetTests, Erase) {
 
 }
 
+TEST_F(IDSetTests, EraseIf) {
+
+  if (TestComm().Rank() != 0) return;
+
+  using id_set = ovk::id_set<2>;
+  using helper = ovk::core::test_helper<id_set>;
+
+  // Function takes value, match exists
+  {
+    id_set IDSet = {{1,2}, {1,3}, {2,1}, {1,4}};
+    IDSet.EraseIf([](const ovk::elem<int,2> &Value) -> bool {
+      return Value(0) == 2 || Value(1) == 2;
+    });
+    auto &Values = helper::GetValues(IDSet);
+    EXPECT_EQ(Values.Count(), 2);
+    EXPECT_THAT(Values(0), ElementsAre(1,3));
+    EXPECT_THAT(Values(1), ElementsAre(1,4));
+  }
+
+  // Function takes value, match doesn't exist
+  {
+    id_set IDSet = {{1,3}, {1,4}};
+    IDSet.EraseIf([](const ovk::elem<int,2> &Value) -> bool {
+      return Value(0) == 2 || Value(1) == 2;
+    });
+    auto &Values = helper::GetValues(IDSet);
+    EXPECT_EQ(Values.Count(), 2);
+    EXPECT_THAT(Values(0), ElementsAre(1,3));
+    EXPECT_THAT(Values(1), ElementsAre(1,4));
+  }
+
+  // Function takes separate IDs, match exists
+  {
+    id_set IDSet = {{1,2}, {1,3}, {2,1}, {1,4}};
+    IDSet.EraseIf([](int M, int N) -> bool {
+      return M == 2 || N == 2;
+    });
+    auto &Values = helper::GetValues(IDSet);
+    EXPECT_EQ(Values.Count(), 2);
+    EXPECT_THAT(Values(0), ElementsAre(1,3));
+    EXPECT_THAT(Values(1), ElementsAre(1,4));
+  }
+
+  // Function takes separate IDs, match doesn't exist
+  {
+    id_set IDSet = {{1,3}, {1,4}};
+    IDSet.EraseIf([](int M, int N) -> bool {
+      return M == 2 || N == 2;
+    });
+    auto &Values = helper::GetValues(IDSet);
+    EXPECT_EQ(Values.Count(), 2);
+    EXPECT_THAT(Values(0), ElementsAre(1,3));
+    EXPECT_THAT(Values(1), ElementsAre(1,4));
+  }
+
+}
+
 TEST_F(IDSetTests, Clear) {
 
   if (TestComm().Rank() != 0) return;

@@ -9,10 +9,12 @@
 #include <ovk/core/Elem.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/IDSet.hpp>
+#include <ovk/core/IntegerSequence.hpp>
 #include <ovk/core/IteratorTraits.hpp>
 #include <ovk/core/PointerIterator.hpp>
 #include <ovk/core/Requires.hpp>
 #include <ovk/core/TypeSequence.hpp>
+#include <ovk/core/TypeTraits.hpp>
 
 #include <algorithm>
 #include <initializer_list>
@@ -140,10 +142,12 @@ private:
 
 };
 
-template <int Rank, typename T, bool Contiguous, typename IDTypeSequence> class id_map_base;
+template <int Rank, typename T, bool Contiguous, typename IndexSequence, typename IDTypeSequence>
+  class id_map_base;
 
-template <int Rank, typename T, bool Contiguous_, typename... IDTypes> class id_map_base<Rank, T,
-  Contiguous_, core::type_sequence<IDTypes...>> {
+template <int Rank, typename T, bool Contiguous_, std::size_t... Indices, typename... IDTypes> class
+  id_map_base<Rank, T, Contiguous_, core::index_sequence<Indices...>, core::type_sequence<
+  IDTypes...>> {
 
 public:
 
@@ -186,6 +190,22 @@ public:
     if (KeysIter != Keys_.End() && !Keys_.Less(Key, *KeysIter)) {
       Keys_.Erase(KeysIter);
       Entries_.Erase(EntriesIter);
+    }
+  }
+
+  template <typename F, OVK_FUNCTION_REQUIRES(!core::IsCallableAs<F &&, bool(const entry &)>() &&
+    !core::IsCallableAs<F &&, bool(const key_type &)>() && core::IsCallableAs<F &&,
+    bool(IDTypes...)>())> void EraseIf(F &&Predicate) {
+    auto KeysIter = Keys_.Begin();
+    auto EntriesIter = Entries_.Begin();
+    while (KeysIter != Keys_.End()) {
+      if (std::forward<F>(Predicate)((*KeysIter)(Indices)...)) {
+        KeysIter = Keys_.Erase(KeysIter);
+        EntriesIter = Entries_.Erase(EntriesIter);
+      } else {
+        ++KeysIter;
+        ++EntriesIter;
+      }
     }
   }
 
@@ -241,13 +261,13 @@ protected:
 }
 
 template <int Rank_, typename T, bool Contiguous_=sizeof(T) <= 16> class id_map : public
-  id_map_internal::id_map_base<Rank_, T, Contiguous_, core::repeated_type_sequence_of_size<
-  int, Rank_>> {
+  id_map_internal::id_map_base<Rank_, T, Contiguous_, core::index_sequence_of_size<Rank_>,
+  core::repeated_type_sequence_of_size<int, Rank_>> {
 
 private:
 
   using parent_type = id_map_internal::id_map_base<Rank_, T, Contiguous_,
-    core::repeated_type_sequence_of_size<int, Rank_>>;
+    core::index_sequence_of_size<Rank_>, core::repeated_type_sequence_of_size<int, Rank_>>;
 
   using parent_type::Keys_;
   using parent_type::Entries_;
@@ -267,6 +287,7 @@ public:
   using parent_type::operator();
   using parent_type::Insert;
   using parent_type::Erase;
+  using parent_type::EraseIf;
   using parent_type::Contains;
   using parent_type::Find;
   using parent_type::LowerBound;
@@ -444,6 +465,36 @@ public:
     Keys_.Erase(Keys_.Begin()+iEntry);
     Entries_.Erase(Entries_.Begin()+iEntry);
     return iterator(Entries_.Data() + iEntry);
+  }
+
+  template <typename F, OVK_FUNCTION_REQUIRES(core::IsCallableAs<F &&, bool(const entry &)>())> void
+    EraseIf(F &&Predicate) {
+    auto KeysIter = Keys_.Begin();
+    auto EntriesIter = Entries_.Begin();
+    while (EntriesIter != Entries_.End()) {
+      if (std::forward<F>(Predicate)(*EntriesIter)) {
+        KeysIter = Keys_.Erase(KeysIter);
+        EntriesIter = Entries_.Erase(EntriesIter);
+      } else {
+        ++KeysIter;
+        ++EntriesIter;
+      }
+    }
+  }
+
+  template <typename F, OVK_FUNCTION_REQUIRES(!core::IsCallableAs<F &&, bool(const entry &)>() &&
+    core::IsCallableAs<F &&, bool(const key_type &)>())> void EraseIf(F &&Predicate) {
+    auto KeysIter = Keys_.Begin();
+    auto EntriesIter = Entries_.Begin();
+    while (KeysIter != Keys_.End()) {
+      if (std::forward<F>(Predicate)(*KeysIter)) {
+        KeysIter = Keys_.Erase(KeysIter);
+        EntriesIter = Entries_.Erase(EntriesIter);
+      } else {
+        ++KeysIter;
+        ++EntriesIter;
+      }
+    }
   }
 
   void Clear() {

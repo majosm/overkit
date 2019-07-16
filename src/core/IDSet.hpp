@@ -8,10 +8,12 @@
 #include <ovk/core/ArrayTraits.hpp>
 #include <ovk/core/Elem.hpp>
 #include <ovk/core/Global.hpp>
+#include <ovk/core/IntegerSequence.hpp>
 #include <ovk/core/IteratorTraits.hpp>
 #include <ovk/core/PointerIterator.hpp>
 #include <ovk/core/Requires.hpp>
 #include <ovk/core/TypeSequence.hpp>
+#include <ovk/core/TypeTraits.hpp>
 
 #include <algorithm>
 #include <initializer_list>
@@ -23,9 +25,10 @@ namespace ovk {
 
 namespace id_set_internal {
 
-template <int Rank, typename IDTypeSequence> class id_set_base;
+template <int Rank, typename IndexSequence, typename IDTypeSequence> class id_set_base;
 
-template <int Rank, typename... IDTypes> class id_set_base<Rank, core::type_sequence<IDTypes...>> {
+template <int Rank, std::size_t... Indices, typename... IDTypes> class id_set_base<Rank,
+  core::index_sequence<Indices...>, core::type_sequence<IDTypes...>> {
 
 public:
 
@@ -48,6 +51,18 @@ public:
     auto ValuesIter = LowerBound_(Value);
     if (ValuesIter != Values_.End() && !Less(Value, *ValuesIter)) {
       Values_.Erase(ValuesIter);
+    }
+  }
+
+  template <typename F, OVK_FUNCTION_REQUIRES(!core::IsCallableAs<F &&, bool(const value_type &)>()
+    && core::IsCallableAs<F &&, bool(IDTypes...)>())> void EraseIf(F &&Predicate) {
+    auto ValuesIter = Values_.Begin();
+    while (ValuesIter != Values_.End()) {
+      if (std::forward<F>(Predicate)((*ValuesIter)(Indices)...)) {
+        ValuesIter = Values_.Erase(ValuesIter);
+      } else {
+        ++ValuesIter;
+      }
     }
   }
 
@@ -131,12 +146,12 @@ protected:
 }
 
 template <int Rank_> class id_set : public id_set_internal::id_set_base<Rank_,
-  core::repeated_type_sequence_of_size<int, Rank_>> {
+  core::index_sequence_of_size<Rank_>, core::repeated_type_sequence_of_size<int, Rank_>> {
 
 private:
 
-  using parent_type = id_set_internal::id_set_base<Rank_, core::repeated_type_sequence_of_size<int,
-    Rank_>>;
+  using parent_type = id_set_internal::id_set_base<Rank_, core::index_sequence_of_size<Rank_>,
+    core::repeated_type_sequence_of_size<int, Rank_>>;
 
   using parent_type::Values_;
   using parent_type::LowerBound_;
@@ -152,6 +167,7 @@ public:
 
   using parent_type::Insert;
   using parent_type::Erase;
+  using parent_type::EraseIf;
   using parent_type::Contains;
   using parent_type::Find;
   using parent_type::LowerBound;
@@ -233,6 +249,18 @@ public:
     index_type iValue = index_type(Pos - Begin());
     Values_.Erase(iValue);
     return iterator(Values_.Data() + iValue);
+  }
+
+  template <typename F, OVK_FUNCTION_REQUIRES(core::IsCallableAs<F &&, bool(const value_type &)>())>
+    void EraseIf(F &&Predicate) {
+    auto ValuesIter = Values_.Begin();
+    while (ValuesIter != Values_.End()) {
+      if (std::forward<F>(Predicate)(*ValuesIter)) {
+        ValuesIter = Values_.Erase(ValuesIter);
+      } else {
+        ++ValuesIter;
+      }
+    }
   }
 
   void Clear() {
