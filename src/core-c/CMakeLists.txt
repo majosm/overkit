@@ -16,7 +16,7 @@ set(LOCAL_TARGETS)
 #--------------
 
 set(SOURCES
-  AssemblyOptions.cpp
+  Assembler.cpp
   ConnectivityComponent.cpp
   ConnectivityM.cpp
   ConnectivityN.cpp
@@ -35,7 +35,7 @@ set(SOURCES
 )
 
 set(PUBLIC_HEADERS
-  AssemblyOptions.h
+  Assembler.h
   ConnectivityComponent.h
   ConnectivityM.h
   ConnectivityN.h

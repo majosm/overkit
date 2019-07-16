@@ -1,7 +1,7 @@
 // Copyright (c) 2019 Matthew J. Smith and Overkit contributors
 // License: MIT (http://opensource.org/licenses/MIT)
 
-#include "ovk/core/AssemblyOptions.hpp"
+#include "ovk/core/Assembler.hpp"
 
 #include "ovk/core/ArrayView.hpp"
 #include "ovk/core/Debug.hpp"
@@ -11,20 +11,48 @@
 
 namespace ovk {
 
-assembly_options::assembly_options(int NumDims, id_set<1> GridIDs):
-  NumDims_(NumDims),
-  GridIDs_(std::move(GridIDs))
-{
-  OVK_DEBUG_ASSERT(NumDims_ == 2 || NumDims_ == 3, "Invalid dimension.");
+void assembler::options::AddGrids(const id_set<1> &GridIDs) {
+
+  for (int GridID : GridIDs) {
+    GridIDs_.Insert(GridID);
+  }
+
 }
 
-bool assembly_options::Overlappable(int MGridID, int NGridID) const {
+void assembler::options::RemoveGrids(const id_set<1> &GridIDs) {
+
+  auto MatchesGridToRemove = [&](int GridID) -> bool {
+    return GridIDs.Contains(GridID);
+  };
+
+  auto MatchesGridToRemovePair = [&](int MGridID, int NGridID) -> bool {
+    return GridIDs.Contains(MGridID) || GridIDs.Contains(NGridID);
+  };
+
+  Overlappable_.EraseIf(MatchesGridToRemovePair);
+  OverlapTolerance_.EraseIf(MatchesGridToRemovePair);
+  OverlapAccelDepthAdjust_.EraseIf(MatchesGridToRemove);
+  OverlapAccelResolutionAdjust_.EraseIf(MatchesGridToRemove);
+  InferBoundaries_.EraseIf(MatchesGridToRemove);
+  CutBoundaryHoles_.EraseIf(MatchesGridToRemovePair);
+  Occludes_.EraseIf(MatchesGridToRemovePair);
+  EdgePadding_.EraseIf(MatchesGridToRemovePair);
+  EdgeSmoothing_.EraseIf(MatchesGridToRemove);
+  ConnectionType_.EraseIf(MatchesGridToRemovePair);
+  FringeSize_.EraseIf(MatchesGridToRemove);
+  MinimizeOverlap_.EraseIf(MatchesGridToRemovePair);
+
+  GridIDs_.EraseIf(MatchesGridToRemove);
+
+}
+
+bool assembler::options::Overlappable(int MGridID, int NGridID) const {
 
   return GetOption_(Overlappable_, MGridID, NGridID, false);
 
 }
 
-assembly_options &assembly_options::SetOverlappable(int MGridID, int NGridID, bool Overlappable) {
+assembler::options &assembler::options::SetOverlappable(int MGridID, int NGridID, bool Overlappable) {
 
   SetOption_(Overlappable_, MGridID, NGridID, Overlappable, false);
 
@@ -32,7 +60,7 @@ assembly_options &assembly_options::SetOverlappable(int MGridID, int NGridID, bo
 
 }
 
-assembly_options &assembly_options::ResetOverlappable(int MGridID, int NGridID) {
+assembler::options &assembler::options::ResetOverlappable(int MGridID, int NGridID) {
 
   SetOption_(Overlappable_, MGridID, NGridID, false, false);
 
@@ -40,13 +68,13 @@ assembly_options &assembly_options::ResetOverlappable(int MGridID, int NGridID) 
 
 }
 
-double assembly_options::OverlapTolerance(int MGridID, int NGridID) const {
+double assembler::options::OverlapTolerance(int MGridID, int NGridID) const {
 
   return GetOption_(OverlapTolerance_, MGridID, NGridID, 1.e-12);
 
 }
 
-assembly_options &assembly_options::SetOverlapTolerance(int MGridID, int NGridID, double
+assembler::options &assembler::options::SetOverlapTolerance(int MGridID, int NGridID, double
   OverlapTolerance) {
 
   OVK_DEBUG_ASSERT(OverlapTolerance >= 0., "Invalid overlap tolerance value.");
@@ -57,7 +85,7 @@ assembly_options &assembly_options::SetOverlapTolerance(int MGridID, int NGridID
 
 }
 
-assembly_options &assembly_options::ResetOverlapTolerance(int MGridID, int NGridID) {
+assembler::options &assembler::options::ResetOverlapTolerance(int MGridID, int NGridID) {
 
   SetOption_(OverlapTolerance_, MGridID, NGridID, 1.e-12, 1.e-12);
 
@@ -65,13 +93,13 @@ assembly_options &assembly_options::ResetOverlapTolerance(int MGridID, int NGrid
 
 }
 
-double assembly_options::OverlapAccelDepthAdjust(int MGridID) const {
+double assembler::options::OverlapAccelDepthAdjust(int MGridID) const {
 
   return GetOption_(OverlapAccelDepthAdjust_, MGridID, 0.);
 
 }
 
-assembly_options &assembly_options::SetOverlapAccelDepthAdjust(int MGridID, double
+assembler::options &assembler::options::SetOverlapAccelDepthAdjust(int MGridID, double
   OverlapAccelDepthAdjust) {
 
   SetOption_(OverlapAccelDepthAdjust_, MGridID, OverlapAccelDepthAdjust, 0.);
@@ -80,7 +108,7 @@ assembly_options &assembly_options::SetOverlapAccelDepthAdjust(int MGridID, doub
 
 }
 
-assembly_options &assembly_options::ResetOverlapAccelDepthAdjust(int MGridID) {
+assembler::options &assembler::options::ResetOverlapAccelDepthAdjust(int MGridID) {
 
   SetOption_(OverlapAccelDepthAdjust_, MGridID, 0., 0.);
 
@@ -88,13 +116,13 @@ assembly_options &assembly_options::ResetOverlapAccelDepthAdjust(int MGridID) {
 
 }
 
-double assembly_options::OverlapAccelResolutionAdjust(int MGridID) const {
+double assembler::options::OverlapAccelResolutionAdjust(int MGridID) const {
 
   return GetOption_(OverlapAccelResolutionAdjust_, MGridID, 0.);
 
 }
 
-assembly_options &assembly_options::SetOverlapAccelResolutionAdjust(int MGridID, double
+assembler::options &assembler::options::SetOverlapAccelResolutionAdjust(int MGridID, double
   OverlapAccelResolutionAdjust) {
 
   SetOption_(OverlapAccelResolutionAdjust_, MGridID, OverlapAccelResolutionAdjust, 0.);
@@ -103,7 +131,7 @@ assembly_options &assembly_options::SetOverlapAccelResolutionAdjust(int MGridID,
 
 }
 
-assembly_options &assembly_options::ResetOverlapAccelResolutionAdjust(int MGridID) {
+assembler::options &assembler::options::ResetOverlapAccelResolutionAdjust(int MGridID) {
 
   SetOption_(OverlapAccelResolutionAdjust_, MGridID, 0., 0.);
 
@@ -111,13 +139,13 @@ assembly_options &assembly_options::ResetOverlapAccelResolutionAdjust(int MGridI
 
 }
 
-bool assembly_options::InferBoundaries(int GridID) const {
+bool assembler::options::InferBoundaries(int GridID) const {
 
   return GetOption_(InferBoundaries_, GridID, false);
 
 }
 
-assembly_options &assembly_options::SetInferBoundaries(int GridID, bool InferBoundaries) {
+assembler::options &assembler::options::SetInferBoundaries(int GridID, bool InferBoundaries) {
 
   SetOption_(InferBoundaries_, GridID, InferBoundaries, false);
 
@@ -125,7 +153,7 @@ assembly_options &assembly_options::SetInferBoundaries(int GridID, bool InferBou
 
 }
 
-assembly_options &assembly_options::ResetInferBoundaries(int GridID) {
+assembler::options &assembler::options::ResetInferBoundaries(int GridID) {
 
   SetOption_(InferBoundaries_, GridID, false, false);
 
@@ -133,13 +161,13 @@ assembly_options &assembly_options::ResetInferBoundaries(int GridID) {
 
 }
 
-bool assembly_options::CutBoundaryHoles(int MGridID, int NGridID) const {
+bool assembler::options::CutBoundaryHoles(int MGridID, int NGridID) const {
 
   return GetOption_(CutBoundaryHoles_, MGridID, NGridID, false);
 
 }
 
-assembly_options &assembly_options::SetCutBoundaryHoles(int MGridID, int NGridID, bool
+assembler::options &assembler::options::SetCutBoundaryHoles(int MGridID, int NGridID, bool
   CutBoundaryHoles) {
 
   SetOption_(CutBoundaryHoles_, MGridID, NGridID, CutBoundaryHoles, false);
@@ -148,7 +176,7 @@ assembly_options &assembly_options::SetCutBoundaryHoles(int MGridID, int NGridID
 
 }
 
-assembly_options &assembly_options::ResetCutBoundaryHoles(int MGridID, int NGridID) {
+assembler::options &assembler::options::ResetCutBoundaryHoles(int MGridID, int NGridID) {
 
   SetOption_(CutBoundaryHoles_, MGridID, NGridID, false, false);
 
@@ -156,13 +184,13 @@ assembly_options &assembly_options::ResetCutBoundaryHoles(int MGridID, int NGrid
 
 }
 
-occludes assembly_options::Occludes(int MGridID, int NGridID) const {
+occludes assembler::options::Occludes(int MGridID, int NGridID) const {
 
   return GetOption_(Occludes_, MGridID, NGridID, occludes::NONE);
 
 }
 
-assembly_options &assembly_options::SetOccludes(int MGridID, int NGridID, occludes Occludes) {
+assembler::options &assembler::options::SetOccludes(int MGridID, int NGridID, occludes Occludes) {
 
   OVK_DEBUG_ASSERT(ValidOccludes(Occludes), "Invalid occludes value.");
 
@@ -172,7 +200,7 @@ assembly_options &assembly_options::SetOccludes(int MGridID, int NGridID, occlud
 
 }
 
-assembly_options &assembly_options::ResetOccludes(int MGridID, int NGridID) {
+assembler::options &assembler::options::ResetOccludes(int MGridID, int NGridID) {
 
   SetOption_(Occludes_, MGridID, NGridID, occludes::NONE, occludes::NONE);
 
@@ -180,13 +208,13 @@ assembly_options &assembly_options::ResetOccludes(int MGridID, int NGridID) {
 
 }
 
-int assembly_options::EdgePadding(int MGridID, int NGridID) const {
+int assembler::options::EdgePadding(int MGridID, int NGridID) const {
 
   return GetOption_(EdgePadding_, MGridID, NGridID, 0);
 
 }
 
-assembly_options &assembly_options::SetEdgePadding(int MGridID, int NGridID, int EdgePadding) {
+assembler::options &assembler::options::SetEdgePadding(int MGridID, int NGridID, int EdgePadding) {
 
   OVK_DEBUG_ASSERT(EdgePadding >= 0, "Invalid edge padding value.");
 
@@ -196,7 +224,7 @@ assembly_options &assembly_options::SetEdgePadding(int MGridID, int NGridID, int
 
 }
 
-assembly_options &assembly_options::ResetEdgePadding(int MGridID, int NGridID) {
+assembler::options &assembler::options::ResetEdgePadding(int MGridID, int NGridID) {
 
   SetOption_(EdgePadding_, MGridID, NGridID, 0, 0);
 
@@ -204,13 +232,13 @@ assembly_options &assembly_options::ResetEdgePadding(int MGridID, int NGridID) {
 
 }
 
-int assembly_options::EdgeSmoothing(int NGridID) const {
+int assembler::options::EdgeSmoothing(int NGridID) const {
 
   return GetOption_(EdgeSmoothing_, NGridID, 0);
 
 }
 
-assembly_options &assembly_options::SetEdgeSmoothing(int NGridID, int EdgeSmoothing) {
+assembler::options &assembler::options::SetEdgeSmoothing(int NGridID, int EdgeSmoothing) {
 
   OVK_DEBUG_ASSERT(EdgeSmoothing >= 0, "Invalid edge smoothing value.");
 
@@ -220,7 +248,7 @@ assembly_options &assembly_options::SetEdgeSmoothing(int NGridID, int EdgeSmooth
 
 }
 
-assembly_options &assembly_options::ResetEdgeSmoothing(int NGridID) {
+assembler::options &assembler::options::ResetEdgeSmoothing(int NGridID) {
 
   SetOption_(EdgeSmoothing_, NGridID, 0, 0);
 
@@ -228,13 +256,13 @@ assembly_options &assembly_options::ResetEdgeSmoothing(int NGridID) {
 
 }
 
-connection_type assembly_options::ConnectionType(int MGridID, int NGridID) const {
+connection_type assembler::options::ConnectionType(int MGridID, int NGridID) const {
 
   return GetOption_(ConnectionType_, MGridID, NGridID, connection_type::NONE);
 
 }
 
-assembly_options &assembly_options::SetConnectionType(int MGridID, int NGridID, connection_type
+assembler::options &assembler::options::SetConnectionType(int MGridID, int NGridID, connection_type
   ConnectionType) {
 
   OVK_DEBUG_ASSERT(ValidConnectionType(ConnectionType), "Invalid connection type.");
@@ -245,7 +273,7 @@ assembly_options &assembly_options::SetConnectionType(int MGridID, int NGridID, 
 
 }
 
-assembly_options &assembly_options::ResetConnectionType(int MGridID, int NGridID) {
+assembler::options &assembler::options::ResetConnectionType(int MGridID, int NGridID) {
 
   SetOption_(ConnectionType_, MGridID, NGridID, connection_type::NONE, connection_type::NONE);
 
@@ -253,13 +281,13 @@ assembly_options &assembly_options::ResetConnectionType(int MGridID, int NGridID
 
 }
 
-int assembly_options::FringeSize(int NGridID) const {
+int assembler::options::FringeSize(int NGridID) const {
 
   return GetOption_(FringeSize_, NGridID, 0);
 
 }
 
-assembly_options &assembly_options::SetFringeSize(int NGridID, int FringeSize) {
+assembler::options &assembler::options::SetFringeSize(int NGridID, int FringeSize) {
 
   OVK_DEBUG_ASSERT(FringeSize >= 0, "Invalid fringe size.");
 
@@ -269,7 +297,7 @@ assembly_options &assembly_options::SetFringeSize(int NGridID, int FringeSize) {
 
 }
 
-assembly_options &assembly_options::ResetFringeSize(int NGridID) {
+assembler::options &assembler::options::ResetFringeSize(int NGridID) {
 
   SetOption_(FringeSize_, NGridID, 0, 0);
 
@@ -277,13 +305,13 @@ assembly_options &assembly_options::ResetFringeSize(int NGridID) {
 
 }
 
-bool assembly_options::MinimizeOverlap(int MGridID, int NGridID) const {
+bool assembler::options::MinimizeOverlap(int MGridID, int NGridID) const {
 
   return GetOption_(MinimizeOverlap_, MGridID, NGridID, false);
 
 }
 
-assembly_options &assembly_options::SetMinimizeOverlap(int MGridID, int NGridID, bool
+assembler::options &assembler::options::SetMinimizeOverlap(int MGridID, int NGridID, bool
   MinimizeOverlap) {
 
   SetOption_(MinimizeOverlap_, MGridID, NGridID, MinimizeOverlap, false);
@@ -292,7 +320,7 @@ assembly_options &assembly_options::SetMinimizeOverlap(int MGridID, int NGridID,
 
 }
 
-assembly_options &assembly_options::ResetMinimizeOverlap(int MGridID, int NGridID) {
+assembler::options &assembler::options::ResetMinimizeOverlap(int MGridID, int NGridID) {
 
   SetOption_(MinimizeOverlap_, MGridID, NGridID, false, false);
 
@@ -300,7 +328,7 @@ assembly_options &assembly_options::ResetMinimizeOverlap(int MGridID, int NGridI
 
 }
 
-void assembly_options::PrintOptions_() {
+void assembler::options::PrintOptions_() {
 
   for (auto &Entry : Overlappable_) {
     std::printf("Overlappable(%i,%i) = %c\n", Entry.Key(0), Entry.Key(1), Entry.Value() ? 'T' :
@@ -383,7 +411,7 @@ void assembly_options::PrintOptions_() {
 
 }
 
-template <typename T> T assembly_options::GetOption_(const id_map<1,T> &Option, int GridID, T
+template <typename T> T assembler::options::GetOption_(const id_map<1,T> &Option, int GridID, T
   DefaultValue) const {
 
   OVK_DEBUG_ASSERT(GridID >= 0, "Invalid grid ID.");
@@ -400,7 +428,7 @@ template <typename T> T assembly_options::GetOption_(const id_map<1,T> &Option, 
 
 }
 
-template <typename T> T assembly_options::GetOption_(const id_map<2,T> &Option, int MGridID, int
+template <typename T> T assembler::options::GetOption_(const id_map<2,T> &Option, int MGridID, int
   NGridID, T DefaultValue) const {
 
   OVK_DEBUG_ASSERT(MGridID >= 0, "Invalid M grid ID.");
@@ -419,8 +447,8 @@ template <typename T> T assembly_options::GetOption_(const id_map<2,T> &Option, 
 
 }
 
-template <typename T> void assembly_options::SetOption_(id_map<1,T> &Option, int GridID, T Value, T
-  DefaultValue) {
+template <typename T> void assembler::options::SetOption_(id_map<1,T> &Option, int GridID, T Value,
+  T DefaultValue) {
 
   OVK_DEBUG_ASSERT(GridID == ALL_GRIDS || GridIDs_.Contains(GridID), "Invalid grid ID.");
 
@@ -442,7 +470,7 @@ template <typename T> void assembly_options::SetOption_(id_map<1,T> &Option, int
 
 }
 
-template <typename T> void assembly_options::SetOption_(id_map<2,T> &Option, int MGridID, int
+template <typename T> void assembler::options::SetOption_(id_map<2,T> &Option, int MGridID, int
   NGridID, T Value, T DefaultValue) {
 
   OVK_DEBUG_ASSERT(MGridID == ALL_GRIDS || GridIDs_.Contains(MGridID), "Invalid M grid ID.");

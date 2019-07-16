@@ -16,7 +16,9 @@ set(LOCAL_TARGETS)
 #--------------
 
 set(SOURCES
-  AssemblyOptions.cpp
+  Assembler.cpp
+  AssemblerAssembly.cpp
+  AssemblerOptions.cpp
   CollectBase.cpp
   CollectCol.cpp
   CollectMap.cpp
@@ -60,7 +62,7 @@ set(PUBLIC_HEADERS
   ArrayOps.hpp
   ArrayTraits.hpp
   ArrayView.hpp
-  AssemblyOptions.hpp
+  Assembler.hpp
   Box.hpp
   Cart.hpp
   Comm.hpp
@@ -101,7 +103,7 @@ set(PUBLIC_HEADERS
 
 set(INTERNAL_HEADERS
   ArrayTraitsBase.hpp
-  AssemblyOptions.h
+  Assembler.h
   Box.inl
   Cart.inl
   Collect.hpp
