@@ -40,6 +40,7 @@ void ovkResizeConnectivityM(ovk_connectivity_m *ConnectivityM, long long Count, 
 
 void ovkGetConnectivityMExtents(const ovk_connectivity_m *ConnectivityM, int Dimension, const int
   **Begins, const int **Ends);
+bool ovkEditingConnectivityMExtents(const ovk_connectivity_m *ConnectivityM);
 void ovkEditConnectivityMExtents(ovk_connectivity_m *ConnectivityM, int Dimension, int **Begins,
   int **Ends);
 void ovkRestoreConnectivityMExtents(ovk_connectivity_m *ConnectivityM, int Dimension, int **Begins,
@@ -47,12 +48,14 @@ void ovkRestoreConnectivityMExtents(ovk_connectivity_m *ConnectivityM, int Dimen
 
 void ovkGetConnectivityMCoords(const ovk_connectivity_m *ConnectivityM, int Dimension, const
   double **Coords);
+bool ovkEditingConnectivityMCoords(const ovk_connectivity_m *ConnectivityM);
 void ovkEditConnectivityMCoords(ovk_connectivity_m *ConnectivityM, int Dimension, double **Coords);
 void ovkRestoreConnectivityMCoords(ovk_connectivity_m *ConnectivityM, int Dimension, double
   **Coords);
 
 void ovkGetConnectivityMInterpCoefs(const ovk_connectivity_m *ConnectivityM, int Dimension, int
   Point, const double **InterpCoefs);
+bool ovkEditingConnectivityMInterpCoefs(const ovk_connectivity_m *ConnectivityM);
 void ovkEditConnectivityMInterpCoefs(ovk_connectivity_m *ConnectivityM, int Dimension, int Point,
   double **InterpCoefs);
 void ovkRestoreConnectivityMInterpCoefs(ovk_connectivity_m *ConnectivityM, int Dimension, int Point,
@@ -60,6 +63,7 @@ void ovkRestoreConnectivityMInterpCoefs(ovk_connectivity_m *ConnectivityM, int D
 
 void ovkGetConnectivityMDestinations(const ovk_connectivity_m *ConnectivityM, int Dimension, const
   int **Destinations);
+bool ovkEditingConnectivityMDestinations(const ovk_connectivity_m *ConnectivityM);
 void ovkEditConnectivityMDestinations(ovk_connectivity_m *ConnectivityM, int Dimension, int
   **Destinations);
 void ovkRestoreConnectivityMDestinations(ovk_connectivity_m *ConnectivityM, int Dimension, int
@@ -67,6 +71,7 @@ void ovkRestoreConnectivityMDestinations(ovk_connectivity_m *ConnectivityM, int 
 
 void ovkGetConnectivityMDestinationRanks(const ovk_connectivity_m *ConnectivityM, const int
   **DestinationRanks);
+bool ovkEditingConnectivityMDestinationRanks(const ovk_connectivity_m *ConnectivityM);
 void ovkEditConnectivityMDestinationRanks(ovk_connectivity_m *ConnectivityM, int
   **DestinationRanks);
 void ovkRestoreConnectivityMDestinationRanks(ovk_connectivity_m *ConnectivityM, int

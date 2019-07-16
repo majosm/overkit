@@ -38,16 +38,19 @@ void ovkResizeConnectivityN(ovk_connectivity_n *ConnectivityN, long long Count);
 
 void ovkGetConnectivityNPoints(const ovk_connectivity_n *ConnectivityN, int Dimension, const int
   **Points);
+bool ovkEditingConnectivityNPoints(const ovk_connectivity_n *ConnectivityN);
 void ovkEditConnectivityNPoints(ovk_connectivity_n *ConnectivityN, int Dimension, int **Points);
 void ovkRestoreConnectivityNPoints(ovk_connectivity_n *ConnectivityN, int Dimension, int **Points);
 
 void ovkGetConnectivityNSources(const ovk_connectivity_n *ConnectivityN, int iDim, const int
   **Sources);
+bool ovkEditingConnectivityNSources(const ovk_connectivity_n *ConnectivityN);
 void ovkEditConnectivityNSources(ovk_connectivity_n *ConnectivityN, int iDim, int **Sources);
 void ovkRestoreConnectivityNSources(ovk_connectivity_n *ConnectivityN, int iDim, int **Sources);
 
 void ovkGetConnectivityNSourceRanks(const ovk_connectivity_n *ConnectivityN, const int
   **SourceRanks);
+bool ovkEditingConnectivityNSourceRanks(const ovk_connectivity_n *ConnectivityN);
 void ovkEditConnectivityNSourceRanks(ovk_connectivity_n *ConnectivityN, int **SourceRanks);
 void ovkRestoreConnectivityNSourceRanks(ovk_connectivity_n *ConnectivityN, int **SourceRanks);
 
