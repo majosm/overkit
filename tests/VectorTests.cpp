@@ -67,16 +67,16 @@ TEST_F(VectorTests, Meta) {
 
   EXPECT_TRUE((std::is_same<typename vector::value_type, int>::value));
   EXPECT_TRUE((std::is_same<typename vector::index_type, long long>::value));
-  EXPECT_TRUE((std::is_same<typename vector::iterator, int *>::value));
-  EXPECT_TRUE((std::is_same<typename vector::const_iterator, const int *>::value));
+  EXPECT_TRUE((std::is_same<typename vector::iterator::pointer, int *>::value));
+  EXPECT_TRUE((std::is_same<typename vector::const_iterator::pointer, const int *>::value));
   EXPECT_TRUE((std::is_same<typename helper::storage_value_type, int>::value));
 
   using vector_bool = ovk::core::vector<bool>;
   using helper_bool = ovk::core::test_helper<vector_bool>;
 
   EXPECT_TRUE((std::is_same<typename vector_bool::value_type, bool>::value));
-  EXPECT_TRUE((std::is_same<typename vector_bool::iterator, bool *>::value));
-  EXPECT_TRUE((std::is_same<typename vector_bool::const_iterator, const bool *>::value));
+  EXPECT_TRUE((std::is_same<typename vector_bool::iterator::pointer, bool *>::value));
+  EXPECT_TRUE((std::is_same<typename vector_bool::const_iterator::pointer, const bool *>::value));
   EXPECT_TRUE((std::is_same<typename helper_bool::storage_value_type, not_bool>::value));
 
 }
@@ -678,17 +678,64 @@ TEST_F(VectorTests, Insert) {
   using helper_multiargument = ovk::core::test_helper<vector_multiargument>;
   using helper_nondefaultconstructible = ovk::core::test_helper<vector_nondefaultconstructible>;
 
-  // lvalue ref, non-bool
+  // Index, lvalue ref, non-bool
+  {
+    vector_nonbool Vector = {0,1,3,4};
+    int SourceValue = 2;
+    auto &NewValue = Vector.Insert(2, SourceValue);
+    auto &Values = helper_nonbool::GetValues(Vector);
+    EXPECT_THAT(Values, ElementsAreArray({0,1,2,3,4}));
+    EXPECT_EQ(&NewValue, Values.data()+2);
+  }
+
+  // Index, lvalue ref, bool
+  {
+    vector_bool Vector = {false,true,false,true};
+    bool SourceValue = false;
+    auto &NewValue = Vector.Insert(2, SourceValue);
+    auto &Values = helper_bool::GetValues(Vector);
+    EXPECT_THAT(Values, ElementsAreArray({not_bool::FALSE,not_bool::TRUE,not_bool::FALSE,
+      not_bool::FALSE,not_bool::TRUE}));
+    EXPECT_EQ(&NewValue, reinterpret_cast<bool *>(Values.data()+2));
+  }
+
+  // Index, rvalue ref
+  {
+    vector_noncopyable Vector;
+    Vector.Append(2);
+    noncopyable<int> Value(1);
+    auto &NewValue = Vector.Insert(0, std::move(Value));
+    auto &Values = helper_noncopyable::GetValues(Vector);
+    EXPECT_EQ(int(Values.size()), 2);
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 3);
+    EXPECT_EQ(&NewValue, Values.data());
+  }
+
+  // Index, in-place
+  {
+    vector_multiargument Vector = {{3,4}};
+    auto &NewValue = Vector.Insert(0, 1, 2);
+    auto &Values = helper_multiargument::GetValues(Vector);
+    EXPECT_EQ(int(Values.size()), 2);
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.v1 + Value.v2;
+    EXPECT_EQ(Sum, 10);
+    EXPECT_EQ(&NewValue, Values.data());
+  }
+
+  // Iterator, lvalue ref, non-bool
   {
     vector_nonbool Vector = {0,1,3,4};
     int SourceValue = 2;
     auto Iter = Vector.Insert(Vector.Begin()+2, SourceValue);
     auto &Values = helper_nonbool::GetValues(Vector);
     EXPECT_THAT(Values, ElementsAreArray({0,1,2,3,4}));
-    EXPECT_EQ(Iter, Values.data()+2);
+    EXPECT_EQ(Iter, Vector.Begin()+2);
   }
 
-  // lvalue ref, bool
+  // Iterator, lvalue ref, bool
   {
     vector_bool Vector = {false,true,false,true};
     bool SourceValue = false;
@@ -696,10 +743,10 @@ TEST_F(VectorTests, Insert) {
     auto &Values = helper_bool::GetValues(Vector);
     EXPECT_THAT(Values, ElementsAreArray({not_bool::FALSE,not_bool::TRUE,not_bool::FALSE,
       not_bool::FALSE,not_bool::TRUE}));
-    EXPECT_EQ(Iter, reinterpret_cast<bool *>(Values.data()+2));
+    EXPECT_EQ(Iter, Vector.Begin()+2);
   }
 
-  // rvalue ref
+  // Iterator, rvalue ref
   {
     vector_noncopyable Vector;
     Vector.Append(2);
@@ -710,10 +757,10 @@ TEST_F(VectorTests, Insert) {
     int Sum = 0;
     for (auto &Value : Values) Sum += Value.Value();
     EXPECT_EQ(Sum, 3);
-    EXPECT_EQ(Iter, Values.data());
+    EXPECT_EQ(Iter, Vector.Begin());
   }
 
-  // In-place
+  // Iterator, in-place
   {
     vector_multiargument Vector = {{3,4}};
     auto Iter = Vector.Insert(Vector.Begin(), 1, 2);
@@ -722,10 +769,48 @@ TEST_F(VectorTests, Insert) {
     int Sum = 0;
     for (auto &Value : Values) Sum += Value.v1 + Value.v2;
     EXPECT_EQ(Sum, 10);
-    EXPECT_EQ(Iter, Values.data());
+    EXPECT_EQ(Iter, Vector.Begin());
   }
 
-  // Non-default-constructible, lvalue ref
+  // Non-default-constructible, index, lvalue ref
+  {
+    vector_nondefaultconstructible Vector = {{2}};
+    nondefaultconstructible<int> SourceValue(1);
+    auto &NewValue = Vector.Insert(0, SourceValue);
+    auto &Values = helper_nondefaultconstructible::GetValues(Vector);
+    EXPECT_EQ(int(Values.size()), 2);
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 3);
+    EXPECT_EQ(&NewValue, Values.data());
+  }
+
+  // Non-default-constructible, index, rvalue ref
+  {
+    vector_nondefaultconstructible Vector = {{2}};
+    nondefaultconstructible<int> SourceValue(1);
+    auto &NewValue = Vector.Insert(0, std::move(SourceValue));
+    auto &Values = helper_nondefaultconstructible::GetValues(Vector);
+    EXPECT_EQ(int(Values.size()), 2);
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 3);
+    EXPECT_EQ(&NewValue, Values.data());
+  }
+
+  // Non-default-constructible, index, in-place
+  {
+    vector_nondefaultconstructible Vector = {{2}};
+    auto &NewValue = Vector.Insert(0, 1);
+    auto &Values = helper_nondefaultconstructible::GetValues(Vector);
+    EXPECT_EQ(int(Values.size()), 2);
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 3);
+    EXPECT_EQ(&NewValue, Values.data());
+  }
+
+  // Non-default-constructible, iterator, lvalue ref
   {
     vector_nondefaultconstructible Vector = {{2}};
     nondefaultconstructible<int> SourceValue(1);
@@ -735,10 +820,10 @@ TEST_F(VectorTests, Insert) {
     int Sum = 0;
     for (auto &Value : Values) Sum += Value.Value();
     EXPECT_EQ(Sum, 3);
-    EXPECT_EQ(Iter, Values.data());
+    EXPECT_EQ(Iter, Vector.Begin());
   }
 
-  // Non-default-constructible, rvalue ref
+  // Non-default-constructible, iterator, rvalue ref
   {
     vector_nondefaultconstructible Vector = {{2}};
     nondefaultconstructible<int> SourceValue(1);
@@ -748,10 +833,10 @@ TEST_F(VectorTests, Insert) {
     int Sum = 0;
     for (auto &Value : Values) Sum += Value.Value();
     EXPECT_EQ(Sum, 3);
-    EXPECT_EQ(Iter, Values.data());
+    EXPECT_EQ(Iter, Vector.Begin());
   }
 
-  // Non-default-constructible, in-place
+  // Non-default-constructible, iterator, in-place
   {
     vector_nondefaultconstructible Vector = {{2}};
     auto Iter = Vector.Insert(Vector.Begin(), 1);
@@ -760,7 +845,7 @@ TEST_F(VectorTests, Insert) {
     int Sum = 0;
     for (auto &Value : Values) Sum += Value.Value();
     EXPECT_EQ(Sum, 3);
-    EXPECT_EQ(Iter, Values.data());
+    EXPECT_EQ(Iter, Vector.Begin());
   }
 
 }
@@ -778,26 +863,56 @@ TEST_F(VectorTests, Erase) {
   using helper_noncopyable = ovk::core::test_helper<vector_noncopyable>;
   using helper_nondefaultconstructible = ovk::core::test_helper<vector_nondefaultconstructible>;
 
-  // Non-bool
+  // Index, non-bool
+  {
+    vector_nonbool Vector = {0,1,2,3,4};
+    Vector.Erase(2);
+    auto &Values = helper_nonbool::GetValues(Vector);
+    EXPECT_THAT(Values, ElementsAreArray({0,1,3,4}));
+  }
+
+  // Index, bool
+  {
+    vector_bool Vector = {false,true,false,false,true};
+    Vector.Erase(2);
+    auto &Values = helper_bool::GetValues(Vector);
+    EXPECT_THAT(Values, ElementsAreArray({not_bool::FALSE,not_bool::TRUE,not_bool::FALSE,
+      not_bool::TRUE}));
+  }
+
+  // Iterator, non-bool
   {
     vector_nonbool Vector = {0,1,2,3,4};
     auto Iter = Vector.Erase(Vector.Begin()+2);
     auto &Values = helper_nonbool::GetValues(Vector);
     EXPECT_THAT(Values, ElementsAreArray({0,1,3,4}));
-    EXPECT_EQ(Iter, Values.data()+2);
+    EXPECT_EQ(Iter, Vector.Begin()+2);
   }
 
-  // Bool
+  // Iterator, bool
   {
     vector_bool Vector = {false,true,false,false,true};
     auto Iter = Vector.Erase(Vector.Begin()+2);
     auto &Values = helper_bool::GetValues(Vector);
     EXPECT_THAT(Values, ElementsAreArray({not_bool::FALSE,not_bool::TRUE,not_bool::FALSE,
       not_bool::TRUE}));
-    EXPECT_EQ(Iter, reinterpret_cast<bool *>(Values.data()+2));
+    EXPECT_EQ(Iter, Vector.Begin()+2);
   }
 
-  // Non-copyable
+  // Non-copyable, index
+  {
+    vector_noncopyable Vector;
+    Vector.Append(1);
+    Vector.Append(2);
+    Vector.Erase(0);
+    auto &Values = helper_noncopyable::GetValues(Vector);
+    EXPECT_EQ(int(Values.size()), 1);
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 2);
+  }
+
+  // Non-copyable, iterator
   {
     vector_noncopyable Vector;
     Vector.Append(1);
@@ -808,10 +923,21 @@ TEST_F(VectorTests, Erase) {
     int Sum = 0;
     for (auto &Value : Values) Sum += Value.Value();
     EXPECT_EQ(Sum, 2);
-    EXPECT_EQ(Iter, Values.data());
+    EXPECT_EQ(Iter, Vector.Begin());
   }
 
-  // Non-default-constructible
+  // Non-default-constructible, index
+  {
+    vector_nondefaultconstructible Vector = {{1},{2}};
+    Vector.Erase(0);
+    auto &Values = helper_nondefaultconstructible::GetValues(Vector);
+    EXPECT_EQ(int(Values.size()), 1);
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 2);
+  }
+
+  // Non-default-constructible, iterator
   {
     vector_nondefaultconstructible Vector = {{1},{2}};
     auto Iter = Vector.Erase(Vector.Begin());
@@ -820,7 +946,7 @@ TEST_F(VectorTests, Erase) {
     int Sum = 0;
     for (auto &Value : Values) Sum += Value.Value();
     EXPECT_EQ(Sum, 2);
-    EXPECT_EQ(Iter, Values.data());
+    EXPECT_EQ(Iter, Vector.Begin());
   }
 
 }
@@ -1055,8 +1181,8 @@ TEST_F(VectorTests, BeginEnd) {
   {
     const vector_nonbool Vector = {0,1,2,3,4};
     auto &Values = helper_nonbool::GetValues(Vector);
-    EXPECT_EQ(Vector.Begin(), Values.data());
-    EXPECT_EQ(Vector.End(), Values.data()+5);
+    EXPECT_EQ(Vector.Begin().Pointer(), Values.data());
+    EXPECT_EQ(Vector.End().Pointer(), Values.data()+5);
     int Sum = 0;
     for (auto &Value : Vector) Sum += Value;
     EXPECT_EQ(Sum, 10);
@@ -1066,8 +1192,8 @@ TEST_F(VectorTests, BeginEnd) {
   {
     vector_nonbool Vector = {0,1,2,3,4};
     auto &Values = helper_nonbool::GetValues(Vector);
-    EXPECT_EQ(Vector.Begin(), Values.data());
-    EXPECT_EQ(Vector.End(), Values.data()+5);
+    EXPECT_EQ(Vector.Begin().Pointer(), Values.data());
+    EXPECT_EQ(Vector.End().Pointer(), Values.data()+5);
     for (auto &Value : Vector) Value = 1;
     EXPECT_THAT(Values, ElementsAreArray({1,1,1,1,1}));
   }
@@ -1076,8 +1202,8 @@ TEST_F(VectorTests, BeginEnd) {
   {
     const vector_bool Vector = {false,true,false,false,true};
     auto &Values = helper_bool::GetValues(Vector);
-    EXPECT_EQ(Vector.Begin(), reinterpret_cast<const bool *>(Values.data()));
-    EXPECT_EQ(Vector.End(), reinterpret_cast<const bool *>(Values.data()+5));
+    EXPECT_EQ(Vector.Begin().Pointer(), reinterpret_cast<const bool *>(Values.data()));
+    EXPECT_EQ(Vector.End().Pointer(), reinterpret_cast<const bool *>(Values.data()+5));
     int Sum = 0;
     for (auto &Value : Vector) Sum += int(Value);
     EXPECT_EQ(Sum, 2);
@@ -1087,8 +1213,8 @@ TEST_F(VectorTests, BeginEnd) {
   {
     vector_bool Vector = {false,true,false,false,true};
     auto &Values = helper_bool::GetValues(Vector);
-    EXPECT_EQ(Vector.Begin(), reinterpret_cast<bool *>(Values.data()));
-    EXPECT_EQ(Vector.End(), reinterpret_cast<bool *>(Values.data()+5));
+    EXPECT_EQ(Vector.Begin().Pointer(), reinterpret_cast<bool *>(Values.data()));
+    EXPECT_EQ(Vector.End().Pointer(), reinterpret_cast<bool *>(Values.data()+5));
     for (auto &Value : Vector) Value = false;
     EXPECT_THAT(Values, ElementsAreArray({not_bool::FALSE,not_bool::FALSE,not_bool::FALSE,
       not_bool::FALSE,not_bool::FALSE}));

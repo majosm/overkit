@@ -156,6 +156,7 @@ set(INTERNAL_HEADERS
   Partition.hpp
   PartitionBase.hpp
   PartitionHash.hpp
+  PointerIterator.hpp
   Profiler.hpp
   Profiler.inl
   Range.inl

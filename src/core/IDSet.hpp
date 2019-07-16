@@ -9,7 +9,9 @@
 #include <ovk/core/Elem.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/IteratorTraits.hpp>
+#include <ovk/core/PointerIterator.hpp>
 #include <ovk/core/Requires.hpp>
+#include <ovk/core/TypeSequence.hpp>
 
 #include <algorithm>
 #include <initializer_list>
@@ -28,8 +30,9 @@ template <int Rank, typename... IDTypes> class id_set_base<Rank, core::type_sequ
 public:
 
   using value_type = elem<int,Rank>;
+  using index_type = long long;
   // Values aren't mutable, so iterator is const
-  using iterator = const value_type *;
+  using iterator = core::pointer_iterator<id_set_base, const value_type *>;
   using const_iterator = iterator;
 
   void Insert(IDTypes... IDs) {
@@ -60,19 +63,19 @@ public:
     if (ValuesIter != Values_.End() && Less(Value, *ValuesIter)) {
       ValuesIter = Values_.End();
     }
-    return Values_.Data() + (ValuesIter - Values_.Begin());
+    return iterator(Values_.Data() + (ValuesIter - Values_.Begin()));
   }
 
   iterator LowerBound(IDTypes... IDs) const {
     value_type Value(IDs...);
     auto ValuesIter = LowerBound_(Value);
-    return Values_.Data() + (ValuesIter - Values_.Begin());
+    return iterator(Values_.Data() + (ValuesIter - Values_.Begin()));
   }
 
   iterator UpperBound(IDTypes... IDs) const {
     value_type Value(IDs...);
     auto ValuesIter = UpperBound_(Value);
-    return Values_.Data() + (ValuesIter - Values_.Begin());
+    return iterator(Values_.Data() + (ValuesIter - Values_.Begin()));
   }
 
   static constexpr bool Less(const value_type &Left, const value_type &Right) {
@@ -143,6 +146,7 @@ public:
 
   static constexpr int Rank = Rank_;
   using value_type = typename parent_type::value_type;
+  using index_type = typename parent_type::index_type;
   using iterator = typename parent_type::iterator;
   using const_iterator = typename parent_type::const_iterator;
 
@@ -200,7 +204,7 @@ public:
     return *this;
   }
 
-  void Reserve(long long Count) {
+  void Reserve(index_type Count) {
     Values_.Reserve(Count);
   }
 
@@ -212,7 +216,7 @@ public:
   }
 
   void Insert(iterator LowerBoundIter, const value_type &Value) {
-    auto ValuesIter = Values_.Begin() + (LowerBoundIter - Values_.Data());
+    auto ValuesIter = Values_.Begin() + (LowerBoundIter - Begin());
     if (ValuesIter == Values_.End() || Less(Value, *ValuesIter)) {
       ValuesIter = Values_.Insert(ValuesIter, Value);
     }
@@ -226,9 +230,9 @@ public:
   }
 
   iterator Erase(iterator Pos) {
-    auto ValuesIter = Values_.Begin() + (Pos - Values_.Data());
-    ValuesIter = Values_.Erase(ValuesIter);
-    return Values_.Data(ValuesIter - Values_.Begin());
+    index_type iValue = index_type(Pos - Begin());
+    Values_.Erase(iValue);
+    return iterator(Values_.Data() + iValue);
   }
 
   void Clear() {
@@ -245,17 +249,17 @@ public:
     if (ValuesIter != Values_.End() && Less(Value, *ValuesIter)) {
       ValuesIter = Values_.End();
     }
-    return Values_.Data() + (ValuesIter - Values_.Begin());
+    return iterator(Values_.Data() + (ValuesIter - Values_.Begin()));
   }
 
   iterator LowerBound(const value_type &Value) const {
     auto ValuesIter = LowerBound_(Value);
-    return Values_.Data() + (ValuesIter - Values_.Begin());
+    return iterator(Values_.Data() + (ValuesIter - Values_.Begin()));
   }
 
   iterator UpperBound(const value_type &Value) const {
     auto ValuesIter = UpperBound_(Value);
-    return Values_.Data() + (ValuesIter - Values_.Begin());
+    return iterator(Values_.Data() + (ValuesIter - Values_.Begin()));
   }
 
   // Not sure if this is actually useful for Rank > 1
@@ -275,19 +279,19 @@ public:
     return Result;
   }
 
-  long long Count() const { return Values_.Count(); }
+  index_type Count() const { return Values_.Count(); }
 
   bool Empty() const { return Values_.Empty(); }
 
-  long long Capacity() const { return Values_.Capacity(); }
+  index_type Capacity() const { return Values_.Capacity(); }
 
-  const value_type &operator[](long long Index) const { return Values_(Index); }
+  const value_type &operator[](index_type Index) const { return Values_(Index); }
 
   const value_type *Data() const { return Values_.Data(); }
 
-  iterator Begin() const { return Values_.Data(); }
+  iterator Begin() const { return iterator(Values_.Data()); }
 
-  iterator End() const { return Values_.Data() + Values_.Count(); }
+  iterator End() const { return iterator(Values_.Data() + Values_.Count()); }
 
 private:
 

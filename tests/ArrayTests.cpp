@@ -79,8 +79,8 @@ TEST_F(ArrayTests, Meta) {
     3>>::value));
   EXPECT_TRUE((std::is_same<typename array::view_type, ovk::array_view<int,3>>::value));
   EXPECT_TRUE((std::is_same<typename array::const_view_type, ovk::array_view<const int,3>>::value));
-  EXPECT_TRUE((std::is_same<typename array::iterator, int *>::value));
-  EXPECT_TRUE((std::is_same<typename array::const_iterator, const int *>::value));
+  EXPECT_TRUE((std::is_same<typename array::iterator::pointer, int *>::value));
+  EXPECT_TRUE((std::is_same<typename array::const_iterator::pointer, const int *>::value));
 
   using array_col = ovk::array<int,3,ovk::array_layout::COLUMN_MAJOR>;
 
@@ -2353,7 +2353,50 @@ TEST_F(ArrayTests, Insert) {
   using helper_multiargument = ovk::core::test_helper<array_multiargument>;
   using helper_nondefaultconstructible = ovk::core::test_helper<array_nondefaultconstructible>;
 
-  // lvalue ref
+  // Index, lvalue ref
+  {
+    array Array({1,5}, {0,1,3,4});
+    int SourceValue = 2;
+    auto &NewValue = Array.Insert(2, SourceValue);
+    auto &View = helper::GetView(Array);
+    auto &Values = helper::GetValues(Array);
+    EXPECT_THAT(View.Extents().Begin(), ElementsAre(1));
+    EXPECT_THAT(View.Extents().End(), ElementsAre(6));
+    EXPECT_THAT(Values, ElementsAreArray({0,1,2,3,4}));
+    EXPECT_EQ(&NewValue, Values.Data()+2);
+  }
+
+  // Index, rvalue ref
+  {
+    array_noncopyable Array;
+    Array.Append(2);
+    noncopyable<int> Value(1);
+    auto &NewValue = Array.Insert(0, std::move(Value));
+    auto &View = helper_noncopyable::GetView(Array);
+    auto &Values = helper_noncopyable::GetValues(Array);
+    EXPECT_THAT(View.Extents().Begin(), ElementsAre(0));
+    EXPECT_THAT(View.Extents().End(), ElementsAre(2));
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 3);
+    EXPECT_EQ(&NewValue, Values.Data());
+  }
+
+  // Index, in-place
+  {
+    array_multiargument Array({1}, {{3, 4}});
+    auto &NewValue = Array.Insert(0, 1, 2);
+    auto &View = helper_multiargument::GetView(Array);
+    auto &Values = helper_multiargument::GetValues(Array);
+    EXPECT_THAT(View.Extents().Begin(), ElementsAre(0));
+    EXPECT_THAT(View.Extents().End(), ElementsAre(2));
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.v1 + Value.v2;
+    EXPECT_EQ(Sum, 10);
+    EXPECT_EQ(&NewValue, Values.Data());
+  }
+
+  // Iterator, lvalue ref
   {
     array Array({1,5}, {0,1,3,4});
     int SourceValue = 2;
@@ -2363,10 +2406,10 @@ TEST_F(ArrayTests, Insert) {
     EXPECT_THAT(View.Extents().Begin(), ElementsAre(1));
     EXPECT_THAT(View.Extents().End(), ElementsAre(6));
     EXPECT_THAT(Values, ElementsAreArray({0,1,2,3,4}));
-    EXPECT_EQ(Iter, Values.Data()+2);
+    EXPECT_EQ(Iter, Array.Begin()+2);
   }
 
-  // rvalue ref
+  // Iterator, rvalue ref
   {
     array_noncopyable Array;
     Array.Append(2);
@@ -2379,10 +2422,10 @@ TEST_F(ArrayTests, Insert) {
     int Sum = 0;
     for (auto &Value : Values) Sum += Value.Value();
     EXPECT_EQ(Sum, 3);
-    EXPECT_EQ(Iter, Values.Data());
+    EXPECT_EQ(Iter, Array.Begin());
   }
 
-  // In-place
+  // Iterator, in-place
   {
     array_multiargument Array({1}, {{3, 4}});
     auto Iter = Array.Insert(Array.Begin(), 1, 2);
@@ -2393,10 +2436,54 @@ TEST_F(ArrayTests, Insert) {
     int Sum = 0;
     for (auto &Value : Values) Sum += Value.v1 + Value.v2;
     EXPECT_EQ(Sum, 10);
-    EXPECT_EQ(Iter, Values.Data());
+    EXPECT_EQ(Iter, Array.Begin());
   }
 
-  // Non-default-constructible, lvalue ref
+  // Non-default-constructible, index, lvalue ref
+  {
+    array_nondefaultconstructible Array({1}, {{2}});
+    nondefaultconstructible<int> SourceValue(1);
+    auto &NewValue = Array.Insert(0, SourceValue);
+    auto &View = helper_nondefaultconstructible::GetView(Array);
+    auto &Values = helper_nondefaultconstructible::GetValues(Array);
+    EXPECT_THAT(View.Extents().Begin(), ElementsAre(0));
+    EXPECT_THAT(View.Extents().End(), ElementsAre(2));
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 3);
+    EXPECT_EQ(&NewValue, Values.Data());
+  }
+
+  // Non-default-constructible, index, rvalue ref
+  {
+    array_nondefaultconstructible Array({1}, {{2}});
+    nondefaultconstructible<int> SourceValue(1);
+    auto &NewValue = Array.Insert(0, std::move(SourceValue));
+    auto &View = helper_nondefaultconstructible::GetView(Array);
+    auto &Values = helper_nondefaultconstructible::GetValues(Array);
+    EXPECT_THAT(View.Extents().Begin(), ElementsAre(0));
+    EXPECT_THAT(View.Extents().End(), ElementsAre(2));
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 3);
+    EXPECT_EQ(&NewValue, Values.Data());
+  }
+
+  // Non-default-constructible, index, in-place
+  {
+    array_nondefaultconstructible Array({1}, {{2}});
+    auto &NewValue = Array.Insert(0, 1);
+    auto &View = helper_nondefaultconstructible::GetView(Array);
+    auto &Values = helper_nondefaultconstructible::GetValues(Array);
+    EXPECT_THAT(View.Extents().Begin(), ElementsAre(0));
+    EXPECT_THAT(View.Extents().End(), ElementsAre(2));
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 3);
+    EXPECT_EQ(&NewValue, Values.Data());
+  }
+
+  // Non-default-constructible, iterator, lvalue ref
   {
     array_nondefaultconstructible Array({1}, {{2}});
     nondefaultconstructible<int> SourceValue(1);
@@ -2408,10 +2495,10 @@ TEST_F(ArrayTests, Insert) {
     int Sum = 0;
     for (auto &Value : Values) Sum += Value.Value();
     EXPECT_EQ(Sum, 3);
-    EXPECT_EQ(Iter, Values.Data());
+    EXPECT_EQ(Iter, Array.Begin());
   }
 
-  // Non-default-constructible, rvalue ref
+  // Non-default-constructible, iterator, rvalue ref
   {
     array_nondefaultconstructible Array({1}, {{2}});
     nondefaultconstructible<int> SourceValue(1);
@@ -2423,10 +2510,10 @@ TEST_F(ArrayTests, Insert) {
     int Sum = 0;
     for (auto &Value : Values) Sum += Value.Value();
     EXPECT_EQ(Sum, 3);
-    EXPECT_EQ(Iter, Values.Data());
+    EXPECT_EQ(Iter, Array.Begin());
   }
 
-  // Non-default-constructible, in-place
+  // Non-default-constructible, iterator, in-place
   {
     array_nondefaultconstructible Array({1}, {{2}});
     auto Iter = Array.Insert(Array.Begin(), 1);
@@ -2437,7 +2524,7 @@ TEST_F(ArrayTests, Insert) {
     int Sum = 0;
     for (auto &Value : Values) Sum += Value.Value();
     EXPECT_EQ(Sum, 3);
-    EXPECT_EQ(Iter, Values.Data());
+    EXPECT_EQ(Iter, Array.Begin());
   }
 
 }
@@ -2453,7 +2540,18 @@ TEST_F(ArrayTests, Erase) {
   using helper_noncopyable = ovk::core::test_helper<array_noncopyable>;
   using helper_nondefaultconstructible = ovk::core::test_helper<array_nondefaultconstructible>;
 
-  // Regular type
+  // Regular type, index
+  {
+    array Array({1,6}, {0,1,2,3,4});
+    Array.Erase(2);
+    auto &View = helper::GetView(Array);
+    auto &Values = helper::GetValues(Array);
+    EXPECT_THAT(View.Extents().Begin(), ElementsAre(1));
+    EXPECT_THAT(View.Extents().End(), ElementsAre(5));
+    EXPECT_THAT(Values, ElementsAreArray({0,1,3,4}));
+  }
+
+  // Regular type, iterator
   {
     array Array({1,6}, {0,1,2,3,4});
     auto Iter = Array.Erase(Array.Begin()+2);
@@ -2462,10 +2560,25 @@ TEST_F(ArrayTests, Erase) {
     EXPECT_THAT(View.Extents().Begin(), ElementsAre(1));
     EXPECT_THAT(View.Extents().End(), ElementsAre(5));
     EXPECT_THAT(Values, ElementsAreArray({0,1,3,4}));
-    EXPECT_EQ(Iter, Values.Data()+2);
+    EXPECT_EQ(Iter, Array.Begin()+2);
   }
 
-  // Non-copyable
+  // Non-copyable, index
+  {
+    array_noncopyable Array;
+    Array.Append(1);
+    Array.Append(2);
+    Array.Erase(0);
+    auto &View = helper_noncopyable::GetView(Array);
+    auto &Values = helper_noncopyable::GetValues(Array);
+    EXPECT_THAT(View.Extents().Begin(), ElementsAre(0));
+    EXPECT_THAT(View.Extents().End(), ElementsAre(1));
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 2);
+  }
+
+  // Non-copyable, iterator
   {
     array_noncopyable Array;
     Array.Append(1);
@@ -2478,10 +2591,23 @@ TEST_F(ArrayTests, Erase) {
     int Sum = 0;
     for (auto &Value : Values) Sum += Value.Value();
     EXPECT_EQ(Sum, 2);
-    EXPECT_EQ(Iter, Values.Data());
+    EXPECT_EQ(Iter, Array.Begin());
   }
 
-  // Non-default-constructible
+  // Non-default-constructible, index
+  {
+    array_nondefaultconstructible Array({2}, {{1},{2}});
+    Array.Erase(0);
+    auto &View = helper_nondefaultconstructible::GetView(Array);
+    auto &Values = helper_nondefaultconstructible::GetValues(Array);
+    EXPECT_THAT(View.Extents().Begin(), ElementsAre(0));
+    EXPECT_THAT(View.Extents().End(), ElementsAre(1));
+    int Sum = 0;
+    for (auto &Value : Values) Sum += Value.Value();
+    EXPECT_EQ(Sum, 2);
+  }
+
+  // Non-default-constructible, iterator
   {
     array_nondefaultconstructible Array({2}, {{1},{2}});
     auto Iter = Array.Erase(Array.Begin());
@@ -2492,7 +2618,7 @@ TEST_F(ArrayTests, Erase) {
     int Sum = 0;
     for (auto &Value : Values) Sum += Value.Value();
     EXPECT_EQ(Sum, 2);
-    EXPECT_EQ(Iter, Values.Data());
+    EXPECT_EQ(Iter, Array.Begin());
   }
 
 }
@@ -2796,8 +2922,8 @@ TEST_F(ArrayTests, BeginEnd) {
   {
     const array Array({{1,2,3}, {2,4,6}}, {0,1,2,3,4,5});
     auto &Values = helper::GetValues(Array);
-    EXPECT_EQ(Array.Begin(), &Values[0]);
-    EXPECT_EQ(Array.End(), &Values[0] + 6);
+    EXPECT_EQ(Array.Begin().Pointer(), &Values[0]);
+    EXPECT_EQ(Array.End().Pointer(), &Values[0] + 6);
     int Sum = 0;
     for (auto &Value : Array) Sum += Value;
     EXPECT_EQ(Sum, 15);
@@ -2807,8 +2933,8 @@ TEST_F(ArrayTests, BeginEnd) {
   {
     array Array({{1,2,3}, {2,4,6}}, {0,1,2,3,4,5});
     auto &Values = helper::GetValues(Array);
-    EXPECT_EQ(Array.Begin(), &Values[0]);
-    EXPECT_EQ(Array.End(), &Values[0] + 6);
+    EXPECT_EQ(Array.Begin().Pointer(), &Values[0]);
+    EXPECT_EQ(Array.End().Pointer(), &Values[0] + 6);
     for (auto &Value : Array) Value = 1;
     int Sum = 0;
     for (int i = 0; i < 6; ++i) Sum += Values[i];

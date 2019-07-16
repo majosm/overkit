@@ -59,7 +59,7 @@ TEST_F(ArrayViewTests, Meta) {
   EXPECT_TRUE((std::is_same<typename array_view::interval_type, ovk::interval<long long,3>>::value));
   EXPECT_TRUE((std::is_same<typename array_view::indexer_type, ovk::indexer<long long, long long,
     3>>::value));
-  EXPECT_TRUE((std::is_same<typename array_view::iterator, int *>::value));
+  EXPECT_TRUE((std::is_same<typename array_view::iterator::pointer, int *>::value));
 
   using array_view_col = ovk::array_view<int,3,ovk::array_layout::COLUMN_MAJOR>;
 
@@ -70,7 +70,7 @@ TEST_F(ArrayViewTests, Meta) {
   using array_view_const = ovk::array_view<const int,3>;
 
   EXPECT_TRUE((std::is_same<typename array_view_const::value_type, const int>::value));
-  EXPECT_TRUE((std::is_same<typename array_view_const::iterator, const int *>::value));
+  EXPECT_TRUE((std::is_same<typename array_view_const::iterator::pointer, const int *>::value));
 
 }
 
@@ -1217,8 +1217,8 @@ TEST_F(ArrayViewTests, BeginEnd) {
   {
     multidim_array Array({{1,2,3}, {4,5,6}}, 1);
     array_view_const View(Array);
-    EXPECT_EQ(View.Begin(), &Array[0]);
-    EXPECT_EQ(View.End(), &Array[0] + 27);
+    EXPECT_EQ(View.Begin().Pointer(), &Array[0]);
+    EXPECT_EQ(View.End().Pointer(), &Array[0] + 27);
     int Sum = 0;
     for (auto &Value : View) Sum += Value;
     EXPECT_EQ(Sum, 27);
@@ -1228,8 +1228,8 @@ TEST_F(ArrayViewTests, BeginEnd) {
   {
     multidim_array Array({{1,2,3}, {4,5,6}}, 0);
     array_view View(Array);
-    EXPECT_EQ(View.Begin(), &Array[0]);
-    EXPECT_EQ(View.End(), &Array[0] + 27);
+    EXPECT_EQ(View.Begin().Pointer(), &Array[0]);
+    EXPECT_EQ(View.End().Pointer(), &Array[0] + 27);
     for (auto &Value : View) Value = 1;
     int Sum = 0;
     for (int i = 0; i < 27; ++i) Sum += Array[i];

@@ -405,8 +405,8 @@ TEST_F(IDMapTests, Meta) {
   EXPECT_TRUE((std::is_same<typename id_map::key_type, ovk::elem<int,2>>::value));
   EXPECT_TRUE((std::is_same<typename id_map::value_type, int>::value));
   EXPECT_TRUE(bool(id_map::Contiguous));
-  EXPECT_TRUE((std::is_same<typename id_map::iterator, typename id_map::entry *>::value));
-  EXPECT_TRUE((std::is_same<typename id_map::const_iterator, const typename id_map::entry *
+  EXPECT_TRUE((std::is_same<typename id_map::iterator::pointer, typename id_map::entry *>::value));
+  EXPECT_TRUE((std::is_same<typename id_map::const_iterator::pointer, const typename id_map::entry *
     >::value));
 
 }
@@ -1986,8 +1986,8 @@ TEST_F(IDMapTests, BeginEnd) {
 
   id_map IDMap = {{{1,2}, 1}, {{1,3}, 2}};
   auto &Entries = helper::GetEntries(IDMap);
-  EXPECT_EQ(IDMap.Begin(), Entries.Data());
-  EXPECT_EQ(IDMap.End(), Entries.Data()+2);
+  EXPECT_EQ(IDMap.Begin().Pointer(), Entries.Data());
+  EXPECT_EQ(IDMap.End().Pointer(), Entries.Data()+2);
 
   int Sum = 0;
   for (auto &Entry : IDMap) Sum += Entry.Key(0)+Entry.Key(1)+Entry.Value();

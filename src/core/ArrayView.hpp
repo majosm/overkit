@@ -11,6 +11,7 @@
 #include <ovk/core/IntegerSequence.hpp>
 #include <ovk/core/Interval.hpp>
 #include <ovk/core/IteratorTraits.hpp>
+#include <ovk/core/PointerIterator.hpp>
 #include <ovk/core/Requires.hpp>
 #include <ovk/core/TypeSequence.hpp>
 #include <ovk/core/TypeTraits.hpp>
@@ -232,9 +233,9 @@ public:
   using tuple_type = elem<tuple_element_type,Rank>;
   using interval_type = interval<tuple_element_type,Rank>;
   using indexer_type = indexer<index_type, tuple_element_type, Rank, Layout>;
-  using iterator = value_type *;
+  using iterator = core::pointer_iterator<array_view, value_type *>;
   // Has pointer semantics, so iterator and const_iterator are the same
-  using const_iterator = value_type *;
+  using const_iterator = iterator;
 
   using parent_type::operator();
   using parent_type::Data;
@@ -339,8 +340,8 @@ public:
     return Ptr_+Indexer_.ToIndex(Array);
   }
 
-  constexpr OVK_FORCE_INLINE iterator Begin() const { return Ptr_; }
-  constexpr OVK_FORCE_INLINE iterator End() const { return Ptr_ + NumValues_; }
+  constexpr OVK_FORCE_INLINE iterator Begin() const { return iterator(Ptr_); }
+  constexpr OVK_FORCE_INLINE iterator End() const { return iterator(Ptr_ + NumValues_); }
 
   // Google Test doesn't use free begin/end functions and instead expects container to have
   // lowercase begin/end methods

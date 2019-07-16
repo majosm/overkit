@@ -14,6 +14,7 @@
 #include <ovk/core/Indexer.hpp>
 #include <ovk/core/Interval.hpp>
 #include <ovk/core/IteratorTraits.hpp>
+#include <ovk/core/PointerIterator.hpp>
 #include <ovk/core/TypeSequence.hpp>
 #include <ovk/core/Vector.hpp>
 
@@ -52,8 +53,8 @@ public:
   using tuple_type = elem<tuple_element_type,Rank>;
   using interval_type = interval<index_type,Rank>;
   using indexer_type = indexer<index_type, tuple_element_type, Rank, Layout>;
-  using iterator = value_type *;
-  using const_iterator = const value_type *;
+  using iterator = core::pointer_iterator<array_base_1, value_type *>;
+  using const_iterator = core::pointer_iterator<array_base_1, const value_type *>;
 
   array_base_1():
     View_(Values_.Data(), MakeEmptyInterval<index_type,Rank>())
@@ -74,8 +75,8 @@ public:
     Values_(ValuesList),
     View_(Values_.Data(), Extents)
   {
-    OVK_DEBUG_ASSERT_C((long long)(Values_.Count()) == View_.Count(), "Incorrect number of values "
-      "in initializer list");
+    OVK_DEBUG_ASSERT_C(Values_.Count() == View_.Count(), "Incorrect number of values in "
+      "initializer list");
   }
 
   template <typename IterType, OVK_FUNCTION_REQUIRES(core::IsInputIterator<IterType>())>
@@ -130,7 +131,7 @@ public:
   array_base_1 &Assign(const interval_type &Extents, std::initializer_list<value_type> ValuesList) {
     Values_.Assign(ValuesList);
     View_ = view_type(Values_.Data(), Extents);
-    OVK_DEBUG_ASSERT_C((long long)(Values_.Count()) == View_.Count(), "Incorrect number of values in "
+    OVK_DEBUG_ASSERT_C(Values_.Count() == View_.Count(), "Incorrect number of values in "
       "initializer list");
     return *this;
   }
@@ -293,34 +294,59 @@ public:
     return Values_.Back();
   }
 
-  iterator Insert(const_iterator Pos, const value_type &Value) {
-    auto ValuesPos = Values_.Begin() + (Pos - View_.Begin());
-    auto ValuesIter = Values_.Insert(ValuesPos, Value);
+  value_type &Insert(index_type iValue, const value_type &Value) {
+    value_type &NewValue = Values_.Insert(iValue, Value);
     View_ = view_type(Values_.Data(), {View_.Extents().Begin(0), View_.Extents().End(0)+1});
-    return View_.Begin() + (ValuesIter - Values_.Begin());
+    return NewValue;
+  }
+
+  value_type &Insert(index_type iValue, value_type &&Value) {
+    value_type &NewValue = Values_.Insert(iValue, std::move(Value));
+    View_ = view_type(Values_.Data(), {View_.Extents().Begin(0), View_.Extents().End(0)+1});
+    return NewValue;
+  }
+
+  template <typename... Args, OVK_FUNCTION_REQUIRES(std::is_constructible<value_type, Args &&...
+    >::value && !core::IsCopyOrMoveArgument<value_type, Args &&...>())> value_type &Insert(
+    index_type iValue, Args &&... Arguments) {
+    value_type &NewValue = Values_.Insert(iValue, std::forward<Args>(Arguments)...);
+    View_ = view_type(Values_.Data(), {View_.Extents().Begin(0), View_.Extents().End(0)+1});
+    return NewValue;
+  }
+
+  iterator Insert(const_iterator Pos, const value_type &Value) {
+    index_type iValue = index_type(Pos.Pointer() - View_.Data());
+    Values_.Insert(iValue, Value);
+    View_ = view_type(Values_.Data(), {View_.Extents().Begin(0), View_.Extents().End(0)+1});
+    return iterator(View_.Data() + iValue);
   }
 
   iterator Insert(const_iterator Pos, value_type &&Value) {
-    auto ValuesPos = Values_.Begin() + (Pos - View_.Begin());
-    auto ValuesIter = Values_.Insert(ValuesPos, std::move(Value));
+    index_type iValue = index_type(Pos.Pointer() - View_.Data());
+    Values_.Insert(iValue, std::move(Value));
     View_ = view_type(Values_.Data(), {View_.Extents().Begin(0), View_.Extents().End(0)+1});
-    return View_.Begin() + (ValuesIter - Values_.Begin());
+    return iterator(View_.Data() + iValue);
   }
 
   template <typename... Args, OVK_FUNCTION_REQUIRES(std::is_constructible<value_type, Args &&...
     >::value && !core::IsCopyOrMoveArgument<value_type, Args &&...>())> iterator Insert(
     const_iterator Pos, Args &&... Arguments) {
-    auto ValuesPos = Values_.Begin() + (Pos - View_.Begin());
-    auto ValuesIter = Values_.Insert(ValuesPos, std::forward<Args>(Arguments)...);
+    index_type iValue = index_type(Pos.Pointer() - View_.Data());
+    Values_.Insert(iValue, std::forward<Args>(Arguments)...);
     View_ = view_type(Values_.Data(), {View_.Extents().Begin(0), View_.Extents().End(0)+1});
-    return View_.Begin() + (ValuesIter - Values_.Begin());
+    return iterator(View_.Data() + iValue);
+  }
+
+  void Erase(index_type iValue) {
+    Values_.Erase(iValue);
+    View_ = view_type(Values_.Data(), {View_.Extents().Begin(0), View_.Extents().End(0)-1});
   }
 
   iterator Erase(const_iterator Pos) {
-    auto ValuesPos = Values_.Begin() + (Pos - View_.Begin());
-    auto ValuesIter = Values_.Erase(ValuesPos);
+    index_type iValue = index_type(Pos.Pointer() - View_.Data());
+    Values_.Erase(iValue);
     View_ = view_type(Values_.Data(), {View_.Extents().Begin(0), View_.Extents().End(0)-1});
-    return View_.Begin() + (ValuesIter - Values_.Begin());
+    return iterator(View_.Data() + iValue);
   }
 
 };
@@ -401,8 +427,8 @@ public:
   using indexer_type = indexer<index_type, tuple_element_type, Rank, Layout>;
   using view_type = array_view<value_type, Rank, Layout>;
   using const_view_type = array_view<const value_type, Rank, Layout>;
-  using iterator = value_type *;
-  using const_iterator = const value_type *;
+  using iterator = typename parent_type::iterator;
+  using const_iterator = typename parent_type::const_iterator;
 
   using parent_type::operator();
   using parent_type::Data;
@@ -701,10 +727,10 @@ public:
     return View_.Data(Array);
   }
 
-  const_iterator Begin() const { return View_.Begin(); }
-  iterator Begin() { return View_.Begin(); }
-  const_iterator End() const { return View_.End(); }
-  iterator End() { return View_.End(); }
+  const_iterator Begin() const { return const_iterator(View_.Data()); }
+  iterator Begin() { return iterator(View_.Data()); }
+  const_iterator End() const { return const_iterator(View_.Data() + View_.Count()); }
+  iterator End() { return iterator(View_.Data() + View_.Count()); }
 
   // Google Test doesn't use free begin/end functions and instead expects container to have
   // lowercase begin/end methods

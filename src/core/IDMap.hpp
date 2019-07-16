@@ -9,6 +9,8 @@
 #include <ovk/core/Elem.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/IDSet.hpp>
+#include <ovk/core/IteratorTraits.hpp>
+#include <ovk/core/PointerIterator.hpp>
 #include <ovk/core/Requires.hpp>
 #include <ovk/core/TypeSequence.hpp>
 
@@ -148,10 +150,11 @@ public:
   using key_type = elem<int,Rank>;
   using value_type = T;
   static constexpr bool Contiguous = Contiguous_;
+  using index_type = long long;
   using id_set_type = id_set<Rank>;
   using entry = id_map_entry<Rank,T,Contiguous>;
-  using iterator = entry *;
-  using const_iterator = const entry *;
+  using iterator = core::pointer_iterator<id_map_base, entry *>;
+  using const_iterator = core::pointer_iterator<id_map_base, const entry *>;
 
   const value_type &operator()(IDTypes... IDs) const {
     auto KeysIter = Keys_.LowerBound(IDs...);
@@ -192,29 +195,29 @@ public:
 
   const_iterator Find(IDTypes... IDs) const {
     auto KeysIter = Keys_.Find(IDs...);
-    return Entries_.Data() + (KeysIter - Keys_.Begin());
+    return const_iterator(Entries_.Data() + (KeysIter - Keys_.Begin()));
   }
   iterator Find(IDTypes... IDs) {
     auto KeysIter = Keys_.Find(IDs...);
-    return Entries_.Data() + (KeysIter - Keys_.Begin());
+    return iterator(Entries_.Data() + (KeysIter - Keys_.Begin()));
   }
 
   const_iterator LowerBound(IDTypes... IDs) const {
     auto KeysIter = Keys_.LowerBound(IDs...);
-    return Entries_.Data() + (KeysIter - Keys_.Begin());
+    return const_iterator(Entries_.Data() + (KeysIter - Keys_.Begin()));
   }
   iterator LowerBound(IDTypes... IDs) {
     auto KeysIter = Keys_.LowerBound(IDs...);
-    return Entries_.Data() + (KeysIter - Keys_.Begin());
+    return iterator(Entries_.Data() + (KeysIter - Keys_.Begin()));
   }
 
   const_iterator UpperBound(IDTypes... IDs) const {
     auto KeysIter = Keys_.UpperBound(IDs...);
-    return Entries_.Data() + (KeysIter - Keys_.Begin());
+    return const_iterator(Entries_.Data() + (KeysIter - Keys_.Begin()));
   }
   iterator UpperBound(IDTypes... IDs) {
     auto KeysIter = Keys_.UpperBound(IDs...);
-    return Entries_.Data() + (KeysIter - Keys_.Begin());
+    return iterator(Entries_.Data() + (KeysIter - Keys_.Begin()));
   }
 
   value_type &Get(IDTypes... IDs) {
@@ -255,6 +258,7 @@ public:
   using key_type = typename parent_type::key_type;
   using value_type = typename parent_type::value_type;
   static constexpr bool Contiguous = Contiguous_;
+  using index_type = typename parent_type::index_type;
   using id_set_type = typename parent_type::id_set_type;
   using entry = typename parent_type::entry;
   using iterator = typename parent_type::iterator;
@@ -282,7 +286,7 @@ public:
   // Don't care about input iterators enough to implement a second overload
   template <typename IterType, OVK_FUNCTION_REQUIRES(core::IsForwardIterator<IterType>())>
     id_map(IterType Begin, IterType End) {
-    long long NumEntries = (long long)(std::distance(Begin, End));
+    index_type NumEntries = index_type(std::distance(Begin, End));
     Keys_.Reserve(NumEntries);
     Entries_.Reserve(NumEntries);
     IterType Iter = Begin;
@@ -310,7 +314,7 @@ public:
   // Don't care about input iterators enough to implement a second overload
   template <typename IterType, OVK_FUNCTION_REQUIRES(core::IsForwardIterator<IterType>())>
     id_map &Assign(IterType Begin, IterType End) {
-    long long NumEntries = (long long)(std::distance(Begin, End));
+    index_type NumEntries = index_type(std::distance(Begin, End));
     Keys_.Clear();
     Entries_.Clear();
     Keys_.Reserve(NumEntries);
@@ -386,8 +390,9 @@ public:
   }
 
   value_type &Insert(const_iterator LowerBoundIter, const key_type &Key, const value_type &Value) {
-    auto KeysIter = Keys_.Begin() + (LowerBoundIter - Entries_.Data());
-    auto EntriesIter = Entries_.Begin() + (LowerBoundIter - Entries_.Data());
+    index_type iEntry = index_type(LowerBoundIter - Begin());
+    auto KeysIter = Keys_.Begin() + iEntry;
+    auto EntriesIter = Entries_.Begin() + iEntry;
     if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
       Keys_.Insert(KeysIter, Key);
       EntriesIter = Entries_.Insert(EntriesIter, Key, Value);
@@ -398,8 +403,9 @@ public:
   }
 
   value_type &Insert(const_iterator LowerBoundIter, const key_type &Key, value_type &&Value) {
-    auto KeysIter = Keys_.Begin() + (LowerBoundIter - Entries_.Data());
-    auto EntriesIter = Entries_.Begin() + (LowerBoundIter - Entries_.Data());
+    index_type iEntry = index_type(LowerBoundIter - Begin());
+    auto KeysIter = Keys_.Begin() + iEntry;
+    auto EntriesIter = Entries_.Begin() + iEntry;
     if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
       Keys_.Insert(KeysIter, Key);
       EntriesIter = Entries_.Insert(EntriesIter, Key, std::move(Value));
@@ -412,8 +418,9 @@ public:
   template <typename... Args, OVK_FUNCTION_REQUIRES(std::is_constructible<value_type, Args &&...
     >::value && !core::IsCopyOrMoveArgument<value_type, Args &&...>())> value_type &Insert(
     const_iterator LowerBoundIter, const key_type &Key, Args &&...  Arguments) {
-    auto KeysIter = Keys_.Begin() + (LowerBoundIter - Entries_.Data());
-    auto EntriesIter = Entries_.Begin() + (LowerBoundIter - Entries_.Data());
+    index_type iEntry = index_type(LowerBoundIter - Begin());
+    auto KeysIter = Keys_.Begin() + iEntry;
+    auto EntriesIter = Entries_.Begin() + iEntry;
     if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
       Keys_.Insert(KeysIter, Key);
       EntriesIter = Entries_.Insert(EntriesIter, Key, std::forward<Args>(Arguments)...);
@@ -433,11 +440,10 @@ public:
   }
 
   iterator Erase(const_iterator Pos) {
-    auto KeysIter = Keys_.Begin() + (Pos - Entries_.Data());
-    auto EntriesIter = Entries_.Begin() + (Pos - Entries_.Data());
-    Keys_.Erase(KeysIter);
-    EntriesIter = Entries_.Erase(EntriesIter);
-    return Entries_.Data(EntriesIter - Entries_.Begin());
+    index_type iEntry = index_type(Pos - Begin());
+    Keys_.Erase(Keys_.Begin()+iEntry);
+    Entries_.Erase(Entries_.Begin()+iEntry);
+    return iterator(Entries_.Data() + iEntry);
   }
 
   void Clear() {
@@ -445,7 +451,7 @@ public:
     Entries_.Clear();
   }
 
-  void Reserve(long long Count) {
+  void Reserve(index_type Count) {
     Keys_.Reserve(Count);
     Entries_.Reserve(Count);
   }
@@ -456,40 +462,40 @@ public:
 
   const_iterator Find(const key_type &Key) const {
     auto KeysIter = Keys_.Find(Key);
-    return Entries_.Data() + (KeysIter - Keys_.Begin());
+    return const_iterator(Entries_.Data() + (KeysIter - Keys_.Begin()));
   }
   iterator Find(const key_type &Key) {
     auto KeysIter = Keys_.Find(Key);
-    return Entries_.Data() + (KeysIter - Keys_.Begin());
+    return iterator(Entries_.Data() + (KeysIter - Keys_.Begin()));
   }
 
   const_iterator LowerBound(const key_type &Key) const {
     auto KeysIter = Keys_.LowerBound(Key);
-    return Entries_.Data() + (KeysIter - Keys_.Begin());
+    return const_iterator(Entries_.Data() + (KeysIter - Keys_.Begin()));
   }
   iterator LowerBound(const key_type &Key) {
     auto KeysIter = Keys_.LowerBound(Key);
-    return Entries_.Data() + (KeysIter - Keys_.Begin());
+    return iterator(Entries_.Data() + (KeysIter - Keys_.Begin()));
   }
 
   const_iterator UpperBound(const key_type &Key) const {
     auto KeysIter = Keys_.UpperBound(Key);
-    return Entries_.Data() + (KeysIter - Keys_.Begin());
+    return const_iterator(Entries_.Data() + (KeysIter - Keys_.Begin()));
   }
   iterator UpperBound(const key_type &Key) {
     auto KeysIter = Keys_.UpperBound(Key);
-    return Entries_.Data() + (KeysIter - Keys_.Begin());
+    return iterator(Entries_.Data() + (KeysIter - Keys_.Begin()));
   }
 
   key_type NextAvailableKey(int iDim=0) const {
     return Keys_.NextAvailableValue(iDim);
   }
 
-  long long Count() const { return Entries_.Count(); }
+  index_type Count() const { return Entries_.Count(); }
 
   bool Empty() const { return Entries_.Empty(); }
 
-  long long Capacity() const { return Entries_.Capacity(); }
+  index_type Capacity() const { return Entries_.Capacity(); }
 
   const id_set_type &Keys() const { return Keys_; }
 
@@ -535,19 +541,19 @@ public:
     return EntriesIter->Value();
   }
 
-  const entry &operator[](long long Index) const { return Entries_(Index); }
-  entry &operator[](long long Index) { return Entries_(Index); }
+  const entry &operator[](index_type Index) const { return Entries_(Index); }
+  entry &operator[](index_type Index) { return Entries_(Index); }
 
   const entry *Data() const { return Entries_.Data(); }
   entry *Data() { return Entries_.Data(); }
 
-  const_iterator Begin() const { return Entries_.Data(); }
-  iterator Begin() { return Entries_.Data(); }
-  const_iterator CBegin() const { return Entries_.Data(); }
+  const_iterator Begin() const { return const_iterator(Entries_.Data()); }
+  iterator Begin() { return iterator(Entries_.Data()); }
+  const_iterator CBegin() const { return const_iterator(Entries_.Data()); }
 
-  const_iterator End() const { return Entries_.Data() + Entries_.Count(); }
-  iterator End() { return Entries_.Data() + Entries_.Count(); }
-  const_iterator CEnd() const { return Entries_.Data() + Entries_.Count(); }
+  const_iterator End() const { return const_iterator(Entries_.Data() + Entries_.Count()); }
+  iterator End() { return iterator(Entries_.Data() + Entries_.Count()); }
+  const_iterator CEnd() const { return const_iterator(Entries_.Data() + Entries_.Count()); }
 
   static constexpr bool KeyLess(const key_type &Left, const key_type &Right) {
     return id_set_type::Less(Left, Right);

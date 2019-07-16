@@ -6,6 +6,8 @@
 
 #include <ovk/core/ArrayTraits.hpp>
 #include <ovk/core/Global.hpp>
+#include <ovk/core/IteratorTraits.hpp>
+#include <ovk/core/PointerIterator.hpp>
 #include <ovk/core/Requires.hpp>
 #include <ovk/core/TypeTraits.hpp>
 
@@ -107,8 +109,8 @@ private:
 public:
 
   using index_type = long long;
-  using iterator = value_type *;
-  using const_iterator = const value_type *;
+  using iterator = core::pointer_iterator<vector, value_type *>;
+  using const_iterator = core::pointer_iterator<vector, const value_type *>;
 
   vector() = default;
 
@@ -142,7 +144,7 @@ public:
     return *this;
   }
 
-  vector &Assign(long long NumValues, const value_type &Value) {
+  vector &Assign(index_type NumValues, const value_type &Value) {
     Values_.assign(NumValues, reinterpret_cast<const storage_value_type &>(Value));
     return *this;
   }
@@ -193,34 +195,57 @@ public:
     return reinterpret_cast<value_type &>(Values_.back());
   }
 
+  value_type &Insert(index_type iValue, const value_type &Value) {
+    Values_.insert(Values_.begin()+iValue, reinterpret_cast<const storage_value_type &>(Value));
+    return *(Begin() + iValue);
+  }
+
+  value_type &Insert(index_type iValue, value_type &&Value) {
+    Values_.insert(Values_.begin()+iValue, std::move(reinterpret_cast<storage_value_type
+      &>(Value)));
+    return *(Begin() + iValue);
+  }
+
+  template <typename... Args, OVK_FUNCTION_REQUIRES(std::is_constructible<value_type, Args &&...
+    >::value && !core::IsCopyOrMoveArgument<value_type, Args &&...>())> value_type &Insert(
+    index_type iValue, Args &&... Arguments) {
+    value_type Value(std::forward<Args>(Arguments)...);
+    Values_.insert(Values_.begin()+iValue, std::move(reinterpret_cast<storage_value_type
+      &>(Value)));
+    return *(Begin() + iValue);
+  }
+
   iterator Insert(const_iterator Pos, const value_type &Value) {
-    auto StoragePos = Values_.begin() + (Pos - Begin());
-    auto StorageIter = Values_.insert(StoragePos, reinterpret_cast<const storage_value_type
-      &>(Value));
-    return Begin() + (StorageIter - Values_.begin());
+    index_type iValue = index_type(Pos - Begin());
+    Values_.insert(Values_.begin()+iValue, reinterpret_cast<const storage_value_type &>(Value));
+    return Begin() + iValue;
   }
 
   iterator Insert(const_iterator Pos, value_type &&Value) {
-    auto StoragePos = Values_.begin() + (Pos - Begin());
-    auto StorageIter = Values_.insert(StoragePos, std::move(reinterpret_cast<storage_value_type
+    index_type iValue = index_type(Pos - Begin());
+    Values_.insert(Values_.begin()+iValue, std::move(reinterpret_cast<storage_value_type
       &>(Value)));
-    return Begin() + (StorageIter - Values_.begin());
+    return Begin() + iValue;
   }
 
   template <typename... Args, OVK_FUNCTION_REQUIRES(std::is_constructible<value_type, Args &&...
     >::value && !core::IsCopyOrMoveArgument<value_type, Args &&...>())> iterator Insert(
     const_iterator Pos, Args &&... Arguments) {
     value_type Value(std::forward<Args>(Arguments)...);
-    auto StoragePos = Values_.begin() + (Pos - Begin());
-    auto StorageIter = Values_.insert(StoragePos, std::move(reinterpret_cast<storage_value_type
-      &>(Value)));
-    return Begin() + (StorageIter - Values_.begin());
+    index_type iValue = index_type(Pos - Begin());
+    Values_.insert(Values_.begin()+iValue, std::move(reinterpret_cast<storage_value_type &>(
+      Value)));
+    return Begin() + iValue;
+  }
+
+  void Erase(index_type iValue) {
+    Values_.erase(Values_.begin()+iValue);
   }
 
   iterator Erase(const_iterator Pos) {
-    auto StoragePos = Values_.begin() + (Pos - Begin());
-    auto StorageIter = Values_.erase(StoragePos);
-    return Begin() + (StorageIter - Values_.begin());
+    index_type iValue = index_type(Pos - Begin());
+    Values_.erase(Values_.begin()+iValue);
+    return Begin() + iValue;
   }
 
   index_type Count() const { return index_type(Values_.size()); }
@@ -257,15 +282,17 @@ public:
   }
 
   OVK_FORCE_INLINE const_iterator Begin() const {
-    return reinterpret_cast<const value_type *>(Values_.data());
+    return const_iterator(reinterpret_cast<const value_type *>(Values_.data()));
   }
-  OVK_FORCE_INLINE iterator Begin() { return reinterpret_cast<value_type *>(Values_.data()); }
+  OVK_FORCE_INLINE iterator Begin() {
+    return iterator(reinterpret_cast<value_type *>(Values_.data()));
+  }
 
   OVK_FORCE_INLINE const_iterator End() const {
-    return reinterpret_cast<const value_type *>(Values_.data() + Values_.size());
+    return const_iterator(reinterpret_cast<const value_type *>(Values_.data() + Values_.size()));
   }
   OVK_FORCE_INLINE iterator End() {
-    return reinterpret_cast<value_type *>(Values_.data() + Values_.size());
+    return iterator(reinterpret_cast<value_type *>(Values_.data() + Values_.size()));
   }
 
   // Google Test doesn't use free begin/end functions and instead expects container to have

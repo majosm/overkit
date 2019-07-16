@@ -38,8 +38,9 @@ TEST_F(IDSetTests, Meta) {
 
   EXPECT_EQ(int(id_set::Rank), 2);
   EXPECT_TRUE((std::is_same<typename id_set::value_type, ovk::elem<int,2>>::value));
-  EXPECT_TRUE((std::is_same<typename id_set::iterator, const ovk::elem<int,2> *>::value));
-  EXPECT_TRUE((std::is_same<typename id_set::const_iterator, const ovk::elem<int,2> *>::value));
+  EXPECT_TRUE((std::is_same<typename id_set::iterator::pointer, const ovk::elem<int,2> *>::value));
+  EXPECT_TRUE((std::is_same<typename id_set::const_iterator::pointer, const ovk::elem<int,2>
+    *>::value));
 
 }
 
@@ -606,8 +607,8 @@ TEST_F(IDSetTests, BeginEnd) {
 
   id_set IDSet = {{1,2}, {1,3}};
   auto &Values = helper::GetValues(IDSet);
-  EXPECT_EQ(IDSet.Begin(), Values.Data());
-  EXPECT_EQ(IDSet.End(), Values.Data()+2);
+  EXPECT_EQ(IDSet.Begin().Pointer(), Values.Data());
+  EXPECT_EQ(IDSet.End().Pointer(), Values.Data()+2);
 
   int Sum = 0;
   for (auto &Value : IDSet) Sum += Value(0)+Value(1);
