@@ -240,7 +240,7 @@ public:
     return iterator(Entries_.Data() + (KeysIter - Keys_.Begin()));
   }
 
-  value_type &Get(IDTypes... IDs) {
+  value_type &Fetch(IDTypes... IDs) {
     key_type Key(IDs...);
     auto KeysIter = Keys_.LowerBound(Key);
     auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
@@ -292,7 +292,7 @@ public:
   using parent_type::Find;
   using parent_type::LowerBound;
   using parent_type::UpperBound;
-  using parent_type::Get;
+  using parent_type::Fetch;
 
   id_map() = default;
 
@@ -560,7 +560,7 @@ public:
     return Entries_(KeysIter - Keys_.Begin()).Value();
   }
 
-  value_type &Get(const key_type &Key, const value_type &InsertValue) {
+  value_type &Fetch(const key_type &Key, const value_type &InsertValue) {
     auto KeysIter = Keys_.LowerBound(Key);
     auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
     if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
@@ -570,7 +570,7 @@ public:
     return EntriesIter->Value();
   }
 
-  value_type &Get(const key_type &Key, value_type &&InsertValue) {
+  value_type &Fetch(const key_type &Key, value_type &&InsertValue) {
     auto KeysIter = Keys_.LowerBound(Key);
     auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
     if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
@@ -581,7 +581,7 @@ public:
   }
 
   template <typename... Args, OVK_FUNCTION_REQUIRES(std::is_constructible<value_type, Args &&...
-    >::value && !core::IsCopyOrMoveArgument<value_type, Args &&...>())> value_type &Get(const
+    >::value && !core::IsCopyOrMoveArgument<value_type, Args &&...>())> value_type &Fetch(const
     key_type &Key, Args &&... Arguments) {
     auto KeysIter = Keys_.LowerBound(Key);
     auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());

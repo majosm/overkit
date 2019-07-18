@@ -80,7 +80,7 @@ void profiler::Start_(int TimerID) {
 
   OVK_DEBUG_ASSERT(TimerID >= 0 && TimerID < profiler_internal_TIMER_ID_COUNT, "Invalid timer ID.");
 
-  timer_entry &Entry = Timers_.Get(TimerID);
+  timer_entry &Entry = Timers_.Fetch(TimerID);
   Entry.Timer.Start();
   ++Entry.ActiveCount;
 
@@ -92,7 +92,7 @@ void profiler::StartSync_(int TimerID, MPI_Comm Comm) {
 
   MPI_Barrier(Comm);
 
-  timer_entry &Entry = Timers_.Get(TimerID);
+  timer_entry &Entry = Timers_.Fetch(TimerID);
   Entry.Timer.Start();
   ++Entry.ActiveCount;
 

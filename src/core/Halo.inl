@@ -18,7 +18,7 @@ template <typename FieldType, OVK_FUNCDEF_REQUIRES(IsField<FieldType>())> reques
 
   data_type DataType = GetDataType<value_type>();
 
-  array<halo_exchanger> &HaloExchangersForType = HaloExchangers_.Get(int(DataType));
+  array<halo_exchanger> &HaloExchangersForType = HaloExchangers_.Fetch(int(DataType));
 
   int iHaloExchanger = 0;
   while (iHaloExchanger < HaloExchangersForType.Count() && HaloExchangersForType(iHaloExchanger).

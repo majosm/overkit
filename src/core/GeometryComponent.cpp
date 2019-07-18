@@ -60,7 +60,7 @@ geometry_component::geometry_component(const core::domain_base &Domain, params P
   GridEventListener_ = Domain.AddGridEventListener([FloatingRef](int GridID, grid_event_flags Flags,
     bool LastInSequence) {
     geometry_component &GeometryComponent = *FloatingRef;
-    grid_event_flags &AccumulatedFlags = GeometryComponent.GridEventFlags_.Get(GridID,
+    grid_event_flags &AccumulatedFlags = GeometryComponent.GridEventFlags_.Fetch(GridID,
       grid_event_flags::NONE);
     AccumulatedFlags |= Flags;
     if (LastInSequence) {

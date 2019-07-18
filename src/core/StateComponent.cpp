@@ -60,7 +60,7 @@ state_component::state_component(const core::domain_base &Domain, params Params)
   GridEventListener_ = Domain.AddGridEventListener([FloatingRef](int GridID, grid_event_flags Flags,
     bool LastInSequence) {
     state_component &StateComponent = *FloatingRef;
-    grid_event_flags &AccumulatedFlags = StateComponent.GridEventFlags_.Get(GridID,
+    grid_event_flags &AccumulatedFlags = StateComponent.GridEventFlags_.Fetch(GridID,
       grid_event_flags::NONE);
     AccumulatedFlags |= Flags;
     if (LastInSequence) {

@@ -60,7 +60,7 @@ overlap_component::overlap_component(const core::domain_base &Domain, params Par
   GridEventListener_ = Domain.AddGridEventListener([FloatingRef](int GridID, grid_event_flags Flags,
     bool LastInSequence) {
     overlap_component &OverlapComponent = *FloatingRef;
-    grid_event_flags &AccumulatedFlags = OverlapComponent.GridEventFlags_.Get(GridID,
+    grid_event_flags &AccumulatedFlags = OverlapComponent.GridEventFlags_.Fetch(GridID,
       grid_event_flags::NONE);
     AccumulatedFlags |= Flags;
     if (LastInSequence) {

@@ -1789,7 +1789,7 @@ TEST_F(IDMapTests, ParenthesisOperator) {
 
 }
 
-TEST_F(IDMapTests, Get) {
+TEST_F(IDMapTests, Fetch) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -1806,7 +1806,7 @@ TEST_F(IDMapTests, Get) {
   {
     id_map IDMap = {{{1,2}, 1}, {{2,1}, 3}};
     int SourceValue = 2;
-    int &Value = IDMap.Get({1,3}, SourceValue);
+    int &Value = IDMap.Fetch({1,3}, SourceValue);
     auto &Keys = helper::GetKeys(IDMap);
     auto &Entries = helper::GetEntries(IDMap);
     EXPECT_EQ(Keys.Count(), 3);
@@ -1827,7 +1827,7 @@ TEST_F(IDMapTests, Get) {
   {
     id_map IDMap = {{{1,2}, 1}, {{2,1}, 3}};
     int SourceValue = 2;
-    int &Value = IDMap.Get({2,1}, SourceValue);
+    int &Value = IDMap.Fetch({2,1}, SourceValue);
     auto &Keys = helper::GetKeys(IDMap);
     auto &Entries = helper::GetEntries(IDMap);
     EXPECT_EQ(Keys.Count(), 2);
@@ -1851,7 +1851,7 @@ TEST_F(IDMapTests, Get) {
     Entries.Append({1, {1}});
     Entries.Append({3, {3}});
     noncopyable<int> SourceValue(2);
-    noncopyable<int> &Value = IDMap.Get(2, std::move(SourceValue));
+    noncopyable<int> &Value = IDMap.Fetch(2, std::move(SourceValue));
     EXPECT_EQ(Keys.Count(), 3);
     EXPECT_EQ(Keys[0], 1);
     EXPECT_EQ(Keys[1], 2);
@@ -1876,7 +1876,7 @@ TEST_F(IDMapTests, Get) {
     Entries.Append({1, {1}});
     Entries.Append({3, {2}});
     noncopyable<int> SourceValue(3);
-    noncopyable<int> &Value = IDMap.Get(3, std::move(SourceValue));
+    noncopyable<int> &Value = IDMap.Fetch(3, std::move(SourceValue));
     EXPECT_EQ(Keys.Count(), 2);
     EXPECT_EQ(Keys[0], 1);
     EXPECT_EQ(Keys[1], 3);
@@ -1891,7 +1891,7 @@ TEST_F(IDMapTests, Get) {
   // In-place, default, key, key doesn't already exist
   {
     id_map IDMap = {{{1,2}, 1}, {{2,1}, 3}};
-    int &Value = IDMap.Get({1,3});
+    int &Value = IDMap.Fetch({1,3});
     auto &Keys = helper::GetKeys(IDMap);
     auto &Entries = helper::GetEntries(IDMap);
     EXPECT_EQ(Keys.Count(), 3);
@@ -1911,7 +1911,7 @@ TEST_F(IDMapTests, Get) {
   // In-place, default, key, key already exists
   {
     id_map IDMap = {{{1,2}, 1}, {{2,1}, 3}};
-    int &Value = IDMap.Get({2,1});
+    int &Value = IDMap.Fetch({2,1});
     auto &Keys = helper::GetKeys(IDMap);
     auto &Entries = helper::GetEntries(IDMap);
     EXPECT_EQ(Keys.Count(), 2);
@@ -1928,7 +1928,7 @@ TEST_F(IDMapTests, Get) {
   // In-place, default, separate IDs, key doesn't already exist
   {
     id_map IDMap = {{{1,2}, 1}, {{2,1}, 3}};
-    int &Value = IDMap.Get(1,3);
+    int &Value = IDMap.Fetch(1,3);
     auto &Keys = helper::GetKeys(IDMap);
     auto &Entries = helper::GetEntries(IDMap);
     EXPECT_EQ(Keys.Count(), 3);
@@ -1948,7 +1948,7 @@ TEST_F(IDMapTests, Get) {
   // In-place, default, separate IDs, key already exists
   {
     id_map IDMap = {{{1,2}, 1}, {{2,1}, 3}};
-    int &Value = IDMap.Get(2,1);
+    int &Value = IDMap.Fetch(2,1);
     auto &Keys = helper::GetKeys(IDMap);
     auto &Entries = helper::GetEntries(IDMap);
     EXPECT_EQ(Keys.Count(), 2);
@@ -1965,7 +1965,7 @@ TEST_F(IDMapTests, Get) {
   // In-place, multiple arguments, key doesn't already exist
   {
     id_map_multiargument IDMap = {{1, {1,2}}, {3, {3,4}}};
-    multiargument &Value = IDMap.Get(2, 2, 3);
+    multiargument &Value = IDMap.Fetch(2, 2, 3);
     auto &Keys = helper_multiargument::GetKeys(IDMap);
     auto &Entries = helper_multiargument::GetEntries(IDMap);
     EXPECT_EQ(Keys.Count(), 3);
@@ -1988,7 +1988,7 @@ TEST_F(IDMapTests, Get) {
   // In-place, multiple arguments, key already exists
   {
     id_map_multiargument IDMap = {{1, {1,2}}, {3, {2,3}}};
-    multiargument &Value = IDMap.Get(3, 3, 4);
+    multiargument &Value = IDMap.Fetch(3, 3, 4);
     auto &Keys = helper_multiargument::GetKeys(IDMap);
     auto &Entries = helper_multiargument::GetEntries(IDMap);
     EXPECT_EQ(Keys.Count(), 2);
@@ -2008,7 +2008,7 @@ TEST_F(IDMapTests, Get) {
   {
     id_map_nondefaultconstructible IDMap = {{1, {1}}, {3, {3}}};
     nondefaultconstructible<int> SourceValue(2);
-    nondefaultconstructible<int> &Value = IDMap.Get(2, SourceValue);
+    nondefaultconstructible<int> &Value = IDMap.Fetch(2, SourceValue);
     auto &Keys = helper_nondefaultconstructible::GetKeys(IDMap);
     auto &Entries = helper_nondefaultconstructible::GetEntries(IDMap);
     EXPECT_EQ(Keys.Count(), 3);
@@ -2029,7 +2029,7 @@ TEST_F(IDMapTests, Get) {
   {
     id_map_nondefaultconstructible IDMap = {{1, {1}}, {3, {3}}};
     nondefaultconstructible<int> SourceValue(2);
-    nondefaultconstructible<int> &Value = IDMap.Get(2, std::move(SourceValue));
+    nondefaultconstructible<int> &Value = IDMap.Fetch(2, std::move(SourceValue));
     auto &Keys = helper_nondefaultconstructible::GetKeys(IDMap);
     auto &Entries = helper_nondefaultconstructible::GetEntries(IDMap);
     EXPECT_EQ(Keys.Count(), 3);
@@ -2049,7 +2049,7 @@ TEST_F(IDMapTests, Get) {
   // Non-default-constructible, in-place
   {
     id_map_nondefaultconstructible IDMap = {{1, {1}}, {3, {3}}};
-    nondefaultconstructible<int> &Value = IDMap.Get(2, 2);
+    nondefaultconstructible<int> &Value = IDMap.Fetch(2, 2);
     auto &Keys = helper_nondefaultconstructible::GetKeys(IDMap);
     auto &Entries = helper_nondefaultconstructible::GetEntries(IDMap);
     EXPECT_EQ(Keys.Count(), 3);
