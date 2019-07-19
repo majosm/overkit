@@ -15,7 +15,6 @@
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Context.hpp>
 #include <ovk/core/Field.hpp>
-#include <ovk/core/PartitionHash.hpp>
 #include <ovk/core/Range.hpp>
 #include <ovk/core/Tuple.hpp>
 
@@ -222,9 +221,10 @@ TEST_F(PartitionTests, DetectNeighbors) {
     return {NumDims, GlobalRange, Periodic, ovk::periodic_storage::UNIQUE};
   };
 
-  auto CreatePartitionHash = [](const ovk::cart &Cart, ovk::comm_view Comm, const ovk::range
+  auto CreatePartitionHash = [](int NumDims, ovk::comm_view Comm, const ovk::range
     &LocalRange) -> ovk::core::partition_hash {
-    ovk::core::partition_hash Hash(Cart.Dimension(), Comm, Cart.Range(), LocalRange);
+    ovk::core::partition_hash Hash(NumDims, Comm, 1, ovk::array<ovk::range>({1}, {LocalRange}),
+      ovk::array<int>({1}, {1}));
     return Hash;
   };
 
@@ -232,7 +232,7 @@ TEST_F(PartitionTests, DetectNeighbors) {
   if (CommOfSize1) {
     ovk::comm_view Comm = CommOfSize1;
     ovk::cart Cart = CreateCart(2, false);
-    ovk::core::partition_hash Hash = CreatePartitionHash(Cart, Comm, Cart.Range());
+    ovk::core::partition_hash Hash = CreatePartitionHash(Cart.Dimension(), Comm, Cart.Range());
     ovk::array<int> NeighborRanks = ovk::core::DetectNeighbors(Cart, Comm, Cart.Range(), Hash);
     EXPECT_EQ(NeighborRanks.Count(), 0);
   }
@@ -241,7 +241,7 @@ TEST_F(PartitionTests, DetectNeighbors) {
   if (CommOfSize1) {
     ovk::comm_view Comm = CommOfSize1;
     ovk::cart Cart = CreateCart(3, false);
-    ovk::core::partition_hash Hash = CreatePartitionHash(Cart, Comm, Cart.Range());
+    ovk::core::partition_hash Hash = CreatePartitionHash(Cart.Dimension(), Comm, Cart.Range());
     ovk::array<int> NeighborRanks = ovk::core::DetectNeighbors(Cart, Comm, Cart.Range(), Hash);
     EXPECT_EQ(NeighborRanks.Count(), 0);
   }
@@ -250,7 +250,7 @@ TEST_F(PartitionTests, DetectNeighbors) {
   if (CommOfSize1) {
     ovk::comm_view Comm = CommOfSize1;
     ovk::cart Cart = CreateCart(2, true);
-    ovk::core::partition_hash Hash = CreatePartitionHash(Cart, Comm, Cart.Range());
+    ovk::core::partition_hash Hash = CreatePartitionHash(Cart.Dimension(), Comm, Cart.Range());
     ovk::array<int> NeighborRanks = ovk::core::DetectNeighbors(Cart, Comm, Cart.Range(), Hash);
     EXPECT_EQ(NeighborRanks.Count(), 0);
   }
@@ -259,7 +259,7 @@ TEST_F(PartitionTests, DetectNeighbors) {
   if (CommOfSize1) {
     ovk::comm_view Comm = CommOfSize1;
     ovk::cart Cart = CreateCart(3, true);
-    ovk::core::partition_hash Hash = CreatePartitionHash(Cart, Comm, Cart.Range());
+    ovk::core::partition_hash Hash = CreatePartitionHash(Cart.Dimension(), Comm, Cart.Range());
     ovk::array<int> NeighborRanks = ovk::core::DetectNeighbors(Cart, Comm, Cart.Range(), Hash);
     EXPECT_EQ(NeighborRanks.Count(), 0);
   }
@@ -269,7 +269,7 @@ TEST_F(PartitionTests, DetectNeighbors) {
     ovk::cart Cart = CreateCart(2, false);
     ovk::comm Comm = ovk::CreateCartComm(CommOfSize6, 2, {2,3,1}, Cart.Periodic());
     ovk::range LocalRange = CartesianDecomp(Cart.Dimension(), Cart.Range(), Comm);
-    ovk::core::partition_hash Hash = CreatePartitionHash(Cart, Comm, LocalRange);
+    ovk::core::partition_hash Hash = CreatePartitionHash(Cart.Dimension(), Comm, LocalRange);
     ovk::array<int> NeighborRanks = ovk::core::DetectNeighbors(Cart, Comm, LocalRange, Hash);
     switch (Comm.Rank()) {
     // Lower corner
@@ -294,7 +294,7 @@ TEST_F(PartitionTests, DetectNeighbors) {
     ovk::cart Cart = CreateCart(3, false);
     ovk::comm Comm = ovk::CreateCartComm(CommOfSize12, 3, {2,2,3}, Cart.Periodic());
     ovk::range LocalRange = CartesianDecomp(Cart.Dimension(), Cart.Range(), Comm);
-    ovk::core::partition_hash Hash = CreatePartitionHash(Cart, Comm, LocalRange);
+    ovk::core::partition_hash Hash = CreatePartitionHash(Cart.Dimension(), Comm, LocalRange);
     ovk::array<int> NeighborRanks = ovk::core::DetectNeighbors(Cart, Comm, LocalRange, Hash);
     switch (Comm.Rank()) {
     // Lower corner
@@ -319,7 +319,7 @@ TEST_F(PartitionTests, DetectNeighbors) {
     ovk::cart Cart = CreateCart(2, true);
     ovk::comm Comm = ovk::CreateCartComm(CommOfSize6, 2, {2,3,1}, Cart.Periodic());
     ovk::range LocalRange = CartesianDecomp(Cart.Dimension(), Cart.Range(), Comm);
-    ovk::core::partition_hash Hash = CreatePartitionHash(Cart, Comm, LocalRange);
+    ovk::core::partition_hash Hash = CreatePartitionHash(Cart.Dimension(), Comm, LocalRange);
     ovk::array<int> NeighborRanks = ovk::core::DetectNeighbors(Cart, Comm, LocalRange, Hash);
     switch (Comm.Rank()) {
     // Lower corner
@@ -344,7 +344,7 @@ TEST_F(PartitionTests, DetectNeighbors) {
     ovk::cart Cart = CreateCart(3, true);
     ovk::comm Comm = ovk::CreateCartComm(CommOfSize12, 3, {2,2,3}, Cart.Periodic());
     ovk::range LocalRange = CartesianDecomp(Cart.Dimension(), Cart.Range(), Comm);
-    ovk::core::partition_hash Hash = CreatePartitionHash(Cart, Comm, LocalRange);
+    ovk::core::partition_hash Hash = CreatePartitionHash(Cart.Dimension(), Comm, LocalRange);
     ovk::array<int> NeighborRanks = ovk::core::DetectNeighbors(Cart, Comm, LocalRange, Hash);
     switch (Comm.Rank()) {
     // Lower corner
@@ -369,7 +369,7 @@ TEST_F(PartitionTests, DetectNeighbors) {
     ovk::comm_view Comm = CommOfSize6;
     ovk::cart Cart = CreateCart(2, false);
     ovk::range LocalRange = TriangularDecomp(Cart.Dimension(), Cart.Range(), Comm);
-    ovk::core::partition_hash Hash = CreatePartitionHash(Cart, Comm, LocalRange);
+    ovk::core::partition_hash Hash = CreatePartitionHash(Cart.Dimension(), Comm, LocalRange);
     ovk::array<int> NeighborRanks = ovk::core::DetectNeighbors(Cart, Comm, LocalRange, Hash);
     switch (Comm.Rank()) {
     // Bottom
@@ -394,7 +394,7 @@ TEST_F(PartitionTests, DetectNeighbors) {
     ovk::comm_view Comm = CommOfSize14;
     ovk::cart Cart = CreateCart(3, false);
     ovk::range LocalRange = TriangularDecomp(Cart.Dimension(), Cart.Range(), Comm);
-    ovk::core::partition_hash Hash = CreatePartitionHash(Cart, Comm, LocalRange);
+    ovk::core::partition_hash Hash = CreatePartitionHash(Cart.Dimension(), Comm, LocalRange);
     ovk::array<int> NeighborRanks = ovk::core::DetectNeighbors(Cart, Comm, LocalRange, Hash);
     switch (Comm.Rank()) {
     // Bottom
@@ -419,7 +419,7 @@ TEST_F(PartitionTests, DetectNeighbors) {
     ovk::comm_view Comm = CommOfSize6;
     ovk::cart Cart = CreateCart(2, true);
     ovk::range LocalRange = TriangularDecomp(Cart.Dimension(), Cart.Range(), Comm);
-    ovk::core::partition_hash Hash = CreatePartitionHash(Cart, Comm, LocalRange);
+    ovk::core::partition_hash Hash = CreatePartitionHash(Cart.Dimension(), Comm, LocalRange);
     ovk::array<int> NeighborRanks = ovk::core::DetectNeighbors(Cart, Comm, LocalRange, Hash);
     switch (Comm.Rank()) {
     // Bottom
@@ -444,7 +444,7 @@ TEST_F(PartitionTests, DetectNeighbors) {
     ovk::comm_view Comm = CommOfSize14;
     ovk::cart Cart = CreateCart(3, true);
     ovk::range LocalRange = TriangularDecomp(Cart.Dimension(), Cart.Range(), Comm);
-    ovk::core::partition_hash Hash = CreatePartitionHash(Cart, Comm, LocalRange);
+    ovk::core::partition_hash Hash = CreatePartitionHash(Cart.Dimension(), Comm, LocalRange);
     ovk::array<int> NeighborRanks = ovk::core::DetectNeighbors(Cart, Comm, LocalRange, Hash);
     switch (Comm.Rank()) {
     // Bottom
@@ -541,7 +541,8 @@ TEST_F(PartitionTests, ConstructPartition) {
     ovk::comm Comm = ovk::CreateCartComm(CommOfSize6, 2, {3,3,1}, Cart.Periodic());
     ovk::range LocalRange = CartesianDecomp(Cart.Dimension(), Cart.Range(), Comm);
 
-    ovk::core::partition_hash Hash(Cart.Dimension(), Comm, Cart.Range(), LocalRange);
+    ovk::core::partition_hash Hash(Cart.Dimension(), Comm, 1, ovk::array<ovk::range>({1},
+      {LocalRange}), ovk::array<int>({1}, {1}));
     ovk::array<int> NeighborRanks = ovk::core::DetectNeighbors(Cart, Comm, LocalRange, Hash);
 
     ovk::core::partition Partition(Context, Cart, Comm, LocalRange, 1, 2, NeighborRanks);

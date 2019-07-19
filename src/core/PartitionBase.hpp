@@ -7,8 +7,8 @@
 #include <ovk/core/ArrayView.hpp>
 #include <ovk/core/Cart.hpp>
 #include <ovk/core/Comm.hpp>
+#include <ovk/core/DistributedRegionHash.hpp>
 #include <ovk/core/Global.hpp>
-#include <ovk/core/PartitionHash.hpp>
 #include <ovk/core/Range.hpp>
 
 namespace ovk {
@@ -19,6 +19,10 @@ struct partition_info {
   range LocalRange;
   range ExtendedRange;
 };
+
+using partition_hash = distributed_region_hash<int>;
+using partition_hash_bin = distributed_region_hash_bin<int>;
+using partition_hash_region_data = distributed_region_data<int>;
 
 range ExtendLocalRange(const cart &Cart, const range &LocalRange, int ExtendAmount);
 

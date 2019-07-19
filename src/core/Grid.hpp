@@ -11,7 +11,6 @@
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Partition.hpp>
-#include <ovk/core/PartitionHash.hpp>
 #include <ovk/core/Range.hpp>
 #include <ovk/core/StringWrapper.hpp>
 #include <ovk/core/Tuple.hpp>

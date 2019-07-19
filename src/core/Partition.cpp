@@ -8,10 +8,10 @@
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Context.hpp"
 #include "ovk/core/Debug.hpp"
+#include "ovk/core/DistributedRegionHash.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Halo.hpp"
 #include "ovk/core/Misc.hpp"
-#include "ovk/core/PartitionHash.hpp"
 #include "ovk/core/Range.hpp"
 #include "ovk/core/Request.hpp"
 #include "ovk/core/ScalarOps.hpp"
@@ -19,8 +19,6 @@
 
 #include <mpi.h>
 
-#include <map>
-#include <set>
 #include <string>
 #include <utility>
 
@@ -92,35 +90,48 @@ array<int> DetectNeighbors(const cart &Cart, comm_view Comm, const range &LocalR
   }
 
   array<int> ExtendedPointBinIndices({NumExtendedPoints});
+  id_set<1> UniqueBinIndices;
 
-  Hash.MapToBins(ExtendedPoints, ExtendedPointBinIndices);
-
-  std::set<int> UniqueBinIndices;
   for (long long iPoint = 0; iPoint < NumExtendedPoints; ++iPoint) {
-    UniqueBinIndices.insert(ExtendedPointBinIndices(iPoint));
+    tuple<int> Point = {
+      ExtendedPoints(0,iPoint),
+      ExtendedPoints(1,iPoint),
+      ExtendedPoints(2,iPoint)
+    };
+    tuple<int> BinLoc = Hash.MapPointToBin(Point);
+    ExtendedPointBinIndices(iPoint) = Hash.BinIndexer().ToIndex(BinLoc);
+    UniqueBinIndices.Insert(ExtendedPointBinIndices(iPoint));
   }
 
-  std::map<int, core::partition_hash::bin> Bins;
+  id_map<1,partition_hash_bin> Bins;
   for (int iBin : UniqueBinIndices) {
-    Bins.emplace(iBin, core::partition_hash::bin());
+    Bins.Insert(iBin);
   }
 
   Hash.RetrieveBins(Bins);
 
-  array<int> ExtendedPointRanks({NumExtendedPoints});
-
-  Hash.FindPartitions(Bins, ExtendedPoints, ExtendedPointBinIndices, ExtendedPointRanks);
-
-  Bins.clear();
-
-  std::set<int> UniqueExtendedRanks;
+  id_set<1> UniqueExtendedRanks;
 
   for (long long iPoint = 0; iPoint < NumExtendedPoints; ++iPoint) {
-    UniqueExtendedRanks.insert(ExtendedPointRanks(iPoint));
+    tuple<int> Point = {
+      ExtendedPoints(0,iPoint),
+      ExtendedPoints(1,iPoint),
+      ExtendedPoints(2,iPoint)
+    };
+    const partition_hash_bin &Bin = Bins(ExtendedPointBinIndices(iPoint));
+    for (int iRegion = 0; iRegion < Bin.Regions().Count(); ++iRegion) {
+      const partition_hash_region_data &Region = Bin.Region(iRegion);
+      if (Region.Extents.Contains(Point)) {
+        UniqueExtendedRanks.Insert(Region.Rank);
+        break;
+      }
+    }
   }
-  UniqueExtendedRanks.erase(Comm.Rank());
+  UniqueExtendedRanks.Erase(Comm.Rank());
 
-  return {{int(UniqueExtendedRanks.size())}, UniqueExtendedRanks.begin()};
+  Bins.Clear();
+
+  return {UniqueExtendedRanks};
 
 }
 
@@ -128,7 +139,7 @@ array<partition_info> RetrievePartitionInfo(comm_view Comm, array_view<const int
   &LocalRange, const range &ExtendedRange) {
 
   array_view<const int> &RecvFromRanks = Ranks;
-  array<int> SendToRanks = core::DynamicHandshake(Comm, RecvFromRanks);
+  array<int> SendToRanks = DynamicHandshake(Comm, RecvFromRanks);
 
   int NumSends = SendToRanks.Count();
   int NumRecvs = RecvFromRanks.Count();

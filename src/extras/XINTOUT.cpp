@@ -23,7 +23,7 @@
 #include "ovk/core/Logger.hpp"
 #include "ovk/core/Misc.hpp"
 #include "ovk/core/Optional.hpp"
-#include "ovk/core/PartitionHash.hpp"
+#include "ovk/core/Partition.hpp"
 #include "ovk/core/Profiler.hpp"
 #include "ovk/core/Range.hpp"
 #include "ovk/core/ScopeGuard.hpp"
@@ -1942,7 +1942,7 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
 
   Profiler.StartSync(IMPORT_DISTRIBUTE_MAP_TO_BINS_TIME, Comm);
 
-  std::map<int, core::partition_hash::bin> Bins;
+  id_map<1,core::partition_hash_bin> Bins;
 
   long long NumChunkDonors = 0;
   long long NumChunkDonorPoints = 0;
@@ -1995,13 +1995,18 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
       }
     }
     ChunkDonorPointBinIndices.Resize({NumChunkDonorPoints});
-    Hash.MapToBins(ChunkDonorPoints, ChunkDonorPointBinIndices);
+    for (long long iDonorPoint = 0; iDonorPoint < NumChunkDonorPoints; ++iDonorPoint) {
+      tuple<int> Point = {
+        ChunkDonorPoints(0,iDonorPoint),
+        ChunkDonorPoints(1,iDonorPoint),
+        ChunkDonorPoints(2,iDonorPoint)
+      };
+      tuple<int> BinLoc = Hash.MapPointToBin(Point);
+      ChunkDonorPointBinIndices(iDonorPoint) = Hash.BinIndexer().ToIndex(BinLoc);
+    }
     for (long long iDonorPoint = 0; iDonorPoint < NumChunkDonorPoints; ++iDonorPoint) {
       int BinIndex = ChunkDonorPointBinIndices(iDonorPoint);
-      auto Iter = Bins.lower_bound(BinIndex);
-      if (Iter == Bins.end() || Iter->first > BinIndex) {
-        Bins.emplace_hint(Iter, BinIndex, core::partition_hash::bin());
-      }
+      Bins.Fetch(BinIndex);
     }
   }
 
@@ -2011,13 +2016,18 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
     const xintout_receiver_chunk &ReceiverChunk = XINTOUTReceivers.Chunk;
     NumChunkReceivers = ReceiverChunk.End - ReceiverChunk.Begin;
     ChunkReceiverBinIndices.Resize({NumChunkReceivers});
-    Hash.MapToBins(ReceiverChunk.Data.Points, ChunkReceiverBinIndices);
+    for (long long iReceiver = 0; iReceiver < NumChunkReceivers; ++iReceiver) {
+      tuple<int> Point = {
+        ReceiverChunk.Data.Points(0,iReceiver),
+        ReceiverChunk.Data.Points(1,iReceiver),
+        ReceiverChunk.Data.Points(2,iReceiver)
+      };
+      tuple<int> BinLoc = Hash.MapPointToBin(Point);
+      ChunkReceiverBinIndices(iReceiver) = Hash.BinIndexer().ToIndex(BinLoc);
+    }
     for (long long iReceiver = 0; iReceiver < NumChunkReceivers; ++iReceiver) {
       int BinIndex = ChunkReceiverBinIndices(iReceiver);
-      auto Iter = Bins.lower_bound(BinIndex);
-      if (Iter == Bins.end() || Iter->first > BinIndex) {
-        Bins.emplace_hint(Iter, BinIndex, core::partition_hash::bin());
-      }
+      Bins.Fetch(BinIndex);
     }
   }
 
@@ -2037,7 +2047,21 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
     NumChunkDonorRanks.Resize({NumChunkDonors});
     ChunkDonorRanks.Resize({NumChunkDonors});
     ChunkDonorRanksData.Resize({NumChunkDonorPoints});
-    Hash.FindPartitions(Bins, ChunkDonorPoints, ChunkDonorPointBinIndices, ChunkDonorRanksData);
+    for (long long iDonorPoint = 0; iDonorPoint < NumChunkDonorPoints; ++iDonorPoint) {
+      tuple<int> Point = {
+        ChunkDonorPoints(0,iDonorPoint),
+        ChunkDonorPoints(1,iDonorPoint),
+        ChunkDonorPoints(2,iDonorPoint)
+      };
+      const core::partition_hash_bin &Bin = Bins(ChunkDonorPointBinIndices(iDonorPoint));
+      for (int iRegion = 0; iRegion < Bin.Regions().Count(); ++iRegion) {
+        const core::partition_hash_region_data &Region = Bin.Region(iRegion);
+        if (Region.Extents.Contains(Point)) {
+          ChunkDonorRanksData(iDonorPoint) = Region.Rank;
+          break;
+        }
+      }
+    }
     int MaxSize = DonorChunk.Data.MaxSize;
     int MaxPointsInCell = 1;
     for (int iDim = 0; iDim < NumDims; ++iDim) {
@@ -2071,12 +2095,25 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
   if (XINTOUTReceivers.HasChunk) {
     const xintout_receiver_chunk &ReceiverChunk = XINTOUTReceivers.Chunk;
     ChunkReceiverRanks.Resize({NumChunkReceivers});
-    Hash.FindPartitions(Bins, ReceiverChunk.Data.Points, ChunkReceiverBinIndices,
-      ChunkReceiverRanks);
+    for (long long iReceiver = 0; iReceiver < NumChunkReceivers; ++iReceiver) {
+      tuple<int> Point = {
+        ReceiverChunk.Data.Points(0,iReceiver),
+        ReceiverChunk.Data.Points(1,iReceiver),
+        ReceiverChunk.Data.Points(2,iReceiver)
+      };
+      const core::partition_hash_bin &Bin = Bins(ChunkReceiverBinIndices(iReceiver));
+      for (int iRegion = 0; iRegion < Bin.Regions().Count(); ++iRegion) {
+        const core::partition_hash_region_data &Region = Bin.Region(iRegion);
+        if (Region.Extents.Contains(Point)) {
+          ChunkReceiverRanks(iReceiver) = Region.Rank;
+          break;
+        }
+      }
+    }
     ChunkReceiverBinIndices.Clear();
   }
 
-  Bins.clear();
+  Bins.Clear();
 
   struct donor_send_recv {
     long long Count;

@@ -45,7 +45,6 @@ set(SOURCES
   OverlapM.cpp
   OverlapN.cpp
   Partition.cpp
-  PartitionHash.cpp
   Profiler.cpp
   Recv.cpp
   RecvMap.cpp
@@ -127,6 +126,8 @@ set(INTERNAL_HEADERS
   DisperseBase.hpp
   DisperseMap.hpp
   DisperseOverwrite.hpp
+  DistributedRegionHash.hpp
+  DistributedRegionHash.inl
   Domain.h
   Domain.inl
   DomainBase.hpp
@@ -157,7 +158,6 @@ set(INTERNAL_HEADERS
   OverlapComponent.h
   Partition.hpp
   PartitionBase.hpp
-  PartitionHash.hpp
   PointerIterator.hpp
   Profiler.hpp
   Profiler.inl

@@ -12,7 +12,6 @@
 #include "ovk/core/Logger.hpp"
 #include "ovk/core/Misc.hpp"
 #include "ovk/core/Partition.hpp"
-#include "ovk/core/PartitionHash.hpp"
 #include "ovk/core/Range.hpp"
 #include "ovk/core/TextProcessing.hpp"
 #include "ovk/core/Tuple.hpp"
@@ -50,7 +49,8 @@ grid::grid(std::shared_ptr<context> &&Context, params &&Params):
   grid_base(std::move(Context), std::move(*Params.Name_), Params.Comm_),
   NumDims_(Params.NumDims_),
   Cart_(Params.Cart_),
-  PartitionHash_(NumDims_, Comm_, Cart_.Range(), Params.LocalRange_),
+  PartitionHash_(NumDims_, Comm_, 1, array<range>({1}, {Params.LocalRange_}), array<int>({1},
+    {1})),
   Partition_(std::make_shared<core::partition>(Context_, Cart_, Comm_, Params.LocalRange_, 1,
     1, core::DetectNeighbors(Cart_, Comm_, Params.LocalRange_, PartitionHash_)))
 {
