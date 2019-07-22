@@ -21,6 +21,8 @@ template <typename T> class test_helper;
 constexpr int MAX_DIMS = OVK_MAX_DIMS;
 constexpr int ALL_GRIDS = OVK_ALL_GRIDS;
 
+using byte = unsigned char;
+
 enum class array_layout {
   ROW_MAJOR = OVK_ROW_MAJOR,
   COLUMN_MAJOR = OVK_COLUMN_MAJOR

@@ -6,6 +6,7 @@
 
 #include <ovk/core/DataType.h>
 #include <ovk/core/Global.hpp>
+#include <ovk/core/Requires.hpp>
 
 #include <mpi.h>
 
@@ -62,52 +63,96 @@ inline MPI_Datatype DataTypeToMPI(data_type DataType) {
 
 namespace core {
 
-template <typename T> constexpr bool IsSupportedDataType() { return false; }
-template <> constexpr bool IsSupportedDataType<bool>() { return true; }
-template <> constexpr bool IsSupportedDataType<unsigned char>() { return true; }
-template <> constexpr bool IsSupportedDataType<int>() { return true; }
-template <> constexpr bool IsSupportedDataType<long>() { return true; }
-template <> constexpr bool IsSupportedDataType<long long>() { return true; }
-template <> constexpr bool IsSupportedDataType<unsigned int>() { return true; }
-template <> constexpr bool IsSupportedDataType<unsigned long>() { return true; }
-template <> constexpr bool IsSupportedDataType<unsigned long long>() { return true; }
-template <> constexpr bool IsSupportedDataType<float>() { return true; }
-template <> constexpr bool IsSupportedDataType<double>() { return true; }
-
-template <typename T> constexpr data_type GetDataType();
-template <> constexpr data_type GetDataType<bool>() { return data_type::BOOL; }
-template <> constexpr data_type GetDataType<unsigned char>() { return data_type::BYTE; }
-template <> constexpr data_type GetDataType<int>() { return data_type::INT; }
-template <> constexpr data_type GetDataType<long>() { return data_type::LONG; }
-template <> constexpr data_type GetDataType<long long>() { return data_type::LONG_LONG; }
-template <> constexpr data_type GetDataType<unsigned int>() { return data_type::UNSIGNED_INT; }
-template <> constexpr data_type GetDataType<unsigned long>() { return data_type::UNSIGNED_LONG; }
-template <> constexpr data_type GetDataType<unsigned long long>() { return data_type::UNSIGNED_LONG_LONG; }
-template <> constexpr data_type GetDataType<float>() { return data_type::FLOAT; }
-template <> constexpr data_type GetDataType<double>() { return data_type::DOUBLE; }
-
+template <typename T, typename=void> struct data_type_traits {
+//   static constexpr data_type Type = ???;
+//   using mpi_convert_type = ???;
 // Tried to make this constexpr, but apparently MPI types aren't always compile-time constants
-template <typename T> inline MPI_Datatype GetMPIDataType();
-template <> inline MPI_Datatype GetMPIDataType<char>() { return MPI_SIGNED_CHAR; }
-template <> inline MPI_Datatype GetMPIDataType<short>() { return MPI_SHORT; }
-template <> inline MPI_Datatype GetMPIDataType<int>() { return MPI_INT; }
-template <> inline MPI_Datatype GetMPIDataType<long>() { return MPI_LONG; }
-template <> inline MPI_Datatype GetMPIDataType<long long>() { return MPI_LONG_LONG; }
-template <> inline MPI_Datatype GetMPIDataType<unsigned char>() { return MPI_UNSIGNED_CHAR; }
-template <> inline MPI_Datatype GetMPIDataType<unsigned short>() { return MPI_UNSIGNED_SHORT; }
-template <> inline MPI_Datatype GetMPIDataType<unsigned int>() { return MPI_UNSIGNED; }
-template <> inline MPI_Datatype GetMPIDataType<unsigned long>() { return MPI_UNSIGNED_LONG; }
-template <> inline MPI_Datatype GetMPIDataType<unsigned long long>() { return MPI_UNSIGNED_LONG_LONG; }
-template <> inline MPI_Datatype GetMPIDataType<float>() { return MPI_FLOAT; }
-template <> inline MPI_Datatype GetMPIDataType<double>() { return MPI_DOUBLE; }
+//   static const MPI_Datatype MPIType = ???;
+};
 
-// Use unsigned char in place of bool for MPI sends/recvs
-namespace data_type_internal {
-template <typename T> struct mpi_compatible_type_helper { using type = T; };
-template <> struct mpi_compatible_type_helper<bool> { using type = unsigned char; };
+namespace is_supported_data_type_internal {
+template <typename T> using maybe_int = int;
+template <typename T> constexpr std::true_type Test(maybe_int<decltype(data_type_traits<T>::Type)>)
+  {
+  return {};
 }
-template <typename T> using mpi_compatible_type = typename data_type_internal::
-  mpi_compatible_type_helper<T>::type;
+template <typename T> constexpr std::false_type Test(...) { return {}; }
+}
+template <typename T> constexpr bool IsSupportedDataType() {
+  return decltype(is_supported_data_type_internal::Test<T>(0))::value;
+}
+
+template <typename T, OVK_FUNCTION_REQUIRES(IsSupportedDataType<T>())> constexpr data_type
+  GetDataType() {
+  return data_type_traits<T>::Type;
+}
+
+template <typename T, OVK_FUNCTION_REQUIRES(IsSupportedDataType<T>())> MPI_Datatype GetMPIDataType()
+  {
+  return data_type_traits<T>::MPIType;
+}
+
+template <typename T> using mpi_compatible_type = typename data_type_traits<T>::mpi_convert_type;
+
+template <> struct data_type_traits<bool> {
+  static constexpr data_type Type = data_type::BOOL;
+  using mpi_convert_type = unsigned char;
+  static const MPI_Datatype MPIType = MPI_UNSIGNED_CHAR;
+};
+
+template <> struct data_type_traits<byte> {
+  static constexpr data_type Type = data_type::BYTE;
+  using mpi_convert_type = byte;
+  static const MPI_Datatype MPIType = MPI_UNSIGNED_CHAR;
+};
+
+template <> struct data_type_traits<int> {
+  static constexpr data_type Type = data_type::INT;
+  using mpi_convert_type = int;
+  static const MPI_Datatype MPIType = MPI_INT;
+};
+
+template <> struct data_type_traits<long> {
+  static constexpr data_type Type = data_type::LONG;
+  using mpi_convert_type = long;
+  static const MPI_Datatype MPIType = MPI_LONG;
+};
+
+template <> struct data_type_traits<long long> {
+  static constexpr data_type Type = data_type::LONG_LONG;
+  using mpi_convert_type = long long;
+  static const MPI_Datatype MPIType = MPI_LONG_LONG;
+};
+
+template <> struct data_type_traits<unsigned int> {
+  static constexpr data_type Type = data_type::UNSIGNED_INT;
+  using mpi_convert_type = unsigned int;
+  static const MPI_Datatype MPIType = MPI_UNSIGNED;
+};
+
+template <> struct data_type_traits<unsigned long> {
+  static constexpr data_type Type = data_type::UNSIGNED_LONG;
+  using mpi_convert_type = unsigned long;
+  static const MPI_Datatype MPIType = MPI_UNSIGNED_LONG;
+};
+
+template <> struct data_type_traits<unsigned long long> {
+  static constexpr data_type Type = data_type::UNSIGNED_LONG_LONG;
+  using mpi_convert_type = unsigned long long;
+  static const MPI_Datatype MPIType = MPI_UNSIGNED_LONG_LONG;
+};
+
+template <> struct data_type_traits<float> {
+  static constexpr data_type Type = data_type::FLOAT;
+  using mpi_convert_type = float;
+  static const MPI_Datatype MPIType = MPI_FLOAT;
+};
+
+template <> struct data_type_traits<double> {
+  static constexpr data_type Type = data_type::DOUBLE;
+  using mpi_convert_type = double;
+  static const MPI_Datatype MPIType = MPI_DOUBLE;
+};
 
 }
 
