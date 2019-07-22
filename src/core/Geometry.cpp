@@ -14,6 +14,7 @@
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
 #include "ovk/core/Logger.hpp"
+#include "ovk/core/Request.hpp"
 
 #include <mpi.h>
 
@@ -140,6 +141,7 @@ edit_handle<array<field<double>>> geometry::EditCoords() {
     floating_ref<geometry> FloatingRef = FloatingRefGenerator_.Generate(*this);
     auto DeactivateFunc = [FloatingRef] {
       geometry &Geometry = *FloatingRef;
+      Geometry.OnCoordsEndEdit_();
       MPI_Barrier(Geometry.Comm_);
       Geometry.CoordsEvent_.Trigger();
       MPI_Barrier(Geometry.Comm_);
@@ -156,6 +158,38 @@ void geometry::RestoreCoords() {
   OVK_DEBUG_ASSERT(CoordsEditor_.Active(), "Unable to restore coords; not currently being edited.");
 
   CoordsEditor_.Restore();
+
+}
+
+void geometry::OnCoordsEndEdit_() {
+
+  const grid &Grid = *Grid_;
+  const range &GlobalRange = Grid.GlobalRange();
+  const range &ExtendedRange = Grid.ExtendedRange();
+  const core::halo &Halo = Grid.core_Partition().Halo();
+
+  request Requests[MAX_DIMS];
+
+  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+    Requests[iDim] = Halo.Exchange(Coords_(iDim));
+  }
+
+  WaitAll(Requests);
+
+  for (int k = ExtendedRange.Begin(2); k < ExtendedRange.End(2); ++k) {
+    for (int j = ExtendedRange.Begin(1); j < ExtendedRange.End(1); ++j) {
+      for (int i = ExtendedRange.Begin(0); i < ExtendedRange.End(0); ++i) {
+        tuple<int> Point = {i,j,k};
+        for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+          if (Point(iDim) > GlobalRange.End(iDim)) {
+            Coords_(iDim)(Point) += PeriodicLength_(iDim);
+          } else if (Point(iDim) < GlobalRange.Begin(iDim)) {
+            Coords_(iDim)(Point) -= PeriodicLength_(iDim);
+          }
+        }
+      }
+    }
+  }
 
 }
 

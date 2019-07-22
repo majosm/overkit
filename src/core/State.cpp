@@ -97,6 +97,7 @@ edit_handle<field<state_flags>> state::EditFlags() {
     floating_ref<state> FloatingRef = FloatingRefGenerator_.Generate(*this);
     auto DeactivateFunc = [FloatingRef] {
       state &State = *FloatingRef;
+      State.OnFlagsEndEdit_();
       MPI_Barrier(State.Comm_);
       State.FlagsEvent_.Trigger();
       MPI_Barrier(State.Comm_);
@@ -113,6 +114,15 @@ void state::RestoreFlags() {
   OVK_DEBUG_ASSERT(FlagsEditor_.Active(), "Unable to restore flags; not currently being edited.");
 
   FlagsEditor_.Restore();
+
+}
+
+void state::OnFlagsEndEdit_() {
+
+  const grid &Grid = *Grid_;
+  const core::halo &Halo = Grid.core_Partition().Halo();
+
+  Halo.Exchange(Flags_);
 
 }
 

@@ -6,6 +6,7 @@
 
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Context.hpp>
+#include <ovk/core/DataType.hpp>
 #include <ovk/core/Editor.hpp>
 #include <ovk/core/Event.hpp>
 #include <ovk/core/Field.hpp>
@@ -70,6 +71,11 @@ inline state_flags operator&=(state_flags &Left, state_flags Right) {
 }
 inline state_flags operator^=(state_flags &Left, state_flags Right) {
   return Left = Left ^ Right;
+}
+
+namespace core {
+template <> struct data_type_traits<state_flags> : data_type_traits<typename std::underlying_type<
+  state_flags>::type> {};
 }
 
 namespace state_internal {
@@ -152,6 +158,8 @@ private:
   mutable event<void()> FlagsEvent_;
 
   state(std::shared_ptr<context> &&Context, const grid &Grid, params &&Params);
+
+  void OnFlagsEndEdit_();
 
 };
 

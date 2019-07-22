@@ -137,6 +137,8 @@ private:
 
   geometry(std::shared_ptr<context> &&Context, const grid &Grid, params &&Params);
 
+  void OnCoordsEndEdit_();
+
 };
 
 namespace core {
