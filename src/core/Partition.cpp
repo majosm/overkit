@@ -64,6 +64,41 @@ range ExtendLocalRange(const cart &Cart, const range &LocalRange, int ExtendAmou
 
 }
 
+cart CartPointToCell(const cart &Cart) {
+
+  cart CellCart = Cart;
+
+  for (int iDim = 0; iDim < Cart.Dimension(); ++iDim) {
+    CellCart.Range().Begin(iDim) = Cart.Range().Begin(iDim);
+    if (Cart.Periodic(iDim) && Cart.PeriodicStorage() == periodic_storage::UNIQUE) {
+      CellCart.Range().End(iDim) = Cart.Range().End(iDim);
+    } else {
+      CellCart.Range().End(iDim) = Cart.Range().End(iDim)-1;
+    }
+  }
+
+  return CellCart;
+
+}
+
+range LocalRangePointToCell(const cart &Cart, const range &LocalRange) {
+
+  range CellLocalRange = MakeEmptyRange(Cart.Dimension());
+
+  for (int iDim = 0; iDim < Cart.Dimension(); ++iDim) {
+    CellLocalRange.Begin(iDim) = LocalRange.Begin(iDim);
+    if (Cart.Periodic(iDim) && Cart.PeriodicStorage() == periodic_storage::UNIQUE &&
+      LocalRange.End(iDim) == Cart.Range().End(iDim)) {
+      CellLocalRange.End(iDim) = LocalRange.End(iDim);
+    } else {
+      CellLocalRange.End(iDim) = LocalRange.End(iDim)-1;
+    }
+  }
+
+  return CellLocalRange;
+
+}
+
 array<int> DetectNeighbors(const cart &Cart, comm_view Comm, const range &LocalRange, const
   partition_hash &Hash) {
 

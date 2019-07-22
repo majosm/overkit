@@ -26,6 +26,9 @@ using partition_hash_region_data = distributed_region_data<int>;
 
 range ExtendLocalRange(const cart &Cart, const range &LocalRange, int ExtendAmount);
 
+cart CartPointToCell(const cart &Cart);
+range LocalRangePointToCell(const cart &Cart, const range &LocalRange);
+
 array<int> DetectNeighbors(const cart &Cart, comm_view Comm, const range &LocalRange, const
   partition_hash &Hash);
 

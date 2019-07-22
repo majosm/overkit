@@ -99,16 +99,4 @@ inline cart MakeEmptyCart(int NumDims) {
 
 }
 
-inline cart CartPointToCell(const cart &PointCart) {
-
-  cart CellCart = PointCart;
-
-  for (int iDim = 0; iDim < CellCart.Dimension(); ++iDim) {
-    if (!CellCart.Periodic(iDim)) CellCart.Range().End(iDim) -= 1;
-  }
-
-  return CellCart;
-
-}
-
 }

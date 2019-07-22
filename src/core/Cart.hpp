@@ -49,7 +49,6 @@ inline bool operator==(const cart &Left, const cart &Right);
 inline bool operator!=(const cart &Left, const cart &Right);
 
 inline cart MakeEmptyCart(int NumDims);
-inline cart CartPointToCell(const cart &PointCart);
 
 }
 
