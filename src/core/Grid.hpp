@@ -106,6 +106,12 @@ public:
   const range &LocalRange() const { return Partition_->LocalRange(); }
   const range &ExtendedRange() const { return Partition_->ExtendedRange(); }
 
+  const cart &CellCart() const { return CellCart_; }
+
+  const range &CellGlobalRange() const { return CellCart_.Range(); }
+  const range &CellLocalRange() const { return CellPartition_->LocalRange(); }
+  const range &CellExtendedRange() const { return CellPartition_->ExtendedRange(); }
+
   tuple<int> Size() const { return Cart_.Range().Size(); }
   int Size(int iDim) const { return Cart_.Range().Size(iDim); }
 
@@ -113,9 +119,13 @@ public:
   bool Periodic(int iDim) const { return Cart_.Periodic(iDim); }
   periodic_storage PeriodicStorage() const { return Cart_.PeriodicStorage(); }
 
+  const array<int> &NeighborRanks() const { return NeighborRanks_; }
+
   const core::partition_hash &core_PartitionHash() const { return PartitionHash_; }
-  const std::shared_ptr<core::partition> &core_PartitionShared() const { return Partition_; }
   const core::partition &core_Partition() const { return *Partition_; }
+  const std::shared_ptr<core::partition> &core_PartitionShared() const { return Partition_; }
+  const core::partition &core_CellPartition() const { return *CellPartition_; }
+  const std::shared_ptr<core::partition> &core_CellPartitionShared() const { return CellPartition_; }
 
   static grid internal_Create(std::shared_ptr<context> &&Context, params &&Params);
 
@@ -125,9 +135,14 @@ private:
 
   int NumDims_;
   cart Cart_;
+  cart CellCart_;
 
   core::partition_hash PartitionHash_;
+
+  array<int> NeighborRanks_;
+
   std::shared_ptr<core::partition> Partition_;
+  std::shared_ptr<core::partition> CellPartition_;
 
   grid(std::shared_ptr<context> &&Context, params &&Params);
 
@@ -149,6 +164,8 @@ public:
   int RootRank() const { return RootRank_; }
   const cart &Cart() const { return Cart_; }
   const range &GlobalRange() const { return Cart_.Range(); }
+  const cart &CellCart() const { return CellCart_; }
+  const range &CellGlobalRange() const { return CellCart_.Range(); }
   tuple<int> Size() const { return Cart_.Range().Size(); }
   int Size(int iDim) const { return Cart_.Range().Size(iDim); }
   bool IsLocal() const { return IsLocal_; }
@@ -160,6 +177,7 @@ private:
   core::string_wrapper Name_;
   int RootRank_ = -1;
   cart Cart_ = MakeEmptyCart(2);
+  cart CellCart_ = MakeEmptyCart(2);
   bool IsLocal_ = false;
 
   grid_info(grid *MaybeGrid, comm_view Comm);

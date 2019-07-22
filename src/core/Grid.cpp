@@ -49,10 +49,14 @@ grid::grid(std::shared_ptr<context> &&Context, params &&Params):
   grid_base(std::move(Context), std::move(*Params.Name_), Params.Comm_),
   NumDims_(Params.NumDims_),
   Cart_(Params.Cart_),
+  CellCart_(core::CartPointToCell(Cart_)),
   PartitionHash_(NumDims_, Comm_, 1, array<range>({1}, {Params.LocalRange_}), array<int>({1},
     {1})),
+  NeighborRanks_(core::DetectNeighbors(Cart_, Comm_, Params.LocalRange_, PartitionHash_)),
   Partition_(std::make_shared<core::partition>(Context_, Cart_, Comm_, Params.LocalRange_, 1,
-    1, core::DetectNeighbors(Cart_, Comm_, Params.LocalRange_, PartitionHash_)))
+    1, NeighborRanks_)),
+  CellPartition_(std::make_shared<core::partition>(Context_, CellCart_, Comm_,
+    core::LocalRangePointToCell(Cart_, Params.LocalRange_), 1, 1, NeighborRanks_))
 {
 
   MPI_Barrier(Comm_);
@@ -308,6 +312,8 @@ grid_info::grid_info(grid *MaybeGrid, comm_view Comm) {
   }
   MPI_Bcast(&PeriodicStorageInt, 1, MPI_INT, RootRank_, Comm);
   Cart_.PeriodicStorage() = periodic_storage(PeriodicStorageInt);
+
+  CellCart_ = core::CartPointToCell(Cart_);
 
 }
 
