@@ -13,6 +13,9 @@
 
 #include <mpi.h>
 
+#include <array>
+#include <vector>
+
 using testing::ElementsAre;
 
 class ElemTests : public tests::mpi_test {};
@@ -51,6 +54,36 @@ TEST_F(ElemTests, Create) {
   // Values
   {
     ovk::elem<int,3> Elem = {1,2,3};
+    const int *Values = helper::GetValues(Elem);
+    EXPECT_EQ(Values[0], 1);
+    EXPECT_EQ(Values[1], 2);
+    EXPECT_EQ(Values[2], 3);
+  }
+
+  // Iterator
+  {
+    std::array<int,3> SourceValues = {{1,2,3}};
+    ovk::elem<int,3> Elem(SourceValues.begin());
+    const int *Values = helper::GetValues(Elem);
+    EXPECT_EQ(Values[0], 1);
+    EXPECT_EQ(Values[1], 2);
+    EXPECT_EQ(Values[2], 3);
+  }
+
+  // Static-sized array
+  {
+    std::array<int,3> SourceValues = {{1,2,3}};
+    ovk::elem<int,3> Elem(SourceValues);
+    const int *Values = helper::GetValues(Elem);
+    EXPECT_EQ(Values[0], 1);
+    EXPECT_EQ(Values[1], 2);
+    EXPECT_EQ(Values[2], 3);
+  }
+
+  // Runtime-sized array
+  {
+    std::vector<int> SourceValues = {1,2,3};
+    ovk::elem<int,3> Elem(SourceValues);
     const int *Values = helper::GetValues(Elem);
     EXPECT_EQ(Values[0], 1);
     EXPECT_EQ(Values[1], 2);
@@ -96,6 +129,47 @@ TEST_F(ElemTests, Copy) {
     ovk::elem<int,3> Elem2;
     Elem2 = Elem1;
     const int *Values = helper::GetValues(Elem2);
+    EXPECT_EQ(Values[0], 1);
+    EXPECT_EQ(Values[1], 2);
+    EXPECT_EQ(Values[2], 3);
+  }
+
+}
+
+TEST_F(ElemTests, Assign) {
+
+  if (TestComm().Rank() != 0) return;
+
+  using helper = ovk::core::test_helper<ovk::elem<int,3>>;
+
+  // Iterator
+  {
+    std::array<int,3> SourceValues = {{1,2,3}};
+    ovk::elem<int,3> Elem;
+    Elem = SourceValues.begin();
+    const int *Values = helper::GetValues(Elem);
+    EXPECT_EQ(Values[0], 1);
+    EXPECT_EQ(Values[1], 2);
+    EXPECT_EQ(Values[2], 3);
+  }
+
+  // Static-sized array
+  {
+    std::array<int,3> SourceValues = {{1,2,3}};
+    ovk::elem<int,3> Elem;
+    Elem = SourceValues;
+    const int *Values = helper::GetValues(Elem);
+    EXPECT_EQ(Values[0], 1);
+    EXPECT_EQ(Values[1], 2);
+    EXPECT_EQ(Values[2], 3);
+  }
+
+  // Runtime-sized array
+  {
+    std::vector<int> SourceValues = {1,2,3};
+    ovk::elem<int,3> Elem;
+    Elem = SourceValues;
+    const int *Values = helper::GetValues(Elem);
     EXPECT_EQ(Values[0], 1);
     EXPECT_EQ(Values[1], 2);
     EXPECT_EQ(Values[2], 3);
@@ -381,11 +455,45 @@ TEST_F(ElemTests, Addition) {
 
   if (TestComm().Rank() != 0) return;
 
-  ovk::elem<int,3> Elem1 = {1,2,3};
-  ovk::elem<int,3> Elem2 = {3,3,3};
-  ovk::elem<int,3> Sum = Elem1 + Elem2;
+  // +, both elem
+  {
+    ovk::elem<int,3> Left = {1,2,3};
+    ovk::elem<int,3> Right = {3,3,3};
+    ovk::elem<int,3> Sum = Left + Right;
+    EXPECT_THAT(Sum, ElementsAre(4,5,6));
+  }
 
-  EXPECT_THAT(Sum, ElementsAre(4,5,6));
+  // +, right not elem
+  {
+    ovk::elem<int,3> Left = {1,2,3};
+    std::array<int,3> Right = {{3,3,3}};
+    ovk::elem<int,3> Sum = Left + Right;
+    EXPECT_THAT(Sum, ElementsAre(4,5,6));
+  }
+
+  // +, left not elem
+  {
+    std::array<int,3> Left = {{1,2,3}};
+    ovk::elem<int,3> Right = {3,3,3};
+    ovk::elem<int,3> Sum = Left + Right;
+    EXPECT_THAT(Sum, ElementsAre(4,5,6));
+  }
+
+  // +=, elem
+  {
+    ovk::elem<int,3> Elem = {1,2,3};
+    ovk::elem<int,3> Other = {3,3,3};
+    Elem += Other;
+    EXPECT_THAT(Elem, ElementsAre(4,5,6));
+  }
+
+  // +=, not elem
+  {
+    ovk::elem<int,3> Elem = {1,2,3};
+    std::array<int,3> Other = {{3,3,3}};
+    Elem += Other;
+    EXPECT_THAT(Elem, ElementsAre(4,5,6));
+  }
 
 }
 
@@ -393,11 +501,45 @@ TEST_F(ElemTests, Subtraction) {
 
   if (TestComm().Rank() != 0) return;
 
-  ovk::elem<int,3> Elem1 = {4,5,6};
-  ovk::elem<int,3> Elem2 = {3,3,3};
-  ovk::elem<int,3> Sum = Elem1 - Elem2;
+  // -, both elem
+  {
+    ovk::elem<int,3> Left = {4,5,6};
+    ovk::elem<int,3> Right = {3,3,3};
+    ovk::elem<int,3> Difference = Left - Right;
+    EXPECT_THAT(Difference, ElementsAre(1,2,3));
+  }
 
-  EXPECT_THAT(Sum, ElementsAre(1,2,3));
+  // -, right not elem
+  {
+    ovk::elem<int,3> Left = {4,5,6};
+    std::array<int,3> Right = {{3,3,3}};
+    ovk::elem<int,3> Difference = Left - Right;
+    EXPECT_THAT(Difference, ElementsAre(1,2,3));
+  }
+
+  // -, left not elem
+  {
+    std::array<int,3> Left = {{4,5,6}};
+    ovk::elem<int,3> Right = {3,3,3};
+    ovk::elem<int,3> Difference = Left - Right;
+    EXPECT_THAT(Difference, ElementsAre(1,2,3));
+  }
+
+  // -=, elem
+  {
+    ovk::elem<int,3> Elem = {4,5,6};
+    ovk::elem<int,3> Other = {3,3,3};
+    Elem -= Other;
+    EXPECT_THAT(Elem, ElementsAre(1,2,3));
+  }
+
+  // -=, not elem
+  {
+    ovk::elem<int,3> Elem = {4,5,6};
+    std::array<int,3> Other = {{3,3,3}};
+    Elem -= Other;
+    EXPECT_THAT(Elem, ElementsAre(1,2,3));
+  }
 
 }
 
@@ -405,11 +547,29 @@ TEST_F(ElemTests, Min) {
 
   if (TestComm().Rank() != 0) return;
 
-  ovk::elem<int,3> Elem1 = {1,2,3};
-  ovk::elem<int,3> Elem2 = {3,2,1};
-  ovk::elem<int,3> Min = ovk::Min(Elem1, Elem2);
+  // Both elem
+  {
+    ovk::elem<int,3> Left = {1,2,3};
+    ovk::elem<int,3> Right = {3,2,1};
+    ovk::elem<int,3> Min = ovk::Min(Left, Right);
+    EXPECT_THAT(Min, ElementsAre(1,2,1));
+  }
 
-  EXPECT_THAT(Min, ElementsAre(1,2,1));
+  // Right not elem
+  {
+    ovk::elem<int,3> Left = {1,2,3};
+    std::array<int,3> Right = {{3,2,1}};
+    ovk::elem<int,3> Min = ovk::Min(Left, Right);
+    EXPECT_THAT(Min, ElementsAre(1,2,1));
+  }
+
+  // Left not elem
+  {
+    std::array<int,3> Left = {{1,2,3}};
+    ovk::elem<int,3> Right = {3,2,1};
+    ovk::elem<int,3> Min = ovk::Min(Left, Right);
+    EXPECT_THAT(Min, ElementsAre(1,2,1));
+  }
 
 }
 
@@ -417,11 +577,29 @@ TEST_F(ElemTests, Max) {
 
   if (TestComm().Rank() != 0) return;
 
-  ovk::elem<int,3> Elem1 = {1,2,3};
-  ovk::elem<int,3> Elem2 = {3,2,1};
-  ovk::elem<int,3> Max = ovk::Max(Elem1, Elem2);
+  // Both elem
+  {
+    ovk::elem<int,3> Left = {1,2,3};
+    ovk::elem<int,3> Right = {3,2,1};
+    ovk::elem<int,3> Max = ovk::Max(Left, Right);
+    EXPECT_THAT(Max, ElementsAre(3,2,3));
+  }
 
-  EXPECT_THAT(Max, ElementsAre(3,2,3));
+  // Right not elem
+  {
+    ovk::elem<int,3> Left = {1,2,3};
+    std::array<int,3> Right = {{3,2,1}};
+    ovk::elem<int,3> Max = ovk::Max(Left, Right);
+    EXPECT_THAT(Max, ElementsAre(3,2,3));
+  }
+
+  // Left not elem
+  {
+    std::array<int,3> Left = {{1,2,3}};
+    ovk::elem<int,3> Right = {3,2,1};
+    ovk::elem<int,3> Max = ovk::Max(Left, Right);
+    EXPECT_THAT(Max, ElementsAre(3,2,3));
+  }
 
 }
 
@@ -429,9 +607,9 @@ TEST_F(ElemTests, Concat) {
 
   if (TestComm().Rank() != 0) return;
 
-  ovk::elem<int,3> Elem1 = {1,2,3};
-  ovk::elem<int,2> Elem2 = {4,5};
-  ovk::elem<int,5> Concat = ovk::ConcatElems(Elem1, Elem2);
+  ovk::elem<int,3> Left = {1,2,3};
+  ovk::elem<int,2> Right = {4,5};
+  ovk::elem<int,5> Concat = ovk::ConcatElems(Left, Right);
 
   EXPECT_THAT(Concat, ElementsAre(1,2,3,4,5));
 

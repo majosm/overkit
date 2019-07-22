@@ -56,47 +56,91 @@ template <typename T, int N> constexpr OVK_FORCE_INLINE bool operator!=(const el
 }
 
 namespace elem_internal {
-template <typename T, int N, std::size_t... Indices> constexpr OVK_FORCE_INLINE elem<T,N>
-  PlusHelper(core::index_sequence<Indices...>, const elem<T,N> &Left, const elem<T,N> &Right) {
-  return {Left(Indices)+Right(Indices)...};
+template <typename T, int N, typename U1, typename U2, std::size_t... Indices> constexpr
+  OVK_FORCE_INLINE elem<T,N> PlusHelper(core::index_sequence<Indices...>, const U1 &Left, const U2
+  &Right) {
+  return {T(Left[Indices])+T(Right[Indices])...};
 }
 }
 template <typename T, int N, OVK_FUNCDEF_REQUIRES(core::IsScalar<T>())> constexpr OVK_FORCE_INLINE
   elem<T,N> operator+(const elem<T,N> &Left, const elem<T,N> &Right) {
-  return elem_internal::PlusHelper(core::index_sequence_of_size<N>(), Left, Right);
+  return elem_internal::PlusHelper<T, N>(core::index_sequence_of_size<N>(), Left, Right);
+}
+template <typename T, int N, typename U, OVK_FUNCDEF_REQUIRES(core::IsScalar<T>() &&
+  !std::is_same<U, elem<T,N>>::value && elem_internal::ImplicitlyConvertibleToElem<U, T, N>())>
+  constexpr OVK_FORCE_INLINE elem<T,N> operator+(const elem<T,N> &Left, const U &Right) {
+  return elem_internal::PlusHelper<T, N>(core::index_sequence_of_size<N>(), Left, Right);
+}
+template <typename U, typename T, int N, OVK_FUNCDEF_REQUIRES(core::IsScalar<T>() &&
+  !std::is_same<U, elem<T,N>>::value && elem_internal::ImplicitlyConvertibleToElem<U, T, N>())>
+  constexpr OVK_FORCE_INLINE elem<T,N> operator+(const U &Left, const elem<T,N> &Right) {
+  return elem_internal::PlusHelper<T, N>(core::index_sequence_of_size<N>(), Left, Right);
 }
 
 namespace elem_internal {
-template <typename T, int N, std::size_t... Indices> constexpr OVK_FORCE_INLINE elem<T,N>
-  MinusHelper(core::index_sequence<Indices...>, const elem<T,N> &Left, const elem<T,N> &Right) {
-  return {Left(Indices)-Right(Indices)...};
+template <typename T, int N, typename U1, typename U2, std::size_t... Indices> constexpr
+  OVK_FORCE_INLINE elem<T,N> MinusHelper(core::index_sequence<Indices...>, const U1 &Left, const U2
+  &Right) {
+  return {T(Left[Indices])-T(Right[Indices])...};
 }
 }
 template <typename T, int N, OVK_FUNCDEF_REQUIRES(core::IsScalar<T>())> constexpr OVK_FORCE_INLINE
   elem<T,N> operator-(const elem<T,N> &Left, const elem<T,N> &Right) {
-  return elem_internal::MinusHelper(core::index_sequence_of_size<N>(), Left, Right);
+  return elem_internal::MinusHelper<T, N>(core::index_sequence_of_size<N>(), Left, Right);
+}
+template <typename T, int N, typename U, OVK_FUNCDEF_REQUIRES(core::IsScalar<T>() &&
+  !std::is_same<U, elem<T,N>>::value && elem_internal::ImplicitlyConvertibleToElem<U, T, N>())>
+  constexpr OVK_FORCE_INLINE elem<T,N> operator-(const elem<T,N> &Left, const U &Right) {
+  return elem_internal::MinusHelper<T, N>(core::index_sequence_of_size<N>(), Left, Right);
+}
+template <typename U, typename T, int N, OVK_FUNCDEF_REQUIRES(core::IsScalar<T>() &&
+  !std::is_same<U, elem<T,N>>::value && elem_internal::ImplicitlyConvertibleToElem<U, T, N>())>
+  constexpr OVK_FORCE_INLINE elem<T,N> operator-(const U &Left, const elem<T,N> &Right) {
+  return elem_internal::MinusHelper<T, N>(core::index_sequence_of_size<N>(), Left, Right);
 }
 
 namespace elem_internal {
-template <typename T, int N, std::size_t... Indices> constexpr OVK_FORCE_INLINE elem<T,N>
-  MinHelper(core::index_sequence<Indices...>, const elem<T,N> &Left, const elem<T,N> &Right) {
-  return {Min(Left(Indices),Right(Indices))...};
+template <typename T, int N, typename U1, typename U2, std::size_t... Indices> constexpr
+  OVK_FORCE_INLINE elem<T,N> MinHelper(core::index_sequence<Indices...>, const U1 &Left, const U2
+  &Right) {
+  return {Min(T(Left[Indices]), T(Right[Indices]))...};
 }
 }
 template <typename T, int N, OVK_FUNCDEF_REQUIRES(core::IsScalar<T>())> constexpr OVK_FORCE_INLINE
   elem<T,N> Min(const elem<T,N> &Left, const elem<T,N> &Right) {
-  return elem_internal::MinHelper(core::index_sequence_of_size<N>(), Left, Right);
+  return elem_internal::MinHelper<T, N>(core::index_sequence_of_size<N>(), Left, Right);
+}
+template <typename T, int N, typename U, OVK_FUNCDEF_REQUIRES(core::IsScalar<T>() &&
+  !std::is_same<U, elem<T,N>>::value && elem_internal::ImplicitlyConvertibleToElem<U, T, N>())>
+  constexpr OVK_FORCE_INLINE elem<T,N> Min(const elem<T,N> &Left, const U &Right) {
+  return elem_internal::MinHelper<T, N>(core::index_sequence_of_size<N>(), Left, Right);
+}
+template <typename U, typename T, int N, OVK_FUNCDEF_REQUIRES(core::IsScalar<T>() &&
+  !std::is_same<U, elem<T,N>>::value && elem_internal::ImplicitlyConvertibleToElem<U, T, N>())>
+  constexpr OVK_FORCE_INLINE elem<T,N> Min(const U &Left, const elem<T,N> &Right) {
+  return elem_internal::MinHelper<T, N>(core::index_sequence_of_size<N>(), Left, Right);
 }
 
 namespace elem_internal {
-template <typename T, int N, std::size_t... Indices> constexpr OVK_FORCE_INLINE elem<T,N>
-  MaxHelper(core::index_sequence<Indices...>, const elem<T,N> &Left, const elem<T,N> &Right) {
-  return {Max(Left(Indices),Right(Indices))...};
+template <typename T, int N, typename U1, typename U2, std::size_t... Indices> constexpr
+  OVK_FORCE_INLINE elem<T,N> MaxHelper(core::index_sequence<Indices...>, const U1 &Left, const U2
+  &Right) {
+  return {Max(T(Left[Indices]), T(Right[Indices]))...};
 }
 }
 template <typename T, int N, OVK_FUNCDEF_REQUIRES(core::IsScalar<T>())> constexpr OVK_FORCE_INLINE
   elem<T,N> Max(const elem<T,N> &Left, const elem<T,N> &Right) {
-  return elem_internal::MaxHelper(core::index_sequence_of_size<N>(), Left, Right);
+  return elem_internal::MaxHelper<T, N>(core::index_sequence_of_size<N>(), Left, Right);
+}
+template <typename T, int N, typename U, OVK_FUNCDEF_REQUIRES(core::IsScalar<T>() &&
+  !std::is_same<U, elem<T,N>>::value && elem_internal::ImplicitlyConvertibleToElem<U, T, N>())>
+  constexpr OVK_FORCE_INLINE elem<T,N> Max(const elem<T,N> &Left, const U &Right) {
+  return elem_internal::MaxHelper<T, N>(core::index_sequence_of_size<N>(), Left, Right);
+}
+template <typename U, typename T, int N, OVK_FUNCDEF_REQUIRES(core::IsScalar<T>() &&
+  !std::is_same<U, elem<T,N>>::value && elem_internal::ImplicitlyConvertibleToElem<U, T, N>())>
+  constexpr OVK_FORCE_INLINE elem<T,N> Max(const U &Left, const elem<T,N> &Right) {
+  return elem_internal::MaxHelper<T, N>(core::index_sequence_of_size<N>(), Left, Right);
 }
 
 namespace elem_internal {
