@@ -51,12 +51,13 @@ set(SOURCES
   ElemTests.cpp
   ExchangerTests.cpp
   ForEachTests.cpp
-  GeometryOpsTests.cpp
+  GeometricPrimitiveOpsTests.cpp
   HaloTests.cpp
   IDMapTests.cpp
   IDSetTests.cpp
   IndexerTests.cpp
   IntervalTests.cpp
+  MathTests.cpp
   OptionalTests.cpp
   PartitionTests.cpp
   RangeTests.cpp

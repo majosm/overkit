@@ -1,7 +1,7 @@
 // Copyright (c) 2019 Matthew J. Smith and Overkit contributors
 // License: MIT (http://opensource.org/licenses/MIT)
 
-#include <ovk/core/GeometryOps.hpp>
+#include <ovk/core/GeometricPrimitiveOps.hpp>
 
 #include "tests/MPITest.hpp"
 
@@ -18,404 +18,10 @@
 #include <type_traits>
 
 using testing::ElementsAre;
-using testing::ElementsAreArray;
 
-class GeometryOpsTests : public tests::mpi_test {};
+class GeometricPrimitiveOpsTests : public tests::mpi_test {};
 
-TEST_F(GeometryOpsTests, CartesianGridCell1D) {
-
-  if (TestComm().Rank() != 0) return;
-
-  using ovk::core::CartesianGridCell1D;
-
-  // Above origin, cell interior
-  {
-    long long Cell = CartesianGridCell1D(1., 2., 6.);
-    EXPECT_EQ(Cell, 2);
-  }
-
-  // Above origin, lower cell boundary
-  {
-    long long Cell = CartesianGridCell1D(1., 2., 5.);
-    EXPECT_EQ(Cell, 2);
-  }
-
-  // Above origin, upper cell boundary
-  {
-    long long Cell = CartesianGridCell1D(1., 2., 7.);
-    EXPECT_EQ(Cell, 3);
-  }
-
-  // Below origin, cell interior
-  {
-    long long Cell = CartesianGridCell1D(1., 2., -6.);
-    EXPECT_EQ(Cell, -4);
-  }
-
-  // Below origin, lower cell boundary
-  {
-    long long Cell = CartesianGridCell1D(1., 2., -7.);
-    EXPECT_EQ(Cell, -4);
-  }
-
-  // Below origin, upper cell boundary
-  {
-    long long Cell = CartesianGridCell1D(1., 2., -5.);
-    EXPECT_EQ(Cell, -3);
-  }
-
-  // Explicit index type
-  {
-    auto Cell = CartesianGridCell1D<int>(1., 2., 6.);
-    EXPECT_TRUE((std::is_same<decltype(Cell), int>::value));
-    EXPECT_EQ(Cell, 2);
-  }
-
-}
-
-TEST_F(GeometryOpsTests, CartesianGridCell2D) {
-
-  if (TestComm().Rank() != 0) return;
-
-  using ovk::core::CartesianGridCell2D;
-
-  // Above origin, cell interior
-  {
-    ovk::tuple<long long> Cell = CartesianGridCell2D({1.,2.,0.}, {2.,4.,0.}, {4.,11.,0.});
-    EXPECT_THAT(Cell, ElementsAre(1,2,0));
-  }
-
-  // Above origin, lower cell boundary
-  {
-    ovk::tuple<long long> Cell = CartesianGridCell2D({1.,2.,0.}, {2.,4.,0.}, {3.,10.,0.});
-    EXPECT_THAT(Cell, ElementsAre(1,2,0));
-  }
-
-  // Above origin, upper cell boundary
-  {
-    ovk::tuple<long long> Cell = CartesianGridCell2D({1.,2.,0.}, {2.,4.,0.}, {5.,14.,0.});
-    EXPECT_THAT(Cell, ElementsAre(2,3,0));
-  }
-
-  // Below origin, cell interior
-  {
-    ovk::tuple<long long> Cell = CartesianGridCell2D({1.,2.,0.}, {2.,4.,0.}, {-4.,-11.,0.});
-    EXPECT_THAT(Cell, ElementsAre(-3,-4,0));
-  }
-
-  // Below origin, lower cell boundary
-  {
-    ovk::tuple<long long> Cell = CartesianGridCell2D({1.,2.,0.}, {2.,4.,0.}, {-5.,-14.,0.});
-    EXPECT_THAT(Cell, ElementsAre(-3,-4,0));
-  }
-
-  // Below origin, upper cell boundary
-  {
-    ovk::tuple<long long> Cell = CartesianGridCell2D({1.,2.,0.}, {2.,4.,0.}, {-3.,-10.,0.});
-    EXPECT_THAT(Cell, ElementsAre(-2,-3,0));
-  }
-
-  // Explicit index type
-  {
-    auto Cell = CartesianGridCell2D<int>({1.,2.,0.}, {2.,4.,0.}, {4.,11.,0.});
-    EXPECT_TRUE((std::is_same<decltype(Cell), ovk::tuple<int>>::value));
-    EXPECT_THAT(Cell, ElementsAre(1,2,0));
-  }
-
-}
-
-TEST_F(GeometryOpsTests, CartesianGridCell3D) {
-
-  if (TestComm().Rank() != 0) return;
-
-  using ovk::core::CartesianGridCell3D;
-
-  // Above origin, cell interior
-  {
-    ovk::tuple<long long> Cell = CartesianGridCell3D({1.,2.,3.}, {2.,4.,6.}, {4.,11.,22.});
-    EXPECT_THAT(Cell, ElementsAre(1,2,3));
-  }
-
-  // Above origin, lower cell boundary
-  {
-    ovk::tuple<long long> Cell = CartesianGridCell3D({1.,2.,3.}, {2.,4.,6.}, {3.,10.,21.});
-    EXPECT_THAT(Cell, ElementsAre(1,2,3));
-  }
-
-  // Above origin, upper cell boundary
-  {
-    ovk::tuple<long long> Cell = CartesianGridCell3D({1.,2.,3.}, {2.,4.,6.}, {5.,14.,27.});
-    EXPECT_THAT(Cell, ElementsAre(2,3,4));
-  }
-
-  // Below origin, cell interior
-  {
-    ovk::tuple<long long> Cell = CartesianGridCell3D({1.,2.,3.}, {2.,4.,6.}, {-4.,-11.,-22.});
-    EXPECT_THAT(Cell, ElementsAre(-3,-4,-5));
-  }
-
-  // Below origin, lower cell boundary
-  {
-    ovk::tuple<long long> Cell = CartesianGridCell3D({1.,2.,3.}, {2.,4.,6.}, {-5.,-14.,-27.});
-    EXPECT_THAT(Cell, ElementsAre(-3,-4,-5));
-  }
-
-  // Below origin, upper cell boundary
-  {
-    ovk::tuple<long long> Cell = CartesianGridCell3D({1.,2.,3.}, {2.,4.,6.}, {-3.,-10.,-21.});
-    EXPECT_THAT(Cell, ElementsAre(-2,-3,-4));
-  }
-
-  // Explicit index type
-  {
-    auto Cell = CartesianGridCell3D<int>({1.,2.,3.}, {2.,4.,6.}, {4.,11.,22.});
-    EXPECT_TRUE((std::is_same<decltype(Cell), ovk::tuple<int>>::value));
-    EXPECT_THAT(Cell, ElementsAre(1,2,3));
-  }
-
-}
-
-TEST_F(GeometryOpsTests, ColumnDeterminant2D) {
-
-  if (TestComm().Rank() != 0) return;
-
-  using ovk::core::ColumnDeterminant2D;
-
-  ovk::tuple<double> AI = {
-    1.,
-   -2.,
-    0.
-  };
-  ovk::tuple<double> AJ = {
-    2.,
-    1.,
-    0.
-  };
-  EXPECT_EQ(ColumnDeterminant2D(AI, AJ), 5.);
-
-}
-
-TEST_F(GeometryOpsTests, ColumnDeterminant3D) {
-
-  if (TestComm().Rank() != 0) return;
-
-  using ovk::core::ColumnDeterminant3D;
-
-  ovk::tuple<double> AI = {
-    1.,
-   -3.,
-   -2.
-  };
-  ovk::tuple<double> AJ = {
-    2.,
-    1.,
-   -3.
-  };
-  ovk::tuple<double> AK = {
-    3.,
-    2.,
-    1.
-  };
-  EXPECT_EQ(ColumnDeterminant3D(AI, AJ, AK), 38.);
-
-}
-
-TEST_F(GeometryOpsTests, ColumnSolve2D) {
-
-  if (TestComm().Rank() != 0) return;
-
-  using ovk::core::ColumnSolve2D;
-
-  ovk::tuple<double> AI = {
-    1.,
-   -2.,
-    0.
-  };
-  ovk::tuple<double> AJ = {
-    2.,
-    1.,
-    0.
-  };
-  ovk::tuple<double> B = {
-    8.,
-   -1,
-    0.
-  };
-  EXPECT_THAT(ColumnSolve2D(AI, AJ, B), ElementsAre(2.,3.,0.));
-
-}
-
-TEST_F(GeometryOpsTests, ColumnSolve3D) {
-
-  if (TestComm().Rank() != 0) return;
-
-  using ovk::core::ColumnSolve3D;
-
-  ovk::tuple<double> AI = {
-    1.,
-   -3.,
-   -2.
-  };
-  ovk::tuple<double> AJ = {
-    2.,
-    1.,
-   -3.
-  };
-  ovk::tuple<double> AK = {
-    3.,
-    2.,
-    1.
-  };
-  ovk::tuple<double> B = {
-   20.,
-    5.,
-   -9.
-  };
-  EXPECT_THAT(ColumnSolve3D(AI, AJ, AK, B), ElementsAre(2.,3.,4.));
-
-}
-
-TEST_F(GeometryOpsTests, LagrangeInterpLinear) {
-
-  if (TestComm().Rank() != 0) return;
-
-  using ovk::core::LagrangeInterpLinear;
-  using ovk::core::LagrangeInterpLinearDeriv;
-
-  // Point 1
-  {
-    ovk::elem<double,2> Interp = LagrangeInterpLinear(0.);
-    ovk::elem<double,2> InterpDeriv = LagrangeInterpLinearDeriv(0.);
-    EXPECT_THAT(Interp, ElementsAre(1.,0.));
-    EXPECT_THAT(InterpDeriv, ElementsAre(-1.,1.));
-  }
-
-  // Between points 1 and 2
-  {
-    ovk::elem<double,2> Interp = LagrangeInterpLinear(0.5);
-    ovk::elem<double,2> InterpDeriv = LagrangeInterpLinearDeriv(0.5);
-    EXPECT_THAT(Interp, ElementsAre(0.5,0.5));
-    EXPECT_THAT(InterpDeriv, ElementsAre(-1.,1.));
-  }
-
-  // Point 2
-  {
-    ovk::elem<double,2> Interp = LagrangeInterpLinear(1.);
-    ovk::elem<double,2> InterpDeriv = LagrangeInterpLinearDeriv(1.);
-    EXPECT_THAT(Interp, ElementsAre(0.,1.));
-    EXPECT_THAT(InterpDeriv, ElementsAre(-1.,1.));
-  }
-
-}
-
-TEST_F(GeometryOpsTests, LagrangeInterpCubic) {
-
-  if (TestComm().Rank() != 0) return;
-
-  using ovk::core::LagrangeInterpCubic;
-  using ovk::core::LagrangeInterpCubicDeriv;
-
-  // Point 1
-  {
-    ovk::elem<double,4> Interp = LagrangeInterpCubic(-1.);
-    ovk::elem<double,4> InterpDeriv = LagrangeInterpCubicDeriv(-1.);
-    EXPECT_NEAR(Interp(0), 1., 1.e-12);
-    EXPECT_NEAR(Interp(1), 0., 1.e-12);
-    EXPECT_NEAR(Interp(2), 0., 1.e-12);
-    EXPECT_NEAR(Interp(3), 0., 1.e-12);
-    EXPECT_NEAR(InterpDeriv(0), -11./6., 1.e-12);
-    EXPECT_NEAR(InterpDeriv(1), 3., 1.e-12);
-    EXPECT_NEAR(InterpDeriv(2), -1.5, 1.e-12);
-    EXPECT_NEAR(InterpDeriv(3), 1./3., 1.e-12);
-  }
-
-  // Between points 1 and 2
-  {
-    ovk::elem<double,4> Interp = LagrangeInterpCubic(-0.5);
-    ovk::elem<double,4> InterpDeriv = LagrangeInterpCubicDeriv(-0.5);
-    EXPECT_NEAR(Interp(0), 0.3125, 1.e-12);
-    EXPECT_NEAR(Interp(1), 0.9375, 1.e-12);
-    EXPECT_NEAR(Interp(2), -0.3125, 1.e-12);
-    EXPECT_NEAR(Interp(3), 0.0625, 1.e-12);
-    EXPECT_NEAR(InterpDeriv(0), -23./24., 1.e-12);
-    EXPECT_NEAR(InterpDeriv(1), 0.875, 1.e-12);
-    EXPECT_NEAR(InterpDeriv(2), 0.125, 1.e-12);
-    EXPECT_NEAR(InterpDeriv(3), -1./24., 1.e-12);
-  }
-
-  // Point 2
-  {
-    ovk::elem<double,4> Interp = LagrangeInterpCubic(0.);
-    ovk::elem<double,4> InterpDeriv = LagrangeInterpCubicDeriv(0.);
-    EXPECT_NEAR(Interp(0), 0., 1.e-12);
-    EXPECT_NEAR(Interp(1), 1., 1.e-12);
-    EXPECT_NEAR(Interp(2), 0., 1.e-12);
-    EXPECT_NEAR(Interp(3), 0., 1.e-12);
-    EXPECT_NEAR(InterpDeriv(0), -1./3., 1.e-12);
-    EXPECT_NEAR(InterpDeriv(1), -0.5, 1.e-12);
-    EXPECT_NEAR(InterpDeriv(2), 1., 1.e-12);
-    EXPECT_NEAR(InterpDeriv(3), -1./6., 1.e-12);
-  }
-
-  // Between points 2 and 3
-  {
-    ovk::elem<double,4> Interp = LagrangeInterpCubic(0.5);
-    ovk::elem<double,4> InterpDeriv = LagrangeInterpCubicDeriv(0.5);
-    EXPECT_NEAR(Interp(0), -0.0625, 1.e-12);
-    EXPECT_NEAR(Interp(1), 0.5625, 1.e-12);
-    EXPECT_NEAR(Interp(2), 0.5625, 1.e-12);
-    EXPECT_NEAR(Interp(3), -0.0625, 1.e-12);
-    EXPECT_NEAR(InterpDeriv(0), 1./24., 1.e-12);
-    EXPECT_NEAR(InterpDeriv(1), -1.125, 1.e-12);
-    EXPECT_NEAR(InterpDeriv(2), 1.125, 1.e-12);
-    EXPECT_NEAR(InterpDeriv(3), -1./24., 1.e-12);
-  }
-
-  // Point 3
-  {
-    ovk::elem<double,4> Interp = LagrangeInterpCubic(1.);
-    ovk::elem<double,4> InterpDeriv = LagrangeInterpCubicDeriv(1.);
-    EXPECT_NEAR(Interp(0), 0., 1.e-12);
-    EXPECT_NEAR(Interp(1), 0., 1.e-12);
-    EXPECT_NEAR(Interp(2), 1., 1.e-12);
-    EXPECT_NEAR(Interp(3), 0., 1.e-12);
-    EXPECT_NEAR(InterpDeriv(0), 1./6., 1.e-12);
-    EXPECT_NEAR(InterpDeriv(1), -1., 1.e-12);
-    EXPECT_NEAR(InterpDeriv(2), 0.5, 1.e-12);
-    EXPECT_NEAR(InterpDeriv(3), 1./3., 1.e-12);
-  }
-
-  // Between points 3 and 4
-  {
-    ovk::elem<double,4> Interp = LagrangeInterpCubic(1.5);
-    ovk::elem<double,4> InterpDeriv = LagrangeInterpCubicDeriv(1.5);
-    EXPECT_NEAR(Interp(0), 0.0625, 1.e-12);
-    EXPECT_NEAR(Interp(1), -0.3125, 1.e-12);
-    EXPECT_NEAR(Interp(2), 0.9375, 1.e-12);
-    EXPECT_NEAR(Interp(3), 0.3125, 1.e-12);
-    EXPECT_NEAR(InterpDeriv(0), 1./24., 1.e-12);
-    EXPECT_NEAR(InterpDeriv(1), -0.125, 1.e-12);
-    EXPECT_NEAR(InterpDeriv(2), -0.875, 1.e-12);
-    EXPECT_NEAR(InterpDeriv(3),  23./24., 1.e-12);
-  }
-
-  // Point 4
-  {
-    ovk::elem<double,4> Interp = LagrangeInterpCubic(2.);
-    ovk::elem<double,4> InterpDeriv = LagrangeInterpCubicDeriv(2.);
-    EXPECT_NEAR(Interp(0), 0., 1.e-12);
-    EXPECT_NEAR(Interp(1), 0., 1.e-12);
-    EXPECT_NEAR(Interp(2), 0., 1.e-12);
-    EXPECT_NEAR(Interp(3), 1., 1.e-12);
-    EXPECT_NEAR(InterpDeriv(0), -1./3., 1.e-12);
-    EXPECT_NEAR(InterpDeriv(1), 1.5, 1.e-12);
-    EXPECT_NEAR(InterpDeriv(2), -3., 1.e-12);
-    EXPECT_NEAR(InterpDeriv(3), 11./6., 1.e-12);
-  }
-
-}
-
-TEST_F(GeometryOpsTests, IsoLine2Node) {
+TEST_F(GeometricPrimitiveOpsTests, IsoLine2Node) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -456,7 +62,7 @@ TEST_F(GeometryOpsTests, IsoLine2Node) {
 
 }
 
-TEST_F(GeometryOpsTests, IsoLine2NodeInverse) {
+TEST_F(GeometricPrimitiveOpsTests, IsoLine2NodeInverse) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -496,7 +102,7 @@ TEST_F(GeometryOpsTests, IsoLine2NodeInverse) {
 
 }
 
-TEST_F(GeometryOpsTests, IsoLine4Node) {
+TEST_F(GeometricPrimitiveOpsTests, IsoLine4Node) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -539,7 +145,7 @@ TEST_F(GeometryOpsTests, IsoLine4Node) {
 
 }
 
-TEST_F(GeometryOpsTests, IsoLine4NodeInverse) {
+TEST_F(GeometricPrimitiveOpsTests, IsoLine4NodeInverse) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -583,7 +189,7 @@ TEST_F(GeometryOpsTests, IsoLine4NodeInverse) {
 
 }
 
-TEST_F(GeometryOpsTests, IsoQuad4NodeUniform) {
+TEST_F(GeometricPrimitiveOpsTests, IsoQuad4NodeUniform) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -634,7 +240,7 @@ TEST_F(GeometryOpsTests, IsoQuad4NodeUniform) {
 
 }
 
-TEST_F(GeometryOpsTests, IsoQuad4NodeUniformInverse) {
+TEST_F(GeometricPrimitiveOpsTests, IsoQuad4NodeUniformInverse) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -686,7 +292,7 @@ TEST_F(GeometryOpsTests, IsoQuad4NodeUniformInverse) {
 
 }
 
-TEST_F(GeometryOpsTests, IsoQuad4NodeOrientedUniform) {
+TEST_F(GeometricPrimitiveOpsTests, IsoQuad4NodeOrientedUniform) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -740,7 +346,7 @@ TEST_F(GeometryOpsTests, IsoQuad4NodeOrientedUniform) {
 
 }
 
-TEST_F(GeometryOpsTests, IsoQuad4NodeOrientedUniformInverse) {
+TEST_F(GeometricPrimitiveOpsTests, IsoQuad4NodeOrientedUniformInverse) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -795,7 +401,7 @@ TEST_F(GeometryOpsTests, IsoQuad4NodeOrientedUniformInverse) {
 
 }
 
-TEST_F(GeometryOpsTests, IsoQuad4NodeNonUniform) {
+TEST_F(GeometricPrimitiveOpsTests, IsoQuad4NodeNonUniform) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -846,7 +452,7 @@ TEST_F(GeometryOpsTests, IsoQuad4NodeNonUniform) {
 
 }
 
-TEST_F(GeometryOpsTests, IsoQuad4NodeNonUniformInverse) {
+TEST_F(GeometricPrimitiveOpsTests, IsoQuad4NodeNonUniformInverse) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -899,7 +505,7 @@ TEST_F(GeometryOpsTests, IsoQuad4NodeNonUniformInverse) {
 
 }
 
-TEST_F(GeometryOpsTests, IsoQuad16Node) {
+TEST_F(GeometricPrimitiveOpsTests, IsoQuad16Node) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -953,7 +559,7 @@ TEST_F(GeometryOpsTests, IsoQuad16Node) {
 
 }
 
-TEST_F(GeometryOpsTests, IsoQuad16NodeInverse) {
+TEST_F(GeometricPrimitiveOpsTests, IsoQuad16NodeInverse) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -1008,7 +614,7 @@ TEST_F(GeometryOpsTests, IsoQuad16NodeInverse) {
 
 }
 
-TEST_F(GeometryOpsTests, IsoHex8NodeUniform) {
+TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeUniform) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -1069,7 +675,7 @@ TEST_F(GeometryOpsTests, IsoHex8NodeUniform) {
 
 }
 
-TEST_F(GeometryOpsTests, IsoHex8NodeUniformInverse) {
+TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeUniformInverse) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -1131,7 +737,7 @@ TEST_F(GeometryOpsTests, IsoHex8NodeUniformInverse) {
 
 }
 
-TEST_F(GeometryOpsTests, IsoHex8NodeOrientedUniform) {
+TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeOrientedUniform) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -1195,7 +801,7 @@ TEST_F(GeometryOpsTests, IsoHex8NodeOrientedUniform) {
 
 }
 
-TEST_F(GeometryOpsTests, IsoHex8NodeOrientedUniformInverse) {
+TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeOrientedUniformInverse) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -1260,7 +866,7 @@ TEST_F(GeometryOpsTests, IsoHex8NodeOrientedUniformInverse) {
 
 }
 
-TEST_F(GeometryOpsTests, IsoHex8NodeNonUniform) {
+TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeNonUniform) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -1321,7 +927,7 @@ TEST_F(GeometryOpsTests, IsoHex8NodeNonUniform) {
 
 }
 
-TEST_F(GeometryOpsTests, IsoHex8NodeNonUniformInverse) {
+TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeNonUniformInverse) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -1385,7 +991,7 @@ TEST_F(GeometryOpsTests, IsoHex8NodeNonUniformInverse) {
 
 }
 
-TEST_F(GeometryOpsTests, IsoHex64Node) {
+TEST_F(GeometricPrimitiveOpsTests, IsoHex64Node) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -1447,7 +1053,7 @@ TEST_F(GeometryOpsTests, IsoHex64Node) {
 
 }
 
-TEST_F(GeometryOpsTests, IsoHex64NodeInverse) {
+TEST_F(GeometricPrimitiveOpsTests, IsoHex64NodeInverse) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -1511,7 +1117,7 @@ TEST_F(GeometryOpsTests, IsoHex64NodeInverse) {
 
 }
 
-TEST_F(GeometryOpsTests, OverlapsLine) {
+TEST_F(GeometricPrimitiveOpsTests, OverlapsLine) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -1558,7 +1164,7 @@ TEST_F(GeometryOpsTests, OverlapsLine) {
 
 }
 
-TEST_F(GeometryOpsTests, OverlapsQuadUniform) {
+TEST_F(GeometricPrimitiveOpsTests, OverlapsQuadUniform) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -1627,7 +1233,7 @@ TEST_F(GeometryOpsTests, OverlapsQuadUniform) {
 
 }
 
-TEST_F(GeometryOpsTests, OverlapsQuadOrientedUniform) {
+TEST_F(GeometricPrimitiveOpsTests, OverlapsQuadOrientedUniform) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -1699,7 +1305,7 @@ TEST_F(GeometryOpsTests, OverlapsQuadOrientedUniform) {
 
 }
 
-TEST_F(GeometryOpsTests, OverlapsQuadNonUniform) {
+TEST_F(GeometricPrimitiveOpsTests, OverlapsQuadNonUniform) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -1768,7 +1374,7 @@ TEST_F(GeometryOpsTests, OverlapsQuadNonUniform) {
 
 }
 
-TEST_F(GeometryOpsTests, OverlapsHexUniform) {
+TEST_F(GeometricPrimitiveOpsTests, OverlapsHexUniform) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -1863,7 +1469,7 @@ TEST_F(GeometryOpsTests, OverlapsHexUniform) {
 
 }
 
-TEST_F(GeometryOpsTests, OverlapsHexOrientedUniform) {
+TEST_F(GeometricPrimitiveOpsTests, OverlapsHexOrientedUniform) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -1961,7 +1567,7 @@ TEST_F(GeometryOpsTests, OverlapsHexOrientedUniform) {
 
 }
 
-TEST_F(GeometryOpsTests, OverlapsHexNonUniform) {
+TEST_F(GeometricPrimitiveOpsTests, OverlapsHexNonUniform) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -2056,28 +1662,7 @@ TEST_F(GeometryOpsTests, OverlapsHexNonUniform) {
 
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-TEST_F(GeometryOpsTests, VolumeLine) {
+TEST_F(GeometricPrimitiveOpsTests, VolumeLine) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -2105,7 +1690,7 @@ TEST_F(GeometryOpsTests, VolumeLine) {
 
 }
 
-TEST_F(GeometryOpsTests, VolumeQuadUniform) {
+TEST_F(GeometricPrimitiveOpsTests, VolumeQuadUniform) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -2137,7 +1722,7 @@ TEST_F(GeometryOpsTests, VolumeQuadUniform) {
 
 }
 
-TEST_F(GeometryOpsTests, VolumeQuadOrientedUniform) {
+TEST_F(GeometricPrimitiveOpsTests, VolumeQuadOrientedUniform) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -2172,7 +1757,7 @@ TEST_F(GeometryOpsTests, VolumeQuadOrientedUniform) {
 
 }
 
-TEST_F(GeometryOpsTests, VolumeQuadNonUniform) {
+TEST_F(GeometricPrimitiveOpsTests, VolumeQuadNonUniform) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -2204,7 +1789,7 @@ TEST_F(GeometryOpsTests, VolumeQuadNonUniform) {
 
 }
 
-TEST_F(GeometryOpsTests, VolumeHexUniform) {
+TEST_F(GeometricPrimitiveOpsTests, VolumeHexUniform) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -2244,7 +1829,7 @@ TEST_F(GeometryOpsTests, VolumeHexUniform) {
 
 }
 
-TEST_F(GeometryOpsTests, VolumeHexOrientedUniform) {
+TEST_F(GeometricPrimitiveOpsTests, VolumeHexOrientedUniform) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -2287,7 +1872,7 @@ TEST_F(GeometryOpsTests, VolumeHexOrientedUniform) {
 
 }
 
-TEST_F(GeometryOpsTests, VolumeHexNonUniform) {
+TEST_F(GeometricPrimitiveOpsTests, VolumeHexNonUniform) {
 
   if (TestComm().Rank() != 0) return;
 

@@ -4,35 +4,6 @@
 namespace ovk {
 namespace core {
 
-template <typename IndexType> IndexType CartesianGridCell1D(double Origin, double CellSize, double
-  Coord) {
-
-  return IndexType(std::floor((Coord - Origin)/CellSize));
-
-}
-
-template <typename IndexType> tuple<IndexType> CartesianGridCell2D(const tuple<double> &Origin,
-  const tuple<double> &CellSize, const tuple<double> &Coords) {
-
-  return {
-    IndexType(std::floor((Coords(0) - Origin(0))/CellSize(0))),
-    IndexType(std::floor((Coords(1) - Origin(1))/CellSize(1))),
-    IndexType(0)
-  };
-
-}
-
-template <typename IndexType> tuple<IndexType> CartesianGridCell3D(const tuple<double> &Origin,
-  const tuple<double> &CellSize, const tuple<double> &Coords) {
-
-  return {
-    IndexType(std::floor((Coords(0) - Origin(0))/CellSize(0))),
-    IndexType(std::floor((Coords(1) - Origin(1))/CellSize(1))),
-    IndexType(std::floor((Coords(2) - Origin(2))/CellSize(2)))
-  };
-
-}
-
 inline double ColumnDeterminant2D(const tuple<double> &AI, const tuple<double> &AJ) {
 
   return AI(0)*AJ(1) - AI(1)*AJ(0);

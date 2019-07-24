@@ -1,39 +1,20 @@
 // Copyright (c) 2019 Matthew J. Smith and Overkit contributors
 // License: MIT (http://opensource.org/licenses/MIT)
 
-#ifndef OVK_CORE_GEOMETRY_OPS_HPP_INCLUDED
-#define OVK_CORE_GEOMETRY_OPS_HPP_INCLUDED
+#ifndef OVK_CORE_GEOMETRIC_PRIMITIVE_OPS_HPP_INCLUDED
+#define OVK_CORE_GEOMETRIC_PRIMITIVE_OPS_HPP_INCLUDED
 
 #include <ovk/core/ArrayView.hpp>
 #include <ovk/core/Elem.hpp>
 #include <ovk/core/Global.hpp>
+#include <ovk/core/Math.hpp>
 #include <ovk/core/Tuple.hpp>
 
 #include <cmath>
+#include <cstdlib>
 
 namespace ovk {
 namespace core {
-
-template <typename IndexType=long long> IndexType CartesianGridCell1D(double Origin, double
-  CellSize, double Coord);
-template <typename IndexType=long long> tuple<IndexType> CartesianGridCell2D(const tuple<double>
-  &Origin, const tuple<double> &CellSize, const tuple<double> &Coords);
-template <typename IndexType=long long> tuple<IndexType> CartesianGridCell3D(const tuple<double>
-  &Origin, const tuple<double> &CellSize, const tuple<double> &Coords);
-
-double ColumnDeterminant2D(const tuple<double> &AI, const tuple<double> &AJ);
-double ColumnDeterminant3D(const tuple<double> &AI, const tuple<double> &AJ, const tuple<double>
-  &AK);
-
-tuple<double> ColumnSolve2D(const tuple<double> &AI, const tuple<double> &AJ, const tuple<double>
-  &B);
-tuple<double> ColumnSolve3D(const tuple<double> &AI, const tuple<double> &AJ, const tuple<double>
-  &AK, const tuple<double> &B);
-
-elem<double,2> LagrangeInterpLinear(double U);
-elem<double,2> LagrangeInterpLinearDeriv(double U);
-elem<double,4> LagrangeInterpCubic(double U);
-elem<double,4> LagrangeInterpCubicDeriv(double U);
 
 double IsoLine2Node(double LowerNodeCoord, double UpperNodeCoord, double LocalCoord);
 double IsoLine2NodeInverse(double LowerNodeCoord, double UpperNodeCoord, double Coord);
@@ -117,9 +98,8 @@ double VolumeHexNonUniform(const array_view<const tuple<double>> &NodeCoords);
 
 }}
 
-#include <ovk/core/GeometryOps.inl>
-#include <ovk/core/GeometryOpsLine.inl>
-#include <ovk/core/GeometryOpsQuad.inl>
-#include <ovk/core/GeometryOpsHex.inl>
+#include <ovk/core/GeometricPrimitiveOpsLine.inl>
+#include <ovk/core/GeometricPrimitiveOpsQuad.inl>
+#include <ovk/core/GeometricPrimitiveOpsHex.inl>
 
 #endif

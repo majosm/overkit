@@ -138,13 +138,12 @@ set(INTERNAL_HEADERS
   Exchanger.h
   FloatingRef.inl
   ForEach.hpp
+  GeometricPrimitiveOps.hpp
+  GeometricPrimitiveOpsLine.inl
+  GeometricPrimitiveOpsQuad.inl
+  GeometricPrimitiveOpsHex.inl
   Geometry.h
   GeometryComponent.h
-  GeometryOps.hpp
-  GeometryOps.inl
-  GeometryOpsLine.inl
-  GeometryOpsQuad.inl
-  GeometryOpsHex.inl
   Global.h
   Halo.hpp
   Halo.inl
@@ -152,6 +151,8 @@ set(INTERNAL_HEADERS
   IteratorTraits.hpp
   Logger.hpp
   Logger.inl
+  Math.hpp
+  Math.inl
   Misc.inl
   Moveabool.hpp
   Optional.inl
