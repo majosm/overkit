@@ -293,7 +293,7 @@ bool connectivity_m::EditingDestinationRanks() const {
 
 edit_handle<array<int>> connectivity_m::EditDestinationRanks() {
 
-  if (!DestinationsEditor_.Active()) {
+  if (!DestinationRanksEditor_.Active()) {
     MPI_Barrier(Comm_);
     floating_ref<connectivity_m> FloatingRef = FloatingRefGenerator_.Generate(*this);
     auto DeactivateFunc = [FloatingRef] {

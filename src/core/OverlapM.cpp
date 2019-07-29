@@ -231,7 +231,7 @@ bool overlap_m::EditingDestinationRanks() const {
 
 edit_handle<array<int>> overlap_m::EditDestinationRanks() {
 
-  if (!DestinationsEditor_.Active()) {
+  if (!DestinationRanksEditor_.Active()) {
     MPI_Barrier(Comm_);
     floating_ref<overlap_m> FloatingRef = FloatingRefGenerator_.Generate(*this);
     auto DeactivateFunc = [FloatingRef] {
