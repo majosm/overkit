@@ -11,6 +11,7 @@
 #include "ovk/core/DataType.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/DomainBase.hpp"
+#include "ovk/core/Elem.hpp"
 #include "ovk/core/Editor.hpp"
 #include "ovk/core/FloatingRef.hpp"
 #include "ovk/core/Global.hpp"
@@ -103,21 +104,7 @@ void connectivity_component::DestroyConnectivitiesForDyingGrids_() {
     }
   }
 
-  if (DyingConnectivityIDs.Count() > 0) {
-
-    array<int> MGridIDs, NGridIDs;
-
-    MGridIDs.Reserve(DyingConnectivityIDs.Count());
-    NGridIDs.Reserve(DyingConnectivityIDs.Count());
-
-    for (auto &IDPair : DyingConnectivityIDs) {
-      MGridIDs.Append(IDPair(0));
-      NGridIDs.Append(IDPair(1));
-    }
-
-    DestroyConnectivities(MGridIDs, NGridIDs);
-
-  }
+  DestroyConnectivities(DyingConnectivityIDs);
 
 }
 
@@ -163,9 +150,7 @@ void connectivity_component::SyncEdits_() {
 
   int NextIndex = 0;
   for (auto &IDPair : ConnectivityRecords_.Keys()) {
-    int MGridID = IDPair(0);
-    int NGridID = IDPair(1);
-    GridIDsToIndex.Insert({MGridID,NGridID}, NextIndex);
+    GridIDsToIndex.Insert(IDPair, NextIndex);
     ++NextIndex;
   }
 
@@ -173,18 +158,14 @@ void connectivity_component::SyncEdits_() {
     connectivity_event_flags::NONE);
 
   for (auto &LocalMEntry : LocalMs_) {
-    int MGridID = LocalMEntry.Key(0);
-    int NGridID = LocalMEntry.Key(1);
     local_m &LocalM = LocalMEntry.Value();
-    int iConnectivity = GridIDsToIndex(MGridID,NGridID);
+    int iConnectivity = GridIDsToIndex(LocalMEntry.Key());
     AllConnectivityEventFlags(iConnectivity) |= LocalM.EventFlags;
   }
 
   for (auto &LocalNEntry : LocalNs_) {
-    int MGridID = LocalNEntry.Key(0);
-    int NGridID = LocalNEntry.Key(1);
     local_n &LocalN = LocalNEntry.Value();
-    int iConnectivity = GridIDsToIndex(MGridID,NGridID);
+    int iConnectivity = GridIDsToIndex(LocalNEntry.Key());
     AllConnectivityEventFlags(iConnectivity) |= LocalN.EventFlags;
   }
 
@@ -200,7 +181,7 @@ void connectivity_component::SyncEdits_() {
   for (auto &IDPair : ConnectivityRecords_.Keys()) {
     int MGridID = IDPair(0);
     int NGridID = IDPair(1);
-    int iConnectivity = GridIDsToIndex(MGridID,NGridID);
+    int iConnectivity = GridIDsToIndex(IDPair);
     connectivity_event_flags EventFlags = AllConnectivityEventFlags(iConnectivity);
     if (EventFlags != connectivity_event_flags::NONE) {
       ConnectivityEvent_.Trigger(MGridID, NGridID, EventFlags, iTrigger == NumTriggers-1);
@@ -247,6 +228,12 @@ bool connectivity_component::ConnectivityExists(int MGridID, int NGridID) const 
 
 }
 
+bool connectivity_component::ConnectivityExists(const elem<int,2> &GridIDPair) const {
+
+  return ConnectivityExists(GridIDPair(0),GridIDPair(1));
+
+}
+
 void connectivity_component::CreateConnectivity(int MGridID, int NGridID) {
 
   const core::domain_base &Domain = *Domain_;
@@ -284,7 +271,7 @@ void connectivity_component::CreateConnectivity(int MGridID, int NGridID) {
     LocalNs_.Insert({MGridID,NGridID}, std::move(ConnectivityN));
   }
 
-  ConnectivityRecords_.Insert({MGridID,NGridID});
+  ConnectivityRecords_.Insert(MGridID,NGridID);
 
   MPI_Barrier(Domain.Comm());
 
@@ -294,6 +281,12 @@ void connectivity_component::CreateConnectivity(int MGridID, int NGridID) {
   ConnectivityEvent_.Trigger(MGridID, NGridID, connectivity_event_flags::CREATE, true);
 
   MPI_Barrier(Domain.Comm());
+
+}
+
+void connectivity_component::CreateConnectivity(const elem<int,2> &GridIDPair) {
+
+  CreateConnectivity(GridIDPair(0), GridIDPair(1));
 
 }
 
@@ -358,7 +351,7 @@ void connectivity_component::CreateConnectivities(array_view<const int> MGridIDs
   for (int iCreate = 0; iCreate < NumCreates; ++iCreate) {
     int MGridID = MGridIDs(iCreate);
     int NGridID = NGridIDs(iCreate);
-    ConnectivityRecords_.Insert({MGridID,NGridID});
+    ConnectivityRecords_.Insert(MGridID,NGridID);
   }
 
   MPI_Barrier(Domain.Comm());
@@ -382,6 +375,23 @@ void connectivity_component::CreateConnectivities(array_view<const int> MGridIDs
   }
 
   MPI_Barrier(Domain.Comm());
+
+}
+
+void connectivity_component::CreateConnectivities(array_view<const elem<int,2>> GridIDPairs) {
+
+  array<int> MGridIDs;
+  array<int> NGridIDs;
+
+  MGridIDs.Reserve(GridIDPairs.Count());
+  NGridIDs.Reserve(GridIDPairs.Count());
+
+  for (auto &IDPair : GridIDPairs) {
+    MGridIDs.Append(IDPair(0));
+    NGridIDs.Append(IDPair(1));
+  }
+
+  CreateConnectivities(MGridIDs, NGridIDs);
 
 }
 
@@ -436,6 +446,12 @@ void connectivity_component::DestroyConnectivity(int MGridID, int NGridID) {
 
   Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Done destroying connectivity %s.(%s,%s).",
     Domain.Name(), MGridInfo.Name(), NGridInfo.Name());
+
+}
+
+void connectivity_component::DestroyConnectivity(const elem<int,2> &GridIDPair) {
+
+  DestroyConnectivity(GridIDPair(0), GridIDPair(1));
 
 }
 
@@ -538,6 +554,23 @@ void connectivity_component::DestroyConnectivities(array_view<const int> MGridID
 
 }
 
+void connectivity_component::DestroyConnectivities(array_view<const elem<int,2>> GridIDPairs) {
+
+  array<int> MGridIDs;
+  array<int> NGridIDs;
+
+  MGridIDs.Reserve(GridIDPairs.Count());
+  NGridIDs.Reserve(GridIDPairs.Count());
+
+  for (auto &IDPair : GridIDPairs) {
+    MGridIDs.Append(IDPair(0));
+    NGridIDs.Append(IDPair(1));
+  }
+
+  DestroyConnectivities(MGridIDs, NGridIDs);
+
+}
+
 void connectivity_component::ClearConnectivities() {
 
   const core::domain_base &Domain = *Domain_;
@@ -557,12 +590,10 @@ void connectivity_component::ClearConnectivities() {
       int MGridID = IDPair(0);
       int NGridID = IDPair(1);
       if (Domain.GridIsLocal(MGridID)) {
-        Editing(iConnectivity) = Editing(iConnectivity) || LocalMs_(MGridID,NGridID).Editor.
-          Active();
+        Editing(iConnectivity) = Editing(iConnectivity) || LocalMs_(IDPair).Editor.Active();
       }
       if (Domain.GridIsLocal(NGridID)) {
-        Editing(iConnectivity) = Editing(iConnectivity) || LocalNs_(MGridID,NGridID).Editor.
-          Active();
+        Editing(iConnectivity) = Editing(iConnectivity) || LocalNs_(IDPair).Editor.Active();
       }
       ++iConnectivity;
     }
@@ -651,6 +682,12 @@ const connectivity_m &connectivity_component::ConnectivityM(int MGridID, int NGr
 
 }
 
+const connectivity_m &connectivity_component::ConnectivityM(const elem<int,2> &GridIDPair) const {
+
+  return ConnectivityM(GridIDPair(0), GridIDPair(1));
+
+}
+
 bool connectivity_component::EditingConnectivityM(int MGridID, int NGridID) const {
 
   const core::domain_base &Domain = *Domain_;
@@ -670,6 +707,12 @@ bool connectivity_component::EditingConnectivityM(int MGridID, int NGridID) cons
   const editor &Editor = LocalM.Editor;
 
   return Editor.Active();
+
+}
+
+bool connectivity_component::EditingConnectivityM(const elem<int,2> &GridIDPair) const {
+
+  return EditingConnectivityM(GridIDPair(0), GridIDPair(1));
 
 }
 
@@ -703,6 +746,13 @@ edit_handle<connectivity_m> connectivity_component::EditConnectivityM(int MGridI
 
 }
 
+edit_handle<connectivity_m> connectivity_component::EditConnectivityM(const elem<int,2> &GridIDPair)
+  {
+
+  return EditConnectivityM(GridIDPair(0), GridIDPair(1));
+
+}
+
 void connectivity_component::RestoreConnectivityM(int MGridID, int NGridID) {
 
   const core::domain_base &Domain = *Domain_;
@@ -729,6 +779,12 @@ void connectivity_component::RestoreConnectivityM(int MGridID, int NGridID) {
   }
 
   Editor.Restore();
+
+}
+
+void connectivity_component::RestoreConnectivityM(const elem<int,2> &GridIDPair) {
+
+  RestoreConnectivityM(GridIDPair(0), GridIDPair(1));
 
 }
 
@@ -780,6 +836,12 @@ const connectivity_n &connectivity_component::ConnectivityN(int MGridID, int NGr
 
 }
 
+const connectivity_n &connectivity_component::ConnectivityN(const elem<int,2> &GridIDPair) const {
+
+  return ConnectivityN(GridIDPair(0), GridIDPair(1));
+
+}
+
 bool connectivity_component::EditingConnectivityN(int MGridID, int NGridID) const {
 
   const core::domain_base &Domain = *Domain_;
@@ -799,6 +861,12 @@ bool connectivity_component::EditingConnectivityN(int MGridID, int NGridID) cons
   const editor &Editor = LocalN.Editor;
 
   return Editor.Active();
+
+}
+
+bool connectivity_component::EditingConnectivityN(const elem<int,2> &GridIDPair) const {
+
+  return EditingConnectivityN(GridIDPair(0), GridIDPair(1));
 
 }
 
@@ -832,6 +900,13 @@ edit_handle<connectivity_n> connectivity_component::EditConnectivityN(int MGridI
 
 }
 
+edit_handle<connectivity_n> connectivity_component::EditConnectivityN(const elem<int,2> &GridIDPair)
+  {
+
+  return EditConnectivityN(GridIDPair(0), GridIDPair(1));
+
+}
+
 void connectivity_component::RestoreConnectivityN(int MGridID, int NGridID) {
 
   const core::domain_base &Domain = *Domain_;
@@ -858,6 +933,12 @@ void connectivity_component::RestoreConnectivityN(int MGridID, int NGridID) {
   }
 
   Editor.Restore();
+
+}
+
+void connectivity_component::RestoreConnectivityN(const elem<int,2> &GridIDPair) {
+
+  RestoreConnectivityN(GridIDPair(0), GridIDPair(1));
 
 }
 

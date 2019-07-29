@@ -8,6 +8,7 @@
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Context.hpp>
 #include <ovk/core/DomainBase.hpp>
+#include <ovk/core/Elem.hpp>
 #include <ovk/core/Event.hpp>
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
@@ -131,12 +132,17 @@ public:
   const id_set<2> &OverlapIDs() const;
 
   bool OverlapExists(int MGridID, int NGridID) const;
+  bool OverlapExists(const elem<int,2> &GridIDPair) const;
 
   void CreateOverlap(int MGridID, int NGridID);
+  void CreateOverlap(const elem<int,2> &GridIDPair);
   void CreateOverlaps(array_view<const int> MGridIDs, array_view<const int> NGridIDs);
+  void CreateOverlaps(array_view<const elem<int,2>> GridIDPairs);
 
   void DestroyOverlap(int MGridID, int NGridID);
+  void DestroyOverlap(const elem<int,2> &GridIDPair);
   void DestroyOverlaps(array_view<const int> MGridIDs, array_view<const int> NGridIDs);
+  void DestroyOverlaps(array_view<const elem<int,2>> GridIDPairs);
 
   void ClearOverlaps();
 
@@ -146,9 +152,13 @@ public:
   const id_set<2> &LocalOverlapMIDs() const;
 
   const overlap_m &OverlapM(int MGridID, int NGridID) const;
+  const overlap_m &OverlapM(const elem<int,2> &GridIDPair) const;
   bool EditingOverlapM(int MGridID, int NGridID) const;
+  bool EditingOverlapM(const elem<int,2> &GridIDPair) const;
   edit_handle<overlap_m> EditOverlapM(int MGridID, int NGridID);
+  edit_handle<overlap_m> EditOverlapM(const elem<int,2> &GridIDPair);
   void RestoreOverlapM(int MGridID, int NGridID);
+  void RestoreOverlapM(const elem<int,2> &GridIDPair);
 
   int LocalOverlapNCount() const;
   int LocalOverlapNCountForGrid(int NGridID) const;
@@ -156,9 +166,13 @@ public:
   const id_set<2> &LocalOverlapNIDs() const;
 
   const overlap_n &OverlapN(int MGridID, int NGridID) const;
+  const overlap_n &OverlapN(const elem<int,2> &GridIDPair) const;
   bool EditingOverlapN(int MGridID, int NGridID) const;
+  bool EditingOverlapN(const elem<int,2> &GridIDPair) const;
   edit_handle<overlap_n> EditOverlapN(int MGridID, int NGridID);
+  edit_handle<overlap_n> EditOverlapN(const elem<int,2> &GridIDPair);
   void RestoreOverlapN(int MGridID, int NGridID);
+  void RestoreOverlapN(const elem<int,2> &GridIDPair);
 
   void StartEdit();
   void EndEdit();

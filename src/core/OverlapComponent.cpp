@@ -9,6 +9,7 @@
 #include "ovk/core/DataType.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/DomainBase.hpp"
+#include "ovk/core/Elem.hpp"
 #include "ovk/core/Editor.hpp"
 #include "ovk/core/FloatingRef.hpp"
 #include "ovk/core/Global.hpp"
@@ -102,21 +103,7 @@ void overlap_component::DestroyOverlapsForDyingGrids_() {
     }
   }
 
-  if (DyingOverlapIDs.Count() > 0) {
-
-    array<int> MGridIDs, NGridIDs;
-
-    MGridIDs.Reserve(DyingOverlapIDs.Count());
-    NGridIDs.Reserve(DyingOverlapIDs.Count());
-
-    for (auto &IDPair : DyingOverlapIDs) {
-      MGridIDs.Append(IDPair(0));
-      NGridIDs.Append(IDPair(1));
-    }
-
-    DestroyOverlaps(MGridIDs, NGridIDs);
-
-  }
+  DestroyOverlaps(DyingOverlapIDs);
 
 }
 
@@ -162,9 +149,7 @@ void overlap_component::SyncEdits_() {
 
   int NextIndex = 0;
   for (auto &IDPair : OverlapRecords_.Keys()) {
-    int MGridID = IDPair(0);
-    int NGridID = IDPair(1);
-    GridIDsToIndex.Insert({MGridID,NGridID}, NextIndex);
+    GridIDsToIndex.Insert(IDPair, NextIndex);
     ++NextIndex;
   }
 
@@ -172,18 +157,14 @@ void overlap_component::SyncEdits_() {
     overlap_event_flags::NONE);
 
   for (auto &LocalMEntry : LocalMs_) {
-    int MGridID = LocalMEntry.Key(0);
-    int NGridID = LocalMEntry.Key(1);
     local_m &LocalM = LocalMEntry.Value();
-    int iOverlap = GridIDsToIndex(MGridID,NGridID);
+    int iOverlap = GridIDsToIndex(LocalMEntry.Key());
     AllOverlapEventFlags(iOverlap) |= LocalM.EventFlags;
   }
 
   for (auto &LocalNEntry : LocalNs_) {
-    int MGridID = LocalNEntry.Key(0);
-    int NGridID = LocalNEntry.Key(1);
     local_n &LocalN = LocalNEntry.Value();
-    int iOverlap = GridIDsToIndex(MGridID,NGridID);
+    int iOverlap = GridIDsToIndex(LocalNEntry.Key());
     AllOverlapEventFlags(iOverlap) |= LocalN.EventFlags;
   }
 
@@ -199,7 +180,7 @@ void overlap_component::SyncEdits_() {
   for (auto &IDPair : OverlapRecords_.Keys()) {
     int MGridID = IDPair(0);
     int NGridID = IDPair(1);
-    int iOverlap = GridIDsToIndex(MGridID,NGridID);
+    int iOverlap = GridIDsToIndex(IDPair);
     overlap_event_flags EventFlags = AllOverlapEventFlags(iOverlap);
     if (EventFlags != overlap_event_flags::NONE) {
       OverlapEvent_.Trigger(MGridID, NGridID, EventFlags, iTrigger == NumTriggers-1);
@@ -246,6 +227,12 @@ bool overlap_component::OverlapExists(int MGridID, int NGridID) const {
 
 }
 
+bool overlap_component::OverlapExists(const elem<int,2> &GridIDPair) const {
+
+  return OverlapExists(GridIDPair(0), GridIDPair(1));
+
+}
+
 void overlap_component::CreateOverlap(int MGridID, int NGridID) {
 
   const core::domain_base &Domain = *Domain_;
@@ -283,7 +270,7 @@ void overlap_component::CreateOverlap(int MGridID, int NGridID) {
     LocalNs_.Insert({MGridID,NGridID}, std::move(OverlapN));
   }
 
-  OverlapRecords_.Insert({MGridID,NGridID});
+  OverlapRecords_.Insert(MGridID,NGridID);
 
   MPI_Barrier(Domain.Comm());
 
@@ -296,8 +283,14 @@ void overlap_component::CreateOverlap(int MGridID, int NGridID) {
 
 }
 
-void overlap_component::CreateOverlaps(array_view<const int> MGridIDs, array_view<const
-  int> NGridIDs) {
+void overlap_component::CreateOverlap(const elem<int,2> &GridIDPair) {
+
+  CreateOverlap(GridIDPair(0), GridIDPair(1));
+
+}
+
+void overlap_component::CreateOverlaps(array_view<const int> MGridIDs, array_view<const int>
+  NGridIDs) {
 
   const core::domain_base &Domain = *Domain_;
 
@@ -357,7 +350,7 @@ void overlap_component::CreateOverlaps(array_view<const int> MGridIDs, array_vie
   for (int iCreate = 0; iCreate < NumCreates; ++iCreate) {
     int MGridID = MGridIDs(iCreate);
     int NGridID = NGridIDs(iCreate);
-    OverlapRecords_.Insert({MGridID,NGridID});
+    OverlapRecords_.Insert(MGridID,NGridID);
   }
 
   MPI_Barrier(Domain.Comm());
@@ -380,6 +373,22 @@ void overlap_component::CreateOverlaps(array_view<const int> MGridIDs, array_vie
   }
 
   MPI_Barrier(Domain.Comm());
+
+}
+
+void overlap_component::CreateOverlaps(array_view<const elem<int,2>> GridIDPairs) {
+
+  array<int> MGridIDs, NGridIDs;
+
+  MGridIDs.Reserve(GridIDPairs.Count());
+  NGridIDs.Reserve(GridIDPairs.Count());
+
+  for (auto &IDPair : GridIDPairs) {
+    MGridIDs.Append(IDPair(0));
+    NGridIDs.Append(IDPair(1));
+  }
+
+  CreateOverlaps(MGridIDs, NGridIDs);
 
 }
 
@@ -434,6 +443,12 @@ void overlap_component::DestroyOverlap(int MGridID, int NGridID) {
 
   Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Done destroying overlap %s.(%s,%s).",
     Domain.Name(), MGridInfo.Name(), NGridInfo.Name());
+
+}
+
+void overlap_component::DestroyOverlap(const elem<int,2> &GridIDPair) {
+
+  DestroyOverlap(GridIDPair(0), GridIDPair(1));
 
 }
 
@@ -536,6 +551,22 @@ void overlap_component::DestroyOverlaps(array_view<const int> MGridIDs, array_vi
 
 }
 
+void overlap_component::DestroyOverlaps(array_view<const elem<int,2>> GridIDPairs) {
+
+  array<int> MGridIDs, NGridIDs;
+
+  MGridIDs.Reserve(GridIDPairs.Count());
+  NGridIDs.Reserve(GridIDPairs.Count());
+
+  for (auto &IDPair : GridIDPairs) {
+    MGridIDs.Append(IDPair(0));
+    NGridIDs.Append(IDPair(1));
+  }
+
+  DestroyOverlaps(MGridIDs, NGridIDs);
+
+}
+
 void overlap_component::ClearOverlaps() {
 
   const core::domain_base &Domain = *Domain_;
@@ -555,12 +586,10 @@ void overlap_component::ClearOverlaps() {
       int MGridID = IDPair(0);
       int NGridID = IDPair(1);
       if (Domain.GridIsLocal(MGridID)) {
-        Editing(iOverlap) = Editing(iOverlap) || LocalMs_(MGridID,NGridID).Editor.
-          Active();
+        Editing(iOverlap) = Editing(iOverlap) || LocalMs_(IDPair).Editor.Active();
       }
       if (Domain.GridIsLocal(NGridID)) {
-        Editing(iOverlap) = Editing(iOverlap) || LocalNs_(MGridID,NGridID).Editor.
-          Active();
+        Editing(iOverlap) = Editing(iOverlap) || LocalNs_(IDPair).Editor.Active();
       }
       ++iOverlap;
     }
@@ -649,6 +678,12 @@ const overlap_m &overlap_component::OverlapM(int MGridID, int NGridID) const {
 
 }
 
+const overlap_m &overlap_component::OverlapM(const elem<int,2> &GridIDPair) const {
+
+  return OverlapM(GridIDPair(0), GridIDPair(1));
+
+}
+
 bool overlap_component::EditingOverlapM(int MGridID, int NGridID) const {
 
   const core::domain_base &Domain = *Domain_;
@@ -668,6 +703,12 @@ bool overlap_component::EditingOverlapM(int MGridID, int NGridID) const {
   const editor &Editor = LocalM.Editor;
 
   return Editor.Active();
+
+}
+
+bool overlap_component::EditingOverlapM(const elem<int,2> &GridIDPair) const {
+
+  return EditingOverlapM(GridIDPair(0), GridIDPair(1));
 
 }
 
@@ -701,6 +742,12 @@ edit_handle<overlap_m> overlap_component::EditOverlapM(int MGridID, int NGridID)
 
 }
 
+edit_handle<overlap_m> overlap_component::EditOverlapM(const elem<int,2> &GridIDPair) {
+
+  return EditOverlapM(GridIDPair(0), GridIDPair(1));
+
+}
+
 void overlap_component::RestoreOverlapM(int MGridID, int NGridID) {
 
   const core::domain_base &Domain = *Domain_;
@@ -727,6 +774,12 @@ void overlap_component::RestoreOverlapM(int MGridID, int NGridID) {
   }
 
   Editor.Restore();
+
+}
+
+void overlap_component::RestoreOverlapM(const elem<int,2> &GridIDPair) {
+
+  RestoreOverlapM(GridIDPair(0), GridIDPair(1));
 
 }
 
@@ -778,6 +831,12 @@ const overlap_n &overlap_component::OverlapN(int MGridID, int NGridID) const {
 
 }
 
+const overlap_n &overlap_component::OverlapN(const elem<int,2> &GridIDPair) const {
+
+  return OverlapN(GridIDPair(0), GridIDPair(1));
+
+}
+
 bool overlap_component::EditingOverlapN(int MGridID, int NGridID) const {
 
   const core::domain_base &Domain = *Domain_;
@@ -797,6 +856,12 @@ bool overlap_component::EditingOverlapN(int MGridID, int NGridID) const {
   const editor &Editor = LocalN.Editor;
 
   return Editor.Active();
+
+}
+
+bool overlap_component::EditingOverlapN(const elem<int,2> &GridIDPair) const {
+
+  return EditingOverlapN(GridIDPair(0), GridIDPair(1));
 
 }
 
@@ -830,6 +895,12 @@ edit_handle<overlap_n> overlap_component::EditOverlapN(int MGridID, int NGridID)
 
 }
 
+edit_handle<overlap_n> overlap_component::EditOverlapN(const elem<int,2> &GridIDPair) {
+
+  return EditOverlapN(GridIDPair(0), GridIDPair(1));
+
+}
+
 void overlap_component::RestoreOverlapN(int MGridID, int NGridID) {
 
   const core::domain_base &Domain = *Domain_;
@@ -856,6 +927,12 @@ void overlap_component::RestoreOverlapN(int MGridID, int NGridID) {
   }
 
   Editor.Restore();
+
+}
+
+void overlap_component::RestoreOverlapN(const elem<int,2> &GridIDPair) {
+
+  RestoreOverlapN(GridIDPair(0), GridIDPair(1));
 
 }
 

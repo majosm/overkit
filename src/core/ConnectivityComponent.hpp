@@ -11,6 +11,7 @@
 #include <ovk/core/ConnectivityN.hpp>
 #include <ovk/core/Context.hpp>
 #include <ovk/core/DomainBase.hpp>
+#include <ovk/core/Elem.hpp>
 #include <ovk/core/Event.hpp>
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
@@ -136,12 +137,17 @@ public:
   const id_set<2> &ConnectivityIDs() const;
 
   bool ConnectivityExists(int MGridID, int NGridID) const;
+  bool ConnectivityExists(const elem<int,2> &GridIDPair) const;
 
   void CreateConnectivity(int MGridID, int NGridID);
+  void CreateConnectivity(const elem<int,2> &GridIDPair);
   void CreateConnectivities(array_view<const int> MGridIDs, array_view<const int> NGridIDs);
+  void CreateConnectivities(array_view<const elem<int,2>> GridIDPairs);
 
   void DestroyConnectivity(int MGridID, int NGridID);
+  void DestroyConnectivity(const elem<int,2> &GridIDPair);
   void DestroyConnectivities(array_view<const int> MGridIDs, array_view<const int> NGridIDs);
+  void DestroyConnectivities(array_view<const elem<int,2>> GridIDPairs);
 
   void ClearConnectivities();
 
@@ -151,9 +157,13 @@ public:
   const id_set<2> &LocalConnectivityMIDs() const;
 
   const connectivity_m &ConnectivityM(int MGridID, int NGridID) const;
+  const connectivity_m &ConnectivityM(const elem<int,2> &GridIDPair) const;
   bool EditingConnectivityM(int MGridID, int NGridID) const;
+  bool EditingConnectivityM(const elem<int,2> &GridIDPair) const;
   edit_handle<connectivity_m> EditConnectivityM(int MGridID, int NGridID);
+  edit_handle<connectivity_m> EditConnectivityM(const elem<int,2> &GridIDPair);
   void RestoreConnectivityM(int MGridID, int NGridID);
+  void RestoreConnectivityM(const elem<int,2> &GridIDPair);
 
   int LocalConnectivityNCount() const;
   int LocalConnectivityNCountForGrid(int NGridID) const;
@@ -161,9 +171,13 @@ public:
   const id_set<2> &LocalConnectivityNIDs() const;
 
   const connectivity_n &ConnectivityN(int MGridID, int NGridID) const;
+  const connectivity_n &ConnectivityN(const elem<int,2> &GridIDPair) const;
   bool EditingConnectivityN(int MGridID, int NGridID) const;
+  bool EditingConnectivityN(const elem<int,2> &GridIDPair) const;
   edit_handle<connectivity_n> EditConnectivityN(int MGridID, int NGridID);
+  edit_handle<connectivity_n> EditConnectivityN(const elem<int,2> &GridIDPair);
   void RestoreConnectivityN(int MGridID, int NGridID);
+  void RestoreConnectivityN(const elem<int,2> &GridIDPair);
 
   void StartEdit();
   void EndEdit();
