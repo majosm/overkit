@@ -106,9 +106,25 @@ void overlap_n::Resize(long long Count) {
 
   Count_ = Count;
 
-  Points_.Resize({{MAX_DIMS,Count}}, 0);
-  Sources_.Resize({{MAX_DIMS,Count}}, 0);
-  SourceRanks_.Resize({Count}, -1);
+  Points_.Resize({{MAX_DIMS,Count}});
+  Sources_.Resize({{MAX_DIMS,Count}});
+  SourceRanks_.Resize({Count});
+
+  for (long long iPoint = 0; iPoint < Count_; ++iPoint) {
+    for (int iDim = 0; iDim < NumDims_; ++iDim) {
+      Points_(iDim,iPoint) = Grid_->GlobalRange().Begin(iDim)-1;
+    }
+    for (int iDim = NumDims_; iDim < MAX_DIMS; ++iDim) {
+      Points_(iDim,iPoint) = 0;
+    }
+    for (int iDim = 0; iDim < NumDims_; ++iDim) {
+      Sources_(iDim,iPoint) = SourceGridInfo_.CellGlobalRange().Begin(iDim)-1;
+    }
+    for (int iDim = NumDims_; iDim < MAX_DIMS; ++iDim) {
+      Sources_(iDim,iPoint) = 0;
+    }
+    SourceRanks_(iPoint) = -1;
+  }
 
   MPI_Barrier(Comm_);
 
@@ -160,13 +176,20 @@ void overlap_n::UpdateMask_() {
 
   Mask_.Fill(false);
 
+  tuple<int> GlobalBeginMinusOne = Grid_->GlobalRange().Begin();
+  for (int iDim = 0; iDim < NumDims_; ++iDim) {
+    GlobalBeginMinusOne(iDim) -= 1;
+  }
+
   for (long long iPoint = 0; iPoint < Count_; ++iPoint) {
     tuple<int> Point = {
       Points_(0,iPoint),
       Points_(1,iPoint),
       Points_(2,iPoint)
     };
-    Mask_(Point) = true;
+    if (Point != GlobalBeginMinusOne) {
+      Mask_(Point) = true;
+    }
   }
 
   Partition.Halo().Exchange(Mask_);

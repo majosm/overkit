@@ -108,10 +108,29 @@ void overlap_m::Resize(long long Count) {
 
   Count_ = Count;
 
-  Cells_.Resize({{MAX_DIMS,Count}}, 0);
-  Coords_.Resize({{MAX_DIMS,Count}}, 0.);
-  Destinations_.Resize({{MAX_DIMS,Count}}, 0);
-  DestinationRanks_.Resize({Count}, -1);
+  Cells_.Resize({{MAX_DIMS,Count}});
+  Coords_.Resize({{MAX_DIMS,Count}});
+  Destinations_.Resize({{MAX_DIMS,Count}});
+  DestinationRanks_.Resize({Count});
+
+  for (long long iCell = 0; iCell < Count_; ++iCell) {
+    for (int iDim = 0; iDim < NumDims_; ++iDim) {
+      Cells_(iDim,iCell) = Grid_->CellGlobalRange().Begin(iDim)-1;
+    }
+    for (int iDim = NumDims_; iDim < MAX_DIMS; ++iDim) {
+      Cells_(iDim,iCell) = 0;
+    }
+    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+      Coords_(iDim,iCell) = 0.;
+    }
+    for (int iDim = 0; iDim < NumDims_; ++iDim) {
+      Destinations_(iDim,iCell) = DestinationGridInfo_.GlobalRange().Begin(iDim)-1;
+    }
+    for (int iDim = NumDims_; iDim < MAX_DIMS; ++iDim) {
+      Destinations_(iDim,iCell) = 0;
+    }
+    DestinationRanks_(iCell) = -1;
+  }
 
   MPI_Barrier(Comm_);
 
