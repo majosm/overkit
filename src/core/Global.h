@@ -13,6 +13,10 @@
 #define ovk_min(a, b) ((a) < (b) ? (a) : (b))
 #define ovk_max(a, b) ((a) > (b) ? (a) : (b))
 
+#if !defined(_WIN32) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
+#define OVK_POSIX_SYSTEM
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
