@@ -32,19 +32,21 @@ TEST_F(PartitionTests, ExtendLocalRange) {
 
   if (TestComm().Rank() != 0) return;
 
-  auto CreateCart = [](int NumDims, bool IsPeriodic) -> ovk::cart {
+  auto CreateCart = [](int NumDims, bool IsPeriodic, bool Duplicated) -> ovk::cart {
     ovk::range GlobalRange = ovk::MakeEmptyRange(NumDims);
     for (int iDim = 0; iDim < NumDims; ++iDim) {
       GlobalRange.End(iDim) = 20;
     }
     ovk::tuple<bool> Periodic = {false,false,false};
     if (IsPeriodic) Periodic[NumDims-1] = true;
-    return {NumDims, GlobalRange, Periodic, ovk::periodic_storage::UNIQUE};
+    ovk::periodic_storage PeriodicStorage = ovk::periodic_storage::UNIQUE;
+    if (Duplicated) PeriodicStorage = ovk::periodic_storage::DUPLICATED;
+    return {NumDims, GlobalRange, Periodic, PeriodicStorage};
   };
 
   // Extend by 0, 2D
   {
-    ovk::cart Cart = CreateCart(2, false);
+    ovk::cart Cart = CreateCart(2, false, false);
     ovk::range LocalRange({5,5,0}, {15,15,1});
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 0);
     EXPECT_THAT(ExtendedRange.Begin(), ElementsAre(5,5,0));
@@ -53,7 +55,7 @@ TEST_F(PartitionTests, ExtendLocalRange) {
 
   // Extend by 0, 3D
   {
-    ovk::cart Cart = CreateCart(2, false);
+    ovk::cart Cart = CreateCart(2, false, false);
     ovk::range LocalRange({5,5,5}, {15,15,15});
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 0);
     EXPECT_THAT(ExtendedRange.Begin(), ElementsAre(5,5,5));
@@ -62,7 +64,7 @@ TEST_F(PartitionTests, ExtendLocalRange) {
 
   // Full range, non-periodic, 2D
   {
-    ovk::cart Cart = CreateCart(2, false);
+    ovk::cart Cart = CreateCart(2, false, false);
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, Cart.Range(), 2);
     EXPECT_THAT(ExtendedRange.Begin(), ElementsAre(0,0,0));
     EXPECT_THAT(ExtendedRange.End(), ElementsAre(20,20,1));
@@ -70,7 +72,7 @@ TEST_F(PartitionTests, ExtendLocalRange) {
 
   // Full range, non-periodic, 3D
   {
-    ovk::cart Cart = CreateCart(3, false);
+    ovk::cart Cart = CreateCart(3, false, false);
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, Cart.Range(), 2);
     EXPECT_THAT(ExtendedRange.Begin(), ElementsAre(0,0,0));
     EXPECT_THAT(ExtendedRange.End(), ElementsAre(20,20,20));
@@ -78,23 +80,23 @@ TEST_F(PartitionTests, ExtendLocalRange) {
 
   // Full range, periodic, 2D
   {
-    ovk::cart Cart = CreateCart(2, true);
+    ovk::cart Cart = CreateCart(2, true, false);
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, Cart.Range(), 2);
     EXPECT_THAT(ExtendedRange.Begin(), ElementsAre(0,-2,0));
-    EXPECT_THAT(ExtendedRange.End(), ElementsAre(20,22,1));
+    EXPECT_THAT(ExtendedRange.End(), ElementsAre(20,23,1));
   }
 
   // Full range, periodic, 3D
   {
-    ovk::cart Cart = CreateCart(3, true);
+    ovk::cart Cart = CreateCart(3, true, false);
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, Cart.Range(), 2);
     EXPECT_THAT(ExtendedRange.Begin(), ElementsAre(0,0,-2));
-    EXPECT_THAT(ExtendedRange.End(), ElementsAre(20,20,22));
+    EXPECT_THAT(ExtendedRange.End(), ElementsAre(20,20,23));
   }
 
   // Lower boundary, non-periodic, 2D
   {
-    ovk::cart Cart = CreateCart(2, false);
+    ovk::cart Cart = CreateCart(2, false, false);
     ovk::range LocalRange({0,0,0}, {10,10,1});
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
     EXPECT_THAT(ExtendedRange.Begin(), ElementsAre(0,0,0));
@@ -103,25 +105,43 @@ TEST_F(PartitionTests, ExtendLocalRange) {
 
   // Lower boundary, non-periodic, 3D
   {
-    ovk::cart Cart = CreateCart(3, false);
+    ovk::cart Cart = CreateCart(3, false, false);
     ovk::range LocalRange({0,0,0}, {10,10,10});
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
     EXPECT_THAT(ExtendedRange.Begin(), ElementsAre(0,0,0));
     EXPECT_THAT(ExtendedRange.End(), ElementsAre(12,12,12));
   }
 
-  // Lower boundary, periodic, 2D
+  // Lower boundary, periodic, unique, 2D
   {
-    ovk::cart Cart = CreateCart(2, true);
+    ovk::cart Cart = CreateCart(2, true, false);
     ovk::range LocalRange({0,0,0}, {10,10,1});
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
     EXPECT_THAT(ExtendedRange.Begin(), ElementsAre(0,-2,0));
     EXPECT_THAT(ExtendedRange.End(), ElementsAre(12,12,1));
   }
 
-  // Lower boundary, periodic, 3D
+  // Lower boundary, periodic, unique, 3D
   {
-    ovk::cart Cart = CreateCart(3, true);
+    ovk::cart Cart = CreateCart(3, true, false);
+    ovk::range LocalRange({0,0,0}, {10,10,10});
+    ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
+    EXPECT_THAT(ExtendedRange.Begin(), ElementsAre(0,0,-2));
+    EXPECT_THAT(ExtendedRange.End(), ElementsAre(12,12,12));
+  }
+
+  // Lower boundary, periodic, duplicated, 2D
+  {
+    ovk::cart Cart = CreateCart(2, true, true);
+    ovk::range LocalRange({0,0,0}, {10,10,1});
+    ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
+    EXPECT_THAT(ExtendedRange.Begin(), ElementsAre(0,-2,0));
+    EXPECT_THAT(ExtendedRange.End(), ElementsAre(12,12,1));
+  }
+
+  // Lower boundary, periodic, duplicated, 3D
+  {
+    ovk::cart Cart = CreateCart(3, true, true);
     ovk::range LocalRange({0,0,0}, {10,10,10});
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
     EXPECT_THAT(ExtendedRange.Begin(), ElementsAre(0,0,-2));
@@ -130,7 +150,7 @@ TEST_F(PartitionTests, ExtendLocalRange) {
 
   // Upper boundary, non-periodic, 2D
   {
-    ovk::cart Cart = CreateCart(2, false);
+    ovk::cart Cart = CreateCart(2, false, false);
     ovk::range LocalRange({10,10,0}, {20,20,1});
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
     EXPECT_THAT(ExtendedRange.Begin(), ElementsAre(8,8,0));
@@ -139,25 +159,43 @@ TEST_F(PartitionTests, ExtendLocalRange) {
 
   // Upper boundary, non-periodic, 3D
   {
-    ovk::cart Cart = CreateCart(3, false);
+    ovk::cart Cart = CreateCart(3, false, false);
     ovk::range LocalRange({10,10,10}, {20,20,20});
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
     EXPECT_THAT(ExtendedRange.Begin(), ElementsAre(8,8,8));
     EXPECT_THAT(ExtendedRange.End(), ElementsAre(20,20,20));
   }
 
-  // Upper boundary, periodic, 2D
+  // Upper boundary, periodic, unique, 2D
   {
-    ovk::cart Cart = CreateCart(2, true);
+    ovk::cart Cart = CreateCart(2, true, false);
+    ovk::range LocalRange({10,10,0}, {20,20,1});
+    ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
+    EXPECT_THAT(ExtendedRange.Begin(), ElementsAre(8,8,0));
+    EXPECT_THAT(ExtendedRange.End(), ElementsAre(20,23,1));
+  }
+
+  // Upper boundary, periodic, unique, 3D
+  {
+    ovk::cart Cart = CreateCart(3, true, false);
+    ovk::range LocalRange({10,10,10}, {20,20,20});
+    ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
+    EXPECT_THAT(ExtendedRange.Begin(), ElementsAre(8,8,8));
+    EXPECT_THAT(ExtendedRange.End(), ElementsAre(20,20,23));
+  }
+
+  // Upper boundary, periodic, duplicated, 2D
+  {
+    ovk::cart Cart = CreateCart(2, true, true);
     ovk::range LocalRange({10,10,0}, {20,20,1});
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
     EXPECT_THAT(ExtendedRange.Begin(), ElementsAre(8,8,0));
     EXPECT_THAT(ExtendedRange.End(), ElementsAre(20,22,1));
   }
 
-  // Upper boundary, periodic, 3D
+  // Upper boundary, periodic, duplicated, 3D
   {
-    ovk::cart Cart = CreateCart(3, true);
+    ovk::cart Cart = CreateCart(3, true, true);
     ovk::range LocalRange({10,10,10}, {20,20,20});
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
     EXPECT_THAT(ExtendedRange.Begin(), ElementsAre(8,8,8));
@@ -166,7 +204,7 @@ TEST_F(PartitionTests, ExtendLocalRange) {
 
   // Interior, non-periodic, 2D
   {
-    ovk::cart Cart = CreateCart(2, false);
+    ovk::cart Cart = CreateCart(2, false, false);
     ovk::range LocalRange({5,5,0}, {15,15,1});
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
     EXPECT_THAT(ExtendedRange.Begin(), ElementsAre(3,3,0));
@@ -175,25 +213,43 @@ TEST_F(PartitionTests, ExtendLocalRange) {
 
   // Interior, non-periodic, 3D
   {
-    ovk::cart Cart = CreateCart(3, false);
+    ovk::cart Cart = CreateCart(3, false, false);
     ovk::range LocalRange({5,5,5}, {15,15,15});
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
     EXPECT_THAT(ExtendedRange.Begin(), ElementsAre(3,3,3));
     EXPECT_THAT(ExtendedRange.End(), ElementsAre(17,17,17));
   }
 
-  // Interior, periodic, 2D
+  // Interior, periodic, unique, 2D
   {
-    ovk::cart Cart = CreateCart(2, true);
+    ovk::cart Cart = CreateCart(2, true, false);
     ovk::range LocalRange({5,5,0}, {15,15,1});
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
     EXPECT_THAT(ExtendedRange.Begin(), ElementsAre(3,3,0));
     EXPECT_THAT(ExtendedRange.End(), ElementsAre(17,17,1));
   }
 
-  // Interior, periodic, 3D
+  // Interior, periodic, unique, 3D
   {
-    ovk::cart Cart = CreateCart(3, true);
+    ovk::cart Cart = CreateCart(3, true, false);
+    ovk::range LocalRange({5,5,5}, {15,15,15});
+    ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
+    EXPECT_THAT(ExtendedRange.Begin(), ElementsAre(3,3,3));
+    EXPECT_THAT(ExtendedRange.End(), ElementsAre(17,17,17));
+  }
+
+  // Interior, periodic, duplicated, 2D
+  {
+    ovk::cart Cart = CreateCart(2, true, true);
+    ovk::range LocalRange({5,5,0}, {15,15,1});
+    ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
+    EXPECT_THAT(ExtendedRange.Begin(), ElementsAre(3,3,0));
+    EXPECT_THAT(ExtendedRange.End(), ElementsAre(17,17,1));
+  }
+
+  // Interior, periodic, duplicated, 3D
+  {
+    ovk::cart Cart = CreateCart(3, true, true);
     ovk::range LocalRange({5,5,5}, {15,15,15});
     ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
     EXPECT_THAT(ExtendedRange.Begin(), ElementsAre(3,3,3));
@@ -537,7 +593,7 @@ TEST_F(PartitionTests, ConstructPartition) {
 
   if (CommOfSize6) {
 
-    ovk::cart Cart(2, {{-1,0,0},{21,20,1}}, {false,true,false}, ovk::periodic_storage::UNIQUE);
+    ovk::cart Cart(2, {{-1,0,0},{21,20,1}}, {false,true,false}, ovk::periodic_storage::DUPLICATED);
     ovk::comm Comm = ovk::CreateCartComm(CommOfSize6, 2, {3,3,1}, Cart.Periodic());
     ovk::range LocalRange = CartesianDecomp(Cart.Dimension(), Cart.Range(), Comm);
 
@@ -551,7 +607,7 @@ TEST_F(PartitionTests, ConstructPartition) {
     EXPECT_THAT(Partition.Cart().Range().Begin(), ElementsAre(-1,0,0));
     EXPECT_THAT(Partition.Cart().Range().End(), ElementsAre(21,20,1));
     EXPECT_THAT(Partition.Cart().Periodic(), ElementsAre(false,true,false));
-    EXPECT_EQ(Partition.Cart().PeriodicStorage(), ovk::periodic_storage::UNIQUE);
+    EXPECT_EQ(Partition.Cart().PeriodicStorage(), ovk::periodic_storage::DUPLICATED);
     EXPECT_EQ(Partition.Comm().Get(), Comm.Get());
     switch (Comm.Rank()) {
     // Lower corner

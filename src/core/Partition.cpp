@@ -46,17 +46,22 @@ partition::partition(std::shared_ptr<context> Context, const cart &Cart, comm_vi
 
 range ExtendLocalRange(const cart &Cart, const range &LocalRange, int ExtendAmount) {
 
-  const range &GlobalRange = Cart.Range();
-  const tuple<bool> &Periodic = Cart.Periodic();
-
   range ExtendedRange = LocalRange;
 
   for (int iDim = 0; iDim < Cart.Dimension(); ++iDim) {
-    if (LocalRange.Begin(iDim) != GlobalRange.Begin(iDim) || Periodic[iDim]) {
+    if (LocalRange.Begin(iDim) != Cart.Range().Begin(iDim) || Cart.Periodic(iDim)) {
       ExtendedRange.Begin(iDim) -= ExtendAmount;
     }
-    if (LocalRange.End(iDim) != GlobalRange.End(iDim) || Periodic[iDim]) {
+    if (LocalRange.End(iDim) != Cart.Range().End(iDim) || Cart.Periodic(iDim)) {
       ExtendedRange.End(iDim) += ExtendAmount;
+    }
+  }
+
+  if (Cart.PeriodicStorage() == periodic_storage::UNIQUE) {
+    for (int iDim = 0; iDim < Cart.Dimension(); ++iDim) {
+      if (LocalRange.End(iDim) == Cart.Range().End(iDim) && Cart.Periodic(iDim)) {
+        ExtendedRange.End(iDim) += 1;
+      }
     }
   }
 
