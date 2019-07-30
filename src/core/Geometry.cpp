@@ -59,6 +59,21 @@ geometry::geometry(std::shared_ptr<context> &&Context, const grid &Grid, params 
     }
   }
 
+  // In 1D, geometry type is always uniform or rectilinear
+  if (NumDims_ == 1) {
+    switch (Type_) {
+    case geometry_type::UNIFORM:
+    case geometry_type::ORIENTED_UNIFORM:
+      Type_ = geometry_type::UNIFORM;
+      break;
+    case geometry_type::RECTILINEAR:
+    case geometry_type::ORIENTED_RECTILINEAR:
+    case geometry_type::CURVILINEAR:
+      Type_ = geometry_type::RECTILINEAR;
+      break;
+    }
+  }
+
   const range &ExtendedRange = Grid_->ExtendedRange();
 
   for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
