@@ -87,15 +87,18 @@ collect CreateCollectNoneCol(std::shared_ptr<context> &&Context, comm_view Comm,
 inline collect CreateCollectNone(std::shared_ptr<context> Context, comm_view Comm, const cart &Cart,
   const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
   range &FieldValuesRange, array_layout FieldValuesLayout) {
+  collect Collect;
   switch (FieldValuesLayout) {
   case array_layout::ROW_MAJOR:
-    return collect_internal::CreateCollectNoneRow(std::move(Context), Comm, Cart, LocalRange,
+    Collect = collect_internal::CreateCollectNoneRow(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, ValueType, Count, FieldValuesRange);
+    break;
   case array_layout::COLUMN_MAJOR:
-    return collect_internal::CreateCollectNoneCol(std::move(Context), Comm, Cart, LocalRange,
+    Collect = collect_internal::CreateCollectNoneCol(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, ValueType, Count, FieldValuesRange);
+    break;
   }
-  return {};
+  return Collect;
 }
 
 namespace collect_internal {
@@ -109,15 +112,18 @@ collect CreateCollectAnyCol(std::shared_ptr<context> &&Context, comm_view Comm, 
 inline collect CreateCollectAny(std::shared_ptr<context> Context, comm_view Comm, const cart &Cart,
   const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
   range &FieldValuesRange, array_layout FieldValuesLayout) {
+  collect Collect;
   switch (FieldValuesLayout) {
   case array_layout::ROW_MAJOR:
-    return collect_internal::CreateCollectAnyRow(std::move(Context), Comm, Cart, LocalRange,
+    Collect = collect_internal::CreateCollectAnyRow(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, ValueType, Count, FieldValuesRange);
+    break;
   case array_layout::COLUMN_MAJOR:
-    return collect_internal::CreateCollectAnyCol(std::move(Context), Comm, Cart, LocalRange,
+    Collect = collect_internal::CreateCollectAnyCol(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, ValueType, Count, FieldValuesRange);
+    break;
   }
-  return {};
+  return Collect;
 }
 
 namespace collect_internal {
@@ -131,15 +137,16 @@ collect CreateCollectNotAllCol(std::shared_ptr<context> &&Context, comm_view Com
 inline collect CreateCollectNotAll(std::shared_ptr<context> Context, comm_view Comm, const cart
   &Cart, const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count,
   const range &FieldValuesRange, array_layout FieldValuesLayout) {
+  collect Collect;
   switch (FieldValuesLayout) {
   case array_layout::ROW_MAJOR:
-    return collect_internal::CreateCollectNotAllRow(std::move(Context), Comm, Cart, LocalRange,
+    Collect = collect_internal::CreateCollectNotAllRow(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, ValueType, Count, FieldValuesRange);
   case array_layout::COLUMN_MAJOR:
-    return collect_internal::CreateCollectNotAllCol(std::move(Context), Comm, Cart, LocalRange,
+    Collect = collect_internal::CreateCollectNotAllCol(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, ValueType, Count, FieldValuesRange);
   }
-  return {};
+  return Collect;
 }
 
 namespace collect_internal {
@@ -153,15 +160,16 @@ collect CreateCollectAllCol(std::shared_ptr<context> &&Context, comm_view Comm, 
 inline collect CreateCollectAll(std::shared_ptr<context> Context, comm_view Comm, const cart &Cart,
   const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
   range &FieldValuesRange, array_layout FieldValuesLayout) {
+  collect Collect;
   switch (FieldValuesLayout) {
   case array_layout::ROW_MAJOR:
-    return collect_internal::CreateCollectAllRow(std::move(Context), Comm, Cart, LocalRange,
+    Collect = collect_internal::CreateCollectAllRow(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, ValueType, Count, FieldValuesRange);
   case array_layout::COLUMN_MAJOR:
-    return collect_internal::CreateCollectAllCol(std::move(Context), Comm, Cart, LocalRange,
+    Collect = collect_internal::CreateCollectAllCol(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, ValueType, Count, FieldValuesRange);
   }
-  return {};
+  return Collect;
 }
 
 namespace collect_internal {
