@@ -36,6 +36,11 @@ inline bool ValidGeometryType(geometry_type GeometryType) {
   return ovkValidGeometryType(ovk_geometry_type(GeometryType));
 }
 
+namespace core {
+template <> struct data_type_traits<geometry_type> : data_type_traits<typename std::underlying_type<
+  geometry_type>::type> {};
+}
+
 namespace geometry_internal {
 
 // For doing stuff before creation and after destruction
