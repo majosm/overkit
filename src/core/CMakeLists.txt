@@ -143,7 +143,10 @@ set(INTERNAL_HEADERS
   GeometricPrimitiveOpsQuad.inl
   GeometricPrimitiveOpsHex.inl
   Geometry.h
+  GeometryBase.hpp
   GeometryComponent.h
+  GeometryOps.hpp
+  GeometryOps.inl
   Global.h
   Halo.hpp
   Halo.inl

@@ -11,7 +11,8 @@
 #include <ovk/core/Event.hpp>
 #include <ovk/core/Field.hpp>
 #include <ovk/core/FloatingRef.hpp>
-#include <ovk/core/Geometry.h>
+#include <ovk/core/GeometryBase.hpp>
+#include <ovk/core/GeometryOps.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Grid.hpp>
 #include <ovk/core/Requires.hpp>
@@ -23,23 +24,6 @@
 #include <utility>
 
 namespace ovk {
-
-enum class geometry_type {
-  UNIFORM = OVK_GEOMETRY_TYPE_UNIFORM,
-  ORIENTED_UNIFORM = OVK_GEOMETRY_TYPE_ORIENTED_UNIFORM,
-  RECTILINEAR = OVK_GEOMETRY_TYPE_RECTILINEAR,
-  ORIENTED_RECTILINEAR = OVK_GEOMETRY_TYPE_ORIENTED_RECTILINEAR,
-  CURVILINEAR = OVK_GEOMETRY_TYPE_CURVILINEAR
-};
-
-inline bool ValidGeometryType(geometry_type GeometryType) {
-  return ovkValidGeometryType(ovk_geometry_type(GeometryType));
-}
-
-namespace core {
-template <> struct data_type_traits<geometry_type> : data_type_traits<typename std::underlying_type<
-  geometry_type>::type> {};
-}
 
 namespace geometry_internal {
 
