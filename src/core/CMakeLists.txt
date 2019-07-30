@@ -32,7 +32,6 @@ set(SOURCES
   DisperseBase.cpp
   DisperseMap.cpp
   Domain.cpp
-  DomainBase.cpp
   Error.cpp
   Exchanger.cpp
   Geometry.cpp
