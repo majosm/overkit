@@ -48,7 +48,7 @@ geometry_base::~geometry_base() noexcept {
 geometry::geometry(std::shared_ptr<context> &&Context, const grid &Grid, params &&Params):
   geometry_base(std::move(Context), Grid),
   NumDims_(Grid_->Dimension()),
-  GeometryType_(Params.GeometryType_),
+  Type_(Params.Type_),
   PeriodicLength_(Params.PeriodicLength_),
   Coords_({MAX_DIMS})
 {
@@ -193,11 +193,11 @@ void geometry::OnCoordsEndEdit_() {
 
 }
 
-geometry::params &geometry::params::SetGeometryType(geometry_type GeometryType) {
+geometry::params &geometry::params::SetType(geometry_type Type) {
 
-  OVK_DEBUG_ASSERT(ValidGeometryType(GeometryType), "Invalid geometry type.");
+  OVK_DEBUG_ASSERT(ValidGeometryType(Type), "Invalid type.");
 
-  GeometryType_ = GeometryType;
+  Type_ = Type;
 
   return *this;
 

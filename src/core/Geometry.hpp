@@ -70,12 +70,12 @@ public:
   class params {
   public:
     params() = default;
-    geometry_type GeometryType() const { return GeometryType_; }
-    params &SetGeometryType(geometry_type GeometryType);
+    geometry_type Type() const { return Type_; }
+    params &SetType(geometry_type Type);
     const tuple<double> &PeriodicLength() const { return PeriodicLength_; }
     params &SetPeriodicLength(const tuple<double> &PeriodicLength);
   private:
-    geometry_type GeometryType_ = geometry_type::CURVILINEAR;
+    geometry_type Type_ = geometry_type::CURVILINEAR;
     tuple<double> PeriodicLength_ = {0., 0., 0.};
     friend class geometry;
   };
@@ -103,7 +103,7 @@ public:
 
   comm_view Comm() const { return Comm_; }
 
-  geometry_type GeometryType() const { return GeometryType_; }
+  geometry_type Type() const { return Type_; }
 
   const tuple<double> &PeriodicLength() const { return PeriodicLength_; }
   double PeriodicLength(int iDim) const { return PeriodicLength_[iDim]; }
@@ -127,7 +127,7 @@ private:
 
   int NumDims_;
 
-  geometry_type GeometryType_;
+  geometry_type Type_;
 
   tuple<double> PeriodicLength_;
 

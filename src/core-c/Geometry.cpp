@@ -101,13 +101,13 @@ void ovkGetGeometryCommRank(const ovk_geometry *Geometry, int *CommRank) {
 
 }
 
-void ovkGetGeometryType(const ovk_geometry *Geometry, ovk_geometry_type *GeometryType) {
+void ovkGetGeometryType(const ovk_geometry *Geometry, ovk_geometry_type *Type) {
 
   OVK_DEBUG_ASSERT(Geometry, "Invalid geometry pointer.");
-  OVK_DEBUG_ASSERT(GeometryType, "Invalid geometry type pointer.");
+  OVK_DEBUG_ASSERT(Type, "Invalid type pointer.");
 
   auto &GeometryCPP = *reinterpret_cast<const ovk::geometry *>(Geometry);
-  *GeometryType = ovk_geometry_type(GeometryCPP.GeometryType());
+  *Type = ovk_geometry_type(GeometryCPP.Type());
 
 }
 
@@ -181,23 +181,22 @@ void ovkRestoreGeometryCoords(ovk_geometry *Geometry, int Dimension, double **Co
 
 }
 
-void ovkGetGeometryParamGeometryType(const ovk_geometry_params *Params, ovk_geometry_type
-  *GeometryType) {
+void ovkGetGeometryParamType(const ovk_geometry_params *Params, ovk_geometry_type *Type) {
 
   OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
-  OVK_DEBUG_ASSERT(GeometryType, "Invalid geometry type pointer.");
+  OVK_DEBUG_ASSERT(Type, "Invalid geometry type pointer.");
 
   auto &ParamsCPP = *reinterpret_cast<const ovk::geometry::params *>(Params);
-  *GeometryType = ovk_geometry_type(ParamsCPP.GeometryType());
+  *Type = ovk_geometry_type(ParamsCPP.Type());
 
 }
 
-void ovkSetGeometryParamGeometryType(ovk_geometry_params *Params, ovk_geometry_type GeometryType) {
+void ovkSetGeometryParamType(ovk_geometry_params *Params, ovk_geometry_type Type) {
 
   OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
 
   auto &ParamsCPP = *reinterpret_cast<ovk::geometry::params *>(Params);
-  ParamsCPP.SetGeometryType(ovk::geometry_type(GeometryType));
+  ParamsCPP.SetType(ovk::geometry_type(Type));
 
 }
 

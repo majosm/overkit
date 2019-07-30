@@ -33,7 +33,7 @@ void ovkGetGeometryComm(const ovk_geometry *Geometry, MPI_Comm *Comm);
 void ovkGetGeometryCommSize(const ovk_geometry *Geometry, int *CommSize);
 void ovkGetGeometryCommRank(const ovk_geometry *Geometry, int *CommRank);
 
-void ovkGetGeometryType(const ovk_geometry *Geometry, ovk_geometry_type *GeometryType);
+void ovkGetGeometryType(const ovk_geometry *Geometry, ovk_geometry_type *Type);
 
 void ovkGetGeometryPeriodicLength(const ovk_geometry *Geometry, double *PeriodicLength);
 void ovkSetGeometryPeriodicLength(ovk_geometry *Geometry, const double *PeriodicLength);
@@ -46,9 +46,8 @@ void ovkRestoreGeometryCoords(ovk_geometry *Geometry, int Dimension, double **Co
 void ovkCreateGeometryParams(ovk_geometry_params **Params);
 void ovkDestroyGeometryParams(ovk_geometry_params **Params);
 
-void ovkGetGeometryParamGeometryType(const ovk_geometry_params *Params, ovk_geometry_type
-  *GeometryType);
-void ovkSetGeometryParamGeometryType(ovk_geometry_params *Params, ovk_geometry_type GeometryType);
+void ovkGetGeometryParamType(const ovk_geometry_params *Params, ovk_geometry_type *Type);
+void ovkSetGeometryParamType(ovk_geometry_params *Params, ovk_geometry_type Type);
 void ovkGetGeometryParamPeriodicLength(const ovk_geometry_params *Params, double *PeriodicLength);
 void ovkSetGeometryParamPeriodicLength(ovk_geometry_params *Params, const double *PeriodicLength);
 
