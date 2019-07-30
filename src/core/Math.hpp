@@ -6,21 +6,20 @@
 
 #include <ovk/core/Elem.hpp>
 #include <ovk/core/Global.hpp>
-#include <ovk/core/Tuple.hpp>
 
 #include <cmath>
 
 namespace ovk {
 namespace core {
 
-double ColumnDeterminant2D(const tuple<double> &AI, const tuple<double> &AJ);
-double ColumnDeterminant3D(const tuple<double> &AI, const tuple<double> &AJ, const tuple<double>
+double ColumnDeterminant2D(const elem<double,2> &AI, const elem<double,2> &AJ);
+double ColumnDeterminant3D(const elem<double,3> &AI, const elem<double,3> &AJ, const elem<double,3>
   &AK);
 
-tuple<double> ColumnSolve2D(const tuple<double> &AI, const tuple<double> &AJ, const tuple<double>
-  &B);
-tuple<double> ColumnSolve3D(const tuple<double> &AI, const tuple<double> &AJ, const tuple<double>
-  &AK, const tuple<double> &B);
+elem<double,2> ColumnSolve2D(const elem<double,2> &AI, const elem<double,2> &AJ, const
+  elem<double,2> &B);
+elem<double,3> ColumnSolve3D(const elem<double,3> &AI, const elem<double,3> &AJ, const
+  elem<double,3> &AK, const elem<double,3> &B);
 
 elem<double,2> LagrangeInterpLinear(double U);
 elem<double,2> LagrangeInterpLinearDeriv(double U);

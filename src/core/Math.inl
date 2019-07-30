@@ -4,14 +4,14 @@
 namespace ovk {
 namespace core {
 
-inline double ColumnDeterminant2D(const tuple<double> &AI, const tuple<double> &AJ) {
+inline double ColumnDeterminant2D(const elem<double,2> &AI, const elem<double,2> &AJ) {
 
   return AI(0)*AJ(1) - AI(1)*AJ(0);
 
 }
 
-inline double ColumnDeterminant3D(const tuple<double> &AI, const tuple<double> &AJ, const
-  tuple<double> &AK) {
+inline double ColumnDeterminant3D(const elem<double,3> &AI, const elem<double,3> &AJ, const
+  elem<double,3> &AK) {
 
   return
     AI(0) * (AJ(1)*AK(2) - AJ(2)*AK(1)) +
@@ -20,25 +20,24 @@ inline double ColumnDeterminant3D(const tuple<double> &AI, const tuple<double> &
 
 }
 
-inline tuple<double> ColumnSolve2D(const tuple<double> &AI, const tuple<double> &AJ, const
-  tuple<double> &B) {
+inline elem<double,2> ColumnSolve2D(const elem<double,2> &AI, const elem<double,2> &AJ, const
+  elem<double,2> &B) {
 
-  tuple<double> X;
+  elem<double,2> X;
 
   double Det = ColumnDeterminant2D(AI, AJ);
 
   X(0) = ColumnDeterminant2D(B, AJ)/Det;
   X(1) = ColumnDeterminant2D(AI, B)/Det;
-  X(2) = 0.;
 
   return X;
 
 }
 
-inline tuple<double> ColumnSolve3D(const tuple<double> &AI, const tuple<double> &AJ, const
-  tuple<double> &AK, const tuple<double> &B) {
+inline elem<double,3> ColumnSolve3D(const elem<double,3> &AI, const elem<double,3> &AJ, const
+  elem<double,3> &AK, const elem<double,3> &B) {
 
-  tuple<double> X;
+  elem<double,3> X;
 
   double Det = ColumnDeterminant3D(AI, AJ, AK);
 

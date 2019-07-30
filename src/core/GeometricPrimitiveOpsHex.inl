@@ -4,8 +4,8 @@
 namespace ovk {
 namespace core {
 
-inline tuple<double> IsoHex8NodeUniform(const tuple<double> &LowerNodeCoords, const tuple<double>
-  &UpperNodeCoords, const tuple<double> &LocalCoords) {
+inline elem<double,3> IsoHex8NodeUniform(const elem<double,3> &LowerNodeCoords, const elem<double,3>
+  &UpperNodeCoords, const elem<double,3> &LocalCoords) {
 
   double U = LocalCoords(0);
   double V = LocalCoords(1);
@@ -19,8 +19,8 @@ inline tuple<double> IsoHex8NodeUniform(const tuple<double> &LowerNodeCoords, co
 
 }
 
-inline tuple<double> IsoHex8NodeUniformInverse(const tuple<double> &LowerNodeCoords, const
-  tuple<double> &UpperNodeCoords, const tuple<double> &Coords) {
+inline elem<double,3> IsoHex8NodeUniformInverse(const elem<double,3> &LowerNodeCoords, const
+  elem<double,3> &UpperNodeCoords, const elem<double,3> &Coords) {
 
   double U = (Coords(0) - LowerNodeCoords(0))/(UpperNodeCoords(0) - LowerNodeCoords(0));
   double V = (Coords(1) - LowerNodeCoords(1))/(UpperNodeCoords(1) - LowerNodeCoords(1));
@@ -30,8 +30,8 @@ inline tuple<double> IsoHex8NodeUniformInverse(const tuple<double> &LowerNodeCoo
 
 }
 
-inline tuple<double> IsoHex8NodeOrientedUniform(const array_view<const tuple<double>> &NodeCoords,
-  const tuple<double> &LocalCoords) {
+inline elem<double,3> IsoHex8NodeOrientedUniform(const array_view<const elem<double,3>> &NodeCoords,
+  const elem<double,3> &LocalCoords) {
 
   double U = LocalCoords(0);
   double V = LocalCoords(1);
@@ -45,37 +45,37 @@ inline tuple<double> IsoHex8NodeOrientedUniform(const array_view<const tuple<dou
 
 }
 
-inline tuple<double> IsoHex8NodeOrientedUniformInverse(const array_view<const tuple<double>>
-  &NodeCoords, const tuple<double> &Coords) {
+inline elem<double,3> IsoHex8NodeOrientedUniformInverse(const array_view<const elem<double,3>>
+  &NodeCoords, const elem<double,3> &Coords) {
 
-  tuple<double> I = {
+  elem<double,3> I = {
     NodeCoords(1)(0) - NodeCoords(0)(0),
     NodeCoords(1)(1) - NodeCoords(0)(1),
     NodeCoords(1)(2) - NodeCoords(0)(2)
   };
 
-  tuple<double> J = {
+  elem<double,3> J = {
     NodeCoords(2)(0) - NodeCoords(0)(0),
     NodeCoords(2)(1) - NodeCoords(0)(1),
     NodeCoords(2)(2) - NodeCoords(0)(2)
   };
 
-  tuple<double> K = {
+  elem<double,3> K = {
     NodeCoords(4)(0) - NodeCoords(0)(0),
     NodeCoords(4)(1) - NodeCoords(0)(1),
     NodeCoords(4)(2) - NodeCoords(0)(2)
   };
 
-  tuple<double> RelativeCoords = {
+  elem<double,3> RelativeCoords = {
     Coords(0) - NodeCoords(0)(0),
     Coords(1) - NodeCoords(0)(1),
     Coords(2) - NodeCoords(0)(2)
   };
 
-  auto Dot = [](const tuple<double> &Vec1, const tuple<double> &Vec2) -> double {
+  auto Dot = [](const elem<double,3> &Vec1, const elem<double,3> &Vec2) -> double {
     return Vec1(0)*Vec2(0) + Vec1(1)*Vec2(1) + Vec1(2)*Vec2(2);
   };
-  auto Project = [Dot](const tuple<double> &Vec1, const tuple<double> &Vec2) -> double {
+  auto Project = [Dot](const elem<double,3> &Vec1, const elem<double,3> &Vec2) -> double {
     return Dot(Vec1, Vec2)/Dot(Vec2, Vec2);
   };
 
@@ -87,8 +87,8 @@ inline tuple<double> IsoHex8NodeOrientedUniformInverse(const array_view<const tu
 
 }
 
-inline tuple<double> IsoHex8NodeNonUniform(const array_view<const tuple<double>> &NodeCoords, const
-  tuple<double> &LocalCoords) {
+inline elem<double,3> IsoHex8NodeNonUniform(const array_view<const elem<double,3>> &NodeCoords,
+  const elem<double,3> &LocalCoords) {
 
   elem<double,2> ShapeI = LagrangeInterpLinear(LocalCoords(0));
   elem<double,2> ShapeJ = LagrangeInterpLinear(LocalCoords(1));
@@ -98,10 +98,10 @@ inline tuple<double> IsoHex8NodeNonUniform(const array_view<const tuple<double>>
 
 }
 
-inline tuple<double> IsoHex8NodeNonUniform(const array_view<const tuple<double>> &NodeCoords, const
-  elem<double,2> &ShapeI, const elem<double,2> &ShapeJ, const elem<double,2> &ShapeK) {
+inline elem<double,3> IsoHex8NodeNonUniform(const array_view<const elem<double,3>> &NodeCoords,
+  const elem<double,2> &ShapeI, const elem<double,2> &ShapeJ, const elem<double,2> &ShapeK) {
 
-  tuple<double> Coords = MakeUniformTuple<double>(3, 0.);
+  elem<double,3> Coords = {0., 0., 0.};
 
   int iNode = 0;
   for (int k = 0; k < 2; ++k) {
@@ -119,37 +119,37 @@ inline tuple<double> IsoHex8NodeNonUniform(const array_view<const tuple<double>>
 
 }
 
-inline tuple<double> IsoHex8NodeNonUniformInverse(const array_view<const tuple<double>>
-  &NodeCoords, const tuple<double> &Coords, bool *MaybeSuccess, double Tolerance, int MaxSteps) {
+inline elem<double,3> IsoHex8NodeNonUniformInverse(const array_view<const elem<double,3>>
+  &NodeCoords, const elem<double,3> &Coords, bool *MaybeSuccess, double Tolerance, int MaxSteps) {
 
-  auto SmallEnough = [Tolerance](const tuple<double> &Tuple) -> bool {
+  auto SmallEnough = [Tolerance](const elem<double,3> &Tuple) -> bool {
     return
       std::abs(Tuple(0)) <= Tolerance &&
       std::abs(Tuple(1)) <= Tolerance &&
       std::abs(Tuple(2)) <= Tolerance;
   };
 
-  auto IsNaN = [](const tuple<double> &Tuple) -> bool {
+  auto IsNaN = [](const elem<double,3> &Tuple) -> bool {
     return
       std::isnan(Tuple(0)) ||
       std::isnan(Tuple(1)) ||
       std::isnan(Tuple(2));
   };
 
-  tuple<double> LocalCoords = MakeUniformTuple<double>(3, 0.5);
+  elem<double,3> LocalCoords = {0.5, 0.5, 0.5};
 
   for (int iStep = 0; iStep < MaxSteps; ++iStep) {
     elem<double,2> ShapeI = LagrangeInterpLinear(LocalCoords(0));
     elem<double,2> ShapeJ = LagrangeInterpLinear(LocalCoords(1));
     elem<double,2> ShapeK = LagrangeInterpLinear(LocalCoords(2));
-    tuple<double> Error = Coords - IsoHex8NodeNonUniform(NodeCoords, ShapeI, ShapeJ, ShapeK);
+    elem<double,3> Error = Coords - IsoHex8NodeNonUniform(NodeCoords, ShapeI, ShapeJ, ShapeK);
     if (SmallEnough(Error)) break;
     elem<double,2> InterpDerivI = LagrangeInterpLinearDeriv(LocalCoords(0));
     elem<double,2> InterpDerivJ = LagrangeInterpLinearDeriv(LocalCoords(1));
     elem<double,2> InterpDerivK = LagrangeInterpLinearDeriv(LocalCoords(2));
-    tuple<double> JacobianI = MakeUniformTuple(3, 0.);
-    tuple<double> JacobianJ = MakeUniformTuple(3, 0.);
-    tuple<double> JacobianK = MakeUniformTuple(3, 0.);
+    elem<double,3> JacobianI = {0., 0., 0.};
+    elem<double,3> JacobianJ = {0., 0., 0.};
+    elem<double,3> JacobianK = {0., 0., 0.};
     int iNode = 0;
     for (int k = 0; k < 2; ++k) {
       for (int j = 0; j < 2; ++j) {
@@ -172,7 +172,7 @@ inline tuple<double> IsoHex8NodeNonUniformInverse(const array_view<const tuple<d
     elem<double,2> ShapeI = LagrangeInterpLinear(LocalCoords(0));
     elem<double,2> ShapeJ = LagrangeInterpLinear(LocalCoords(1));
     elem<double,2> ShapeK = LagrangeInterpLinear(LocalCoords(2));
-    tuple<double> Error = Coords - IsoHex8NodeNonUniform(NodeCoords, ShapeI, ShapeJ, ShapeK);
+    elem<double,3> Error = Coords - IsoHex8NodeNonUniform(NodeCoords, ShapeI, ShapeJ, ShapeK);
     Success = SmallEnough(Error) && !IsNaN(Error);
   }
 
@@ -180,8 +180,8 @@ inline tuple<double> IsoHex8NodeNonUniformInverse(const array_view<const tuple<d
 
 }
 
-inline tuple<double> IsoHex64Node(const array_view<const tuple<double>> &NodeCoords, const
-  tuple<double> &LocalCoords) {
+inline elem<double,3> IsoHex64Node(const array_view<const elem<double,3>> &NodeCoords, const
+  elem<double,3> &LocalCoords) {
 
   elem<double,4> ShapeI = LagrangeInterpCubic(LocalCoords(0));
   elem<double,4> ShapeJ = LagrangeInterpCubic(LocalCoords(1));
@@ -191,10 +191,10 @@ inline tuple<double> IsoHex64Node(const array_view<const tuple<double>> &NodeCoo
 
 }
 
-inline tuple<double> IsoHex64Node(const array_view<const tuple<double>> &NodeCoords, const
+inline elem<double,3> IsoHex64Node(const array_view<const elem<double,3>> &NodeCoords, const
   elem<double,4> &ShapeI, const elem<double,4> &ShapeJ, const elem<double,4> &ShapeK) {
 
-  tuple<double> Coords = MakeUniformTuple<double>(3, 0.);
+  elem<double,3> Coords = {0., 0., 0.};
 
   int iNode = 0;
   for (int k = 0; k < 4; ++k) {
@@ -212,37 +212,37 @@ inline tuple<double> IsoHex64Node(const array_view<const tuple<double>> &NodeCoo
 
 }
 
-inline tuple<double> IsoHex64NodeInverse(const array_view<const tuple<double>> &NodeCoords, const
-  tuple<double> &Coords, bool *MaybeSuccess, double Tolerance, int MaxSteps) {
+inline elem<double,3> IsoHex64NodeInverse(const array_view<const elem<double,3>> &NodeCoords, const
+  elem<double,3> &Coords, bool *MaybeSuccess, double Tolerance, int MaxSteps) {
 
-  auto SmallEnough = [Tolerance](const tuple<double> &Tuple) -> bool {
+  auto SmallEnough = [Tolerance](const elem<double,3> &Tuple) -> bool {
     return
       std::abs(Tuple(0)) <= Tolerance &&
       std::abs(Tuple(1)) <= Tolerance &&
       std::abs(Tuple(2)) <= Tolerance;
   };
 
-  auto IsNaN = [](const tuple<double> &Tuple) -> bool {
+  auto IsNaN = [](const elem<double,3> &Tuple) -> bool {
     return
       std::isnan(Tuple(0)) ||
       std::isnan(Tuple(1)) ||
       std::isnan(Tuple(2));
   };
 
-  tuple<double> LocalCoords = MakeUniformTuple<double>(3, 0.5);
+  elem<double,3> LocalCoords = {0.5, 0.5, 0.5};
 
   for (int iStep = 0; iStep < MaxSteps; ++iStep) {
     elem<double,4> ShapeI = LagrangeInterpCubic(LocalCoords(0));
     elem<double,4> ShapeJ = LagrangeInterpCubic(LocalCoords(1));
     elem<double,4> ShapeK = LagrangeInterpCubic(LocalCoords(2));
-    tuple<double> Error = Coords - IsoHex64Node(NodeCoords, ShapeI, ShapeJ, ShapeK);
+    elem<double,3> Error = Coords - IsoHex64Node(NodeCoords, ShapeI, ShapeJ, ShapeK);
     if (SmallEnough(Error)) break;
     elem<double,4> InterpDerivI = LagrangeInterpCubicDeriv(LocalCoords(0));
     elem<double,4> InterpDerivJ = LagrangeInterpCubicDeriv(LocalCoords(1));
     elem<double,4> InterpDerivK = LagrangeInterpCubicDeriv(LocalCoords(2));
-    tuple<double> JacobianI = MakeUniformTuple(3, 0.);
-    tuple<double> JacobianJ = MakeUniformTuple(3, 0.);
-    tuple<double> JacobianK = MakeUniformTuple(3, 0.);
+    elem<double,3> JacobianI = {0., 0., 0.};
+    elem<double,3> JacobianJ = {0., 0., 0.};
+    elem<double,3> JacobianK = {0., 0., 0.};
     int iNode = 0;
     for (int k = 0; k < 4; ++k) {
       for (int j = 0; j < 4; ++j) {
@@ -265,7 +265,7 @@ inline tuple<double> IsoHex64NodeInverse(const array_view<const tuple<double>> &
     elem<double,4> ShapeI = LagrangeInterpCubic(LocalCoords(0));
     elem<double,4> ShapeJ = LagrangeInterpCubic(LocalCoords(1));
     elem<double,4> ShapeK = LagrangeInterpCubic(LocalCoords(2));
-    tuple<double> Error = Coords - IsoHex64Node(NodeCoords, ShapeI, ShapeJ, ShapeK);
+    elem<double,3> Error = Coords - IsoHex64Node(NodeCoords, ShapeI, ShapeJ, ShapeK);
     Success = SmallEnough(Error) && !IsNaN(Error);
   }
 
@@ -273,27 +273,10 @@ inline tuple<double> IsoHex64NodeInverse(const array_view<const tuple<double>> &
 
 }
 
-inline bool OverlapsHexUniform(const tuple<double> &LowerNodeCoords, const tuple<double>
-  &UpperNodeCoords, const tuple<double> &Coords, double Tolerance) {
+inline bool OverlapsHexUniform(const elem<double,3> &LowerNodeCoords, const elem<double,3>
+  &UpperNodeCoords, const elem<double,3> &Coords, double Tolerance) {
 
-  tuple<double> LocalCoords = IsoHex8NodeUniformInverse(LowerNodeCoords, UpperNodeCoords, Coords);
-
-  for (int iDim = 0; iDim < 3; ++iDim) {
-    if (LocalCoords(iDim) < -Tolerance) {
-      return false;
-    } else if (LocalCoords(iDim) > 1.+Tolerance) {
-      return false;
-    }
-  }
-
-  return true;
-
-}
-
-inline bool OverlapsHexOrientedUniform(const array_view<const tuple<double>> &NodeCoords, const
-  tuple<double> &Coords, double Tolerance) {
-
-  tuple<double> LocalCoords = IsoHex8NodeOrientedUniformInverse(NodeCoords, Coords);
+  elem<double,3> LocalCoords = IsoHex8NodeUniformInverse(LowerNodeCoords, UpperNodeCoords, Coords);
 
   for (int iDim = 0; iDim < 3; ++iDim) {
     if (LocalCoords(iDim) < -Tolerance) {
@@ -307,8 +290,25 @@ inline bool OverlapsHexOrientedUniform(const array_view<const tuple<double>> &No
 
 }
 
-inline bool OverlapsHexNonUniform(const array_view<const tuple<double>> &NodeCoords, const
-  tuple<double> &Coords, double Tolerance) {
+inline bool OverlapsHexOrientedUniform(const array_view<const elem<double,3>> &NodeCoords, const
+  elem<double,3> &Coords, double Tolerance) {
+
+  elem<double,3> LocalCoords = IsoHex8NodeOrientedUniformInverse(NodeCoords, Coords);
+
+  for (int iDim = 0; iDim < 3; ++iDim) {
+    if (LocalCoords(iDim) < -Tolerance) {
+      return false;
+    } else if (LocalCoords(iDim) > 1.+Tolerance) {
+      return false;
+    }
+  }
+
+  return true;
+
+}
+
+inline bool OverlapsHexNonUniform(const array_view<const elem<double,3>> &NodeCoords, const
+  elem<double,3> &Coords, double Tolerance) {
 
   // Not safe to invert isoparametric mapping; instead decompose into 6 tetrahedra
   constexpr int Tetrahedra[6][4] = {
@@ -325,27 +325,27 @@ inline bool OverlapsHexNonUniform(const array_view<const tuple<double>> &NodeCoo
     int iVertex2 = Tetrahedra[iTetrahedron][1];
     int iVertex3 = Tetrahedra[iTetrahedron][2];
     int iVertex4 = Tetrahedra[iTetrahedron][3];
-    tuple<double> I = {
+    elem<double,3> I = {
       NodeCoords(iVertex2)(0) - NodeCoords(iVertex1)(0),
       NodeCoords(iVertex2)(1) - NodeCoords(iVertex1)(1),
       NodeCoords(iVertex2)(2) - NodeCoords(iVertex1)(2)
     };
-    tuple<double> J = {
+    elem<double,3> J = {
       NodeCoords(iVertex3)(0) - NodeCoords(iVertex1)(0),
       NodeCoords(iVertex3)(1) - NodeCoords(iVertex1)(1),
       NodeCoords(iVertex3)(2) - NodeCoords(iVertex1)(2)
     };
-    tuple<double> K = {
+    elem<double,3> K = {
       NodeCoords(iVertex4)(0) - NodeCoords(iVertex1)(0),
       NodeCoords(iVertex4)(1) - NodeCoords(iVertex1)(1),
       NodeCoords(iVertex4)(2) - NodeCoords(iVertex1)(2)
     };
-    tuple<double> RelativeCoords = {
+    elem<double,3> RelativeCoords = {
       Coords(0) - NodeCoords(iVertex1)(0),
       Coords(1) - NodeCoords(iVertex1)(1),
       Coords(2) - NodeCoords(iVertex1)(2)
     };
-    tuple<double> LocalCoords = ColumnSolve3D(I, J, K, RelativeCoords);
+    elem<double,3> LocalCoords = ColumnSolve3D(I, J, K, RelativeCoords);
     bool Inside = true;
     double CoordSum = 0.;
     for (int iDim = 0; iDim < 3; ++iDim) {
@@ -362,7 +362,7 @@ inline bool OverlapsHexNonUniform(const array_view<const tuple<double>> &NodeCoo
 
 }
 
-inline double VolumeHexUniform(const tuple<double> &LowerNodeCoords, const tuple<double>
+inline double VolumeHexUniform(const elem<double,3> &LowerNodeCoords, const elem<double,3>
   &UpperNodeCoords) {
 
   return
@@ -372,21 +372,21 @@ inline double VolumeHexUniform(const tuple<double> &LowerNodeCoords, const tuple
 
 }
 
-inline double VolumeHexOrientedUniform(const array_view<const tuple<double>> &NodeCoords) {
+inline double VolumeHexOrientedUniform(const array_view<const elem<double,3>> &NodeCoords) {
 
-  tuple<double> I = {
+  elem<double,3> I = {
     NodeCoords(1)(0) - NodeCoords(0)(0),
     NodeCoords(1)(1) - NodeCoords(0)(1),
     NodeCoords(1)(2) - NodeCoords(0)(2)
   };
 
-  tuple<double> J = {
+  elem<double,3> J = {
     NodeCoords(2)(0) - NodeCoords(0)(0),
     NodeCoords(2)(1) - NodeCoords(0)(1),
     NodeCoords(2)(2) - NodeCoords(0)(2)
   };
 
-  tuple<double> K = {
+  elem<double,3> K = {
     NodeCoords(4)(0) - NodeCoords(0)(0),
     NodeCoords(4)(1) - NodeCoords(0)(1),
     NodeCoords(4)(2) - NodeCoords(0)(2)
@@ -396,7 +396,7 @@ inline double VolumeHexOrientedUniform(const array_view<const tuple<double>> &No
 
 }
 
-inline double VolumeHexNonUniform(const array_view<const tuple<double>> &NodeCoords) {
+inline double VolumeHexNonUniform(const array_view<const elem<double,3>> &NodeCoords) {
 
   // Decompose into 6 tetrahedra
   constexpr int Tetrahedra[6][4] = {
@@ -415,17 +415,17 @@ inline double VolumeHexNonUniform(const array_view<const tuple<double>> &NodeCoo
     int iVertex2 = Tetrahedra[iTetrahedron][1];
     int iVertex3 = Tetrahedra[iTetrahedron][2];
     int iVertex4 = Tetrahedra[iTetrahedron][3];
-    tuple<double> I = {
+    elem<double,3> I = {
       NodeCoords(iVertex2)(0) - NodeCoords(iVertex1)(0),
       NodeCoords(iVertex2)(1) - NodeCoords(iVertex1)(1),
       NodeCoords(iVertex2)(2) - NodeCoords(iVertex1)(2)
     };
-    tuple<double> J = {
+    elem<double,3> J = {
       NodeCoords(iVertex3)(0) - NodeCoords(iVertex1)(0),
       NodeCoords(iVertex3)(1) - NodeCoords(iVertex1)(1),
       NodeCoords(iVertex3)(2) - NodeCoords(iVertex1)(2)
     };
-    tuple<double> K = {
+    elem<double,3> K = {
       NodeCoords(iVertex4)(0) - NodeCoords(iVertex1)(0),
       NodeCoords(iVertex4)(1) - NodeCoords(iVertex1)(1),
       NodeCoords(iVertex4)(2) - NodeCoords(iVertex1)(2)

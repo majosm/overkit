@@ -10,7 +10,6 @@
 
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Elem.hpp>
-#include <ovk/core/Tuple.hpp>
 
 #include <mpi.h>
 
@@ -24,15 +23,13 @@ TEST_F(MathTests, ColumnDeterminant2D) {
 
   using ovk::core::ColumnDeterminant2D;
 
-  ovk::tuple<double> AI = {
+  ovk::elem<double,2> AI = {
     1.,
-   -2.,
-    0.
+   -2.
   };
-  ovk::tuple<double> AJ = {
+  ovk::elem<double,2> AJ = {
     2.,
-    1.,
-    0.
+    1.
   };
   EXPECT_EQ(ColumnDeterminant2D(AI, AJ), 5.);
 
@@ -44,17 +41,17 @@ TEST_F(MathTests, ColumnDeterminant3D) {
 
   using ovk::core::ColumnDeterminant3D;
 
-  ovk::tuple<double> AI = {
+  ovk::elem<double,3> AI = {
     1.,
    -3.,
    -2.
   };
-  ovk::tuple<double> AJ = {
+  ovk::elem<double,3> AJ = {
     2.,
     1.,
    -3.
   };
-  ovk::tuple<double> AK = {
+  ovk::elem<double,3> AK = {
     3.,
     2.,
     1.
@@ -69,22 +66,19 @@ TEST_F(MathTests, ColumnSolve2D) {
 
   using ovk::core::ColumnSolve2D;
 
-  ovk::tuple<double> AI = {
+  ovk::elem<double,2> AI = {
     1.,
-   -2.,
-    0.
+   -2.
   };
-  ovk::tuple<double> AJ = {
+  ovk::elem<double,2> AJ = {
     2.,
-    1.,
-    0.
+    1.
   };
-  ovk::tuple<double> B = {
+  ovk::elem<double,2> B = {
     8.,
-   -1,
-    0.
+   -1
   };
-  EXPECT_THAT(ColumnSolve2D(AI, AJ, B), ElementsAre(2.,3.,0.));
+  EXPECT_THAT(ColumnSolve2D(AI, AJ, B), ElementsAre(2.,3.));
 
 }
 
@@ -94,22 +88,22 @@ TEST_F(MathTests, ColumnSolve3D) {
 
   using ovk::core::ColumnSolve3D;
 
-  ovk::tuple<double> AI = {
+  ovk::elem<double,3> AI = {
     1.,
    -3.,
    -2.
   };
-  ovk::tuple<double> AJ = {
+  ovk::elem<double,3> AJ = {
     2.,
     1.,
    -3.
   };
-  ovk::tuple<double> AK = {
+  ovk::elem<double,3> AK = {
     3.,
     2.,
     1.
   };
-  ovk::tuple<double> B = {
+  ovk::elem<double,3> B = {
    20.,
     5.,
    -9.

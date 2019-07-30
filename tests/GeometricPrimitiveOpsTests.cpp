@@ -11,7 +11,6 @@
 #include <ovk/core/ArrayView.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Elem.hpp>
-#include <ovk/core/Tuple.hpp>
 
 #include <mpi.h>
 
@@ -197,11 +196,11 @@ TEST_F(GeometricPrimitiveOpsTests, IsoQuad4NodeUniform) {
 
   // Rectangle of length (2,3) with lower corner at (1,2)
 
-  auto CoordFunc = [](double U, double V) -> ovk::tuple<double> {
-    return {1.+2.*U, 2.+3.*V, 0.};
+  auto CoordFunc = [](double U, double V) -> ovk::elem<double,2> {
+    return {1.+2.*U, 2.+3.*V};
   };
 
-  const ovk::tuple<double> NodeCoords[] = {
+  const ovk::elem<double,2> NodeCoords[] = {
     CoordFunc(0.,0.),
     CoordFunc(1.,0.),
     CoordFunc(0.,1.),
@@ -209,33 +208,31 @@ TEST_F(GeometricPrimitiveOpsTests, IsoQuad4NodeUniform) {
   };
 
   // Sanity check
-  EXPECT_THAT(NodeCoords[0], ElementsAre(1.,2.,0.));
-  EXPECT_THAT(NodeCoords[1], ElementsAre(3.,2.,0.));
-  EXPECT_THAT(NodeCoords[2], ElementsAre(1.,5.,0.));
-  EXPECT_THAT(NodeCoords[3], ElementsAre(3.,5.,0.));
+  EXPECT_THAT(NodeCoords[0], ElementsAre(1.,2.));
+  EXPECT_THAT(NodeCoords[1], ElementsAre(3.,2.));
+  EXPECT_THAT(NodeCoords[2], ElementsAre(1.,5.));
+  EXPECT_THAT(NodeCoords[3], ElementsAre(3.,5.));
 
-  const ovk::tuple<double> &LowerCoords = NodeCoords[0];
-  const ovk::tuple<double> &UpperCoords = NodeCoords[3];
+  const ovk::elem<double,2> &LowerCoords = NodeCoords[0];
+  const ovk::elem<double,2> &UpperCoords = NodeCoords[3];
 
   // At nodes
   int iNode = 0;
   for (int j = 0; j < 2; ++j) {
     for (int i = 0; i < 2; ++i) {
-      ovk::tuple<double> LocalCoords = {double(i), double(j), 0.};
-      ovk::tuple<double> Coords = IsoQuad4NodeUniform(LowerCoords, UpperCoords, LocalCoords);
+      ovk::elem<double,2> LocalCoords = {double(i), double(j)};
+      ovk::elem<double,2> Coords = IsoQuad4NodeUniform(LowerCoords, UpperCoords, LocalCoords);
       EXPECT_NEAR(Coords(0), NodeCoords[iNode](0), 1.e-12);
       EXPECT_NEAR(Coords(1), NodeCoords[iNode](1), 1.e-12);
-      EXPECT_EQ(Coords(2), 0.);
       ++iNode;
     }
   }
 
   // Between nodes
   {
-    ovk::tuple<double> Coords = IsoQuad4NodeUniform(LowerCoords, UpperCoords, {0.5,0.5,0.});
+    ovk::elem<double,2> Coords = IsoQuad4NodeUniform(LowerCoords, UpperCoords, {0.5,0.5});
     EXPECT_NEAR(Coords(0), CoordFunc(0.5,0.5)(0), 1.e-12);
     EXPECT_NEAR(Coords(1), CoordFunc(0.5,0.5)(1), 1.e-12);
-    EXPECT_EQ(Coords(2), 0.);
   }
 
 }
@@ -248,11 +245,11 @@ TEST_F(GeometricPrimitiveOpsTests, IsoQuad4NodeUniformInverse) {
 
   // Rectangle of length (2,3) with lower corner at (1,2)
 
-  auto CoordFunc = [](double U, double V) -> ovk::tuple<double> {
-    return {1.+2.*U, 2.+3.*V, 0.};
+  auto CoordFunc = [](double U, double V) -> ovk::elem<double,2> {
+    return {1.+2.*U, 2.+3.*V};
   };
 
-  const ovk::tuple<double> NodeCoords[] = {
+  const ovk::elem<double,2> NodeCoords[] = {
     CoordFunc(0.,0.),
     CoordFunc(1.,0.),
     CoordFunc(0.,1.),
@@ -260,34 +257,32 @@ TEST_F(GeometricPrimitiveOpsTests, IsoQuad4NodeUniformInverse) {
   };
 
   // Sanity check
-  EXPECT_THAT(NodeCoords[0], ElementsAre(1.,2.,0.));
-  EXPECT_THAT(NodeCoords[1], ElementsAre(3.,2.,0.));
-  EXPECT_THAT(NodeCoords[2], ElementsAre(1.,5.,0.));
-  EXPECT_THAT(NodeCoords[3], ElementsAre(3.,5.,0.));
+  EXPECT_THAT(NodeCoords[0], ElementsAre(1.,2.));
+  EXPECT_THAT(NodeCoords[1], ElementsAre(3.,2.));
+  EXPECT_THAT(NodeCoords[2], ElementsAre(1.,5.));
+  EXPECT_THAT(NodeCoords[3], ElementsAre(3.,5.));
 
-  const ovk::tuple<double> &LowerCoords = NodeCoords[0];
-  const ovk::tuple<double> &UpperCoords = NodeCoords[3];
+  const ovk::elem<double,2> &LowerCoords = NodeCoords[0];
+  const ovk::elem<double,2> &UpperCoords = NodeCoords[3];
 
   // At nodes
   int iNode = 0;
   for (int j = 0; j < 2; ++j) {
     for (int i = 0; i < 2; ++i) {
-      ovk::tuple<double> LocalCoords = IsoQuad4NodeUniformInverse(LowerCoords, UpperCoords,
+      ovk::elem<double,2> LocalCoords = IsoQuad4NodeUniformInverse(LowerCoords, UpperCoords,
         NodeCoords[iNode]);
       EXPECT_NEAR(LocalCoords(0), double(i), 1.e-12);
       EXPECT_NEAR(LocalCoords(1), double(j), 1.e-12);
-      EXPECT_EQ(LocalCoords(2), 0.);
       ++iNode;
     }
   }
 
   // Between nodes
   {
-    ovk::tuple<double> LocalCoords = IsoQuad4NodeUniformInverse(LowerCoords, UpperCoords,
+    ovk::elem<double,2> LocalCoords = IsoQuad4NodeUniformInverse(LowerCoords, UpperCoords,
       CoordFunc(0.5,0.5));
     EXPECT_NEAR(LocalCoords(0), 0.5, 1.e-12);
     EXPECT_NEAR(LocalCoords(1), 0.5, 1.e-12);
-    EXPECT_EQ(LocalCoords(2), 0.);
   }
 
 }
@@ -301,16 +296,16 @@ TEST_F(GeometricPrimitiveOpsTests, IsoQuad4NodeOrientedUniform) {
   // Rectangle of length (2,3) with lower corner at (1,2), "rotated" 45 degrees cw about
   // lower corner (actually stretched too, but only axially)
 
-  auto CoordFunc = [](double U, double V) -> ovk::tuple<double> {
-    auto Transform = [](double X, double Y) -> ovk::tuple<double> {
+  auto CoordFunc = [](double U, double V) -> ovk::elem<double,2> {
+    auto Transform = [](double X, double Y) -> ovk::elem<double,2> {
       double XRel = X-1.;
       double YRel = Y-2.;
-      return {1.+XRel+YRel, 2.-XRel+YRel, 0.};
+      return {1.+XRel+YRel, 2.-XRel+YRel};
     };
     return Transform(1.+2.*U, 2.+3.*V);
   };
 
-  const ovk::tuple<double> NodeCoords[] = {
+  const ovk::elem<double,2> NodeCoords[] = {
     CoordFunc(0.,0.),
     CoordFunc(1.,0.),
     CoordFunc(0.,1.),
@@ -318,30 +313,28 @@ TEST_F(GeometricPrimitiveOpsTests, IsoQuad4NodeOrientedUniform) {
   };
 
   // Sanity check
-  EXPECT_THAT(NodeCoords[0], ElementsAre(1.,2.,0.));
-  EXPECT_THAT(NodeCoords[1], ElementsAre(3.,0.,0.));
-  EXPECT_THAT(NodeCoords[2], ElementsAre(4.,5.,0.));
-  EXPECT_THAT(NodeCoords[3], ElementsAre(6.,3.,0.));
+  EXPECT_THAT(NodeCoords[0], ElementsAre(1.,2.));
+  EXPECT_THAT(NodeCoords[1], ElementsAre(3.,0.));
+  EXPECT_THAT(NodeCoords[2], ElementsAre(4.,5.));
+  EXPECT_THAT(NodeCoords[3], ElementsAre(6.,3.));
 
   // At nodes
   int iNode = 0;
   for (int j = 0; j < 2; ++j) {
     for (int i = 0; i < 2; ++i) {
-      ovk::tuple<double> LocalCoords = {double(i), double(j), 0.};
-      ovk::tuple<double> Coords = IsoQuad4NodeOrientedUniform(NodeCoords, LocalCoords);
+      ovk::elem<double,2> LocalCoords = {double(i), double(j)};
+      ovk::elem<double,2> Coords = IsoQuad4NodeOrientedUniform(NodeCoords, LocalCoords);
       EXPECT_NEAR(Coords(0), NodeCoords[iNode](0), 1.e-12);
       EXPECT_NEAR(Coords(1), NodeCoords[iNode](1), 1.e-12);
-      EXPECT_EQ(Coords(2), 0.);
       ++iNode;
     }
   }
 
   // Between nodes
   {
-    ovk::tuple<double> Coords = IsoQuad4NodeOrientedUniform(NodeCoords, {0.5,0.5,0.});
+    ovk::elem<double,2> Coords = IsoQuad4NodeOrientedUniform(NodeCoords, {0.5,0.5});
     EXPECT_NEAR(Coords(0), CoordFunc(0.5,0.5)(0), 1.e-12);
     EXPECT_NEAR(Coords(1), CoordFunc(0.5,0.5)(1), 1.e-12);
-    EXPECT_EQ(Coords(2), 0.);
   }
 
 }
@@ -355,16 +348,16 @@ TEST_F(GeometricPrimitiveOpsTests, IsoQuad4NodeOrientedUniformInverse) {
   // Rectangle of length (2,3) with lower corner at (1,2), "rotated" 45 degrees cw about
   // lower corner (actually stretched too, but only axially)
 
-  auto CoordFunc = [](double U, double V) -> ovk::tuple<double> {
-    auto Transform = [](double X, double Y) -> ovk::tuple<double> {
+  auto CoordFunc = [](double U, double V) -> ovk::elem<double,2> {
+    auto Transform = [](double X, double Y) -> ovk::elem<double,2> {
       double XRel = X-1.;
       double YRel = Y-2.;
-      return {1.+XRel+YRel, 2.-XRel+YRel, 0.};
+      return {1.+XRel+YRel, 2.-XRel+YRel};
     };
     return Transform(1.+2.*U, 2.+3.*V);
   };
 
-  const ovk::tuple<double> NodeCoords[] = {
+  const ovk::elem<double,2> NodeCoords[] = {
     CoordFunc(0.,0.),
     CoordFunc(1.,0.),
     CoordFunc(0.,1.),
@@ -372,31 +365,29 @@ TEST_F(GeometricPrimitiveOpsTests, IsoQuad4NodeOrientedUniformInverse) {
   };
 
   // Sanity check
-  EXPECT_THAT(NodeCoords[0], ElementsAre(1.,2.,0.));
-  EXPECT_THAT(NodeCoords[1], ElementsAre(3.,0.,0.));
-  EXPECT_THAT(NodeCoords[2], ElementsAre(4.,5.,0.));
-  EXPECT_THAT(NodeCoords[3], ElementsAre(6.,3.,0.));
+  EXPECT_THAT(NodeCoords[0], ElementsAre(1.,2.));
+  EXPECT_THAT(NodeCoords[1], ElementsAre(3.,0.));
+  EXPECT_THAT(NodeCoords[2], ElementsAre(4.,5.));
+  EXPECT_THAT(NodeCoords[3], ElementsAre(6.,3.));
 
   // At nodes
   int iNode = 0;
   for (int j = 0; j < 2; ++j) {
     for (int i = 0; i < 2; ++i) {
-      ovk::tuple<double> LocalCoords = IsoQuad4NodeOrientedUniformInverse(NodeCoords,
+      ovk::elem<double,2> LocalCoords = IsoQuad4NodeOrientedUniformInverse(NodeCoords,
         NodeCoords[iNode]);
       EXPECT_NEAR(LocalCoords(0), double(i), 1.e-12);
       EXPECT_NEAR(LocalCoords(1), double(j), 1.e-12);
-      EXPECT_EQ(LocalCoords(2), 0.);
       ++iNode;
     }
   }
 
   // Between nodes
   {
-    ovk::tuple<double> LocalCoords = IsoQuad4NodeOrientedUniformInverse(NodeCoords,
+    ovk::elem<double,2> LocalCoords = IsoQuad4NodeOrientedUniformInverse(NodeCoords,
       CoordFunc(0.5,0.5));
     EXPECT_NEAR(LocalCoords(0), 0.5, 1.e-12);
     EXPECT_NEAR(LocalCoords(1), 0.5, 1.e-12);
-    EXPECT_EQ(LocalCoords(2), 0.);
   }
 
 }
@@ -409,14 +400,14 @@ TEST_F(GeometricPrimitiveOpsTests, IsoQuad4NodeNonUniform) {
 
   // Unit-length square with lower corner at (1,2), stretched
 
-  auto CoordFunc = [](double U, double V) -> ovk::tuple<double> {
-    auto Stretch = [](double X, double Y) -> ovk::tuple<double> {
-      return {2.*X+Y, X+2.*Y, 0.};
+  auto CoordFunc = [](double U, double V) -> ovk::elem<double,2> {
+    auto Stretch = [](double X, double Y) -> ovk::elem<double,2> {
+      return {2.*X+Y, X+2.*Y};
     };
     return Stretch(1.+U, 2.+V);
   };
 
-  const ovk::tuple<double> NodeCoords[] = {
+  const ovk::elem<double,2> NodeCoords[] = {
     CoordFunc(0.,0.),
     CoordFunc(1.,0.),
     CoordFunc(0.,1.),
@@ -424,30 +415,28 @@ TEST_F(GeometricPrimitiveOpsTests, IsoQuad4NodeNonUniform) {
   };
 
   // Sanity check
-  EXPECT_THAT(NodeCoords[0], ElementsAre(4.,5.,0.));
-  EXPECT_THAT(NodeCoords[1], ElementsAre(6.,6.,0.));
-  EXPECT_THAT(NodeCoords[2], ElementsAre(5.,7.,0.));
-  EXPECT_THAT(NodeCoords[3], ElementsAre(7.,8.,0.));
+  EXPECT_THAT(NodeCoords[0], ElementsAre(4.,5.));
+  EXPECT_THAT(NodeCoords[1], ElementsAre(6.,6.));
+  EXPECT_THAT(NodeCoords[2], ElementsAre(5.,7.));
+  EXPECT_THAT(NodeCoords[3], ElementsAre(7.,8.));
 
   // At nodes
   int iNode = 0;
   for (int j = 0; j < 2; ++j) {
     for (int i = 0; i < 2; ++i) {
-      ovk::tuple<double> LocalCoords = {double(i), double(j), 0.};
-      ovk::tuple<double> Coords = IsoQuad4NodeNonUniform(NodeCoords, LocalCoords);
+      ovk::elem<double,2> LocalCoords = {double(i), double(j)};
+      ovk::elem<double,2> Coords = IsoQuad4NodeNonUniform(NodeCoords, LocalCoords);
       EXPECT_NEAR(Coords(0), NodeCoords[iNode](0), 1.e-12);
       EXPECT_NEAR(Coords(1), NodeCoords[iNode](1), 1.e-12);
-      EXPECT_EQ(Coords(2), 0.);
       ++iNode;
     }
   }
 
   // Between nodes
   {
-    ovk::tuple<double> Coords = IsoQuad4NodeNonUniform(NodeCoords, {0.5,0.5,0.});
+    ovk::elem<double,2> Coords = IsoQuad4NodeNonUniform(NodeCoords, {0.5,0.5});
     EXPECT_NEAR(Coords(0), CoordFunc(0.5,0.5)(0), 1.e-12);
     EXPECT_NEAR(Coords(1), CoordFunc(0.5,0.5)(1), 1.e-12);
-    EXPECT_EQ(Coords(2), 0.);
   }
 
 }
@@ -460,14 +449,14 @@ TEST_F(GeometricPrimitiveOpsTests, IsoQuad4NodeNonUniformInverse) {
 
   // Unit-length square with lower corner at (1,2), stretched
 
-  auto CoordFunc = [](double U, double V) -> ovk::tuple<double> {
-    auto Stretch = [](double X, double Y) -> ovk::tuple<double> {
-      return {2.*X+Y, X+2.*Y, 0.};
+  auto CoordFunc = [](double U, double V) -> ovk::elem<double,2> {
+    auto Stretch = [](double X, double Y) -> ovk::elem<double,2> {
+      return {2.*X+Y, X+2.*Y};
     };
     return Stretch(1.+U, 2.+V);
   };
 
-  const ovk::tuple<double> NodeCoords[] = {
+  const ovk::elem<double,2> NodeCoords[] = {
     CoordFunc(0.,0.),
     CoordFunc(1.,0.),
     CoordFunc(0.,1.),
@@ -475,19 +464,19 @@ TEST_F(GeometricPrimitiveOpsTests, IsoQuad4NodeNonUniformInverse) {
   };
 
   // Sanity check
-  EXPECT_THAT(NodeCoords[0], ElementsAre(4.,5.,0.));
-  EXPECT_THAT(NodeCoords[1], ElementsAre(6.,6.,0.));
-  EXPECT_THAT(NodeCoords[2], ElementsAre(5.,7.,0.));
-  EXPECT_THAT(NodeCoords[3], ElementsAre(7.,8.,0.));
+  EXPECT_THAT(NodeCoords[0], ElementsAre(4.,5.));
+  EXPECT_THAT(NodeCoords[1], ElementsAre(6.,6.));
+  EXPECT_THAT(NodeCoords[2], ElementsAre(5.,7.));
+  EXPECT_THAT(NodeCoords[3], ElementsAre(7.,8.));
 
   // At nodes
   int iNode = 0;
   for (int j = 0; j < 2; ++j) {
     for (int i = 0; i < 2; ++i) {
-      ovk::tuple<double> LocalCoords = IsoQuad4NodeNonUniformInverse(NodeCoords, NodeCoords[iNode]);
+      ovk::elem<double,2> LocalCoords = IsoQuad4NodeNonUniformInverse(NodeCoords,
+        NodeCoords[iNode]);
       EXPECT_NEAR(LocalCoords(0), double(i), 1.e-12);
       EXPECT_NEAR(LocalCoords(1), double(j), 1.e-12);
-      EXPECT_EQ(LocalCoords(2), 0.);
       ++iNode;
     }
   }
@@ -495,12 +484,11 @@ TEST_F(GeometricPrimitiveOpsTests, IsoQuad4NodeNonUniformInverse) {
   // Between nodes
   {
     bool Success;
-    ovk::tuple<double> LocalCoords = IsoQuad4NodeNonUniformInverse(NodeCoords, CoordFunc(0.5,0.5),
+    ovk::elem<double,2> LocalCoords = IsoQuad4NodeNonUniformInverse(NodeCoords, CoordFunc(0.5,0.5),
       &Success);
     EXPECT_TRUE(Success);
     EXPECT_NEAR(LocalCoords(0), 0.5, 1.e-12);
     EXPECT_NEAR(LocalCoords(1), 0.5, 1.e-12);
-    EXPECT_EQ(LocalCoords(2), 0.);
   }
 
 }
@@ -513,14 +501,14 @@ TEST_F(GeometricPrimitiveOpsTests, IsoQuad16Node) {
 
   // Square of side length 3 with lower corner at (1,2), stretched
 
-  auto CoordFunc = [](double U, double V) -> ovk::tuple<double> {
-    auto Stretch = [](double X, double Y) -> ovk::tuple<double> {
-      return {2.*X+Y, X+2.*Y, 0.};
+  auto CoordFunc = [](double U, double V) -> ovk::elem<double,2> {
+    auto Stretch = [](double X, double Y) -> ovk::elem<double,2> {
+      return {2.*X+Y, X+2.*Y};
     };
     return Stretch(2.+U, 3.+V);
   };
 
-  ovk::tuple<double> NodeCoords[16];
+  ovk::elem<double,2> NodeCoords[16];
   int iNode = 0;
   for (int j = 0; j < 4; ++j) {
     for (int i = 0; i < 4; ++i) {
@@ -530,31 +518,29 @@ TEST_F(GeometricPrimitiveOpsTests, IsoQuad16Node) {
   }
 
   // Sanity check (too many nodes -- just pick a few)
-  EXPECT_THAT(NodeCoords[0], ElementsAre(4.,5.,0.));
-  EXPECT_THAT(NodeCoords[3], ElementsAre(10.,8.,0.));
-  EXPECT_THAT(NodeCoords[5], ElementsAre(7.,8.,0.));
-  EXPECT_THAT(NodeCoords[12], ElementsAre(7.,11.,0.));
-  EXPECT_THAT(NodeCoords[15], ElementsAre(13.,14.,0.));
+  EXPECT_THAT(NodeCoords[0], ElementsAre(4.,5.));
+  EXPECT_THAT(NodeCoords[3], ElementsAre(10.,8.));
+  EXPECT_THAT(NodeCoords[5], ElementsAre(7.,8.));
+  EXPECT_THAT(NodeCoords[12], ElementsAre(7.,11.));
+  EXPECT_THAT(NodeCoords[15], ElementsAre(13.,14.));
 
   // At nodes
   iNode = 0;
   for (int j = 0; j < 4; ++j) {
     for (int i = 0; i < 4; ++i) {
-      ovk::tuple<double> LocalCoords = {double(i)-1., double(j)-1., 0.};
-      ovk::tuple<double> Coords = IsoQuad16Node(NodeCoords, LocalCoords);
+      ovk::elem<double,2> LocalCoords = {double(i)-1., double(j)-1.};
+      ovk::elem<double,2> Coords = IsoQuad16Node(NodeCoords, LocalCoords);
       EXPECT_NEAR(Coords(0), NodeCoords[iNode](0), 1.e-12);
       EXPECT_NEAR(Coords(1), NodeCoords[iNode](1), 1.e-12);
-      EXPECT_EQ(Coords(2), 0.);
       ++iNode;
     }
   }
 
   // Between nodes
   {
-    ovk::tuple<double> Coords = IsoQuad16Node(NodeCoords, {0.5,0.5,0.});
+    ovk::elem<double,2> Coords = IsoQuad16Node(NodeCoords, {0.5,0.5});
     EXPECT_NEAR(Coords(0), CoordFunc(0.5,0.5)(0), 1.e-12);
     EXPECT_NEAR(Coords(1), CoordFunc(0.5,0.5)(1), 1.e-12);
-    EXPECT_EQ(Coords(2), 0.);
   }
 
 }
@@ -567,14 +553,14 @@ TEST_F(GeometricPrimitiveOpsTests, IsoQuad16NodeInverse) {
 
   // Square of side length 3 with lower corner at (1,2), stretched
 
-  auto CoordFunc = [](double U, double V) -> ovk::tuple<double> {
-    auto Stretch = [](double X, double Y) -> ovk::tuple<double> {
-      return {2.*X+Y, X+2.*Y, 0.};
+  auto CoordFunc = [](double U, double V) -> ovk::elem<double,2> {
+    auto Stretch = [](double X, double Y) -> ovk::elem<double,2> {
+      return {2.*X+Y, X+2.*Y};
     };
     return Stretch(2.+U, 3.+V);
   };
 
-  ovk::tuple<double> NodeCoords[16];
+  ovk::elem<double,2> NodeCoords[16];
   int iNode = 0;
   for (int j = 0; j < 4; ++j) {
     for (int i = 0; i < 4; ++i) {
@@ -584,20 +570,19 @@ TEST_F(GeometricPrimitiveOpsTests, IsoQuad16NodeInverse) {
   }
 
   // Sanity check (too many nodes -- just pick a few)
-  EXPECT_THAT(NodeCoords[0], ElementsAre(4.,5.,0.));
-  EXPECT_THAT(NodeCoords[3], ElementsAre(10.,8.,0.));
-  EXPECT_THAT(NodeCoords[5], ElementsAre(7.,8.,0.));
-  EXPECT_THAT(NodeCoords[12], ElementsAre(7.,11.,0.));
-  EXPECT_THAT(NodeCoords[15], ElementsAre(13.,14.,0.));
+  EXPECT_THAT(NodeCoords[0], ElementsAre(4.,5.));
+  EXPECT_THAT(NodeCoords[3], ElementsAre(10.,8.));
+  EXPECT_THAT(NodeCoords[5], ElementsAre(7.,8.));
+  EXPECT_THAT(NodeCoords[12], ElementsAre(7.,11.));
+  EXPECT_THAT(NodeCoords[15], ElementsAre(13.,14.));
 
   // At nodes
   iNode = 0;
   for (int j = 0; j < 4; ++j) {
     for (int i = 0; i < 4; ++i) {
-      ovk::tuple<double> LocalCoords = IsoQuad16NodeInverse(NodeCoords, NodeCoords[iNode]);
+      ovk::elem<double,2> LocalCoords = IsoQuad16NodeInverse(NodeCoords, NodeCoords[iNode]);
       EXPECT_NEAR(LocalCoords(0), double(i)-1., 1.e-12);
       EXPECT_NEAR(LocalCoords(1), double(j)-1., 1.e-12);
-      EXPECT_EQ(LocalCoords(2), 0.);
       ++iNode;
     }
   }
@@ -605,11 +590,11 @@ TEST_F(GeometricPrimitiveOpsTests, IsoQuad16NodeInverse) {
   // Between nodes
   {
     bool Success;
-    ovk::tuple<double> LocalCoords = IsoQuad16NodeInverse(NodeCoords, CoordFunc(0.5,0.5), &Success);
+    ovk::elem<double,2> LocalCoords = IsoQuad16NodeInverse(NodeCoords, CoordFunc(0.5,0.5),
+      &Success);
     EXPECT_TRUE(Success);
     EXPECT_NEAR(LocalCoords(0), 0.5, 1.e-12);
     EXPECT_NEAR(LocalCoords(1), 0.5, 1.e-12);
-    EXPECT_EQ(LocalCoords(2), 0.);
   }
 
 }
@@ -622,11 +607,11 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeUniform) {
 
   // Cuboid of length (2,3,4) with lower corner at (1,2,3)
 
-  auto CoordFunc = [](double U, double V, double W) -> ovk::tuple<double> {
+  auto CoordFunc = [](double U, double V, double W) -> ovk::elem<double,3> {
     return {1.+2.*U, 2.+3.*V, 3.+4.*W};
   };
 
-  const ovk::tuple<double> NodeCoords[] = {
+  const ovk::elem<double,3> NodeCoords[] = {
     CoordFunc(0.,0.,0.),
     CoordFunc(1.,0.,0.),
     CoordFunc(0.,1.,0.),
@@ -647,16 +632,16 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeUniform) {
   EXPECT_THAT(NodeCoords[6], ElementsAre(1.,5.,7.));
   EXPECT_THAT(NodeCoords[7], ElementsAre(3.,5.,7.));
 
-  const ovk::tuple<double> &LowerCoords = NodeCoords[0];
-  const ovk::tuple<double> &UpperCoords = NodeCoords[7];
+  const ovk::elem<double,3> &LowerCoords = NodeCoords[0];
+  const ovk::elem<double,3> &UpperCoords = NodeCoords[7];
 
   // At nodes
   int iNode = 0;
   for (int k = 0; k < 2; ++k) {
     for (int j = 0; j < 2; ++j) {
       for (int i = 0; i < 2; ++i) {
-        ovk::tuple<double> LocalCoords = {double(i), double(j), double(k)};
-        ovk::tuple<double> Coords = IsoHex8NodeUniform(LowerCoords, UpperCoords, LocalCoords);
+        ovk::elem<double,3> LocalCoords = {double(i), double(j), double(k)};
+        ovk::elem<double,3> Coords = IsoHex8NodeUniform(LowerCoords, UpperCoords, LocalCoords);
         EXPECT_NEAR(Coords(0), NodeCoords[iNode](0), 1.e-12);
         EXPECT_NEAR(Coords(1), NodeCoords[iNode](1), 1.e-12);
         EXPECT_NEAR(Coords(2), NodeCoords[iNode](2), 1.e-12);
@@ -667,7 +652,7 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeUniform) {
 
   // Between nodes
   {
-    ovk::tuple<double> Coords = IsoHex8NodeUniform(LowerCoords, UpperCoords, {0.5,0.5,0.5});
+    ovk::elem<double,3> Coords = IsoHex8NodeUniform(LowerCoords, UpperCoords, {0.5,0.5,0.5});
     EXPECT_NEAR(Coords(0), CoordFunc(0.5,0.5,0.5)(0), 1.e-12);
     EXPECT_NEAR(Coords(1), CoordFunc(0.5,0.5,0.5)(1), 1.e-12);
     EXPECT_NEAR(Coords(2), CoordFunc(0.5,0.5,0.5)(2), 1.e-12);
@@ -683,11 +668,11 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeUniformInverse) {
 
   // Cuboid of length (2,3,4) with lower corner at (1,2,3)
 
-  auto CoordFunc = [](double U, double V, double W) -> ovk::tuple<double> {
+  auto CoordFunc = [](double U, double V, double W) -> ovk::elem<double,3> {
     return {1.+2.*U, 2.+3.*V, 3.+4.*W};
   };
 
-  const ovk::tuple<double> NodeCoords[] = {
+  const ovk::elem<double,3> NodeCoords[] = {
     CoordFunc(0.,0.,0.),
     CoordFunc(1.,0.,0.),
     CoordFunc(0.,1.,0.),
@@ -708,15 +693,15 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeUniformInverse) {
   EXPECT_THAT(NodeCoords[6], ElementsAre(1.,5.,7.));
   EXPECT_THAT(NodeCoords[7], ElementsAre(3.,5.,7.));
 
-  const ovk::tuple<double> &LowerCoords = NodeCoords[0];
-  const ovk::tuple<double> &UpperCoords = NodeCoords[7];
+  const ovk::elem<double,3> &LowerCoords = NodeCoords[0];
+  const ovk::elem<double,3> &UpperCoords = NodeCoords[7];
 
   // At nodes
   int iNode = 0;
   for (int k = 0; k < 2; ++k) {
     for (int j = 0; j < 2; ++j) {
       for (int i = 0; i < 2; ++i) {
-        ovk::tuple<double> LocalCoords = IsoHex8NodeUniformInverse(LowerCoords, UpperCoords,
+        ovk::elem<double,3> LocalCoords = IsoHex8NodeUniformInverse(LowerCoords, UpperCoords,
           NodeCoords[iNode]);
         EXPECT_NEAR(LocalCoords(0), double(i), 1.e-12);
         EXPECT_NEAR(LocalCoords(1), double(j), 1.e-12);
@@ -728,7 +713,7 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeUniformInverse) {
 
   // Between nodes
   {
-    ovk::tuple<double> LocalCoords = IsoHex8NodeUniformInverse(LowerCoords, UpperCoords,
+    ovk::elem<double,3> LocalCoords = IsoHex8NodeUniformInverse(LowerCoords, UpperCoords,
       CoordFunc(0.5,0.5,0.5));
     EXPECT_NEAR(LocalCoords(0), 0.5, 1.e-12);
     EXPECT_NEAR(LocalCoords(1), 0.5, 1.e-12);
@@ -746,8 +731,8 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeOrientedUniform) {
   // Cuboid of length (2,3,4) with lower corner at (1,2,3), "rotated" 45 degrees cw about x through
   // lower corner (actually stretched too, but only axially)
 
-  auto CoordFunc = [](double U, double V, double W) -> ovk::tuple<double> {
-    auto Transform = [](double X, double Y, double Z) -> ovk::tuple<double> {
+  auto CoordFunc = [](double U, double V, double W) -> ovk::elem<double,3> {
+    auto Transform = [](double X, double Y, double Z) -> ovk::elem<double,3> {
       double YRel = Y-2.;
       double ZRel = Z-3.;
       return {X, 2.+YRel+ZRel, 3.-YRel+ZRel};
@@ -755,7 +740,7 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeOrientedUniform) {
     return Transform(1.+2.*U, 2.+3.*V, 3.+4.*W);
   };
 
-  const ovk::tuple<double> NodeCoords[] = {
+  const ovk::elem<double,3> NodeCoords[] = {
     CoordFunc(0.,0.,0.),
     CoordFunc(1.,0.,0.),
     CoordFunc(0.,1.,0.),
@@ -781,8 +766,8 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeOrientedUniform) {
   for (int k = 0; k < 2; ++k) {
     for (int j = 0; j < 2; ++j) {
       for (int i = 0; i < 2; ++i) {
-        ovk::tuple<double> LocalCoords = {double(i), double(j), double(k)};
-        ovk::tuple<double> Coords = IsoHex8NodeOrientedUniform(NodeCoords, LocalCoords);
+        ovk::elem<double,3> LocalCoords = {double(i), double(j), double(k)};
+        ovk::elem<double,3> Coords = IsoHex8NodeOrientedUniform(NodeCoords, LocalCoords);
         EXPECT_NEAR(Coords(0), NodeCoords[iNode](0), 1.e-12);
         EXPECT_NEAR(Coords(1), NodeCoords[iNode](1), 1.e-12);
         EXPECT_NEAR(Coords(2), NodeCoords[iNode](2), 1.e-12);
@@ -793,7 +778,7 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeOrientedUniform) {
 
   // Between nodes
   {
-    ovk::tuple<double> Coords = IsoHex8NodeOrientedUniform(NodeCoords, {0.5,0.5,0.5});
+    ovk::elem<double,3> Coords = IsoHex8NodeOrientedUniform(NodeCoords, {0.5,0.5,0.5});
     EXPECT_NEAR(Coords(0), CoordFunc(0.5,0.5,0.5)(0), 1.e-12);
     EXPECT_NEAR(Coords(1), CoordFunc(0.5,0.5,0.5)(1), 1.e-12);
     EXPECT_NEAR(Coords(2), CoordFunc(0.5,0.5,0.5)(2), 1.e-12);
@@ -810,8 +795,8 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeOrientedUniformInverse) {
   // Cuboid of length (2,3,4) with lower corner at (1,2,3), "rotated" 45 degrees cw about x through
   // lower corner (actually stretched too, but only axially)
 
-  auto CoordFunc = [](double U, double V, double W) -> ovk::tuple<double> {
-    auto Transform = [](double X, double Y, double Z) -> ovk::tuple<double> {
+  auto CoordFunc = [](double U, double V, double W) -> ovk::elem<double,3> {
+    auto Transform = [](double X, double Y, double Z) -> ovk::elem<double,3> {
       double YRel = Y-2.;
       double ZRel = Z-3.;
       return {X, 2.+YRel+ZRel, 3.-YRel+ZRel};
@@ -819,7 +804,7 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeOrientedUniformInverse) {
     return Transform(1.+2.*U, 2.+3.*V, 3.+4.*W);
   };
 
-  const ovk::tuple<double> NodeCoords[] = {
+  const ovk::elem<double,3> NodeCoords[] = {
     CoordFunc(0.,0.,0.),
     CoordFunc(1.,0.,0.),
     CoordFunc(0.,1.,0.),
@@ -845,7 +830,7 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeOrientedUniformInverse) {
   for (int k = 0; k < 2; ++k) {
     for (int j = 0; j < 2; ++j) {
       for (int i = 0; i < 2; ++i) {
-        ovk::tuple<double> LocalCoords = IsoHex8NodeOrientedUniformInverse(NodeCoords,
+        ovk::elem<double,3> LocalCoords = IsoHex8NodeOrientedUniformInverse(NodeCoords,
           NodeCoords[iNode]);
         EXPECT_NEAR(LocalCoords(0), double(i), 1.e-12);
         EXPECT_NEAR(LocalCoords(1), double(j), 1.e-12);
@@ -857,7 +842,7 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeOrientedUniformInverse) {
 
   // Between nodes
   {
-    ovk::tuple<double> LocalCoords = IsoHex8NodeOrientedUniformInverse(NodeCoords,
+    ovk::elem<double,3> LocalCoords = IsoHex8NodeOrientedUniformInverse(NodeCoords,
       CoordFunc(0.5,0.5,0.5));
     EXPECT_NEAR(LocalCoords(0), 0.5, 1.e-12);
     EXPECT_NEAR(LocalCoords(1), 0.5, 1.e-12);
@@ -874,14 +859,14 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeNonUniform) {
 
   // Unit-length cube with lower corner at (1,2,3), stretched
 
-  auto CoordFunc = [](double U, double V, double W) -> ovk::tuple<double> {
-    auto Stretch = [](double X, double Y, double Z) -> ovk::tuple<double> {
+  auto CoordFunc = [](double U, double V, double W) -> ovk::elem<double,3> {
+    auto Stretch = [](double X, double Y, double Z) -> ovk::elem<double,3> {
       return {2.*X+Y+Z, X+2.*Y+Z, X+Y+2.*Z};
     };
     return Stretch(1.+U, 2.+V, 3.+W);
   };
 
-  const ovk::tuple<double> NodeCoords[] = {
+  const ovk::elem<double,3> NodeCoords[] = {
     CoordFunc(0.,0.,0.),
     CoordFunc(1.,0.,0.),
     CoordFunc(0.,1.,0.),
@@ -907,8 +892,8 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeNonUniform) {
   for (int k = 0; k < 2; ++k) {
     for (int j = 0; j < 2; ++j) {
       for (int i = 0; i < 2; ++i) {
-        ovk::tuple<double> LocalCoords = {double(i), double(j), double(k)};
-        ovk::tuple<double> Coords = IsoHex8NodeNonUniform(NodeCoords, LocalCoords);
+        ovk::elem<double,3> LocalCoords = {double(i), double(j), double(k)};
+        ovk::elem<double,3> Coords = IsoHex8NodeNonUniform(NodeCoords, LocalCoords);
         EXPECT_NEAR(Coords(0), NodeCoords[iNode](0), 1.e-12);
         EXPECT_NEAR(Coords(1), NodeCoords[iNode](1), 1.e-12);
         EXPECT_NEAR(Coords(2), NodeCoords[iNode](2), 1.e-12);
@@ -919,7 +904,7 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeNonUniform) {
 
   // Between nodes
   {
-    ovk::tuple<double> Coords = IsoHex8NodeNonUniform(NodeCoords, {0.5,0.5,0.5});
+    ovk::elem<double,3> Coords = IsoHex8NodeNonUniform(NodeCoords, {0.5,0.5,0.5});
     EXPECT_NEAR(Coords(0), CoordFunc(0.5,0.5,0.5)(0), 1.e-12);
     EXPECT_NEAR(Coords(1), CoordFunc(0.5,0.5,0.5)(1), 1.e-12);
     EXPECT_NEAR(Coords(2), CoordFunc(0.5,0.5,0.5)(2), 1.e-12);
@@ -935,14 +920,14 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeNonUniformInverse) {
 
   // Unit-length cube with lower corner at (1,2,3), stretched
 
-  auto CoordFunc = [](double U, double V, double W) -> ovk::tuple<double> {
-    auto Stretch = [](double X, double Y, double Z) -> ovk::tuple<double> {
+  auto CoordFunc = [](double U, double V, double W) -> ovk::elem<double,3> {
+    auto Stretch = [](double X, double Y, double Z) -> ovk::elem<double,3> {
       return {2.*X+Y+Z, X+2.*Y+Z, X+Y+2.*Z};
     };
     return Stretch(1.+U, 2.+V, 3.+W);
   };
 
-  const ovk::tuple<double> NodeCoords[] = {
+  const ovk::elem<double,3> NodeCoords[] = {
     CoordFunc(0.,0.,0.),
     CoordFunc(1.,0.,0.),
     CoordFunc(0.,1.,0.),
@@ -968,7 +953,7 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeNonUniformInverse) {
   for (int k = 0; k < 2; ++k) {
     for (int j = 0; j < 2; ++j) {
       for (int i = 0; i < 2; ++i) {
-        ovk::tuple<double> LocalCoords = IsoHex8NodeNonUniformInverse(NodeCoords,
+        ovk::elem<double,3> LocalCoords = IsoHex8NodeNonUniformInverse(NodeCoords,
           NodeCoords[iNode]);
         EXPECT_NEAR(LocalCoords(0), double(i), 1.e-12);
         EXPECT_NEAR(LocalCoords(1), double(j), 1.e-12);
@@ -981,7 +966,7 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeNonUniformInverse) {
   // Between nodes
   {
     bool Success;
-    ovk::tuple<double> LocalCoords = IsoHex8NodeNonUniformInverse(NodeCoords,
+    ovk::elem<double,3> LocalCoords = IsoHex8NodeNonUniformInverse(NodeCoords,
       CoordFunc(0.5,0.5,0.5), &Success);
     EXPECT_TRUE(Success);
     EXPECT_NEAR(LocalCoords(0), 0.5, 1.e-12);
@@ -999,14 +984,14 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex64Node) {
 
   // Cube of side length 3 with lower corner at (1,2,3), stretched
 
-  auto CoordFunc = [](double U, double V, double W) -> ovk::tuple<double> {
-    auto Stretch = [](double X, double Y, double Z) -> ovk::tuple<double> {
+  auto CoordFunc = [](double U, double V, double W) -> ovk::elem<double,3> {
+    auto Stretch = [](double X, double Y, double Z) -> ovk::elem<double,3> {
       return {2.*X+Y+Z, X+2.*Y+Z, X+Y+2.*Z};
     };
     return Stretch(2.+U, 3.+V, 4.+W);
   };
 
-  ovk::tuple<double> NodeCoords[64];
+  ovk::elem<double,3> NodeCoords[64];
   int iNode = 0;
   for (int k = 0; k < 4; ++k) {
     for (int j = 0; j < 4; ++j) {
@@ -1033,8 +1018,8 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex64Node) {
   for (int k = 0; k < 4; ++k) {
     for (int j = 0; j < 4; ++j) {
       for (int i = 0; i < 4; ++i) {
-        ovk::tuple<double> LocalCoords = {double(i)-1., double(j)-1., double(k)-1.};
-        ovk::tuple<double> Coords = IsoHex64Node(NodeCoords, LocalCoords);
+        ovk::elem<double,3> LocalCoords = {double(i)-1., double(j)-1., double(k)-1.};
+        ovk::elem<double,3> Coords = IsoHex64Node(NodeCoords, LocalCoords);
         EXPECT_NEAR(Coords(0), NodeCoords[iNode](0), 1.e-12);
         EXPECT_NEAR(Coords(1), NodeCoords[iNode](1), 1.e-12);
         EXPECT_NEAR(Coords(2), NodeCoords[iNode](2), 1.e-12);
@@ -1045,7 +1030,7 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex64Node) {
 
   // Between nodes
   {
-    ovk::tuple<double> Coords = IsoHex64Node(NodeCoords, {0.5,0.5,0.5});
+    ovk::elem<double,3> Coords = IsoHex64Node(NodeCoords, {0.5,0.5,0.5});
     EXPECT_NEAR(Coords(0), CoordFunc(0.5,0.5,0.5)(0), 1.e-12);
     EXPECT_NEAR(Coords(1), CoordFunc(0.5,0.5,0.5)(1), 1.e-12);
     EXPECT_NEAR(Coords(2), CoordFunc(0.5,0.5,0.5)(2), 1.e-12);
@@ -1061,14 +1046,14 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex64NodeInverse) {
 
   // Cube of side length 3 with lower corner at (1,2,3), stretched
 
-  auto CoordFunc = [](double U, double V, double W) -> ovk::tuple<double> {
-    auto Stretch = [](double X, double Y, double Z) -> ovk::tuple<double> {
+  auto CoordFunc = [](double U, double V, double W) -> ovk::elem<double,3> {
+    auto Stretch = [](double X, double Y, double Z) -> ovk::elem<double,3> {
       return {2.*X+Y+Z, X+2.*Y+Z, X+Y+2.*Z};
     };
     return Stretch(2.+U, 3.+V, 4.+W);
   };
 
-  ovk::tuple<double> NodeCoords[64];
+  ovk::elem<double,3> NodeCoords[64];
   int iNode = 0;
   for (int k = 0; k < 4; ++k) {
     for (int j = 0; j < 4; ++j) {
@@ -1095,7 +1080,7 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex64NodeInverse) {
   for (int k = 0; k < 4; ++k) {
     for (int j = 0; j < 4; ++j) {
       for (int i = 0; i < 4; ++i) {
-        ovk::tuple<double> LocalCoords = IsoHex64NodeInverse(NodeCoords, NodeCoords[iNode]);
+        ovk::elem<double,3> LocalCoords = IsoHex64NodeInverse(NodeCoords, NodeCoords[iNode]);
         EXPECT_NEAR(LocalCoords(0), double(i)-1., 1.e-12);
         EXPECT_NEAR(LocalCoords(1), double(j)-1., 1.e-12);
         EXPECT_NEAR(LocalCoords(2), double(k)-1., 1.e-12);
@@ -1107,7 +1092,7 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex64NodeInverse) {
   // Between nodes
   {
     bool Success;
-    ovk::tuple<double> LocalCoords = IsoHex64NodeInverse(NodeCoords, CoordFunc(0.5,0.5,0.5),
+    ovk::elem<double,3> LocalCoords = IsoHex64NodeInverse(NodeCoords, CoordFunc(0.5,0.5,0.5),
       &Success);
     EXPECT_TRUE(Success);
     EXPECT_NEAR(LocalCoords(0), 0.5, 1.e-12);
@@ -1172,11 +1157,11 @@ TEST_F(GeometricPrimitiveOpsTests, OverlapsQuadUniform) {
 
   // Rectangle of length (2,3) with lower corner at (1,2)
 
-  auto CoordFunc = [](double U, double V) -> ovk::tuple<double> {
-    return {1.+2.*U, 2.+3.*V, 0.};
+  auto CoordFunc = [](double U, double V) -> ovk::elem<double,2> {
+    return {1.+2.*U, 2.+3.*V};
   };
 
-  const ovk::tuple<double> NodeCoords[] = {
+  const ovk::elem<double,2> NodeCoords[] = {
     CoordFunc(0.,0.),
     CoordFunc(1.,0.),
     CoordFunc(0.,1.),
@@ -1184,13 +1169,13 @@ TEST_F(GeometricPrimitiveOpsTests, OverlapsQuadUniform) {
   };
 
   // Sanity check
-  EXPECT_THAT(NodeCoords[0], ElementsAre(1.,2.,0.));
-  EXPECT_THAT(NodeCoords[1], ElementsAre(3.,2.,0.));
-  EXPECT_THAT(NodeCoords[2], ElementsAre(1.,5.,0.));
-  EXPECT_THAT(NodeCoords[3], ElementsAre(3.,5.,0.));
+  EXPECT_THAT(NodeCoords[0], ElementsAre(1.,2.));
+  EXPECT_THAT(NodeCoords[1], ElementsAre(3.,2.));
+  EXPECT_THAT(NodeCoords[2], ElementsAre(1.,5.));
+  EXPECT_THAT(NodeCoords[3], ElementsAre(3.,5.));
 
-  const ovk::tuple<double> &LowerCoords = NodeCoords[0];
-  const ovk::tuple<double> &UpperCoords = NodeCoords[3];
+  const ovk::elem<double,2> &LowerCoords = NodeCoords[0];
+  const ovk::elem<double,2> &UpperCoords = NodeCoords[3];
 
   // Inside
   EXPECT_TRUE(OverlapsQuadUniform(LowerCoords, UpperCoords, CoordFunc(0.5,0.5)));
@@ -1242,16 +1227,16 @@ TEST_F(GeometricPrimitiveOpsTests, OverlapsQuadOrientedUniform) {
   // Rectangle of length (2,3) with lower corner at (1,2), "rotated" 45 degrees cw about
   // lower corner (actually stretched too, but only axially)
 
-  auto CoordFunc = [](double U, double V) -> ovk::tuple<double> {
-    auto Transform = [](double X, double Y) -> ovk::tuple<double> {
+  auto CoordFunc = [](double U, double V) -> ovk::elem<double,2> {
+    auto Transform = [](double X, double Y) -> ovk::elem<double,2> {
       double XRel = X-1.;
       double YRel = Y-2.;
-      return {1.+XRel+YRel, 2.-XRel+YRel, 0.};
+      return {1.+XRel+YRel, 2.-XRel+YRel};
     };
     return Transform(1.+2.*U, 2.+3.*V);
   };
 
-  const ovk::tuple<double> NodeCoords[] = {
+  const ovk::elem<double,2> NodeCoords[] = {
     CoordFunc(0.,0.),
     CoordFunc(1.,0.),
     CoordFunc(0.,1.),
@@ -1259,10 +1244,10 @@ TEST_F(GeometricPrimitiveOpsTests, OverlapsQuadOrientedUniform) {
   };
 
   // Sanity check
-  EXPECT_THAT(NodeCoords[0], ElementsAre(1.,2.,0.));
-  EXPECT_THAT(NodeCoords[1], ElementsAre(3.,0.,0.));
-  EXPECT_THAT(NodeCoords[2], ElementsAre(4.,5.,0.));
-  EXPECT_THAT(NodeCoords[3], ElementsAre(6.,3.,0.));
+  EXPECT_THAT(NodeCoords[0], ElementsAre(1.,2.));
+  EXPECT_THAT(NodeCoords[1], ElementsAre(3.,0.));
+  EXPECT_THAT(NodeCoords[2], ElementsAre(4.,5.));
+  EXPECT_THAT(NodeCoords[3], ElementsAre(6.,3.));
 
   // Inside
   EXPECT_TRUE(OverlapsQuadOrientedUniform(NodeCoords, CoordFunc(0.5,0.5)));
@@ -1313,14 +1298,14 @@ TEST_F(GeometricPrimitiveOpsTests, OverlapsQuadNonUniform) {
 
   // Unit-length square with lower corner at (1,2), stretched
 
-  auto CoordFunc = [](double U, double V) -> ovk::tuple<double> {
-    auto Stretch = [](double X, double Y) -> ovk::tuple<double> {
-      return {2.*X+Y, X+2.*Y, 0.};
+  auto CoordFunc = [](double U, double V) -> ovk::elem<double,2> {
+    auto Stretch = [](double X, double Y) -> ovk::elem<double,2> {
+      return {2.*X+Y, X+2.*Y};
     };
     return Stretch(1.+U, 2.+V);
   };
 
-  const ovk::tuple<double> NodeCoords[] = {
+  const ovk::elem<double,2> NodeCoords[] = {
     CoordFunc(0.,0.),
     CoordFunc(1.,0.),
     CoordFunc(0.,1.),
@@ -1328,10 +1313,10 @@ TEST_F(GeometricPrimitiveOpsTests, OverlapsQuadNonUniform) {
   };
 
   // Sanity check
-  EXPECT_THAT(NodeCoords[0], ElementsAre(4.,5.,0.));
-  EXPECT_THAT(NodeCoords[1], ElementsAre(6.,6.,0.));
-  EXPECT_THAT(NodeCoords[2], ElementsAre(5.,7.,0.));
-  EXPECT_THAT(NodeCoords[3], ElementsAre(7.,8.,0.));
+  EXPECT_THAT(NodeCoords[0], ElementsAre(4.,5.));
+  EXPECT_THAT(NodeCoords[1], ElementsAre(6.,6.));
+  EXPECT_THAT(NodeCoords[2], ElementsAre(5.,7.));
+  EXPECT_THAT(NodeCoords[3], ElementsAre(7.,8.));
 
   // Inside
   EXPECT_TRUE(OverlapsQuadNonUniform(NodeCoords, CoordFunc(0.5,0.5)));
@@ -1382,11 +1367,11 @@ TEST_F(GeometricPrimitiveOpsTests, OverlapsHexUniform) {
 
   // Cuboid of length (2,3,4) with lower corner at (1,2,3)
 
-  auto CoordFunc = [](double U, double V, double W) -> ovk::tuple<double> {
+  auto CoordFunc = [](double U, double V, double W) -> ovk::elem<double,3> {
     return {1.+2.*U, 2.+3.*V, 3.+4.*W};
   };
 
-  const ovk::tuple<double> NodeCoords[] = {
+  const ovk::elem<double,3> NodeCoords[] = {
     CoordFunc(0.,0.,0.),
     CoordFunc(1.,0.,0.),
     CoordFunc(0.,1.,0.),
@@ -1407,8 +1392,8 @@ TEST_F(GeometricPrimitiveOpsTests, OverlapsHexUniform) {
   EXPECT_THAT(NodeCoords[6], ElementsAre(1.,5.,7.));
   EXPECT_THAT(NodeCoords[7], ElementsAre(3.,5.,7.));
 
-  const ovk::tuple<double> &LowerCoords = NodeCoords[0];
-  const ovk::tuple<double> &UpperCoords = NodeCoords[7];
+  const ovk::elem<double,3> &LowerCoords = NodeCoords[0];
+  const ovk::elem<double,3> &UpperCoords = NodeCoords[7];
 
   // Inside
   EXPECT_TRUE(OverlapsHexUniform(LowerCoords, UpperCoords, CoordFunc(0.5,0.5,0.5)));
@@ -1478,8 +1463,8 @@ TEST_F(GeometricPrimitiveOpsTests, OverlapsHexOrientedUniform) {
   // Cuboid of length (2,3,4) with lower corner at (1,2,3), "rotated" 45 degrees cw about x through
   // lower corner (actually stretched too, but only axially)
 
-  auto CoordFunc = [](double U, double V, double W) -> ovk::tuple<double> {
-    auto Transform = [](double X, double Y, double Z) -> ovk::tuple<double> {
+  auto CoordFunc = [](double U, double V, double W) -> ovk::elem<double,3> {
+    auto Transform = [](double X, double Y, double Z) -> ovk::elem<double,3> {
       double YRel = Y-2.;
       double ZRel = Z-3.;
       return {X, 2.+YRel+ZRel, 3.-YRel+ZRel};
@@ -1487,7 +1472,7 @@ TEST_F(GeometricPrimitiveOpsTests, OverlapsHexOrientedUniform) {
     return Transform(1.+2.*U, 2.+3.*V, 3.+4.*W);
   };
 
-  const ovk::tuple<double> NodeCoords[] = {
+  const ovk::elem<double,3> NodeCoords[] = {
     CoordFunc(0.,0.,0.),
     CoordFunc(1.,0.,0.),
     CoordFunc(0.,1.,0.),
@@ -1575,14 +1560,14 @@ TEST_F(GeometricPrimitiveOpsTests, OverlapsHexNonUniform) {
 
   // Unit-length cube with lower corner at (1,2,3), stretched
 
-  auto CoordFunc = [](double U, double V, double W) -> ovk::tuple<double> {
-    auto Stretch = [](double X, double Y, double Z) -> ovk::tuple<double> {
+  auto CoordFunc = [](double U, double V, double W) -> ovk::elem<double,3> {
+    auto Stretch = [](double X, double Y, double Z) -> ovk::elem<double,3> {
       return {2.*X+Y+Z, X+2.*Y+Z, X+Y+2.*Z};
     };
     return Stretch(1.+U, 2.+V, 3.+W);
   };
 
-  const ovk::tuple<double> NodeCoords[] = {
+  const ovk::elem<double,3> NodeCoords[] = {
     CoordFunc(0.,0.,0.),
     CoordFunc(1.,0.,0.),
     CoordFunc(0.,1.,0.),
@@ -1698,11 +1683,11 @@ TEST_F(GeometricPrimitiveOpsTests, VolumeQuadUniform) {
 
   // Rectangle of length (2,3) with lower corner at (1,2)
 
-  auto CoordFunc = [](double U, double V) -> ovk::tuple<double> {
-    return {1.+2.*U, 2.+3.*V, 0.};
+  auto CoordFunc = [](double U, double V) -> ovk::elem<double,2> {
+    return {1.+2.*U, 2.+3.*V};
   };
 
-  const ovk::tuple<double> NodeCoords[] = {
+  const ovk::elem<double,2> NodeCoords[] = {
     CoordFunc(0.,0.),
     CoordFunc(1.,0.),
     CoordFunc(0.,1.),
@@ -1710,13 +1695,13 @@ TEST_F(GeometricPrimitiveOpsTests, VolumeQuadUniform) {
   };
 
   // Sanity check
-  EXPECT_THAT(NodeCoords[0], ElementsAre(1.,2.,0.));
-  EXPECT_THAT(NodeCoords[1], ElementsAre(3.,2.,0.));
-  EXPECT_THAT(NodeCoords[2], ElementsAre(1.,5.,0.));
-  EXPECT_THAT(NodeCoords[3], ElementsAre(3.,5.,0.));
+  EXPECT_THAT(NodeCoords[0], ElementsAre(1.,2.));
+  EXPECT_THAT(NodeCoords[1], ElementsAre(3.,2.));
+  EXPECT_THAT(NodeCoords[2], ElementsAre(1.,5.));
+  EXPECT_THAT(NodeCoords[3], ElementsAre(3.,5.));
 
-  const ovk::tuple<double> &LowerCoords = NodeCoords[0];
-  const ovk::tuple<double> &UpperCoords = NodeCoords[3];
+  const ovk::elem<double,2> &LowerCoords = NodeCoords[0];
+  const ovk::elem<double,2> &UpperCoords = NodeCoords[3];
 
   EXPECT_EQ(VolumeQuadUniform(LowerCoords, UpperCoords), 6.);
 
@@ -1731,16 +1716,16 @@ TEST_F(GeometricPrimitiveOpsTests, VolumeQuadOrientedUniform) {
   // Rectangle of length (2,3) with lower corner at (1,2), "rotated" 45 degrees cw about
   // lower corner (actually stretched too, but only axially)
 
-  auto CoordFunc = [](double U, double V) -> ovk::tuple<double> {
-    auto Transform = [](double X, double Y) -> ovk::tuple<double> {
+  auto CoordFunc = [](double U, double V) -> ovk::elem<double,2> {
+    auto Transform = [](double X, double Y) -> ovk::elem<double,2> {
       double XRel = X-1.;
       double YRel = Y-2.;
-      return {1.+XRel+YRel, 2.-XRel+YRel, 0.};
+      return {1.+XRel+YRel, 2.-XRel+YRel};
     };
     return Transform(1.+2.*U, 2.+3.*V);
   };
 
-  const ovk::tuple<double> NodeCoords[] = {
+  const ovk::elem<double,2> NodeCoords[] = {
     CoordFunc(0.,0.),
     CoordFunc(1.,0.),
     CoordFunc(0.,1.),
@@ -1748,10 +1733,10 @@ TEST_F(GeometricPrimitiveOpsTests, VolumeQuadOrientedUniform) {
   };
 
   // Sanity check
-  EXPECT_THAT(NodeCoords[0], ElementsAre(1.,2.,0.));
-  EXPECT_THAT(NodeCoords[1], ElementsAre(3.,0.,0.));
-  EXPECT_THAT(NodeCoords[2], ElementsAre(4.,5.,0.));
-  EXPECT_THAT(NodeCoords[3], ElementsAre(6.,3.,0.));
+  EXPECT_THAT(NodeCoords[0], ElementsAre(1.,2.));
+  EXPECT_THAT(NodeCoords[1], ElementsAre(3.,0.));
+  EXPECT_THAT(NodeCoords[2], ElementsAre(4.,5.));
+  EXPECT_THAT(NodeCoords[3], ElementsAre(6.,3.));
 
   EXPECT_NEAR(VolumeQuadOrientedUniform(NodeCoords), 12., 1.e-12);
 
@@ -1765,14 +1750,14 @@ TEST_F(GeometricPrimitiveOpsTests, VolumeQuadNonUniform) {
 
   // Unit-length square with lower corner at (1,2), stretched
 
-  auto CoordFunc = [](double U, double V) -> ovk::tuple<double> {
-    auto Stretch = [](double X, double Y) -> ovk::tuple<double> {
-      return {2.*X+Y, X+2.*Y, 0.};
+  auto CoordFunc = [](double U, double V) -> ovk::elem<double,2> {
+    auto Stretch = [](double X, double Y) -> ovk::elem<double,2> {
+      return {2.*X+Y, X+2.*Y};
     };
     return Stretch(1.+U, 2.+V);
   };
 
-  const ovk::tuple<double> NodeCoords[] = {
+  const ovk::elem<double,2> NodeCoords[] = {
     CoordFunc(0.,0.),
     CoordFunc(1.,0.),
     CoordFunc(0.,1.),
@@ -1780,10 +1765,10 @@ TEST_F(GeometricPrimitiveOpsTests, VolumeQuadNonUniform) {
   };
 
   // Sanity check
-  EXPECT_THAT(NodeCoords[0], ElementsAre(4.,5.,0.));
-  EXPECT_THAT(NodeCoords[1], ElementsAre(6.,6.,0.));
-  EXPECT_THAT(NodeCoords[2], ElementsAre(5.,7.,0.));
-  EXPECT_THAT(NodeCoords[3], ElementsAre(7.,8.,0.));
+  EXPECT_THAT(NodeCoords[0], ElementsAre(4.,5.));
+  EXPECT_THAT(NodeCoords[1], ElementsAre(6.,6.));
+  EXPECT_THAT(NodeCoords[2], ElementsAre(5.,7.));
+  EXPECT_THAT(NodeCoords[3], ElementsAre(7.,8.));
 
   EXPECT_NEAR(VolumeQuadNonUniform(NodeCoords), 3., 1.e-12);
 
@@ -1797,11 +1782,11 @@ TEST_F(GeometricPrimitiveOpsTests, VolumeHexUniform) {
 
   // Cuboid of length (2,3,4) with lower corner at (1,2,3)
 
-  auto CoordFunc = [](double U, double V, double W) -> ovk::tuple<double> {
+  auto CoordFunc = [](double U, double V, double W) -> ovk::elem<double,3> {
     return {1.+2.*U, 2.+3.*V, 3.+4.*W};
   };
 
-  const ovk::tuple<double> NodeCoords[] = {
+  const ovk::elem<double,3> NodeCoords[] = {
     CoordFunc(0.,0.,0.),
     CoordFunc(1.,0.,0.),
     CoordFunc(0.,1.,0.),
@@ -1822,8 +1807,8 @@ TEST_F(GeometricPrimitiveOpsTests, VolumeHexUniform) {
   EXPECT_THAT(NodeCoords[6], ElementsAre(1.,5.,7.));
   EXPECT_THAT(NodeCoords[7], ElementsAre(3.,5.,7.));
 
-  const ovk::tuple<double> &LowerCoords = NodeCoords[0];
-  const ovk::tuple<double> &UpperCoords = NodeCoords[7];
+  const ovk::elem<double,3> &LowerCoords = NodeCoords[0];
+  const ovk::elem<double,3> &UpperCoords = NodeCoords[7];
 
   EXPECT_EQ(VolumeHexUniform(LowerCoords, UpperCoords), 24.);
 
@@ -1838,8 +1823,8 @@ TEST_F(GeometricPrimitiveOpsTests, VolumeHexOrientedUniform) {
   // Cuboid of length (2,3,4) with lower corner at (1,2,3), "rotated" 45 degrees cw about x through
   // lower corner (actually stretched too, but only axially)
 
-  auto CoordFunc = [](double U, double V, double W) -> ovk::tuple<double> {
-    auto Transform = [](double X, double Y, double Z) -> ovk::tuple<double> {
+  auto CoordFunc = [](double U, double V, double W) -> ovk::elem<double,3> {
+    auto Transform = [](double X, double Y, double Z) -> ovk::elem<double,3> {
       double YRel = Y-2.;
       double ZRel = Z-3.;
       return {X, 2.+YRel+ZRel, 3.-YRel+ZRel};
@@ -1847,7 +1832,7 @@ TEST_F(GeometricPrimitiveOpsTests, VolumeHexOrientedUniform) {
     return Transform(1.+2.*U, 2.+3.*V, 3.+4.*W);
   };
 
-  const ovk::tuple<double> NodeCoords[] = {
+  const ovk::elem<double,3> NodeCoords[] = {
     CoordFunc(0.,0.,0.),
     CoordFunc(1.,0.,0.),
     CoordFunc(0.,1.,0.),
@@ -1880,14 +1865,14 @@ TEST_F(GeometricPrimitiveOpsTests, VolumeHexNonUniform) {
 
   // Unit-length cube with lower corner at (1,2,3), stretched
 
-  auto CoordFunc = [](double U, double V, double W) -> ovk::tuple<double> {
-    auto Stretch = [](double X, double Y, double Z) -> ovk::tuple<double> {
+  auto CoordFunc = [](double U, double V, double W) -> ovk::elem<double,3> {
+    auto Stretch = [](double X, double Y, double Z) -> ovk::elem<double,3> {
       return {2.*X+Y+Z, X+2.*Y+Z, X+Y+2.*Z};
     };
     return Stretch(1.+U, 2.+V, 3.+W);
   };
 
-  const ovk::tuple<double> NodeCoords[] = {
+  const ovk::elem<double,3> NodeCoords[] = {
     CoordFunc(0.,0.,0.),
     CoordFunc(1.,0.,0.),
     CoordFunc(0.,1.,0.),
