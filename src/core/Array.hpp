@@ -656,7 +656,7 @@ public:
 
   index_type Capacity() const { return index_type(Values_.Capacity()); }
 
-  const indexer_type &Indexer() { return View_.Indexer(); }
+  const indexer_type &Indexer() const { return View_.Indexer(); }
 
   // Want to use iterator directly here instead of constructing intermediate elem type
   template <typename IterType, OVK_FUNCTION_REQUIRES(core::IsRandomAccessIterator<IterType>() &&
