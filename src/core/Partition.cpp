@@ -82,6 +82,8 @@ cart CartPointToCell(const cart &Cart) {
     }
   }
 
+  CellCart.PeriodicStorage() = periodic_storage::UNIQUE;
+
   return CellCart;
 
 }
