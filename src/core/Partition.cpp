@@ -123,7 +123,7 @@ array<int> DetectNeighbors(const cart &Cart, comm_view Comm, const range &LocalR
         if (!LocalRange.Contains(Point)) {
           Point = Cart.PeriodicAdjust(Point);
           for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-            ExtendedPoints(iDim,iNextPoint) = Point[iDim];
+            ExtendedPoints(iDim,iNextPoint) = Point(iDim);
           }
           ++iNextPoint;
         }
