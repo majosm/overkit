@@ -9,6 +9,9 @@
 #include "ovk/core/IDMap.hpp"
 #include "ovk/core/IDSet.hpp"
 
+#include <cstdio>
+#include <string>
+
 namespace ovk {
 
 void assembler::options::AddGrids(const id_set<1> &GridIDs) {
