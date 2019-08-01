@@ -7,10 +7,10 @@
 #include "ovk/core/ArrayView.hpp"
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Global.hpp"
+#include "ovk/core/Set.hpp"
 
 #include <mpi.h>
 
-#include <set>
 #include <string>
 
 namespace ovk {
@@ -148,11 +148,11 @@ array<int> DynamicHandshake(comm_view Comm_, array_view<const int> Ranks) {
 
   int Rank = Comm.Rank();
 
-  std::set<int> MatchedRanksSet;
+  set<int> MatchedRanksSet;
 
   for (int OtherRank : Ranks) {
     if (OtherRank == Rank) {
-      MatchedRanksSet.insert(Rank);
+      MatchedRanksSet.Insert(Rank);
     }
   }
 
@@ -178,7 +178,7 @@ array<int> DynamicHandshake(comm_view Comm_, array_view<const int> Ranks) {
       if (!IncomingMessage) break;
       int MatchedRank = Status.MPI_SOURCE;
       MPI_Irecv(&RecvData, 1, MPI_UNSIGNED_CHAR, MatchedRank, 0, Comm, &RecvRequests.Append());
-      MatchedRanksSet.insert(MatchedRank);
+      MatchedRanksSet.Insert(MatchedRank);
     }
     if (SendsDone) {
       Done = AllSendsDoneSignal.Check();
@@ -192,7 +192,7 @@ array<int> DynamicHandshake(comm_view Comm_, array_view<const int> Ranks) {
 
   MPI_Waitall(RecvRequests.Count(), RecvRequests.Data(), MPI_STATUSES_IGNORE);
 
-  return {{int(MatchedRanksSet.size())}, MatchedRanksSet.begin()};
+  return {MatchedRanksSet};
 
 }
 

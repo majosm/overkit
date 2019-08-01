@@ -6,11 +6,11 @@
 #include "ovk/core/Array.hpp"
 #include "ovk/core/ArrayView.hpp"
 #include "ovk/core/Global.hpp"
+#include "ovk/core/Map.hpp"
 #include "ovk/core/Profiler.hpp"
 
 #include <mpi.h>
 
-#include <map>
 #include <utility>
 
 namespace ovk {
@@ -23,34 +23,30 @@ send_map::send_map(long long NumValues, array<long long> SendOrder, array_view<c
 
   SendIndices_.Resize({NumValues}, -1);
 
-  std::map<int, long long> SendCounts;
+  map<int,long long> SendCounts;
 
   for (long long iValue = 0; iValue < NumValues; ++iValue) {
     int Rank = DestinationRanks(iValue);
     if (Rank >= 0) {
-      auto Iter = SendCounts.lower_bound(Rank);
-      if (Iter != SendCounts.end() && Iter->first == Rank) {
-        ++Iter->second;
-      } else {
-        SendCounts.emplace_hint(Iter, Rank, 1);
-      }
+      ++SendCounts.Fetch(Rank, 0);
     }
   }
 
-  int NumSends = SendCounts.size();
+  int NumSends = SendCounts.Count();
 
-  for (auto &Pair : SendCounts) {
+  for (auto &Entry : SendCounts) {
     send &Send = Sends_.Append();
-    Send.Rank = Pair.first;
-    Send.NumValues = Pair.second;
+    Send.Rank = Entry.Key();
+    Send.NumValues = Entry.Value();
   }
 
-  SendCounts.clear();
+  SendCounts.Clear();
 
-  std::map<int, int> RankToSendIndex;
+  map<int,int> RankToSendIndex;
+  RankToSendIndex.Reserve(NumSends);
 
   for (int iSend = 0; iSend < NumSends; ++iSend) {
-    RankToSendIndex.emplace(Sends_(iSend).Rank, iSend);
+    RankToSendIndex.Insert(Sends_(iSend).Rank, iSend);
   }
 
   SendIndices_.Resize({NumValues}, -1);
@@ -58,7 +54,7 @@ send_map::send_map(long long NumValues, array<long long> SendOrder, array_view<c
   for (long long iValue = 0; iValue < NumValues; ++iValue) {
     int Rank = DestinationRanks(iValue);
     if (Rank >= 0) {
-      SendIndices_(iValue) = RankToSendIndex[Rank];
+      SendIndices_(iValue) = RankToSendIndex(Rank);
     }
   }
 

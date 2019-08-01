@@ -18,7 +18,6 @@
 
 #include <mpi.h>
 
-#include <map>
 #include <memory>
 #include <utility>
 

@@ -32,7 +32,6 @@
 
 #include <mpi.h>
 
-#include <map>
 #include <memory>
 #include <string>
 #include <utility>
@@ -367,7 +366,7 @@ void exchanger::UpdateSourceDestRanks_() {
     {}
   };
 
-  std::map<int, send_recv> MSends, NSends;
+  map<int,send_recv> MSends, NSends;
 
   for (auto &IDPair : ConnectivityMGridIDs) {
     int MGridID = IDPair(0);
@@ -394,7 +393,7 @@ void exchanger::UpdateSourceDestRanks_() {
         };
         long long iLinearPoint = NumPointsBeforeGrid(NGridID) + NGridGlobalIndexer.ToIndex(Point);
         int iLinearPartition = int(iLinearPoint/LinearPartitionSize);
-        send_recv &Send = MSends[iLinearPartition];
+        send_recv &Send = MSends.Fetch(iLinearPartition);
         ++Send.Count;
       }
     }
@@ -417,19 +416,19 @@ void exchanger::UpdateSourceDestRanks_() {
         };
         long long iLinearPoint = NumPointsBeforeGrid(NGridID) + NGridGlobalIndexer.ToIndex(Point);
         int iLinearPartition = int(iLinearPoint/LinearPartitionSize);
-        send_recv &Send = NSends[iLinearPartition];
+        send_recv &Send = NSends.Fetch(iLinearPartition);
         ++Send.Count;
       }
     }
   }
 
-  for (auto &Pair : MSends) {
-    send_recv &Send = Pair.second;
+  for (auto &Entry : MSends) {
+    send_recv &Send = Entry.Value();
     Send.PointIndices.Reserve(Send.Count);
   }
 
-  for (auto &Pair : NSends) {
-    send_recv &Send = Pair.second;
+  for (auto &Entry : NSends) {
+    send_recv &Send = Entry.Value();
     Send.PointIndices.Reserve(Send.Count);
   }
 
@@ -458,7 +457,7 @@ void exchanger::UpdateSourceDestRanks_() {
         };
         long long iLinearPoint = NumPointsBeforeGrid(NGridID) + NGridGlobalIndexer.ToIndex(Point);
         int iLinearPartition = int(iLinearPoint/LinearPartitionSize);
-        send_recv &Send = MSends.at(iLinearPartition);
+        send_recv &Send = MSends(iLinearPartition);
         Send.PointIndices.Append(iLinearPoint);
       }
     }
@@ -481,60 +480,43 @@ void exchanger::UpdateSourceDestRanks_() {
         };
         long long iLinearPoint = NumPointsBeforeGrid(NGridID) + NGridGlobalIndexer.ToIndex(Point);
         int iLinearPartition = int(iLinearPoint/LinearPartitionSize);
-        send_recv &Send = NSends.at(iLinearPartition);
+        send_recv &Send = NSends(iLinearPartition);
         Send.PointIndices.Append(iLinearPoint);
       }
     }
   }
 
-  for (auto &Pair : MSends) {
-    send_recv &Send = Pair.second;
+  for (auto &Entry : MSends) {
+    send_recv &Send = Entry.Value();
     Send.Ranks.Resize({Send.Count});
   }
 
-  for (auto &Pair : NSends) {
-    send_recv &Send = Pair.second;
+  for (auto &Entry : NSends) {
+    send_recv &Send = Entry.Value();
     Send.Ranks.Resize({Send.Count});
   }
 
-  int NumMSends = MSends.size();
-  int NumNSends = NSends.size();
+  array<int> MRecvFromRanks = core::DynamicHandshake(Comm, MSends.Keys());
+  array<int> NRecvFromRanks = core::DynamicHandshake(Comm, NSends.Keys());
 
-  array<int> MSendToRanks, NSendToRanks;
-
-  MSendToRanks.Reserve(NumMSends);
-  for (auto &Pair : MSends) {
-    int Rank = Pair.first;
-    MSendToRanks.Append(Rank);
-  }
-
-  NSendToRanks.Reserve(NumNSends);
-  for (auto &Pair : NSends) {
-    int Rank = Pair.first;
-    NSendToRanks.Append(Rank);
-  }
-
-  array<int> MRecvFromRanks = core::DynamicHandshake(Comm, MSendToRanks);
-  array<int> NRecvFromRanks = core::DynamicHandshake(Comm, NSendToRanks);
-
-  MSendToRanks.Clear();
-  NSendToRanks.Clear();
-
-  std::map<int, send_recv> MRecvs, NRecvs;
+  map<int,send_recv> MRecvs, NRecvs;
 
   for (int Rank : MRecvFromRanks) {
-    MRecvs.emplace(Rank, send_recv());
+    MRecvs.Insert(Rank);
   }
 
   for (int Rank : NRecvFromRanks) {
-    NRecvs.emplace(Rank, send_recv());
+    NRecvs.Insert(Rank);
   }
 
   MRecvFromRanks.Clear();
   NRecvFromRanks.Clear();
 
-  int NumMRecvs = MRecvs.size();
-  int NumNRecvs = NRecvs.size();
+  int NumMSends = MSends.Count();
+  int NumNSends = NSends.Count();
+
+  int NumMRecvs = MRecvs.Count();
+  int NumNRecvs = NRecvs.Count();
 
   array<MPI_Request> Requests;
 
@@ -554,27 +536,27 @@ void exchanger::UpdateSourceDestRanks_() {
     MPI_Irecv(Buffer, int(Count), DataType, SourceRank, Tag, RecvComm, &Request);
   };
 
-  for (auto &Pair : MRecvs) {
-    int Rank = Pair.first;
-    send_recv &Recv = Pair.second;
+  for (auto &Entry : MRecvs) {
+    int Rank = Entry.Key();
+    send_recv &Recv = Entry.Value();
     Irecv(&Recv.Count, 1, MPI_LONG_LONG, Rank, 0, Comm);
   }
 
-  for (auto &Pair : NRecvs) {
-    int Rank = Pair.first;
-    send_recv &Recv = Pair.second;
+  for (auto &Entry : NRecvs) {
+    int Rank = Entry.Key();
+    send_recv &Recv = Entry.Value();
     Irecv(&Recv.Count, 1, MPI_LONG_LONG, Rank, 1, Comm);
   }
 
-  for (auto &Pair : MSends) {
-    int Rank = Pair.first;
-    send_recv &Send = Pair.second;
+  for (auto &Entry : MSends) {
+    int Rank = Entry.Key();
+    send_recv &Send = Entry.Value();
     Isend(&Send.Count, 1, MPI_LONG_LONG, Rank, 0, Comm);
   }
 
-  for (auto &Pair : NSends) {
-    int Rank = Pair.first;
-    send_recv &Send = Pair.second;
+  for (auto &Entry : NSends) {
+    int Rank = Entry.Key();
+    send_recv &Send = Entry.Value();
     Isend(&Send.Count, 1, MPI_LONG_LONG, Rank, 1, Comm);
   }
 
@@ -582,39 +564,39 @@ void exchanger::UpdateSourceDestRanks_() {
 
   Requests.Clear();
 
-  for (auto &Pair : MRecvs) {
-    send_recv &Recv = Pair.second;
+  for (auto &Entry : MRecvs) {
+    send_recv &Recv = Entry.Value();
     Recv.PointIndices.Resize({Recv.Count});
     Recv.Ranks.Resize({Recv.Count});
   }
 
-  for (auto &Pair : NRecvs) {
-    send_recv &Recv = Pair.second;
+  for (auto &Entry : NRecvs) {
+    send_recv &Recv = Entry.Value();
     Recv.PointIndices.Resize({Recv.Count});
     Recv.Ranks.Resize({Recv.Count});
   }
 
-  for (auto &Pair : MRecvs) {
-    int Rank = Pair.first;
-    send_recv &Recv = Pair.second;
+  for (auto &Entry : MRecvs) {
+    int Rank = Entry.Key();
+    send_recv &Recv = Entry.Value();
     Irecv(Recv.PointIndices.Data(), Recv.Count, MPI_LONG_LONG, Rank, 0, Comm);
   }
 
-  for (auto &Pair : NRecvs) {
-    int Rank = Pair.first;
-    send_recv &Recv = Pair.second;
+  for (auto &Entry : NRecvs) {
+    int Rank = Entry.Key();
+    send_recv &Recv = Entry.Value();
     Irecv(Recv.PointIndices.Data(), Recv.Count, MPI_LONG_LONG, Rank, 1, Comm);
   }
 
-  for (auto &Pair : MSends) {
-    int Rank = Pair.first;
-    send_recv &Send = Pair.second;
+  for (auto &Entry : MSends) {
+    int Rank = Entry.Key();
+    send_recv &Send = Entry.Value();
     Isend(Send.PointIndices.Data(), Send.Count, MPI_LONG_LONG, Rank, 0, Comm);
   }
 
-  for (auto &Pair : NSends) {
-    int Rank = Pair.first;
-    send_recv &Send = Pair.second;
+  for (auto &Entry : NSends) {
+    int Rank = Entry.Key();
+    send_recv &Send = Entry.Value();
     Isend(Send.PointIndices.Data(), Send.Count, MPI_LONG_LONG, Rank, 1, Comm);
   }
 
@@ -622,61 +604,61 @@ void exchanger::UpdateSourceDestRanks_() {
 
   Requests.Clear();
 
-  for (auto &Pair : MRecvs) {
-    int Rank = Pair.first;
-    send_recv &Recv = Pair.second;
+  for (auto &Entry : MRecvs) {
+    int Rank = Entry.Key();
+    send_recv &Recv = Entry.Value();
     for (long long iPoint = 0; iPoint < Recv.Count; ++iPoint) {
       long long iLinearPoint = Recv.PointIndices(iPoint);
       LinearPartition.MRanks(iLinearPoint) = Rank;
     }
   }
 
-  for (auto &Pair : NRecvs) {
-    int Rank = Pair.first;
-    send_recv &Recv = Pair.second;
+  for (auto &Entry : NRecvs) {
+    int Rank = Entry.Key();
+    send_recv &Recv = Entry.Value();
     for (long long iPoint = 0; iPoint < Recv.Count; ++iPoint) {
       long long iLinearPoint = Recv.PointIndices(iPoint);
       LinearPartition.NRanks(iLinearPoint) = Rank;
     }
   }
 
-  for (auto &Pair : MRecvs) {
-    send_recv &Recv = Pair.second;
+  for (auto &Entry : MRecvs) {
+    send_recv &Recv = Entry.Value();
     for (long long iPoint = 0; iPoint < Recv.Count; ++iPoint) {
       long long iLinearPoint = Recv.PointIndices(iPoint);
       Recv.Ranks(iPoint) = LinearPartition.NRanks(iLinearPoint);
     }
   }
 
-  for (auto &Pair : NRecvs) {
-    send_recv &Recv = Pair.second;
+  for (auto &Entry : NRecvs) {
+    send_recv &Recv = Entry.Value();
     for (long long iPoint = 0; iPoint < Recv.Count; ++iPoint) {
       long long iLinearPoint = Recv.PointIndices(iPoint);
       Recv.Ranks(iPoint) = LinearPartition.MRanks(iLinearPoint);
     }
   }
 
-  for (auto &Pair : MSends) {
-    int Rank = Pair.first;
-    send_recv &Send = Pair.second;
+  for (auto &Entry : MSends) {
+    int Rank = Entry.Key();
+    send_recv &Send = Entry.Value();
     Irecv(Send.Ranks.Data(), Send.Count, MPI_INT, Rank, 0, Comm);
   }
 
-  for (auto &Pair : NSends) {
-    int Rank = Pair.first;
-    send_recv &Send = Pair.second;
+  for (auto &Entry : NSends) {
+    int Rank = Entry.Key();
+    send_recv &Send = Entry.Value();
     Irecv(Send.Ranks.Data(), Send.Count, MPI_INT, Rank, 1, Comm);
   }
 
-  for (auto &Pair : MRecvs) {
-    int Rank = Pair.first;
-    send_recv &Recv = Pair.second;
+  for (auto &Entry : MRecvs) {
+    int Rank = Entry.Key();
+    send_recv &Recv = Entry.Value();
     Isend(Recv.Ranks.Data(), Recv.Count, MPI_INT, Rank, 0, Comm);
   }
 
-  for (auto &Pair : NRecvs) {
-    int Rank = Pair.first;
-    send_recv &Recv = Pair.second;
+  for (auto &Entry : NRecvs) {
+    int Rank = Entry.Key();
+    send_recv &Recv = Entry.Value();
     Isend(Recv.Ranks.Data(), Recv.Count, MPI_INT, Rank, 1, Comm);
   }
 
@@ -684,19 +666,19 @@ void exchanger::UpdateSourceDestRanks_() {
 
   Requests.Clear();
 
-  MRecvs.clear();
-  NRecvs.clear();
+  MRecvs.Clear();
+  NRecvs.Clear();
 
   LinearPartition = linear_partition();
 
-  for (auto &Pair : MSends) {
-    send_recv &Send = Pair.second;
+  for (auto &Entry : MSends) {
+    send_recv &Send = Entry.Value();
     // Reuse count for unpacking
     Send.Count = 0;
   }
 
-  for (auto &Pair : NSends) {
-    send_recv &Recv = Pair.second;
+  for (auto &Entry : NSends) {
+    send_recv &Recv = Entry.Value();
     // Reuse count for unpacking
     Recv.Count = 0;
   }
@@ -726,7 +708,7 @@ void exchanger::UpdateSourceDestRanks_() {
         };
         long long iLinearPoint = NumPointsBeforeGrid(NGridID) + NGridGlobalIndexer.ToIndex(Point);
         int iLinearPartition = int(iLinearPoint/LinearPartitionSize);
-        send_recv &Send = MSends.at(iLinearPartition);
+        send_recv &Send = MSends(iLinearPartition);
         DestinationRanks(iDonor) = Send.Ranks(Send.Count);
         ++Send.Count;
       }
@@ -750,7 +732,7 @@ void exchanger::UpdateSourceDestRanks_() {
         };
         long long iLinearPoint = NumPointsBeforeGrid(NGridID) + NGridGlobalIndexer.ToIndex(Point);
         int iLinearPartition = int(iLinearPoint/LinearPartitionSize);
-        send_recv &Send = NSends.at(iLinearPartition);
+        send_recv &Send = NSends(iLinearPartition);
         SourceRanks(iReceiver) = Send.Ranks(Send.Count);
         ++Send.Count;
       }

@@ -19,7 +19,6 @@
 #include <mpi.h>
 
 #include <memory>
-#include <set>
 #include <string>
 #include <utility>
 

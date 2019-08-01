@@ -1551,7 +1551,7 @@ void MatchDonorsAndReceivers(xintout &XINTOUT) {
 
   Profiler.StartSync(IMPORT_MATCH_MAP_TO_BINS_TIME, Comm);
 
-  std::map<int, send_recv> DonorSends, ReceiverSends;
+  map<int,send_recv> DonorSends, ReceiverSends;
 
   for (int iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
     xintout_grid &XINTOUTGrid = XINTOUT.Grids(iLocalGrid);
@@ -1563,11 +1563,7 @@ void MatchDonorsAndReceivers(xintout &XINTOUT) {
       for (long long iDonor = 0; iDonor < NumLocalDonors; ++iDonor) {
         long long ConnectionID = DonorChunk.StartingConnectionID + iDonor;
         int ConnectionBinIndex = int(ConnectionID/BinSize);
-        auto Iter = DonorSends.lower_bound(ConnectionBinIndex);
-        if (Iter == DonorSends.end() || Iter->first > ConnectionBinIndex) {
-          Iter = DonorSends.emplace_hint(Iter, ConnectionBinIndex, send_recv());
-        }
-        send_recv &Send = Iter->second;
+        send_recv &Send = DonorSends.Fetch(ConnectionBinIndex);
         ++Send.Count;
       }
     }
@@ -1577,25 +1573,21 @@ void MatchDonorsAndReceivers(xintout &XINTOUT) {
       for (long long iReceiver = 0; iReceiver < NumLocalReceivers; ++iReceiver) {
         long long ConnectionID = ReceiverChunk.ConnectionIDs(iReceiver);
         int ConnectionBinIndex = int(ConnectionID/BinSize);
-        auto Iter = ReceiverSends.find(ConnectionBinIndex);
-        if (Iter == ReceiverSends.end() || Iter->first > ConnectionBinIndex) {
-          Iter = ReceiverSends.emplace_hint(Iter, ConnectionBinIndex, send_recv());
-        }
-        send_recv &Send = Iter->second;
+        send_recv &Send = ReceiverSends.Fetch(ConnectionBinIndex);
         ++Send.Count;
       }
     }
   }
 
-  for (auto &Pair : DonorSends) {
-    send_recv &Send = Pair.second;
+  for (auto &Entry : DonorSends) {
+    send_recv &Send = Entry.Value();
     CreateConnectionData(Send.Data, Send.Count);
     // Reset count for filling in data
     Send.Count = 0;
   }
 
-  for (auto &Pair : ReceiverSends) {
-    send_recv &Send = Pair.second;
+  for (auto &Entry : ReceiverSends) {
+    send_recv &Send = Entry.Value();
     CreateConnectionData(Send.Data, Send.Count);
     // Reset count for filling in data
     Send.Count = 0;
@@ -1611,7 +1603,7 @@ void MatchDonorsAndReceivers(xintout &XINTOUT) {
       for (long long iDonor = 0; iDonor < NumLocalDonors; ++iDonor) {
         long long ConnectionID = DonorChunk.StartingConnectionID + iDonor;
         int ConnectionBinIndex = int(ConnectionID/BinSize);
-        send_recv &Send = DonorSends[ConnectionBinIndex];
+        send_recv &Send = DonorSends(ConnectionBinIndex);
         long long iNext = Send.Count;
         Send.Data.ConnectionIDs(iNext) = ConnectionID;
         Send.Data.DonorGridIDs(iNext) = XINTOUTGrid.ID;
@@ -1627,7 +1619,7 @@ void MatchDonorsAndReceivers(xintout &XINTOUT) {
       for (long long iReceiver = 0; iReceiver < NumLocalReceivers; ++iReceiver) {
         long long ConnectionID = ReceiverChunk.ConnectionIDs(iReceiver);
         int ConnectionBinIndex = int(ConnectionID/BinSize);
-        send_recv &Send = ReceiverSends[ConnectionBinIndex];
+        send_recv &Send = ReceiverSends(ConnectionBinIndex);
         long long iNext = Send.Count;
         Send.Data.ConnectionIDs(iNext) = ConnectionID;
         Send.Data.ReceiverGridIDs(iNext) = XINTOUTGrid.ID;
@@ -1639,48 +1631,33 @@ void MatchDonorsAndReceivers(xintout &XINTOUT) {
     }
   }
 
-  int NumDonorSends = DonorSends.size();
-  int NumReceiverSends = ReceiverSends.size();
-
-  array<int> DonorSendToRanks;
-  for (auto &Pair : DonorSends) {
-    int Rank = Pair.first;
-    DonorSendToRanks.Append(Rank);
-  }
-
-  array<int> ReceiverSendToRanks;
-  for (auto &Pair : ReceiverSends) {
-    int Rank = Pair.first;
-    ReceiverSendToRanks.Append(Rank);
-  }
-
   Profiler.Stop(IMPORT_MATCH_MAP_TO_BINS_TIME);
   Profiler.StartSync(IMPORT_MATCH_HANDSHAKE_TIME, Comm);
 
-  array<int> DonorRecvFromRanks = core::DynamicHandshake(Comm, DonorSendToRanks);
-  array<int> ReceiverRecvFromRanks = core::DynamicHandshake(Comm, ReceiverSendToRanks);
-
-  DonorSendToRanks.Clear();
-  ReceiverSendToRanks.Clear();
+  array<int> DonorRecvFromRanks = core::DynamicHandshake(Comm, DonorSends.Keys());
+  array<int> ReceiverRecvFromRanks = core::DynamicHandshake(Comm, ReceiverSends.Keys());
 
   Profiler.Stop(IMPORT_MATCH_HANDSHAKE_TIME);
   Profiler.StartSync(IMPORT_MATCH_SEND_TO_BINS_TIME, Comm);
 
-  std::map<int, send_recv> DonorRecvs;
+  map<int,send_recv> DonorRecvs;
   for (int Rank : DonorRecvFromRanks) {
-    DonorRecvs.emplace(Rank, send_recv());
+    DonorRecvs.Insert(Rank);
   }
 
-  std::map<int, send_recv> ReceiverRecvs;
+  map<int,send_recv> ReceiverRecvs;
   for (int Rank : ReceiverRecvFromRanks) {
-    ReceiverRecvs.emplace(Rank, send_recv());
+    ReceiverRecvs.Insert(Rank);
   }
 
   DonorRecvFromRanks.Clear();
   ReceiverRecvFromRanks.Clear();
 
-  int NumDonorRecvs = DonorRecvs.size();
-  int NumReceiverRecvs = ReceiverRecvs.size();
+  int NumDonorSends = DonorSends.Count();
+  int NumReceiverSends = ReceiverSends.Count();
+
+  int NumDonorRecvs = DonorRecvs.Count();
+  int NumReceiverRecvs = ReceiverRecvs.Count();
 
   array<MPI_Request> Requests;
 
@@ -1701,27 +1678,27 @@ void MatchDonorsAndReceivers(xintout &XINTOUT) {
     MPI_Irecv(Buffer, int(Count), DataType, SourceRank, Tag, RecvComm, &Request);
   };
 
-  for (auto &Pair : DonorRecvs) {
-    int Rank = Pair.first;
-    send_recv &Recv = Pair.second;
+  for (auto &Entry : DonorRecvs) {
+    int Rank = Entry.Key();
+    send_recv &Recv = Entry.Value();
     Irecv(&Recv.Count, 1, MPI_LONG_LONG, Rank, 0, Comm);
   }
 
-  for (auto &Pair : ReceiverRecvs) {
-    int Rank = Pair.first;
-    send_recv &Recv = Pair.second;
+  for (auto &Entry : ReceiverRecvs) {
+    int Rank = Entry.Key();
+    send_recv &Recv = Entry.Value();
     Irecv(&Recv.Count, 1, MPI_LONG_LONG, Rank, 1, Comm);
   }
 
-  for (auto &Pair : DonorSends) {
-    int Rank = Pair.first;
-    send_recv &Send = Pair.second;
+  for (auto &Entry : DonorSends) {
+    int Rank = Entry.Key();
+    send_recv &Send = Entry.Value();
     Isend(&Send.Count, 1, MPI_LONG_LONG, Rank, 0, Comm);
   }
 
-  for (auto &Pair : ReceiverSends) {
-    int Rank = Pair.first;
-    send_recv &Send = Pair.second;
+  for (auto &Entry : ReceiverSends) {
+    int Rank = Entry.Key();
+    send_recv &Send = Entry.Value();
     Isend(&Send.Count, 1, MPI_LONG_LONG, Rank, 1, Comm);
   }
 
@@ -1729,35 +1706,35 @@ void MatchDonorsAndReceivers(xintout &XINTOUT) {
 
   Requests.Clear();
 
-  for (auto &Pair : DonorRecvs) {
-    int Rank = Pair.first;
-    send_recv &Recv = Pair.second;
+  for (auto &Entry : DonorRecvs) {
+    int Rank = Entry.Key();
+    send_recv &Recv = Entry.Value();
     CreateConnectionData(Recv.Data, Recv.Count);
     Irecv(Recv.Data.ConnectionIDs.Data(), Recv.Count, MPI_LONG_LONG, Rank, 0, Comm);
     Irecv(Recv.Data.DonorGridIDs.Data(), Recv.Count, MPI_INT, Rank, 0, Comm);
     Irecv(Recv.Data.DonorCells.Data(), MAX_DIMS*Recv.Count, MPI_INT, Rank, 0, Comm);
   }
 
-  for (auto &Pair : ReceiverRecvs) {
-    int Rank = Pair.first;
-    send_recv &Recv = Pair.second;
+  for (auto &Entry : ReceiverRecvs) {
+    int Rank = Entry.Key();
+    send_recv &Recv = Entry.Value();
     CreateConnectionData(Recv.Data, Recv.Count);
     Irecv(Recv.Data.ConnectionIDs.Data(), Recv.Count, MPI_LONG_LONG, Rank, 1, Comm);
     Irecv(Recv.Data.ReceiverGridIDs.Data(), Recv.Count, MPI_INT, Rank, 1, Comm);
     Irecv(Recv.Data.ReceiverPoints.Data(), MAX_DIMS*Recv.Count, MPI_INT, Rank, 1, Comm);
   }
 
-  for (auto &Pair : DonorSends) {
-    int Rank = Pair.first;
-    send_recv &Send = Pair.second;
+  for (auto &Entry : DonorSends) {
+    int Rank = Entry.Key();
+    send_recv &Send = Entry.Value();
     Isend(Send.Data.ConnectionIDs.Data(), Send.Count, MPI_LONG_LONG, Rank, 0, Comm);
     Isend(Send.Data.DonorGridIDs.Data(), Send.Count, MPI_INT, Rank, 0, Comm);
     Isend(Send.Data.DonorCells.Data(), MAX_DIMS*Send.Count, MPI_INT, Rank, 0, Comm);
   }
 
-  for (auto &Pair : ReceiverSends) {
-    int Rank = Pair.first;
-    send_recv &Send = Pair.second;
+  for (auto &Entry : ReceiverSends) {
+    int Rank = Entry.Key();
+    send_recv &Send = Entry.Value();
     Isend(Send.Data.ConnectionIDs.Data(), Send.Count, MPI_LONG_LONG, Rank, 1, Comm);
     Isend(Send.Data.ReceiverGridIDs.Data(), Send.Count, MPI_INT, Rank, 1, Comm);
     Isend(Send.Data.ReceiverPoints.Data(), MAX_DIMS*Send.Count, MPI_INT, Rank, 1, Comm);
@@ -1770,16 +1747,16 @@ void MatchDonorsAndReceivers(xintout &XINTOUT) {
   Profiler.Stop(IMPORT_MATCH_SEND_TO_BINS_TIME);
   Profiler.StartSync(IMPORT_MATCH_RECV_FROM_BINS_TIME, Comm);
 
-  for (auto &Pair : DonorSends) {
-    int Rank = Pair.first;
-    send_recv &Send = Pair.second;
+  for (auto &Entry : DonorSends) {
+    int Rank = Entry.Key();
+    send_recv &Send = Entry.Value();
     Irecv(Send.Data.ReceiverGridIDs.Data(), Send.Count, MPI_INT, Rank, 0, Comm);
     Irecv(Send.Data.ReceiverPoints.Data(), MAX_DIMS*Send.Count, MPI_INT, Rank, 0, Comm);
   }
 
-  for (auto &Pair : ReceiverSends) {
-    int Rank = Pair.first;
-    send_recv &Send = Pair.second;
+  for (auto &Entry : ReceiverSends) {
+    int Rank = Entry.Key();
+    send_recv &Send = Entry.Value();
     Irecv(Send.Data.DonorGridIDs.Data(), Send.Count, MPI_INT, Rank, 1, Comm);
     Irecv(Send.Data.DonorCells.Data(), MAX_DIMS*Send.Count, MPI_INT, Rank, 1, Comm);
   }
@@ -1787,8 +1764,8 @@ void MatchDonorsAndReceivers(xintout &XINTOUT) {
   Profiler.Stop(IMPORT_MATCH_RECV_FROM_BINS_TIME);
   Profiler.StartSync(IMPORT_MATCH_FILL_CONNECTION_DATA_TIME, Comm);
 
-  for (auto &Pair : DonorRecvs) {
-    send_recv &Recv = Pair.second;
+  for (auto &Entry : DonorRecvs) {
+    send_recv &Recv = Entry.Value();
     for (long long iDonor = 0; iDonor < Recv.Count; ++iDonor) {
       long long iConnection = Recv.Data.ConnectionIDs(iDonor) - Bin.Begin;
       BinData.DonorGridIDs(iConnection) = Recv.Data.DonorGridIDs(iDonor);
@@ -1798,8 +1775,8 @@ void MatchDonorsAndReceivers(xintout &XINTOUT) {
     }
   }
 
-  for (auto &Pair : ReceiverRecvs) {
-    send_recv &Recv = Pair.second;
+  for (auto &Entry : ReceiverRecvs) {
+    send_recv &Recv = Entry.Value();
     for (long long iReceiver = 0; iReceiver < Recv.Count; ++iReceiver) {
       long long iConnection = Recv.Data.ConnectionIDs(iReceiver) - Bin.Begin;
       BinData.ReceiverGridIDs(iConnection) = Recv.Data.ReceiverGridIDs(iReceiver);
@@ -1812,9 +1789,9 @@ void MatchDonorsAndReceivers(xintout &XINTOUT) {
   Profiler.Stop(IMPORT_MATCH_FILL_CONNECTION_DATA_TIME);
   Profiler.StartSync(IMPORT_MATCH_RECV_FROM_BINS_TIME, Comm);
 
-  for (auto &Pair : DonorRecvs) {
-    int Rank = Pair.first;
-    send_recv &Recv = Pair.second;
+  for (auto &Entry : DonorRecvs) {
+    int Rank = Entry.Key();
+    send_recv &Recv = Entry.Value();
     for (long long iDonor = 0; iDonor < Recv.Count; ++iDonor) {
       long long iConnection = Recv.Data.ConnectionIDs(iDonor) - Bin.Begin;
       Recv.Data.ReceiverGridIDs(iDonor) = BinData.ReceiverGridIDs(iConnection);
@@ -1826,9 +1803,9 @@ void MatchDonorsAndReceivers(xintout &XINTOUT) {
     Isend(Recv.Data.ReceiverPoints.Data(), MAX_DIMS*Recv.Count, MPI_INT, Rank, 0, Comm);
   }
 
-  for (auto &Pair : ReceiverRecvs) {
-    int Rank = Pair.first;
-    send_recv &Recv = Pair.second;
+  for (auto &Entry : ReceiverRecvs) {
+    int Rank = Entry.Key();
+    send_recv &Recv = Entry.Value();
     for (long long iReceiver = 0; iReceiver < Recv.Count; ++iReceiver) {
       long long iConnection = Recv.Data.ConnectionIDs(iReceiver) - Bin.Begin;
       Recv.Data.DonorGridIDs(iReceiver) = BinData.DonorGridIDs(iConnection);
@@ -1847,14 +1824,14 @@ void MatchDonorsAndReceivers(xintout &XINTOUT) {
   Profiler.Stop(IMPORT_MATCH_RECV_FROM_BINS_TIME);
   Profiler.StartSync(IMPORT_MATCH_UNPACK_TIME, Comm);
 
-  for (auto &Pair : DonorSends) {
-    send_recv &Send = Pair.second;
+  for (auto &Entry : DonorSends) {
+    send_recv &Send = Entry.Value();
     // Reset count to 0 for unpacking
     Send.Count = 0;
   }
 
-  for (auto &Pair : ReceiverSends) {
-    send_recv &Send = Pair.second;
+  for (auto &Entry : ReceiverSends) {
+    send_recv &Send = Entry.Value();
     // Reset count to 0 for unpacking
     Send.Count = 0;
   }
@@ -1869,7 +1846,7 @@ void MatchDonorsAndReceivers(xintout &XINTOUT) {
       for (long long iDonor = 0; iDonor < NumLocalDonors; ++iDonor) {
         long long ConnectionID = DonorChunk.StartingConnectionID + iDonor;
         int ConnectionBinIndex = int(ConnectionID/BinSize);
-        send_recv &Send = DonorSends[ConnectionBinIndex];
+        send_recv &Send = DonorSends(ConnectionBinIndex);
         long long iNext = Send.Count;
         DonorChunk.Data.DestinationGridIDs(iDonor) = Send.Data.ReceiverGridIDs(iNext);
         for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
@@ -1884,7 +1861,7 @@ void MatchDonorsAndReceivers(xintout &XINTOUT) {
       for (long long iReceiver = 0; iReceiver < NumLocalReceivers; ++iReceiver) {
         long long ConnectionID = ReceiverChunk.ConnectionIDs(iReceiver);
         int ConnectionBinIndex = int(ConnectionID/BinSize);
-        send_recv &Send = ReceiverSends[ConnectionBinIndex];
+        send_recv &Send = ReceiverSends(ConnectionBinIndex);
         long long iNext = Send.Count;
         ReceiverChunk.Data.SourceGridIDs(iReceiver) = Send.Data.DonorGridIDs(iNext);
         for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
@@ -2133,19 +2110,15 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
     {}
   };
 
-  std::map<int, donor_send_recv> DonorSends;
-  std::map<int, receiver_send_recv> ReceiverSends;
+  map<int,donor_send_recv> DonorSends;
+  map<int,receiver_send_recv> ReceiverSends;
 
   if (XINTOUTDonors.HasChunk) {
     const xintout_donor_chunk &DonorChunk = XINTOUTDonors.Chunk;
     for (long long iDonor = 0; iDonor < NumChunkDonors; ++iDonor) {
       for (int iRank = 0; iRank < NumChunkDonorRanks(iDonor); ++iRank) {
         int Rank = ChunkDonorRanks(iDonor)[iRank];
-        auto Iter = DonorSends.lower_bound(Rank);
-        if (Iter == DonorSends.end() || Iter->first > Rank) {
-          Iter = DonorSends.emplace_hint(Iter, Rank, donor_send_recv());
-        }
-        donor_send_recv &Send = Iter->second;
+        donor_send_recv &Send = DonorSends.Fetch(Rank);
         ++Send.Count;
         Send.MaxSize = std::max(Send.MaxSize, DonorChunk.Data.MaxSize);
       }
@@ -2155,24 +2128,20 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
   if (XINTOUTReceivers.HasChunk) {
     for (long long iReceiver = 0; iReceiver < NumChunkReceivers; ++iReceiver) {
       int Rank = ChunkReceiverRanks(iReceiver);
-      auto Iter = ReceiverSends.lower_bound(Rank);
-      if (Iter == ReceiverSends.end() || Iter->first > Rank) {
-        Iter = ReceiverSends.emplace_hint(Iter, Rank, receiver_send_recv());
-      }
-      receiver_send_recv &Send = Iter->second;
+      receiver_send_recv &Send = ReceiverSends.Fetch(Rank);
       ++Send.Count;
     }
   }
 
-  for (auto &Pair : DonorSends) {
-    donor_send_recv &Send = Pair.second;
+  for (auto &Entry : DonorSends) {
+    donor_send_recv &Send = Entry.Value();
     CreateDonorData(Send.Data, Send.Count, Send.MaxSize);
     // Reset count for filling in data
     Send.Count = 0;
   }
 
-  for (auto &Pair : ReceiverSends) {
-    receiver_send_recv &Send = Pair.second;
+  for (auto &Entry : ReceiverSends) {
+    receiver_send_recv &Send = Entry.Value();
     CreateReceiverData(Send.Data, Send.Count);
     // Reset count for filling in data
     Send.Count = 0;
@@ -2183,7 +2152,7 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
     for (long long iDonor = 0; iDonor < NumChunkDonors; ++iDonor) {
       for (int iRank = 0; iRank < NumChunkDonorRanks(iDonor); ++iRank) {
         int Rank = ChunkDonorRanks(iDonor)[iRank];
-        donor_send_recv &Send = DonorSends[Rank];
+        donor_send_recv &Send = DonorSends(Rank);
         long long iNext = Send.Count;
         int MaxSize = Send.MaxSize;
         for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
@@ -2222,7 +2191,7 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
     const xintout_receiver_chunk &ReceiverChunk = XINTOUTReceivers.Chunk;
     for (long long iReceiver = 0; iReceiver < NumChunkReceivers; ++iReceiver) {
       int Rank = ChunkReceiverRanks(iReceiver);
-      receiver_send_recv &Send = ReceiverSends[Rank];
+      receiver_send_recv &Send = ReceiverSends(Rank);
       long long iNext = Send.Count;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
         Send.Data.Points(iDim,iNext) = ReceiverChunk.Data.Points(iDim,iReceiver);
@@ -2236,48 +2205,33 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
     ChunkReceiverRanks.Clear();
   }
 
-  int NumDonorSends = DonorSends.size();
-  int NumReceiverSends = ReceiverSends.size();
-
-  array<int> DonorSendToRanks;
-  for (auto &Pair : DonorSends) {
-    int Rank = Pair.first;
-    DonorSendToRanks.Append(Rank);
-  }
-
-  array<int> ReceiverSendToRanks;
-  for (auto &Pair : ReceiverSends) {
-    int Rank = Pair.first;
-    ReceiverSendToRanks.Append(Rank);
-  }
-
   Profiler.Stop(IMPORT_DISTRIBUTE_FIND_RANKS_TIME);
   Profiler.StartSync(IMPORT_DISTRIBUTE_HANDSHAKE_TIME, Comm);
 
-  array<int> DonorRecvFromRanks = core::DynamicHandshake(Comm, DonorSendToRanks);
-  array<int> ReceiverRecvFromRanks = core::DynamicHandshake(Comm, ReceiverSendToRanks);
-
-  DonorSendToRanks.Clear();
-  ReceiverSendToRanks.Clear();
+  array<int> DonorRecvFromRanks = core::DynamicHandshake(Comm, DonorSends.Keys());
+  array<int> ReceiverRecvFromRanks = core::DynamicHandshake(Comm, ReceiverSends.Keys());
 
   Profiler.Stop(IMPORT_DISTRIBUTE_HANDSHAKE_TIME);
   Profiler.StartSync(IMPORT_DISTRIBUTE_SEND_DATA_TIME, Comm);
 
-  std::map<int, donor_send_recv> DonorRecvs;
+  map<int,donor_send_recv> DonorRecvs;
   for (int Rank : DonorRecvFromRanks) {
-    DonorRecvs.emplace(Rank, donor_send_recv());
+    DonorRecvs.Insert(Rank);
   }
 
-  std::map<int, receiver_send_recv> ReceiverRecvs;
+  map<int,receiver_send_recv> ReceiverRecvs;
   for (int Rank : ReceiverRecvFromRanks) {
-    ReceiverRecvs.emplace(Rank, receiver_send_recv());
+    ReceiverRecvs.Insert(Rank);
   }
 
   DonorRecvFromRanks.Clear();
   ReceiverRecvFromRanks.Clear();
 
-  int NumDonorRecvs = DonorRecvs.size();
-  int NumReceiverRecvs = ReceiverRecvs.size();
+  int NumDonorSends = DonorSends.Count();
+  int NumReceiverSends = ReceiverSends.Count();
+
+  int NumDonorRecvs = DonorRecvs.Count();
+  int NumReceiverRecvs = ReceiverRecvs.Count();
 
   array<MPI_Request> Requests;
 
@@ -2300,29 +2254,29 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
     MPI_Irecv(Buffer, Count, DataType, SourceRank, Tag, RecvComm, &Request);
   };
 
-  for (auto &Pair : DonorRecvs) {
-    int Rank = Pair.first;
-    donor_send_recv &Recv = Pair.second;
+  for (auto &Entry : DonorRecvs) {
+    int Rank = Entry.Key();
+    donor_send_recv &Recv = Entry.Value();
     Irecv(&Recv.Count, 1, MPI_LONG_LONG, Rank, 0, Comm);
     Irecv(&Recv.MaxSize, 1, MPI_INT, Rank, 0, Comm);
   }
 
-  for (auto &Pair : ReceiverRecvs) {
-    int Rank = Pair.first;
-    receiver_send_recv &Recv = Pair.second;
+  for (auto &Entry : ReceiverRecvs) {
+    int Rank = Entry.Key();
+    receiver_send_recv &Recv = Entry.Value();
     Irecv(&Recv.Count, 1, MPI_LONG_LONG, Rank, 1, Comm);
   }
 
-  for (auto &Pair : DonorSends) {
-    int Rank = Pair.first;
-    donor_send_recv &Send = Pair.second;
+  for (auto &Entry : DonorSends) {
+    int Rank = Entry.Key();
+    donor_send_recv &Send = Entry.Value();
     Isend(&Send.Count, 1, MPI_LONG_LONG, Rank, 0, Comm);
     Isend(&Send.MaxSize, 1, MPI_INT, Rank, 0, Comm);
   }
 
-  for (auto &Pair : ReceiverSends) {
-    int Rank = Pair.first;
-    receiver_send_recv &Send = Pair.second;
+  for (auto &Entry : ReceiverSends) {
+    int Rank = Entry.Key();
+    receiver_send_recv &Send = Entry.Value();
     Isend(&Send.Count, 1, MPI_LONG_LONG, Rank, 1, Comm);
   }
 
@@ -2330,9 +2284,9 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
 
   Requests.Clear();
 
-  for (auto &Pair : DonorRecvs) {
-    int Rank = Pair.first;
-    donor_send_recv &Recv = Pair.second;
+  for (auto &Entry : DonorRecvs) {
+    int Rank = Entry.Key();
+    donor_send_recv &Recv = Entry.Value();
     CreateDonorData(Recv.Data, Recv.Count, Recv.MaxSize);
     Irecv(Recv.Data.Extents.Data(), 2*MAX_DIMS*Recv.Count, MPI_INT, Rank, 0, Comm);
     Irecv(Recv.Data.Coords.Data(), MAX_DIMS*Recv.Count, MPI_DOUBLE, Rank, 0, Comm);
@@ -2342,18 +2296,18 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
     Irecv(Recv.Data.DestinationPoints.Data(), MAX_DIMS*Recv.Count, MPI_INT, Rank, 0, Comm);
   }
 
-  for (auto &Pair : ReceiverRecvs) {
-    int Rank = Pair.first;
-    receiver_send_recv &Recv = Pair.second;
+  for (auto &Entry : ReceiverRecvs) {
+    int Rank = Entry.Key();
+    receiver_send_recv &Recv = Entry.Value();
     CreateReceiverData(Recv.Data, Recv.Count);
     Irecv(Recv.Data.Points.Data(), MAX_DIMS*Recv.Count, MPI_INT, Rank, 1, Comm);
     Irecv(Recv.Data.SourceGridIDs.Data(), Recv.Count, MPI_INT, Rank, 1, Comm);
     Irecv(Recv.Data.SourceCells.Data(), MAX_DIMS*Recv.Count, MPI_INT, Rank, 1, Comm);
   }
 
-  for (auto &Pair : DonorSends) {
-    int Rank = Pair.first;
-    donor_send_recv &Send = Pair.second;
+  for (auto &Entry : DonorSends) {
+    int Rank = Entry.Key();
+    donor_send_recv &Send = Entry.Value();
     Isend(Send.Data.Extents.Data(), 2*MAX_DIMS*Send.Count, MPI_INT, Rank, 0, Comm);
     Isend(Send.Data.Coords.Data(), MAX_DIMS*Send.Count, MPI_DOUBLE, Rank, 0, Comm);
     Isend(Send.Data.InterpCoefs.Data(), MAX_DIMS*Send.MaxSize*Send.Count, MPI_DOUBLE, Rank, 0,
@@ -2362,9 +2316,9 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
     Isend(Send.Data.DestinationPoints.Data(), MAX_DIMS*Send.Count, MPI_INT, Rank, 0, Comm);
   }
 
-  for (auto &Pair : ReceiverSends) {
-    int Rank = Pair.first;
-    receiver_send_recv &Send = Pair.second;
+  for (auto &Entry : ReceiverSends) {
+    int Rank = Entry.Key();
+    receiver_send_recv &Send = Entry.Value();
     Isend(Send.Data.Points.Data(), MAX_DIMS*Send.Count, MPI_INT, Rank, 1, Comm);
     Isend(Send.Data.SourceGridIDs.Data(), Send.Count, MPI_INT, Rank, 1, Comm);
     Isend(Send.Data.SourceCells.Data(), MAX_DIMS*Send.Count, MPI_INT, Rank, 1, Comm);
@@ -2374,21 +2328,21 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
 
   Requests.Clear();
 
-  DonorSends.clear();
-  ReceiverSends.clear();
+  DonorSends.Clear();
+  ReceiverSends.Clear();
 
   long long NumLocalDonors = 0;
   int MaxSize = 0;
   long long NumLocalReceivers = 0;
 
-  for (auto &Pair : DonorRecvs) {
-    donor_send_recv &Recv = Pair.second;
+  for (auto &Entry : DonorRecvs) {
+    donor_send_recv &Recv = Entry.Value();
     NumLocalDonors += Recv.Count;
     MaxSize = std::max(MaxSize, Recv.MaxSize);
   }
 
-  for (auto &Pair : ReceiverRecvs) {
-    receiver_send_recv &Recv = Pair.second;
+  for (auto &Entry : ReceiverRecvs) {
+    receiver_send_recv &Recv = Entry.Value();
     NumLocalReceivers += Recv.Count;
   }
 
@@ -2397,8 +2351,8 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
   long long iNext;
 
   iNext = 0;
-  for (auto &Pair : DonorRecvs) {
-    donor_send_recv &Recv = Pair.second;
+  for (auto &Entry : DonorRecvs) {
+    donor_send_recv &Recv = Entry.Value();
     for (long long iDonor = 0; iDonor < Recv.Count; ++iDonor) {
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
         DonorData.Extents(0,iDim,iNext) = Recv.Data.Extents(0,iDim,iDonor);
@@ -2424,8 +2378,8 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
   CreateReceiverData(ReceiverData, NumLocalReceivers);
 
   iNext = 0;
-  for (auto &Pair : ReceiverRecvs) {
-    receiver_send_recv &Recv = Pair.second;
+  for (auto &Entry : ReceiverRecvs) {
+    receiver_send_recv &Recv = Entry.Value();
     for (long long iReceiver = 0; iReceiver < Recv.Count; ++iReceiver) {
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
         ReceiverData.Points(iDim,iNext) = Recv.Data.Points(iDim,iReceiver);
