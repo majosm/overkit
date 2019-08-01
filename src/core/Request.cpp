@@ -6,12 +6,12 @@
 #include "ovk/core/Array.hpp"
 #include "ovk/core/ArrayView.hpp"
 #include "ovk/core/Debug.hpp"
+#include "ovk/core/Elem.hpp"
 #include "ovk/core/Global.hpp"
 
 #include <mpi.h>
 
 #include <memory>
-#include <tuple>
 #include <utility>
 
 namespace ovk {
@@ -161,7 +161,7 @@ void request::internal_WaitAll(array_view<request *> Requests) {
   }
 
   array<MPI_Request> AllMPIRequests;
-  array<std::tuple<int,int>> AllMPIRequestToRequest;
+  array<elem<int,2>> AllMPIRequestToRequest;
 
   AllMPIRequests.Reserve(TotalMPIRequests);
   AllMPIRequestToRequest.Reserve(TotalMPIRequests);
@@ -175,7 +175,7 @@ void request::internal_WaitAll(array_view<request *> Requests) {
           MPI_Request MPIRequest = MPIRequests(iMPIRequest);
           if (MPIRequest != MPI_REQUEST_NULL) {
             AllMPIRequests.Append(MPIRequests(iMPIRequest));
-            AllMPIRequestToRequest.Append(iRequest, iMPIRequest);
+            AllMPIRequestToRequest.Append({iRequest,iMPIRequest});
           }
         }
       }
@@ -190,8 +190,8 @@ void request::internal_WaitAll(array_view<request *> Requests) {
     if (iCompleted == MPI_UNDEFINED) {
       break;
     }
-    int iRequest, iMPIRequest;
-    std::tie(iRequest, iMPIRequest) = AllMPIRequestToRequest(iCompleted);
+    int iRequest = AllMPIRequestToRequest(iCompleted)(0);
+    int iMPIRequest = AllMPIRequestToRequest(iCompleted)(1);
     request &Request = *Requests(iRequest);
     Request.MPIRequests_()(iMPIRequest) = MPI_REQUEST_NULL;
     Request.OnMPIRequestComplete_(iMPIRequest);
@@ -267,7 +267,7 @@ void request::internal_WaitAny(array_view<request *> Requests, int &Index) {
   }
 
   array<MPI_Request> AllMPIRequests;
-  array<std::tuple<int,int>> AllMPIRequestToRequest;
+  array<elem<int,2>> AllMPIRequestToRequest;
 
   AllMPIRequests.Reserve(TotalMPIRequests);
   AllMPIRequestToRequest.Reserve(TotalMPIRequests);
@@ -281,7 +281,7 @@ void request::internal_WaitAny(array_view<request *> Requests, int &Index) {
           MPI_Request MPIRequest = MPIRequests(iMPIRequest);
           if (MPIRequest != MPI_REQUEST_NULL) {
             AllMPIRequests.Append(MPIRequests(iMPIRequest));
-            AllMPIRequestToRequest.Append(iRequest, iMPIRequest);
+            AllMPIRequestToRequest.Append({iRequest,iMPIRequest});
           }
         }
       }
@@ -297,8 +297,8 @@ void request::internal_WaitAny(array_view<request *> Requests, int &Index) {
       Index = -1;
       break;
     }
-    int iRequest, iMPIRequest;
-    std::tie(iRequest, iMPIRequest) = AllMPIRequestToRequest(iCompleted);
+    int iRequest = AllMPIRequestToRequest(iCompleted)(0);
+    int iMPIRequest = AllMPIRequestToRequest(iCompleted)(1);
     request &Request = *Requests(iRequest);
     Request.MPIRequests_()(iMPIRequest) = MPI_REQUEST_NULL;
     Request.OnMPIRequestComplete_(iMPIRequest);

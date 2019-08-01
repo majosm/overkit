@@ -337,7 +337,7 @@ template <typename CoordType> tuple<int> distributed_region_hash<CoordType>::Bin
 
     double Base = std::pow(double(MaxBins)/Volume, 1./double(NumDims));
 
-    NumBins(iMinLengthDim) = std::max(int(Length(iMinLengthDim)*Base),1);
+    NumBins(iMinLengthDim) = Max(int(Length(iMinLengthDim)*Base),1);
 
     extents_type GlobalExtentsReduced = traits::MakeEmptyExtents(NumDims-1);
 

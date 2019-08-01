@@ -25,6 +25,7 @@
 #include "ovk/core/Partition.hpp"
 #include "ovk/core/Profiler.hpp"
 #include "ovk/core/Range.hpp"
+#include "ovk/core/ScalarOps.hpp"
 #include "ovk/core/ScopeGuard.hpp"
 #include "ovk/core/Set.hpp"
 #include "ovk/core/TextProcessing.hpp"
@@ -32,7 +33,6 @@
 
 #include <mpi.h>
 
-#include <algorithm>
 #include <limits>
 #include <string>
 #include <utility>
@@ -1011,7 +1011,7 @@ void ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std:
       xintout_donor_chunk &Chunk = XINTOUTDonors.Chunk;
 
       long long LocalBegin = ChunkSize*ChunkComm.Rank();
-      long long LocalEnd = std::min(ChunkSize*(ChunkComm.Rank()+1), NumDonors);
+      long long LocalEnd = Min(ChunkSize*(ChunkComm.Rank()+1), NumDonors);
       long long NumLocalDonors = LocalEnd - LocalBegin;
 
       error ChunkSizeError = error::NONE;
@@ -1109,7 +1109,7 @@ void ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std:
       int MaxSize = 0;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
         for (long long iDonor = 0; iDonor < NumLocalDonors; ++iDonor) {
-          MaxSize = std::max(MaxSize, Sizes(iDim,iDonor));
+          MaxSize = Max(MaxSize, Sizes(iDim,iDonor));
         }
       }
 
@@ -1335,7 +1335,7 @@ void ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath, long lo
       xintout_receiver_chunk &Chunk = XINTOUTReceivers.Chunk;
 
       long long LocalBegin = ChunkSize*ChunkComm.Rank();
-      long long LocalEnd = std::min(ChunkSize*(ChunkComm.Rank()+1), NumReceivers);
+      long long LocalEnd = Min(ChunkSize*(ChunkComm.Rank()+1), NumReceivers);
       long long NumLocalReceivers = LocalEnd - LocalBegin;
 
       error ChunkSizeError = error::NONE;
@@ -1525,7 +1525,7 @@ void MatchDonorsAndReceivers(xintout &XINTOUT) {
 
   xintout_connections &XINTOUTConnections = XINTOUT.Connections;
 
-  long long BinSize = std::min(BinDivide(NumPoints, Comm.Size()), NumConnections);
+  long long BinSize = Min(BinDivide(NumPoints, Comm.Size()), NumConnections);
   bool HasBin = BinSize*Comm.Rank() < NumConnections;
 
   XINTOUTConnections.BinSize = BinSize;
@@ -1536,7 +1536,7 @@ void MatchDonorsAndReceivers(xintout &XINTOUT) {
 
   if (HasBin) {
     Bin.Begin = BinSize*Comm.Rank();
-    Bin.End = std::min(BinSize*(Comm.Rank()+1), NumConnections);
+    Bin.End = Min(BinSize*(Comm.Rank()+1), NumConnections);
     long long NumLocalConnections = Bin.End - Bin.Begin;
     CreateConnectionData(BinData, NumLocalConnections);
   }
@@ -2120,7 +2120,7 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
         int Rank = ChunkDonorRanks(iDonor)[iRank];
         donor_send_recv &Send = DonorSends.Fetch(Rank);
         ++Send.Count;
-        Send.MaxSize = std::max(Send.MaxSize, DonorChunk.Data.MaxSize);
+        Send.MaxSize = Max(Send.MaxSize, DonorChunk.Data.MaxSize);
       }
     }
   }
@@ -2338,7 +2338,7 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
   for (auto &Entry : DonorRecvs) {
     donor_send_recv &Recv = Entry.Value();
     NumLocalDonors += Recv.Count;
-    MaxSize = std::max(MaxSize, Recv.MaxSize);
+    MaxSize = Max(MaxSize, Recv.MaxSize);
   }
 
   for (auto &Entry : ReceiverRecvs) {
@@ -2518,7 +2518,7 @@ void ImportDonors(const donor_data &GridDonors, comm_view Comm, const array<edit
     ++Counts(iDestinationGrid);
     for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
       int Size = GridDonors.Extents(1,iDim,iDonor) - GridDonors.Extents(0,iDim,iDonor);
-      MaxSizes(iDestinationGrid) = std::max(MaxSizes(iDestinationGrid), Size);
+      MaxSizes(iDestinationGrid) = Max(MaxSizes(iDestinationGrid), Size);
     }
   }
 
@@ -2681,21 +2681,21 @@ void Chunkify(long long Count, int MaxChunks, long long TargetChunkSize, int Adj
   NumChunks = MaxChunks;
 
   while (BinDivide(Count, NumChunks) < TargetChunkSize && NumChunks > 1) {
-    ChunkRankInterval = int(std::min((long long)(ChunkRankInterval) << 1, (long long)(MaxChunks)));
+    ChunkRankInterval = int(Min((long long)(ChunkRankInterval) << 1, (long long)(MaxChunks)));
     NumChunks = BinDivide((long long)(MaxChunks), ChunkRankInterval);
   }
 
   if (Adjust > 0) {
     int RemainingAdjustAmount = Adjust;
     while (RemainingAdjustAmount > 0 && NumChunks < MaxChunks) {
-      ChunkRankInterval = std::max(ChunkRankInterval >> 1, 1);
+      ChunkRankInterval = Max(ChunkRankInterval >> 1, 1);
       NumChunks = BinDivide((long long)(MaxChunks), ChunkRankInterval);
       --RemainingAdjustAmount;
     }
   } else if (Adjust < 0) {
     int RemainingAdjustAmount = -Adjust;
     while (RemainingAdjustAmount > 0 && NumChunks > 1) {
-      ChunkRankInterval = int(std::min((long long)(ChunkRankInterval) << 1, (long long)(MaxChunks)));
+      ChunkRankInterval = int(Min((long long)(ChunkRankInterval) << 1, (long long)(MaxChunks)));
       NumChunks = BinDivide((long long)(MaxChunks), ChunkRankInterval);
       --RemainingAdjustAmount;
     }
