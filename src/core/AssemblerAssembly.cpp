@@ -21,6 +21,7 @@
 #include "ovk/core/ElemSet.hpp"
 #include "ovk/core/Event.hpp"
 #include "ovk/core/Field.hpp"
+#include "ovk/core/FieldOps.hpp"
 #include "ovk/core/FloatingRef.hpp"
 #include "ovk/core/Geometry.hpp"
 #include "ovk/core/GeometryComponent.hpp"
@@ -78,6 +79,7 @@ void assembler::Assemble() {
 
   InitializeAssembly_();
   DetectOverlap_();
+  InferBoundaries_();
 
   AssemblyManifest_.DetectOverlap.Clear();
   AssemblyManifest_.InferBoundaries.Clear();
@@ -1402,6 +1404,92 @@ void assembler::DetectOverlap_() {
   MPI_Barrier(Domain.Comm());
 
   Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Done detecting overlap between grids.");
+
+}
+
+void assembler::InferBoundaries_() {
+
+  domain &Domain = *Domain_;
+  core::logger &Logger = Context_->core_Logger();
+
+  MPI_Barrier(Domain.Comm());
+
+  Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Inferring non-overlapping boundaries...");
+
+  auto &OverlapComponent = Domain.Component<overlap_component>(OverlapComponentID_);
+  assembly_data &AssemblyData = *AssemblyData_;
+
+  auto StateComponentEditHandle = Domain.EditComponent<state_component>(StateComponentID_);
+  state_component &StateComponent = *StateComponentEditHandle;
+
+  map<int,long long> NumInferredForGrid;
+  if (Logger.LoggingDebug()) {
+    for (int GridID : Domain.LocalGridIDs()) {
+      NumInferredForGrid.Insert(GridID, 0);
+    }
+  }
+
+  for (int GridID : Domain.LocalGridIDs()) {
+    if (!Options_.InferBoundaries(GridID)) continue;
+    const grid &Grid = Domain.Grid(GridID);
+    const range &LocalRange = Grid.LocalRange();
+    long long NumExtended = Grid.ExtendedRange().Count();
+    local_grid_aux_data &GridAuxData = AssemblyData.LocalGridAuxData(GridID);
+    const distributed_field<bool> &ActiveMask = GridAuxData.ActiveMask;
+    distributed_field<bool> &DomainBoundaryMask = GridAuxData.DomainBoundaryMask;
+    auto StateEditHandle = StateComponent.EditState(GridID);
+    auto FlagsEditHandle = StateEditHandle->EditFlags();
+    distributed_field<state_flags> &Flags = *FlagsEditHandle;
+    distributed_field<bool> InferredBoundaryMask(Grid.SharedPartition());
+    core::DetectEdge(ActiveMask, core::edge_type::INNER, core::mask_bc::FALSE, false,
+      InferredBoundaryMask);
+    for (long long l = 0; l < NumExtended; ++l) {
+      InferredBoundaryMask[l] = InferredBoundaryMask[l] && !DomainBoundaryMask[l];
+    }
+    for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+      if (OverlapID(1) == GridID) {
+        const field<bool> &OverlapMask = OverlapComponent.OverlapN(OverlapID).Mask();
+        for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
+          for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
+            for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
+              InferredBoundaryMask(i,j,k) = InferredBoundaryMask(i,j,k) && !OverlapMask(i,j,k);
+            }
+          }
+        }
+      }
+    }
+    InferredBoundaryMask.Exchange();
+    for (long long l = 0; l < NumExtended; ++l) {
+      if (InferredBoundaryMask[l]) {
+        Flags[l] |= state_flags::DOMAIN_BOUNDARY | state_flags::INFERRED_DOMAIN_BOUNDARY;
+      }
+    }
+    for (long long l = 0; l < NumExtended; ++l) {
+      DomainBoundaryMask[l] = DomainBoundaryMask[l] || InferredBoundaryMask[l];
+    }
+    if (Logger.LoggingDebug()) {
+      NumInferredForGrid.Insert(GridID, core::CountDistributedMask(InferredBoundaryMask));
+    }
+  }
+
+  if (Logger.LoggingDebug()) {
+    for (int GridID : Domain.GridIDs()) {
+      if (Domain.GridIsLocal(GridID)) {
+        const grid &Grid = Domain.Grid(GridID);
+        long long NumInferred = NumInferredForGrid(GridID);
+        if (NumInferred > 0) {
+          std::string NumInferredString = core::FormatNumber(NumInferred, "points", "point");
+          Logger.LogDebug(Grid.Comm().Rank() == 0, 2, "%s marked as boundaries on grid %s.",
+            NumInferredString, Grid.Name());
+        }
+      }
+      MPI_Barrier(Domain.Comm());
+    }
+  }
+
+  MPI_Barrier(Domain.Comm());
+
+  Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Done inferring non-overlapping boundaries.");
 
 }
 

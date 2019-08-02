@@ -279,6 +279,7 @@ private:
   void InitializeAssembly_();
   void ValidateOptions_();
   void DetectOverlap_();
+  void InferBoundaries_();
 
 };
 
