@@ -609,6 +609,8 @@ TEST_F(PartitionTests, ConstructPartition) {
     EXPECT_THAT(Partition.Cart().Periodic(), ElementsAre(false,true,false));
     EXPECT_EQ(Partition.Cart().PeriodicStorage(), ovk::periodic_storage::DUPLICATED);
     EXPECT_EQ(Partition.Comm().Get(), Comm.Get());
+    EXPECT_THAT(Partition.GlobalRange().Begin(), ElementsAre(-1,0,0));
+    EXPECT_THAT(Partition.GlobalRange().End(), ElementsAre(21,20,1));
     switch (Comm.Rank()) {
     // Lower corner
     case 0:

@@ -43,6 +43,7 @@ public:
 
   const cart &Cart() const { return Cart_; }
   comm_view Comm() const { return Comm_; }
+  const range &GlobalRange() const { return Cart_.Range(); }
   const range &LocalRange() const { return LocalRange_; }
   const range &ExtendedRange() const { return ExtendedRange_; }
   const array<range> &LocalSubregions() const { return LocalSubregions_; }
