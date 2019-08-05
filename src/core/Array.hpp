@@ -423,7 +423,7 @@ public:
   using index_type = long long;
   using tuple_element_type = long long;
   using tuple_type = elem<tuple_element_type,Rank>;
-  using interval_type = interval<index_type,Rank>;
+  using interval_type = interval<tuple_element_type,Rank>;
   using indexer_type = indexer<index_type, tuple_element_type, Rank, Layout>;
   using view_type = array_view<value_type, Rank, Layout>;
   using const_view_type = array_view<const value_type, Rank, Layout>;
