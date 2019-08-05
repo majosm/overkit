@@ -877,12 +877,12 @@ TEST_F(PartitionTests, ConstructPartition) {
     .SetComm(TestComm())
   ));
 
-  ovk::comm CommOfSize6 = CreateSubsetComm(TestComm(), TestComm().Rank() < 9);
+  ovk::comm CommOfSize9 = CreateSubsetComm(TestComm(), TestComm().Rank() < 9);
 
-  if (CommOfSize6) {
+  if (CommOfSize9) {
 
     ovk::cart Cart(2, {{-1,0,0},{21,20,1}}, {false,true,false}, ovk::periodic_storage::DUPLICATED);
-    ovk::comm Comm = ovk::CreateCartComm(CommOfSize6, 2, {3,3,1}, Cart.Periodic());
+    ovk::comm Comm = ovk::CreateCartComm(CommOfSize9, 2, {3,3,1}, Cart.Periodic());
     ovk::range LocalRange = CartesianDecomp(Cart.Dimension(), Cart.Range(), Comm);
 
     ovk::core::partition_hash Hash(Cart.Dimension(), Comm, 1, ovk::array<ovk::range>({1},
