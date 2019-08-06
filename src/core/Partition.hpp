@@ -21,6 +21,7 @@
 #include <ovk/core/Request.hpp>
 #include <ovk/core/Requires.hpp>
 #include <ovk/core/ScopeGuard.hpp>
+#include <ovk/core/Set.hpp>
 #include <ovk/core/Tuple.hpp>
 #include <ovk/core/TypeTraits.hpp>
 
@@ -32,17 +33,13 @@
 
 namespace ovk {
 
-struct partition_info {
-  int Rank;
-  range LocalRange;
-  range ExtendedRange;
-};
-
 namespace core {
 
 using partition_hash = distributed_region_hash<int>;
 using partition_hash_bin = distributed_region_hash_bin<int>;
 using partition_hash_region_data = distributed_region_data<int>;
+
+partition_hash CreatePartitionHash(int NumDims, comm_view Comm, const range &LocalRange);
 
 range ExtendLocalRange(const cart &Cart, const range &LocalRange, int ExtendAmount);
 
@@ -56,7 +53,12 @@ array<int> DetectNeighbors(const cart &Cart, comm_view Comm, const range &LocalR
 
 namespace partition_internal {
 
-array<partition_info> RetrievePartitionInfo(comm_view Comm, array_view<const int> Ranks, const
+struct decomp_info {
+  range LocalRange;
+  range ExtendedRange;
+};
+
+map<int,decomp_info> RetrieveDecompInfo(comm_view Comm, array_view<const int> Ranks, const
   range &LocalRange, const range &ExtendedRange);
 
 namespace halo_internal {
@@ -67,7 +69,7 @@ public:
 
   halo_map() = default;
   halo_map(const cart &Cart, const range &LocalRange, const range &ExtendedRange,
-    array_view<const partition_info> Neighbors);
+    const map<int,decomp_info> &Neighbors);
 
   floating_ref<const halo_map> GetFloatingRef() const {
     return FloatingRefGenerator_.Generate(*this);
@@ -147,7 +149,7 @@ class halo {
 public:
 
   halo(std::shared_ptr<context> Context, const cart &Cart, comm_view Comm, const range &LocalRange,
-    const range &ExtendedRange, array_view<const partition_info> Neighbors);
+    const range &ExtendedRange, const map<int,decomp_info> &Neighbors);
 
   halo(const halo &Other) = delete;
   halo(halo &&Other) noexcept = default;
@@ -265,6 +267,8 @@ class partition {
 
 public:
 
+  using neighbor_info = partition_internal::decomp_info;
+
   partition(std::shared_ptr<context> Context, const cart &Cart, comm_view Comm, const range
     &LocalRange, const range &ExtendedRange, int NumSubregions, array_view<const int>
     NeighborRanks);
@@ -292,7 +296,8 @@ public:
   const array<range> &LocalSubregions() const { return LocalSubregions_; }
   const array<range> &ExtendedSubregions() const { return ExtendedSubregions_; }
 
-  const array<partition_info> &Neighbors() const { return Neighbors_; }
+  const set<int> &NeighborRanks() const { return Neighbors_.Keys(); }
+  const map<int,neighbor_info> &Neighbors() const { return Neighbors_; }
 
   template <typename FieldType, OVK_FUNCTION_REQUIRES(core::IsField<FieldType>())> request
     Exchange(FieldType &Field) const {
@@ -310,7 +315,7 @@ private:
   int NumSubregions_;
   array<range> LocalSubregions_;
   array<range> ExtendedSubregions_;
-  array<partition_info> Neighbors_;
+  map<int,neighbor_info> Neighbors_;
   partition_internal::halo Halo_;
 
 };

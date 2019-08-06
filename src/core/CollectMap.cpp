@@ -10,6 +10,7 @@
 #include "ovk/core/FloatingRef.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Indexer.hpp"
+#include "ovk/core/Map.hpp"
 #include "ovk/core/Partition.hpp"
 #include "ovk/core/Profiler.hpp"
 #include "ovk/core/Range.hpp"
@@ -50,7 +51,7 @@ void collect_map::CreateSendData_(const cart &Cart, const partition &Partition) 
     int NumDims = Cart.Dimension();
     const range &GlobalRange = Cart.Range();
     const range &LocalRange = Partition.LocalRange();
-    const array<partition_info> &Neighbors = Partition.Neighbors();
+    const map<int,partition::neighbor_info> &Neighbors = Partition.Neighbors();
     int NumNeighbors = Neighbors.Count();
 
     array<range> SendToNeighborRanges({NumNeighbors});
@@ -66,8 +67,9 @@ void collect_map::CreateSendData_(const cart &Cart, const partition &Partition) 
       }
       bool AwayFromEdge = GlobalRange.Includes(CellRange);
       for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
+        const partition::neighbor_info &Neighbor = Neighbors[iNeighbor].Value();
         if (AwayFromEdge) {
-          bool Overlaps = RangesOverlap(Neighbors(iNeighbor).LocalRange, CellRange);
+          bool Overlaps = RangesOverlap(Neighbor.LocalRange, CellRange);
           if (Overlaps) {
             SendToNeighborRanges(iNeighbor) = UnionRanges(SendToNeighborRanges(iNeighbor),
               IntersectRanges(LocalRange, CellRange));
@@ -78,7 +80,7 @@ void collect_map::CreateSendData_(const cart &Cart, const partition &Partition) 
             for (int j = CellRange.Begin(1); j < CellRange.End(1); ++j) {
               for (int i = CellRange.Begin(0); i < CellRange.End(0); ++i) {
                 tuple<int> Vertex = Cart.PeriodicAdjust({i,j,k});
-                if (Neighbors(iNeighbor).LocalRange.Contains(Vertex)) {
+                if (Neighbor.LocalRange.Contains(Vertex)) {
                   Overlaps = true;
                   goto done_checking_for_overlap1;
                 }
@@ -121,7 +123,7 @@ void collect_map::CreateSendData_(const cart &Cart, const partition &Partition) 
 
     for (int iSend = 0; iSend < NumSends; ++iSend) {
       int iNeighbor = SendIndexToNeighbor(iSend);
-      Sends_(iSend).Rank = Neighbors(iNeighbor).Rank;
+      Sends_(iSend).Rank = Neighbors[iNeighbor].Key();
     }
 
     array<array<bool>> SendMasks({NumSends});
@@ -139,9 +141,10 @@ void collect_map::CreateSendData_(const cart &Cart, const partition &Partition) 
       bool AwayFromEdge = GlobalRange.Includes(CellRange);
       for (int iSend = 0; iSend < NumSends; ++iSend) {
         int iNeighbor = SendIndexToNeighbor(iSend);
+        const partition::neighbor_info &Neighbor = Neighbors[iNeighbor].Value();
         const range_indexer_c<long long> &Indexer = SendToNeighborIndexers(iNeighbor);
         if (AwayFromEdge) {
-          bool Overlaps = RangesOverlap(Neighbors(iNeighbor).LocalRange, CellRange);
+          bool Overlaps = RangesOverlap(Neighbor.LocalRange, CellRange);
           if (Overlaps) {
             range LocalCellRange = IntersectRanges(LocalRange, CellRange);
             for (int k = LocalCellRange.Begin(2); k < LocalCellRange.End(2); ++k) {
@@ -159,7 +162,7 @@ void collect_map::CreateSendData_(const cart &Cart, const partition &Partition) 
             for (int j = CellRange.Begin(1); j < CellRange.End(1); ++j) {
               for (int i = CellRange.Begin(0); i < CellRange.End(0); ++i) {
                 tuple<int> Vertex = Cart.PeriodicAdjust({i,j,k});
-                if (Neighbors(iNeighbor).LocalRange.Contains(Vertex)) {
+                if (Neighbor.LocalRange.Contains(Vertex)) {
                   Overlaps = true;
                   goto done_checking_for_overlap2;
                 }
@@ -225,7 +228,7 @@ void collect_map::CreateRecvData_(const cart &Cart, const partition &Partition) 
     int NumDims = Cart.Dimension();
     const range &GlobalRange = Cart.Range();
     const range &LocalRange = Partition.LocalRange();
-    const array<partition_info> &Neighbors = Partition.Neighbors();
+    const map<int,partition::neighbor_info> &Neighbors = Partition.Neighbors();
     int NumNeighbors = Neighbors.Count();
 
     array<range> RecvFromNeighborRanges({NumNeighbors});
@@ -241,15 +244,16 @@ void collect_map::CreateRecvData_(const cart &Cart, const partition &Partition) 
       }
       bool AwayFromEdge = GlobalRange.Includes(CellRange);
       for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
+        const partition::neighbor_info &Neighbor = Neighbors[iNeighbor].Value();
         if (AwayFromEdge) {
           RecvFromNeighborRanges(iNeighbor) = UnionRanges(RecvFromNeighborRanges(iNeighbor),
-            IntersectRanges(Neighbors(iNeighbor).LocalRange, CellRange));
+            IntersectRanges(Neighbor.LocalRange, CellRange));
         } else {
           for (int k = CellRange.Begin(2); k < CellRange.End(2); ++k) {
             for (int j = CellRange.Begin(1); j < CellRange.End(1); ++j) {
               for (int i = CellRange.Begin(0); i < CellRange.End(0); ++i) {
                 tuple<int> Vertex = Cart.PeriodicAdjust({i,j,k});
-                if (Neighbors(iNeighbor).LocalRange.Contains(Vertex)) {
+                if (Neighbor.LocalRange.Contains(Vertex)) {
                   RecvFromNeighborRanges(iNeighbor) = ExtendRange(RecvFromNeighborRanges(iNeighbor),
                     Vertex);
                 }
@@ -278,7 +282,7 @@ void collect_map::CreateRecvData_(const cart &Cart, const partition &Partition) 
 
     for (int iRecv = 0; iRecv < NumRecvs; ++iRecv) {
       int iNeighbor = RecvIndexToNeighbor(iRecv);
-      Recvs_(iRecv).Rank = Neighbors(iNeighbor).Rank;
+      Recvs_(iRecv).Rank = Neighbors[iNeighbor].Key();
     }
 
     array<array<bool>> RecvMasks({NumRecvs});
@@ -296,9 +300,10 @@ void collect_map::CreateRecvData_(const cart &Cart, const partition &Partition) 
       bool AwayFromEdge = GlobalRange.Includes(CellRange);
       for (int iRecv = 0; iRecv < NumRecvs; ++iRecv) {
         int iNeighbor = RecvIndexToNeighbor(iRecv);
+        const partition::neighbor_info &Neighbor = Neighbors[iNeighbor].Value();
         const range_indexer_c<long long> &Indexer = RecvFromNeighborIndexers(iNeighbor);
         if (AwayFromEdge) {
-          range RemoteCellRange = IntersectRanges(Neighbors(iNeighbor).LocalRange, CellRange);
+          range RemoteCellRange = IntersectRanges(Neighbor.LocalRange, CellRange);
           for (int k = RemoteCellRange.Begin(2); k < RemoteCellRange.End(2); ++k) {
             for (int j = RemoteCellRange.Begin(1); j < RemoteCellRange.End(1); ++j) {
               for (int i = RemoteCellRange.Begin(0); i < RemoteCellRange.End(0); ++i) {
@@ -312,7 +317,7 @@ void collect_map::CreateRecvData_(const cart &Cart, const partition &Partition) 
             for (int j = CellRange.Begin(1); j < CellRange.End(1); ++j) {
               for (int i = CellRange.Begin(0); i < CellRange.End(0); ++i) {
                 tuple<int> Vertex = Cart.PeriodicAdjust({i,j,k});
-                if (Neighbors(iNeighbor).LocalRange.Contains(Vertex)) {
+                if (Neighbor.LocalRange.Contains(Vertex)) {
                   long long iPoint = Indexer.ToIndex(Vertex);
                   RecvMasks(iRecv)(iPoint) = true;
                 }
@@ -412,10 +417,11 @@ void collect_map::CreateRecvData_(const cart &Cart, const partition &Partition) 
       bool AwayFromEdge = GlobalRange.Includes(CellRange);
       for (int iRecv = 0; iRecv < Recvs_.Count(); ++iRecv) {
         int iNeighbor = RecvIndexToNeighbor(iRecv);
+        const partition::neighbor_info &Neighbor = Neighbors[iNeighbor].Value();
         const range_indexer_c<long long> &RecvFromNeighborIndexer = RecvFromNeighborIndexers(
           iNeighbor);
         if (AwayFromEdge) {
-          range RemoteCellRange = IntersectRanges(Neighbors(iNeighbor).LocalRange, CellRange);
+          range RemoteCellRange = IntersectRanges(Neighbor.LocalRange, CellRange);
           for (int k = RemoteCellRange.Begin(2); k < RemoteCellRange.End(2); ++k) {
             for (int j = RemoteCellRange.Begin(1); j < RemoteCellRange.End(1); ++j) {
               for (int i = RemoteCellRange.Begin(0); i < RemoteCellRange.End(0); ++i) {
@@ -433,7 +439,7 @@ void collect_map::CreateRecvData_(const cart &Cart, const partition &Partition) 
             for (int j = CellRange.Begin(1); j < CellRange.End(1); ++j) {
               for (int i = CellRange.Begin(0); i < CellRange.End(0); ++i) {
                 tuple<int> Point = Cart.PeriodicAdjust({i,j,k});
-                if (Neighbors(iNeighbor).LocalRange.Contains(Point)) {
+                if (Neighbor.LocalRange.Contains(Point)) {
                   long long iPoint = RecvFromNeighborIndexer.ToIndex(Point);
                   CellRecvs(iVertex) = iRecv;
                   CellRecvBufferIndices(iVertex) = RecvBufferIndices

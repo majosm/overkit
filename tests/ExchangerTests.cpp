@@ -46,7 +46,7 @@ TEST_F(ExchangerTests, Exchange2D) {
     bool Grid1IsLocal = Domain.GridIsLocal(1);
     bool Grid2IsLocal = Domain.GridIsLocal(2);
 
-    ovk::tuple<int> Grid1Size = Domain.GridInfo(1).Size();
+    ovk::tuple<int> Grid1Size = Domain.GridInfo(1).GlobalRange().Size();
 
     ovk::exchanger Exchanger = ovk::CreateExchanger(Domain.SharedContext());
 
@@ -272,7 +272,7 @@ TEST_F(ExchangerTests, Exchange3D) {
     bool Grid1IsLocal = Domain.GridIsLocal(1);
     bool Grid2IsLocal = Domain.GridIsLocal(2);
 
-    ovk::tuple<int> Grid1Size = Domain.GridInfo(1).Size();
+    ovk::tuple<int> Grid1Size = Domain.GridInfo(1).GlobalRange().Size();
 
     ovk::exchanger Exchanger = ovk::CreateExchanger(Domain.SharedContext());
 

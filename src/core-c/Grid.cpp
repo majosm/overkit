@@ -174,18 +174,6 @@ void ovkGetGridExtendedCount(const ovk_grid *Grid, long long *NumExtended) {
 
 }
 
-void ovkGetGridSize(const ovk_grid *Grid, int *Size) {
-
-  OVK_DEBUG_ASSERT(Grid, "Invalid grid pointer.");
-  OVK_DEBUG_ASSERT(Size, "Invalid size pointer.");
-
-  auto &GridCPP = *reinterpret_cast<const ovk::grid *>(Grid);
-  for (int iDim = 0; iDim < ovk::MAX_DIMS; ++iDim) {
-    Size[iDim] = GridCPP.Size(iDim);
-  }
-
-}
-
 void ovkGetGridPeriodic(const ovk_grid *Grid, bool *Periodic) {
 
   OVK_DEBUG_ASSERT(Grid, "Invalid grid pointer.");

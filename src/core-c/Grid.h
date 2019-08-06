@@ -40,8 +40,6 @@ void ovkGetGridGlobalCount(const ovk_grid *Grid, long long *NumGlobal);
 void ovkGetGridLocalCount(const ovk_grid *Grid, long long *NumLocal);
 void ovkGetGridExtendedCount(const ovk_grid *Grid, long long *NumExtended);
 
-void ovkGetGridSize(const ovk_grid *Grid, int *Size);
-
 void ovkGetGridPeriodic(const ovk_grid *Grid, bool *Periodic);
 void ovkGetGridPeriodicStorage(const ovk_grid *Grid, ovk_periodic_storage *PeriodicStorage);
 

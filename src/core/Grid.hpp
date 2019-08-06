@@ -103,31 +103,24 @@ public:
   const partition &Partition() const { return *Partition_; }
   const std::shared_ptr<const partition> &PartitionShared() const { return Partition_; }
 
-  const cart &Cart() const { return Cart_; }
+  const cart &Cart() const { return Partition_->Cart(); }
 
-  const range &GlobalRange() const { return Cart_.Range(); }
+  const range &GlobalRange() const { return Partition_->GlobalRange(); }
   const range &LocalRange() const { return Partition_->LocalRange(); }
   const range &ExtendedRange() const { return Partition_->ExtendedRange(); }
 
   const partition &CellPartition() const { return *CellPartition_; }
   const std::shared_ptr<const partition> &CellPartitionShared() const { return CellPartition_; }
 
-  const cart &CellCart() const { return CellCart_; }
+  const cart &CellCart() const { return CellPartition_->Cart(); }
 
-  const range &CellGlobalRange() const { return CellCart_.Range(); }
+  const range &CellGlobalRange() const { return CellPartition_->GlobalRange(); }
   const range &CellLocalRange() const { return CellPartition_->LocalRange(); }
   const range &CellExtendedRange() const { return CellPartition_->ExtendedRange(); }
 
-  tuple<int> Size() const { return Cart_.Range().Size(); }
-  int Size(int iDim) const { return Cart_.Range().Size(iDim); }
-
-  const tuple<bool> &Periodic() const { return Cart_.Periodic(); }
-  bool Periodic(int iDim) const { return Cart_.Periodic(iDim); }
-  periodic_storage PeriodicStorage() const { return Cart_.PeriodicStorage(); }
-
-  const array<int> &NeighborRanks() const { return NeighborRanks_; }
-
-  const core::partition_hash &core_PartitionHash() const { return PartitionHash_; }
+  const tuple<bool> &Periodic() const { return Partition_->Cart().Periodic(); }
+  bool Periodic(int iDim) const { return Partition_->Cart().Periodic(iDim); }
+  periodic_storage PeriodicStorage() const { return Partition_->Cart().PeriodicStorage(); }
 
   static grid internal_Create(std::shared_ptr<context> &&Context, params &&Params);
 
@@ -136,17 +129,21 @@ private:
   floating_ref_generator FloatingRefGenerator_;
 
   int NumDims_;
-  cart Cart_;
-  cart CellCart_;
-
-  core::partition_hash PartitionHash_;
-
-  array<int> NeighborRanks_;
 
   std::shared_ptr<const partition> Partition_;
   std::shared_ptr<const partition> CellPartition_;
 
   grid(std::shared_ptr<context> &&Context, params &&Params);
+  grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
+    range &LocalRange);
+  grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
+    range &LocalRange, const cart &CellCart, const range &CellLocalRange);
+  grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
+    range &LocalRange, const range &ExtendedRange, const cart &CellCart, const range
+    &CellLocalRange, const range &CellExtendedRange);
+  grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
+    range &LocalRange, const range &ExtendedRange, const cart &CellCart, const range
+    &CellLocalRange, const range &CellExtendedRange, const array<int> &NeighborRanks);
 
 };
 
@@ -168,8 +165,6 @@ public:
   const range &GlobalRange() const { return Cart_.Range(); }
   const cart &CellCart() const { return CellCart_; }
   const range &CellGlobalRange() const { return CellCart_.Range(); }
-  tuple<int> Size() const { return Cart_.Range().Size(); }
-  int Size(int iDim) const { return Cart_.Range().Size(iDim); }
   bool IsLocal() const { return IsLocal_; }
 
   static grid_info internal_Create(grid *MaybeGrid, comm_view Comm);

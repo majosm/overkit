@@ -247,7 +247,7 @@ void ImportXINTOUT(domain &Domain, int ConnectivityComponentID, const std::strin
         LocalGridIDs(iLocalGrid) = GridID;
         LocalGridNames(iLocalGrid) = Grid.Name();
         LocalGridComms(iLocalGrid) = Grid.Comm();
-        LocalGridGlobalSizes(iLocalGrid) = Grid.Size();
+        LocalGridGlobalSizes(iLocalGrid) = Grid.GlobalRange().Size();
         ++iLocalGrid;
       }
     }
@@ -1915,7 +1915,8 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
   const xintout_receivers &XINTOUTReceivers = XINTOUTGrid.Receivers;
 
   const cart &Cart = Grid.Cart();
-  const core::partition_hash &Hash = Grid.core_PartitionHash();
+
+  core::partition_hash Hash = core::CreatePartitionHash(NumDims, Comm, Grid.LocalRange());
 
   Profiler.StartSync(IMPORT_DISTRIBUTE_MAP_TO_BINS_TIME, Comm);
 

@@ -44,12 +44,18 @@ partition::partition(std::shared_ptr<context> Context, const cart &Cart, comm_vi
   NumSubregions_(NumSubregions),
   LocalSubregions_(CreateSubregions(Cart.Dimension(), LocalRange, NumSubregions)),
   ExtendedSubregions_(CreateSubregions(Cart.Dimension(), ExtendedRange_, NumSubregions)),
-  Neighbors_(partition_internal::RetrievePartitionInfo(Comm_, NeighborRanks, LocalRange,
+  Neighbors_(partition_internal::RetrieveDecompInfo(Comm_, NeighborRanks, LocalRange,
     ExtendedRange_)),
   Halo_(Context_, Cart, Comm_, LocalRange, ExtendedRange_, Neighbors_)
 {}
 
 namespace core {
+
+partition_hash CreatePartitionHash(int NumDims, comm_view Comm, const range &LocalRange) {
+
+  return {NumDims, Comm, 1, array<range>({1}, {LocalRange}), array<int>({1}, {1})};
+
+}
 
 range ExtendLocalRange(const cart &Cart, const range &LocalRange, int ExtendAmount) {
 
@@ -188,7 +194,7 @@ array<int> DetectNeighbors(const cart &Cart, comm_view Comm, const range &LocalR
 
 namespace partition_internal {
 
-array<partition_info> RetrievePartitionInfo(comm_view Comm, array_view<const int> Ranks, const range
+map<int,decomp_info> RetrieveDecompInfo(comm_view Comm, array_view<const int> Ranks, const range
   &LocalRange, const range &ExtendedRange) {
 
   array_view<const int> &RecvFromRanks = Ranks;
@@ -223,7 +229,7 @@ array<partition_info> RetrievePartitionInfo(comm_view Comm, array_view<const int
     MPI_Isend(SelfRangeValues.Data(), 4*MAX_DIMS, MPI_INT, Rank, 0, Comm, &Request);
   }
 
-  array<partition_info> RetrievedPartitionInfo({NumRecvs});
+  map<int,decomp_info> RetrievedDecompInfo;
 
   while (true) {
     int iRequest;
@@ -231,25 +237,24 @@ array<partition_info> RetrievePartitionInfo(comm_view Comm, array_view<const int
     if (iRequest == MPI_UNDEFINED) break;
     if (iRequest < NumRecvs) {
       int iRecv = iRequest;
-      partition_info &PartitionInfo = RetrievedPartitionInfo(iRecv);
-      PartitionInfo.Rank = RecvFromRanks(iRecv);
+      decomp_info &DecompInfo = RetrievedDecompInfo.Fetch(RecvFromRanks(iRecv));
       tuple<int> LocalBegin(RetrievedRangeValues.Data(iRecv,0,0,0));
       tuple<int> LocalEnd(RetrievedRangeValues.Data(iRecv,0,1,0));
       tuple<int> ExtendedBegin(RetrievedRangeValues.Data(iRecv,1,0,0));
       tuple<int> ExtendedEnd(RetrievedRangeValues.Data(iRecv,1,1,0));
-      PartitionInfo.LocalRange = {LocalBegin, LocalEnd};
-      PartitionInfo.ExtendedRange = {ExtendedBegin, ExtendedEnd};
+      DecompInfo.LocalRange = {LocalBegin, LocalEnd};
+      DecompInfo.ExtendedRange = {ExtendedBegin, ExtendedEnd};
     }
   }
 
-  return RetrievedPartitionInfo;
+  return RetrievedDecompInfo;
 
 }
 
 namespace halo_internal {
 
 halo_map::halo_map(const cart &Cart, const range &LocalRange, const range &ExtendedRange,
-  array_view<const partition_info> Neighbors) {
+  const map<int,decomp_info> &Neighbors) {
 
   const range &GlobalRange = Cart.Range();
   int NumNeighbors = Neighbors.Count();
@@ -261,11 +266,11 @@ halo_map::halo_map(const cart &Cart, const range &LocalRange, const range &Exten
   NeighborRecvIndices_.Resize({NumNeighbors});
 
   for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
-    NeighborRanks_(iNeighbor) = Neighbors(iNeighbor).Rank;
+    NeighborRanks_(iNeighbor) = Neighbors[iNeighbor].Key();
   }
 
   for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
-    const range &NeighborExtendedRange = Neighbors(iNeighbor).ExtendedRange;
+    const range &NeighborExtendedRange = Neighbors[iNeighbor].Value().ExtendedRange;
     array<long long> &SendIndices = NeighborSendIndices_(iNeighbor);
     if (Cart.Range().Includes(NeighborExtendedRange)) {
       range SendRange = IntersectRanges(LocalRange, NeighborExtendedRange);
@@ -308,7 +313,7 @@ halo_map::halo_map(const cart &Cart, const range &LocalRange, const range &Exten
 
   if (GlobalRange.Includes(ExtendedRange)) {
     for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
-      const range &NeighborLocalRange = Neighbors(iNeighbor).LocalRange;
+      const range &NeighborLocalRange = Neighbors[iNeighbor].Value().LocalRange;
       array<long long> &RecvIndices = NeighborRecvIndices_(iNeighbor);
       range RecvRange = IntersectRanges(ExtendedRange, NeighborLocalRange);
       RecvIndices.Reserve(RecvRange.Count());
@@ -325,7 +330,7 @@ halo_map::halo_map(const cart &Cart, const range &LocalRange, const range &Exten
     field<bool> RecvMask(ExtendedRange);
     for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
       RecvMask.Fill(false);
-      const range &NeighborLocalRange = Neighbors(iNeighbor).LocalRange;
+      const range &NeighborLocalRange = Neighbors[iNeighbor].Value().LocalRange;
       array<long long> &RecvIndices = NeighborRecvIndices_(iNeighbor);
       long long NumRecvPoints = 0;
       for (int k = ExtendedRange.Begin(2); k < ExtendedRange.End(2); ++k) {
@@ -399,7 +404,7 @@ halo_map::halo_map(const cart &Cart, const range &LocalRange, const range &Exten
 }
 
 halo::halo(std::shared_ptr<context> Context, const cart &Cart, comm_view Comm, const range
-  &LocalRange, const range &ExtendedRange, array_view<const partition_info> Neighbors):
+  &LocalRange, const range &ExtendedRange, const map<int,decomp_info> &Neighbors):
   Context_(std::move(Context)),
   Comm_(Comm)
 {

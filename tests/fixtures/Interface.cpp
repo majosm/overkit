@@ -83,7 +83,7 @@ ovk::domain Interface2DManualConnectivity(const ovk::comm &Comm, const ovk::box 
   bool Grid1IsLocal = Domain.GridIsLocal(1);
   bool Grid2IsLocal = Domain.GridIsLocal(2);
 
-  ovk::tuple<int> Grid1Size = Domain.GridInfo(1).Size();
+  ovk::tuple<int> Grid1Size = Domain.GridInfo(1).GlobalRange().Size();
 
   Domain.CreateComponent<ovk::connectivity_component>(1);
 
@@ -297,7 +297,7 @@ ovk::domain Interface3DManualConnectivity(const ovk::comm &Comm, const ovk::box 
   bool Grid1IsLocal = Domain.GridIsLocal(1);
   bool Grid2IsLocal = Domain.GridIsLocal(2);
 
-  ovk::tuple<int> Grid1Size = Domain.GridInfo(1).Size();
+  ovk::tuple<int> Grid1Size = Domain.GridInfo(1).GlobalRange().Size();
 
   Domain.CreateComponent<ovk::connectivity_component>(1);
 

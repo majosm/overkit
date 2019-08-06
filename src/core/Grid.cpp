@@ -45,18 +45,39 @@ grid_base::~grid_base() noexcept {
 }
 
 grid::grid(std::shared_ptr<context> &&Context, params &&Params):
+  grid(std::move(Context), std::move(Params), Params.NumDims_, Params.Cart_, Params.LocalRange_)
+{}
+
+grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
+  range &LocalRange):
+  grid(std::move(Context), std::move(Params), NumDims, Cart, LocalRange,
+    core::CartPointToCell(Cart), core::LocalRangePointToCell(Cart, LocalRange))
+{}
+
+grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
+  range &LocalRange, const cart &CellCart, const range &CellLocalRange):
+  grid(std::move(Context), std::move(Params), NumDims, Cart, LocalRange, core::ExtendLocalRange(
+    Cart, LocalRange, 1), CellCart, CellLocalRange, core::ExtendLocalRange(CellCart, CellLocalRange,
+    1))
+{}
+
+grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
+  range &LocalRange, const range &ExtendedRange, const cart &CellCart, const range &CellLocalRange,
+  const range &CellExtendedRange):
+  grid(std::move(Context), std::move(Params), NumDims, Cart, LocalRange, ExtendedRange, CellCart,
+    CellLocalRange, CellExtendedRange, core::DetectNeighbors(Cart, Params.Comm_, LocalRange,
+    core::CreatePartitionHash(NumDims, Params.Comm_, LocalRange)))
+{}
+
+grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
+  range &LocalRange, const range &ExtendedRange, const cart &CellCart, const range &CellLocalRange,
+  const range &CellExtendedRange, const array<int> &NeighborRanks):
   grid_base(std::move(Context), std::move(*Params.Name_), Params.Comm_),
-  NumDims_(Params.NumDims_),
-  Cart_(Params.Cart_),
-  CellCart_(core::CartPointToCell(Cart_)),
-  PartitionHash_(NumDims_, Comm_, 1, array<range>({1}, {Params.LocalRange_}), array<int>({1},
-    {1})),
-  NeighborRanks_(core::DetectNeighbors(Cart_, Comm_, Params.LocalRange_, PartitionHash_)),
-  Partition_(std::make_shared<partition>(Context_, Cart_, Comm_, Params.LocalRange_,
-    core::ExtendLocalRange(Cart_, Params.LocalRange_, 1), 1, NeighborRanks_)),
-  CellPartition_(std::make_shared<partition>(Context_, CellCart_, Comm_,
-    core::LocalRangePointToCell(Cart_, Params.LocalRange_), core::ExtendLocalRange(CellCart_,
-    core::LocalRangePointToCell(Cart_, Params.LocalRange_), 1), 1, NeighborRanks_))
+  NumDims_(NumDims),
+  Partition_(std::make_shared<partition>(Context_, Cart, Comm_, LocalRange, ExtendedRange, 1,
+    NeighborRanks)),
+  CellPartition_(std::make_shared<partition>(Context_, CellCart, Comm_, CellLocalRange,
+    CellExtendedRange, 1, NeighborRanks))
 {
 
   MPI_Barrier(Comm_);
@@ -73,17 +94,18 @@ grid::grid(std::shared_ptr<context> &&Context, params &&Params):
     Logger.LogDebug(Comm_.Rank() == 0, 0, "Grid %s info:", *Name_);
 
     if (Comm_.Rank() == 0) {
+      const cart &Cart = Partition_->Cart();
       std::string GlobalSizeString;
       for (int iDim = 0; iDim < NumDims_; ++iDim) {
-        GlobalSizeString += core::FormatNumber(Cart_.Range().Size(iDim));
+        GlobalSizeString += core::FormatNumber(Cart.Range().Size(iDim));
         if (iDim != NumDims_-1) GlobalSizeString += " x ";
       }
-      std::string TotalPointsString = core::FormatNumber(Cart_.Range().Count(), "points", "point");
+      std::string TotalPointsString = core::FormatNumber(Cart.Range().Count(), "points", "point");
       Logger.LogDebug(true, 1, "Size: %s (%s)", GlobalSizeString, TotalPointsString);
     }
 
     const range &LocalRange = Partition_->LocalRange();
-    const array<partition_info> &Neighbors = Partition_->Neighbors();
+    const map<int,partition::neighbor_info> &Neighbors = Partition_->Neighbors();
 
     const char *DimNames[3] = {"i", "j", "k"};
     std::string LocalRangeString;
@@ -100,7 +122,7 @@ grid::grid(std::shared_ptr<context> &&Context, params &&Params):
     std::string NeighborRanksString;
     for (int iNeighbor = 0; iNeighbor < Neighbors.Count(); ++iNeighbor) {
       // List separated by commas, so don't add thousands separators
-      NeighborRanksString += std::to_string(Neighbors(iNeighbor).Rank);
+      NeighborRanksString += std::to_string(Neighbors[iNeighbor].Key());
       if (iNeighbor != Neighbors.Count()-1) NeighborRanksString += ", ";
     }
 
