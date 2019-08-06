@@ -970,9 +970,16 @@ TEST_F(PartitionTests, ConstructPartition) {
       }
     }
 
+    // Sanity check
+    int MinValue = Comm.Size();
+    for (auto &Value : Data) {
+      MinValue = ovk::Min(MinValue, Value);
+    }
+    EXPECT_EQ(MinValue, -1);
+
     Partition.Exchange(Data);
 
-    int MinValue = Comm.Size();
+    MinValue = Comm.Size();
     for (auto &Value : Data) {
       MinValue = ovk::Min(MinValue, Value);
     }
