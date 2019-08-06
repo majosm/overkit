@@ -69,6 +69,7 @@ set(PUBLIC_HEADERS
   Context.hpp
   DataType.hpp
   Domain.hpp
+  DistributedField.hpp
   Editor.hpp
   Elem.hpp
   ElemMap.hpp

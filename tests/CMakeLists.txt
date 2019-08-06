@@ -48,6 +48,7 @@ set(SOURCES
   CartTests.cpp
   CommTests.cpp
   ContextTests.cpp
+  DistributedFieldTests.cpp
   ElemTests.cpp
   ExchangerTests.cpp
   ForEachTests.cpp
