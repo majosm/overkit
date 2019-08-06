@@ -919,11 +919,37 @@ TEST_F(ArrayTests, Copy) {
     EXPECT_THAT(Values, ElementsAreArray({0,1,2,3,4,5}));
   }
 
-  // Copy assign
+  // Copy assign, operator=
   {
     array Array1({{1,2,3}, {2,4,6}}, {0,1,2,3,4,5});
     array Array2;
     Array2 = Array1;
+    auto &View = helper::GetView(Array2);
+    auto &Values = helper::GetValues(Array2);
+    EXPECT_EQ(View.Data(), Values.Data());
+    EXPECT_THAT(View.Extents().Begin(), ElementsAre(1,2,3));
+    EXPECT_THAT(View.Extents().End(), ElementsAre(2,4,6));
+    EXPECT_THAT(Values, ElementsAreArray({0,1,2,3,4,5}));
+  }
+
+  // Copy assign, Assign
+  {
+    array Array1({{1,2,3}, {2,4,6}}, {0,1,2,3,4,5});
+    array Array2;
+    Array2.Assign(Array1);
+    auto &View = helper::GetView(Array2);
+    auto &Values = helper::GetValues(Array2);
+    EXPECT_EQ(View.Data(), Values.Data());
+    EXPECT_THAT(View.Extents().Begin(), ElementsAre(1,2,3));
+    EXPECT_THAT(View.Extents().End(), ElementsAre(2,4,6));
+    EXPECT_THAT(Values, ElementsAreArray({0,1,2,3,4,5}));
+  }
+
+  // Copy assign with interval
+  {
+    array Array1({{1,2,3}}, {0,1,2,3,4,5});
+    array Array2;
+    Array2.Assign({{1,2,3}, {2,4,6}}, Array1);
     auto &View = helper::GetView(Array2);
     auto &Values = helper::GetValues(Array2);
     EXPECT_EQ(View.Data(), Values.Data());
@@ -989,11 +1015,45 @@ TEST_F(ArrayTests, Move) {
     EXPECT_TRUE(Values1.Empty());
   }
 
-  // Move assign
+  // Move assign, operator=
   {
     array Array1({{1,2,3}, {2,4,6}}, {0,1,2,3,4,5});
     array Array2;
     Array2 = std::move(Array1);
+    auto &View1 = helper::GetView(Array1);
+    auto &Values1 = helper::GetValues(Array1);
+    auto &View2 = helper::GetView(Array2);
+    auto &Values2 = helper::GetValues(Array2);
+    EXPECT_EQ(View2.Data(), Values2.Data());
+    EXPECT_THAT(View2.Extents().Begin(), ElementsAre(1,2,3));
+    EXPECT_THAT(View2.Extents().End(), ElementsAre(2,4,6));
+    EXPECT_THAT(Values2, ElementsAreArray({0,1,2,3,4,5}));
+    EXPECT_FALSE(static_cast<bool>(View1));
+    EXPECT_TRUE(Values1.Empty());
+  }
+
+  // Move assign, Assign
+  {
+    array Array1({{1,2,3}, {2,4,6}}, {0,1,2,3,4,5});
+    array Array2;
+    Array2.Assign(std::move(Array1));
+    auto &View1 = helper::GetView(Array1);
+    auto &Values1 = helper::GetValues(Array1);
+    auto &View2 = helper::GetView(Array2);
+    auto &Values2 = helper::GetValues(Array2);
+    EXPECT_EQ(View2.Data(), Values2.Data());
+    EXPECT_THAT(View2.Extents().Begin(), ElementsAre(1,2,3));
+    EXPECT_THAT(View2.Extents().End(), ElementsAre(2,4,6));
+    EXPECT_THAT(Values2, ElementsAreArray({0,1,2,3,4,5}));
+    EXPECT_FALSE(static_cast<bool>(View1));
+    EXPECT_TRUE(Values1.Empty());
+  }
+
+  // Move assign with interval
+  {
+    array Array1({{1,2,3}}, {0,1,2,3,4,5});
+    array Array2;
+    Array2.Assign({{1,2,3}, {2,4,6}}, std::move(Array1));
     auto &View1 = helper::GetView(Array1);
     auto &Values1 = helper::GetValues(Array1);
     auto &View2 = helper::GetView(Array2);

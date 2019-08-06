@@ -158,9 +158,22 @@ public:
     return *this;
   }
 
+  array_base_1 &Assign(const interval_type &Extents, const array_base_1 &Other) {
+    Values_ = Other.Values_;
+    View_ = view_type(Values_.Data(), Extents);
+    return *this;
+  }
+
   array_base_1 &Assign(array_base_1 &&Other) noexcept {
     Values_ = std::move(Other.Values_);
     View_ = Other.View_;
+    Other.View_ = view_type();
+    return *this;
+  }
+
+  array_base_1 &Assign(const interval_type &Extents, array_base_1 &&Other) noexcept {
+    Values_ = std::move(Other.Values_);
+    View_ = view_type(Values_.Data(), Extents);
     Other.View_ = view_type();
     return *this;
   }
