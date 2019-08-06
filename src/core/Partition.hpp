@@ -164,6 +164,9 @@ public:
   template <typename FieldType, OVK_FUNCDECL_REQUIRES(core::IsField<FieldType>())> request
     Exchange(FieldType &Field) const;
 
+  template <typename T, OVK_FUNCDECL_REQUIRES(!std::is_const<T>::value)> request
+    Exchange(field_view<T> View) const;
+
 private:
 
   using halo_map = halo_internal::halo_map;
@@ -302,6 +305,11 @@ public:
   template <typename FieldType, OVK_FUNCTION_REQUIRES(core::IsField<FieldType>())> request
     Exchange(FieldType &Field) const {
     return Halo_.Exchange(Field);
+  }
+
+  template <typename T, OVK_FUNCTION_REQUIRES(!std::is_const<T>::value)> request
+    Exchange(field_view<T> View) const {
+    return Halo_.Exchange(View);
   }
 
 private:

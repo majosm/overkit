@@ -9,14 +9,23 @@ template <typename FieldType, OVK_FUNCDEF_REQUIRES(core::IsField<FieldType>())> 
 
   using value_type = core::array_value_type<FieldType>;
 
-  OVK_DEBUG_ASSERT(core::IsSupportedDataType<value_type>(), "Unsupported data type.");
+  field_view<value_type> View(Field);
+
+  return Exchange(View);
+
+}
+
+template <typename T, OVK_FUNCDEF_REQUIRES(!std::is_const<T>::value)> request
+  halo::Exchange(field_view<T> View) const {
+
+  OVK_DEBUG_ASSERT(core::IsSupportedDataType<T>(), "Unsupported data type.");
 
   core::profiler &Profiler = Context_->core_Profiler();
 
   Profiler.StartSync(TOTAL_TIME, Comm_);
   Profiler.Start(EXCHANGE_TIME);
 
-  data_type DataType = core::GetDataType<value_type>();
+  data_type DataType = core::GetDataType<T>();
 
   array<halo_exchanger> &HaloExchangersForType = HaloExchangers_.Fetch(int(DataType));
 
@@ -28,8 +37,8 @@ template <typename FieldType, OVK_FUNCDEF_REQUIRES(core::IsField<FieldType>())> 
   if (iHaloExchanger == HaloExchangersForType.Count()) {
     Profiler.Stop(EXCHANGE_TIME);
     Profiler.Start(SETUP_TIME);
-    HaloExchangersForType.Append(halo_internal::halo_exchanger_for_type<value_type>(*Context_,
-      Comm_, HaloMap_));
+    HaloExchangersForType.Append(halo_internal::halo_exchanger_for_type<T>(*Context_, Comm_,
+      HaloMap_));
     Profiler.Stop(SETUP_TIME);
     Profiler.Start(EXCHANGE_TIME);
   }
@@ -40,7 +49,7 @@ template <typename FieldType, OVK_FUNCDEF_REQUIRES(core::IsField<FieldType>())> 
     Profiler.Stop(TOTAL_TIME);
   });
 
-  return HaloExchanger.Exchange(core::ArrayData(Field));
+  return HaloExchanger.Exchange(View.Data());
 
 }
 
