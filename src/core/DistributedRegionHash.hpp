@@ -158,7 +158,9 @@ public:
 
   void RetrieveBins(map<int,bin> &Bins) const;
 
-  bool HasBin() { return static_cast<bool>(Bin_); }
+  bool HasBin() const { return static_cast<bool>(Bin_); }
+
+  const bin &Bin() const { return Bin_; }
   bin &Bin() { return Bin_; }
 
 private:
