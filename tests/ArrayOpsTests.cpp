@@ -255,6 +255,25 @@ TEST_F(ArrayOpsTests, Fill) {
     EXPECT_EQ(Sum, 27);
   }
 
+  // Interval and constant value, array
+  {
+    multidim_array Array({{1,2,3}, {4,5,6}}, 0);
+    ovk::ArrayFill(Array, {{2,3,4}, {4,5,6}}, 1);
+    int Sum = 0;
+    for (int i = 0; i < 27; ++i) Sum += Array[i];
+    EXPECT_EQ(Sum, 8);
+  }
+
+  // Interval and constant value, array view
+  {
+    multidim_array Array({{1,2,3}, {4,5,6}}, 0);
+    array_view View(Array);
+    ovk::ArrayFill(View, {{2,3,4}, {4,5,6}}, 1);
+    int Sum = 0;
+    for (int i = 0; i < 27; ++i) Sum += View[i];
+    EXPECT_EQ(Sum, 8);
+  }
+
   // Initializer list, array
   {
     multidim_array Array({{1,2,3}}, 0);

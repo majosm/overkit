@@ -6,6 +6,7 @@
 
 #include <ovk/core/ArrayTraits.hpp>
 #include <ovk/core/Elem.hpp>
+#include <ovk/core/ForEach.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Indexer.hpp>
 #include <ovk/core/IntegerSequence.hpp>
@@ -71,6 +72,7 @@ public:
   using value_type = T;
   using index_type = long long;
   using tuple_element_type = long long;
+  using tuple_type = elem<tuple_element_type,Rank>;
   using interval_type = interval<tuple_element_type,Rank>;
   using indexer_type = indexer<index_type, tuple_element_type, Rank, Layout>;
 
@@ -128,6 +130,8 @@ public:
 
   using value_type = T;
   using index_type = long long;
+  using tuple_type = typename parent_type::tuple_type;
+  using interval_type = typename parent_type::interval_type;
 
   using parent_type::parent_type;
   using parent_type::operator();
@@ -137,6 +141,14 @@ public:
     for (index_type i = 0; i < NumValues_; ++i) {
       Ptr_[i] = Value;
     }
+    return *this;
+  }
+
+  const array_view_base_2 &Fill(const interval_type &Interval, const value_type &Value) const {
+    core::ForEach<Layout>(Interval, [&](const tuple_type &Tuple) {
+      index_type i = Indexer_.ToIndex(Tuple);
+      Ptr_[i] = Value;
+    });
     return *this;
   }
 

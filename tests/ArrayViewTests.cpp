@@ -1256,6 +1256,16 @@ TEST_F(ArrayViewTests, Fill) {
     EXPECT_EQ(Sum, 27);
   }
 
+  // Interval and constant value
+  {
+    multidim_array Array({{1,2,3}, {4,5,6}}, 0);
+    array_view View(Array);
+    View.Fill({{2,3,4}, {4,5,6}}, 1);
+    int Sum = 0;
+    for (int i = 0; i < 27; ++i) Sum += Array[i];
+    EXPECT_EQ(Sum, 8);
+  }
+
   // Initializer list
   {
     multidim_array Array({{1,2,3}}, 0);

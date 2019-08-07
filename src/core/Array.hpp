@@ -630,6 +630,11 @@ public:
     return *this;
   }
 
+  array &Fill(const interval_type &Interval, const value_type &Value) {
+    View_.Fill(Interval, Value);
+    return *this;
+  }
+
   array &Fill(std::initializer_list<value_type> Values) {
     View_.Fill(Values);
     return *this;

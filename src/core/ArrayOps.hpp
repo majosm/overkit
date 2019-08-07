@@ -9,6 +9,7 @@
 #include <ovk/core/Debug.hpp>
 #include <ovk/core/ForEach.hpp>
 #include <ovk/core/Global.hpp>
+#include <ovk/core/Interval.hpp>
 #include <ovk/core/IteratorTraits.hpp>
 #include <ovk/core/Requires.hpp>
 #include <ovk/core/ScalarOps.hpp>
@@ -345,6 +346,28 @@ template <typename T, int Rank, array_layout Layout, OVK_FUNCTION_REQUIRES(!std:
   )> void ArrayFill(const array_view<T, Rank, Layout> &View, const T &Value) {
 
   View.Fill(Value);
+
+}
+
+template <typename ArrayType, OVK_FUNCTION_REQUIRES(core::IsArray<ArrayType>())> void ArrayFill(
+  ArrayType &Array, const interval<long long,core::ArrayRank<ArrayType>()> &Interval, const
+  core::array_value_type<ArrayType> &Value) {
+
+  using value_type = core::array_value_type<ArrayType>;
+  constexpr int Rank = core::ArrayRank<ArrayType>();
+  constexpr array_layout Layout = core::ArrayLayout<ArrayType>();
+
+  array_view<value_type, Rank, Layout> View(Array);
+
+  View.Fill(Interval, Value);
+
+}
+
+template <typename T, int Rank, array_layout Layout, OVK_FUNCTION_REQUIRES(!std::is_const<T>::value
+  )> void ArrayFill(const array_view<T, Rank, Layout> &View, const interval<long long,Rank>
+  &Interval, const T &Value) {
+
+  View.Fill(Interval, Value);
 
 }
 

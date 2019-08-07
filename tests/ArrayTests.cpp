@@ -2701,6 +2701,14 @@ TEST_F(ArrayTests, Fill) {
     EXPECT_THAT(Values, ElementsAreArray({1,1,1,1,1,1}));
   }
 
+  // Interval and constant value
+  {
+    array Array({{1,2,3}, {2,4,6}}, 0);
+    Array.Fill({{1,2,4}, {2,4,6}}, 1);
+    auto &Values = helper::GetValues(Array);
+    EXPECT_THAT(Values, ElementsAreArray({0,1,1,0,1,1}));
+  }
+
   // Initializer list
   {
     array Array({{1,2,3}}, 0);
