@@ -42,6 +42,8 @@ template <typename... Ts> void DebugExit(const char *File, int Line, const std::
 #undef OVK_DEBUG_ASSERT
 #define OVK_DEBUG_ASSERT OVK_DEBUG_ASSERT_CPP
 
+extern int &DebugFlag;
+
 }}
 
 #else

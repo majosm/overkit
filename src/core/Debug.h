@@ -10,6 +10,9 @@
 extern "C" {
 #endif
 
+// Global flag for debugging in hard-to-reach places
+extern int ovk_core_DebugFlag;
+
 #if OVK_DEBUG
 void ovk_core_DebugExit(const char *File, int Line, const char *Format, ...);
 #define OVK_DEBUG_ASSERT_C(Condition, ...) \

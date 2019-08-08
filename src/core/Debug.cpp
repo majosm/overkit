@@ -12,9 +12,18 @@
 #include <cstdio>
 #include <string>
 
-extern "C" {
-
 #if OVK_DEBUG
+
+extern "C" {
+int ovk_core_DebugFlag;
+}
+
+namespace ovk {
+namespace core {
+int &DebugFlag = ovk_core_DebugFlag;
+}}
+
+extern "C" {
 
 // Wrapper around ovk::core::DebugExit that can be called from C code
 void ovk_core_DebugExit(const char *File, int Line, const char *Format, ...) {
@@ -41,6 +50,6 @@ void ovk_core_DebugExit(const char *File, int Line, const char *Format, ...) {
 
 }
 
-#endif
-
 }
+
+#endif
