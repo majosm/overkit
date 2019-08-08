@@ -270,10 +270,11 @@ halo_map::halo_map(const cart &Cart, const range &LocalRange, const range &Exten
   }
 
   for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
+    const range &NeighborLocalRange = Neighbors[iNeighbor].Value().LocalRange;
     const range &NeighborExtendedRange = Neighbors[iNeighbor].Value().ExtendedRange;
     array<long long> &SendIndices = NeighborSendIndices_(iNeighbor);
     if (Cart.Range().Includes(NeighborExtendedRange)) {
-      range SendRange = IntersectRanges(LocalRange, NeighborExtendedRange);
+      range SendRange = IntersectRanges(NeighborExtendedRange, LocalRange);
       SendIndices.Reserve(SendRange.Count());
       for (int k = SendRange.Begin(2); k < SendRange.End(2); ++k) {
         for (int j = SendRange.Begin(1); j < SendRange.End(1); ++j) {
@@ -284,25 +285,39 @@ halo_map::halo_map(const cart &Cart, const range &LocalRange, const range &Exten
         }
       }
     } else {
-      field<bool> SendMask(LocalRange, false);
+      field<bool> SendMask(NeighborExtendedRange, false);
       long long NumSendPoints = 0;
       for (int k = NeighborExtendedRange.Begin(2); k < NeighborExtendedRange.End(2); ++k) {
         for (int j = NeighborExtendedRange.Begin(1); j < NeighborExtendedRange.End(1); ++j) {
           for (int i = NeighborExtendedRange.Begin(0); i < NeighborExtendedRange.End(0); ++i) {
-            tuple<int> Point = Cart.PeriodicAdjust({i,j,k});
-            if (LocalRange.Contains(Point)) {
-              SendMask(Point) = true;
-              ++NumSendPoints;
+            tuple<int> Point = {i,j,k};
+            if (!NeighborLocalRange.Contains(Point)) {
+              if (Cart.Range().Contains(Point)) {
+                SendMask(Point) = LocalRange.Contains(Point);
+              } else {
+                tuple<int> AdjustedPoint = Cart.PeriodicAdjust(Point);
+                SendMask(Point) = LocalRange.Contains(AdjustedPoint);
+              }
+              if (SendMask(Point)) {
+                ++NumSendPoints;
+              }
             }
           }
         }
       }
       SendIndices.Reserve(NumSendPoints);
-      for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
-        for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
-          for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
-            if (SendMask(i,j,k)) {
-              long long iPoint = ExtendedIndexer.ToIndex(i,j,k);
+      for (int k = NeighborExtendedRange.Begin(2); k < NeighborExtendedRange.End(2); ++k) {
+        for (int j = NeighborExtendedRange.Begin(1); j < NeighborExtendedRange.End(1); ++j) {
+          for (int i = NeighborExtendedRange.Begin(0); i < NeighborExtendedRange.End(0); ++i) {
+            tuple<int> Point = {i,j,k};
+            if (SendMask(Point)) {
+              long long iPoint;
+              if (Cart.Range().Contains(Point)) {
+                iPoint = ExtendedIndexer.ToIndex(Point);
+              } else {
+                tuple<int> AdjustedPoint = Cart.PeriodicAdjust(Point);
+                iPoint = ExtendedIndexer.ToIndex(AdjustedPoint);
+              }
               SendIndices.Append(iPoint);
             }
           }
@@ -338,9 +353,13 @@ halo_map::halo_map(const cart &Cart, const range &LocalRange, const range &Exten
           for (int i = ExtendedRange.Begin(0); i < ExtendedRange.End(0); ++i) {
             tuple<int> Point = {i,j,k};
             if (!LocalRange.Contains(Point)) {
-              tuple<int> AdjustedPoint = Cart.PeriodicAdjust(Point);
-              if (NeighborLocalRange.Contains(AdjustedPoint)) {
-                RecvMask(Point) = true;
+              if (Cart.Range().Contains(Point)) {
+                RecvMask(Point) = NeighborLocalRange.Contains(Point);
+              } else {
+                tuple<int> AdjustedPoint = Cart.PeriodicAdjust(Point);
+                RecvMask(Point) = NeighborLocalRange.Contains(AdjustedPoint);
+              }
+              if (RecvMask(Point)) {
                 ++NumRecvPoints;
               }
             }
@@ -351,8 +370,9 @@ halo_map::halo_map(const cart &Cart, const range &LocalRange, const range &Exten
       for (int k = ExtendedRange.Begin(2); k < ExtendedRange.End(2); ++k) {
         for (int j = ExtendedRange.Begin(1); j < ExtendedRange.End(1); ++j) {
           for (int i = ExtendedRange.Begin(0); i < ExtendedRange.End(0); ++i) {
-            if (RecvMask(i,j,k)) {
-              long long iPoint = ExtendedIndexer.ToIndex(i,j,k);
+            tuple<int> Point = {i,j,k};
+            if (RecvMask(Point)) {
+              long long iPoint = ExtendedIndexer.ToIndex(Point);
               RecvIndices.Append(iPoint);
             }
           }
