@@ -142,6 +142,7 @@ set(INTERNAL_HEADERS
   Error.h
   Event.inl
   Exchanger.h
+  FieldOps.hpp
   FloatingRef.inl
   ForEach.hpp
   GeometricPrimitiveOps.hpp
