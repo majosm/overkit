@@ -21,6 +21,12 @@
 namespace ovk {
 namespace core {
 
+namespace {
+
+void DilateErode(distributed_field<bool> &Mask, int Amount, mask_bc BoundaryCondition);
+
+}
+
 long long CountDistributedMask(const distributed_field<bool> &Mask) {
 
   long long Count = 0;
@@ -139,6 +145,49 @@ void DetectEdge(const distributed_field<bool> &Mask, edge_type EdgeType, mask_bc
   }
 
   EdgeMask.Exchange();
+
+}
+
+void DilateMask(distributed_field<bool> &Mask, int Amount, mask_bc BoundaryCondition) {
+
+  DilateErode(Mask, Amount, BoundaryCondition);
+
+}
+
+void ErodeMask(distributed_field<bool> &Mask, int Amount, mask_bc BoundaryCondition) {
+
+  DilateErode(Mask, -Amount, BoundaryCondition);
+
+}
+
+namespace {
+
+void DilateErode(distributed_field<bool> &Mask, int Amount, mask_bc BoundaryCondition) {
+
+  if (Amount == 0) return;
+
+  bool FillValue;
+  edge_type EdgeType;
+  if (Amount > 0) {
+    FillValue = true;
+    EdgeType = edge_type::OUTER;
+  } else {
+    FillValue = false;
+    EdgeType = edge_type::INNER;
+  }
+
+  distributed_field<bool> EdgeMask;
+
+  for (int iFill = 0; iFill < std::abs(Amount); ++iFill) {
+    DetectEdge(Mask, EdgeType, BoundaryCondition, false, EdgeMask);
+    for (long long l = 0; l < Mask.Count(); ++l) {
+      if (EdgeMask[l]) {
+        Mask[l] = FillValue;
+      }
+    }
+  }
+
+}
 
 }
 
