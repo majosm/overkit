@@ -115,6 +115,8 @@ public:
     return *this;
   }
 
+  request Exchange() { return Partition_->Exchange(Values_); }
+
   distributed_field &Fill(const value_type &Value) {
     Values_.Fill(Value);
     return *this;
@@ -167,8 +169,6 @@ public:
     Values_.Fill(std::forward<FieldRefType>(Field));
     return *this;
   }
-
-  request Exchange() { return Partition_->Exchange(Values_); }
 
   explicit operator bool() const { return static_cast<bool>(Partition_); }
 

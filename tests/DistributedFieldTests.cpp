@@ -432,6 +432,52 @@ TEST_F(DistributedFieldTests, Assign) {
 
 }
 
+TEST_F(DistributedFieldTests, Exchange) {
+
+  ASSERT_GE(TestComm().Size(), 4);
+
+  ovk::comm CommOfSize4 = CreateSubsetComm(TestComm(), TestComm().Rank() < 4);
+
+  if (CommOfSize4) {
+
+    using helper = ovk::core::test_helper<ovk::distributed_field<int>>;
+
+    ovk::comm CartComm;
+    auto Partition = CreatePartition(CommOfSize4, false, CartComm);
+    const ovk::range &LocalRange = Partition->LocalRange();
+
+    ovk::distributed_field<int> Field(Partition, -1);
+
+    auto &Values = helper::GetValues(Field);
+
+    for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
+      for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
+        for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
+          Values(i,j,k) = CartComm.Rank();
+        }
+      }
+    }
+
+    // Sanity check
+    int MinValue = CartComm.Size();
+    for (auto &Value : Values) {
+      MinValue = ovk::Min(MinValue, Value);
+    }
+    EXPECT_EQ(MinValue, -1);
+
+    Field.Exchange();
+
+    // Simple check since halo is tested elsewhere
+    MinValue = CartComm.Size();
+    for (auto &Value : Values) {
+      MinValue = ovk::Min(MinValue, Value);
+    }
+    EXPECT_GE(MinValue, 0);
+
+  }
+
+}
+
 TEST_F(DistributedFieldTests, Fill) {
 
   ASSERT_GE(TestComm().Size(), 4);
@@ -585,52 +631,6 @@ TEST_F(DistributedFieldTests, Fill) {
       auto &Values = helper::GetValues(Field);
       EXPECT_THAT(Values, ElementsAreArray(SourceValues));
     }
-
-  }
-
-}
-
-TEST_F(DistributedFieldTests, Exchange) {
-
-  ASSERT_GE(TestComm().Size(), 4);
-
-  ovk::comm CommOfSize4 = CreateSubsetComm(TestComm(), TestComm().Rank() < 4);
-
-  if (CommOfSize4) {
-
-    using helper = ovk::core::test_helper<ovk::distributed_field<int>>;
-
-    ovk::comm CartComm;
-    auto Partition = CreatePartition(CommOfSize4, false, CartComm);
-    const ovk::range &LocalRange = Partition->LocalRange();
-
-    ovk::distributed_field<int> Field(Partition, -1);
-
-    auto &Values = helper::GetValues(Field);
-
-    for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
-      for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
-        for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
-          Values(i,j,k) = CartComm.Rank();
-        }
-      }
-    }
-
-    // Sanity check
-    int MinValue = CartComm.Size();
-    for (auto &Value : Values) {
-      MinValue = ovk::Min(MinValue, Value);
-    }
-    EXPECT_EQ(MinValue, -1);
-
-    Field.Exchange();
-
-    // Simple check since halo is tested elsewhere
-    MinValue = CartComm.Size();
-    for (auto &Value : Values) {
-      MinValue = ovk::Min(MinValue, Value);
-    }
-    EXPECT_GE(MinValue, 0);
 
   }
 
