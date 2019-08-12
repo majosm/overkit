@@ -13,7 +13,7 @@ inline std::string FormatNumber(size_t N) {
   char UnformattedNStringChars[32];
   std::sprintf(UnformattedNStringChars, "%zu", N);
 
-  int NumDigits = strlen(UnformattedNStringChars);
+  int NumDigits = std::strlen(UnformattedNStringChars);
   int NumBeforeComma = ((NumDigits-1) % 3) + 1;
 
   for (iInput = 0; iInput < NumBeforeComma; ++iInput) {
