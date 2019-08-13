@@ -310,7 +310,7 @@ public:
     return EntriesIter->Value();
   }
 
-  value_type &Insert(const_iterator LowerBoundIter, const key_type &Key, const value_type &Value) {
+  iterator Insert(const_iterator LowerBoundIter, const key_type &Key, const value_type &Value) {
     index_type iEntry = index_type(LowerBoundIter - Begin());
     auto KeysIter = Keys_.Begin() + iEntry;
     auto EntriesIter = Entries_.Begin() + iEntry;
@@ -320,10 +320,10 @@ public:
     } else {
       *EntriesIter = {Key, Value};
     }
-    return EntriesIter->Value();
+    return iterator(Entries_.Data() + (EntriesIter - Entries_.Begin()));
   }
 
-  value_type &Insert(const_iterator LowerBoundIter, const key_type &Key, value_type &&Value) {
+  iterator Insert(const_iterator LowerBoundIter, const key_type &Key, value_type &&Value) {
     index_type iEntry = index_type(LowerBoundIter - Begin());
     auto KeysIter = Keys_.Begin() + iEntry;
     auto EntriesIter = Entries_.Begin() + iEntry;
@@ -333,11 +333,11 @@ public:
     } else {
       *EntriesIter = {Key, std::move(Value)};
     }
-    return EntriesIter->Value();
+    return iterator(Entries_.Data() + (EntriesIter - Entries_.Begin()));
   }
 
   template <typename... Args, OVK_FUNCTION_REQUIRES(std::is_constructible<value_type, Args &&...
-    >::value && !core::IsCopyOrMoveArgument<value_type, Args &&...>())> value_type &Insert(
+    >::value && !core::IsCopyOrMoveArgument<value_type, Args &&...>())> iterator Insert(
     const_iterator LowerBoundIter, const key_type &Key, Args &&...  Arguments) {
     index_type iEntry = index_type(LowerBoundIter - Begin());
     auto KeysIter = Keys_.Begin() + iEntry;
@@ -348,7 +348,7 @@ public:
     } else {
       *EntriesIter = {Key, std::forward<Args>(Arguments)...};
     }
-    return EntriesIter->Value();
+    return iterator(Entries_.Data() + (EntriesIter - Entries_.Begin()));
   }
 
   void Erase(const key_type &Key) {
@@ -363,8 +363,8 @@ public:
   iterator Erase(const_iterator Pos) {
     index_type iEntry = index_type(Pos - Begin());
     Keys_.Erase(Keys_.Begin()+iEntry);
-    Entries_.Erase(Entries_.Begin()+iEntry);
-    return iterator(Entries_.Data() + iEntry);
+    auto EntriesIter = Entries_.Erase(Entries_.Begin()+iEntry);
+    return iterator(Entries_.Data() + (EntriesIter - Entries_.Begin()));
   }
 
   template <typename F, OVK_FUNCTION_REQUIRES(core::IsCallableAs<F &&, bool(const entry &)>())> void

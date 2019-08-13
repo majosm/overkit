@@ -1129,7 +1129,7 @@ TEST_F(MapTests, Insert) {
   {
     map Map = {{2, 1}, {4, 3}};
     int SourceValue = 2;
-    int &Value = Map.Insert(Map.Begin()+1, 3, SourceValue);
+    auto Iter = Map.Insert(Map.Begin()+1, 3, SourceValue);
     auto &Keys = helper::GetKeys(Map);
     auto &Entries = helper::GetEntries(Map);
     EXPECT_EQ(Keys.Count(), 3);
@@ -1143,14 +1143,14 @@ TEST_F(MapTests, Insert) {
     EXPECT_EQ(Entries(1).Value(), 2);
     EXPECT_EQ(Entries(2).Key(), 4);
     EXPECT_EQ(Entries(2).Value(), 3);
-    EXPECT_EQ(&Value, &Entries(1).Value());
+    EXPECT_EQ(Iter, Map.Begin()+1);
   }
 
   // With lower bound iterator, lvalue ref, key already exists
   {
     map Map = {{2, 1}, {4, 3}};
     int SourceValue = 2;
-    int &Value = Map.Insert(Map.Begin()+1, 4, SourceValue);
+    auto Iter = Map.Insert(Map.Begin()+1, 4, SourceValue);
     auto &Keys = helper::GetKeys(Map);
     auto &Entries = helper::GetEntries(Map);
     EXPECT_EQ(Keys.Count(), 2);
@@ -1161,7 +1161,7 @@ TEST_F(MapTests, Insert) {
     EXPECT_EQ(Entries(0).Value(), 1);
     EXPECT_EQ(Entries(1).Key(), 4);
     EXPECT_EQ(Entries(1).Value(), 2);
-    EXPECT_EQ(&Value, &Entries(1).Value());
+    EXPECT_EQ(Iter, Map.Begin()+1);
   }
 
   // With lower bound iterator, rvalue ref, key doesn't already exist
@@ -1174,7 +1174,7 @@ TEST_F(MapTests, Insert) {
     Entries.Append({1, {1}});
     Entries.Append({3, {3}});
     noncopyable<int> SourceValue(2);
-    noncopyable<int> &Value = Map.Insert(Map.Begin()+1, 2, std::move(SourceValue));
+    auto Iter = Map.Insert(Map.Begin()+1, 2, std::move(SourceValue));
     EXPECT_EQ(Keys.Count(), 3);
     EXPECT_EQ(Keys[0], 1);
     EXPECT_EQ(Keys[1], 2);
@@ -1186,7 +1186,7 @@ TEST_F(MapTests, Insert) {
     EXPECT_EQ(Entries(1).Value().Value(), 2);
     EXPECT_EQ(Entries(2).Key(), 3);
     EXPECT_EQ(Entries(2).Value().Value(), 3);
-    EXPECT_EQ(&Value, &Entries(1).Value());
+    EXPECT_EQ(Iter, Map.Begin()+1);
   }
 
   // With lower bound iterator, rvalue ref, key already exists
@@ -1199,7 +1199,7 @@ TEST_F(MapTests, Insert) {
     Entries.Append({1, {1}});
     Entries.Append({3, {2}});
     noncopyable<int> SourceValue(3);
-    noncopyable<int> &Value = Map.Insert(Map.Begin()+1, 3, std::move(SourceValue));
+    auto Iter = Map.Insert(Map.Begin()+1, 3, std::move(SourceValue));
     EXPECT_EQ(Keys.Count(), 2);
     EXPECT_EQ(Keys[0], 1);
     EXPECT_EQ(Keys[1], 3);
@@ -1208,13 +1208,13 @@ TEST_F(MapTests, Insert) {
     EXPECT_EQ(Entries(0).Value().Value(), 1);
     EXPECT_EQ(Entries(1).Key(), 3);
     EXPECT_EQ(Entries(1).Value().Value(), 3);
-    EXPECT_EQ(&Value, &Entries(1).Value());
+    EXPECT_EQ(Iter, Map.Begin()+1);
   }
 
   // With lower bound iterator, in-place, key doesn't already exist
   {
     map_multiargument Map = {{1, {1,2}}, {3, {3,4}}};
-    multiargument &Value = Map.Insert(Map.Begin()+1, 2, 2, 3);
+    auto Iter = Map.Insert(Map.Begin()+1, 2, 2, 3);
     auto &Keys = helper_multiargument::GetKeys(Map);
     auto &Entries = helper_multiargument::GetEntries(Map);
     EXPECT_EQ(Keys.Count(), 3);
@@ -1231,13 +1231,13 @@ TEST_F(MapTests, Insert) {
     EXPECT_EQ(Entries(2).Key(), 3);
     EXPECT_EQ(Entries(2).Value().v1, 3);
     EXPECT_EQ(Entries(2).Value().v2, 4);
-    EXPECT_EQ(&Value, &Entries(1).Value());
+    EXPECT_EQ(Iter, Map.Begin()+1);
   }
 
   // With lower bound iterator, in-place, key already exists
   {
     map_multiargument Map = {{1, {1,2}}, {3, {2,3}}};
-    multiargument &Value = Map.Insert(Map.Begin()+1, 3, 3, 4);
+    auto Iter = Map.Insert(Map.Begin()+1, 3, 3, 4);
     auto &Keys = helper_multiargument::GetKeys(Map);
     auto &Entries = helper_multiargument::GetEntries(Map);
     EXPECT_EQ(Keys.Count(), 2);
@@ -1250,14 +1250,14 @@ TEST_F(MapTests, Insert) {
     EXPECT_EQ(Entries(1).Key(), 3);
     EXPECT_EQ(Entries(1).Value().v1, 3);
     EXPECT_EQ(Entries(1).Value().v2, 4);
-    EXPECT_EQ(&Value, &Entries(1).Value());
+    EXPECT_EQ(Iter, Map.Begin()+1);
   }
 
   // With lower bound iterator, non-default-constructible, lvalue ref
   {
     map_nondefaultconstructible Map = {{1, {1}}, {3, {3}}};
     nondefaultconstructible<int> SourceValue(2);
-    nondefaultconstructible<int> &Value = Map.Insert(Map.Begin()+1, 2, SourceValue);
+    auto Iter = Map.Insert(Map.Begin()+1, 2, SourceValue);
     auto &Keys = helper_nondefaultconstructible::GetKeys(Map);
     auto &Entries = helper_nondefaultconstructible::GetEntries(Map);
     EXPECT_EQ(Keys.Count(), 3);
@@ -1271,14 +1271,14 @@ TEST_F(MapTests, Insert) {
     EXPECT_EQ(Entries(1).Value().Value(), 2);
     EXPECT_EQ(Entries(2).Key(), 3);
     EXPECT_EQ(Entries(2).Value().Value(), 3);
-    EXPECT_EQ(&Value, &Entries(1).Value());
+    EXPECT_EQ(Iter, Map.Begin()+1);
   }
 
   // With lower bound iterator, non-default-constructible, rvalue ref
   {
     map_nondefaultconstructible Map = {{1, {1}}, {3, {3}}};
     nondefaultconstructible<int> SourceValue(2);
-    nondefaultconstructible<int> &Value = Map.Insert(Map.Begin()+1, 2, std::move(SourceValue));
+    auto Iter = Map.Insert(Map.Begin()+1, 2, std::move(SourceValue));
     auto &Keys = helper_nondefaultconstructible::GetKeys(Map);
     auto &Entries = helper_nondefaultconstructible::GetEntries(Map);
     EXPECT_EQ(Keys.Count(), 3);
@@ -1292,13 +1292,13 @@ TEST_F(MapTests, Insert) {
     EXPECT_EQ(Entries(1).Value().Value(), 2);
     EXPECT_EQ(Entries(2).Key(), 3);
     EXPECT_EQ(Entries(2).Value().Value(), 3);
-    EXPECT_EQ(&Value, &Entries(1).Value());
+    EXPECT_EQ(Iter, Map.Begin()+1);
   }
 
   // With lower bound iterator, non-default-constructible, in-place
   {
     map_nondefaultconstructible Map = {{1, {1}}, {3, {3}}};
-    nondefaultconstructible<int> &Value = Map.Insert(Map.Begin()+1, 2, 2);
+    auto Iter = Map.Insert(Map.Begin()+1, 2, 2);
     auto &Keys = helper_nondefaultconstructible::GetKeys(Map);
     auto &Entries = helper_nondefaultconstructible::GetEntries(Map);
     EXPECT_EQ(Keys.Count(), 3);
@@ -1312,7 +1312,7 @@ TEST_F(MapTests, Insert) {
     EXPECT_EQ(Entries(1).Value().Value(), 2);
     EXPECT_EQ(Entries(2).Key(), 3);
     EXPECT_EQ(Entries(2).Value().Value(), 3);
-    EXPECT_EQ(&Value, &Entries(1).Value());
+    EXPECT_EQ(Iter, Map.Begin()+1);
   }
 
 }
@@ -1359,7 +1359,7 @@ TEST_F(MapTests, Erase) {
   // Iterator
   {
     map Map = {{2, 1}, {3, 2}, {4, 3}};
-    Map.Erase(Map.Begin()+1);
+    auto Iter = Map.Erase(Map.Begin()+1);
     auto &Keys = helper::GetKeys(Map);
     auto &Entries = helper::GetEntries(Map);
     EXPECT_EQ(Keys.Count(), 2);
@@ -1370,6 +1370,7 @@ TEST_F(MapTests, Erase) {
     EXPECT_EQ(Entries(0).Value(), 1);
     EXPECT_EQ(Entries(1).Key(), 4);
     EXPECT_EQ(Entries(1).Value(), 3);
+    EXPECT_EQ(Iter, Map.Begin()+1);
   }
 
 }

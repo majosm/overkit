@@ -238,21 +238,23 @@ TEST_F(SetTests, Insert) {
   {
     set Set = {2, 4};
     auto &Values = helper::GetValues(Set);
-    Set.Insert(Set.Begin()+1, 3);
+    auto Iter = Set.Insert(Set.Begin()+1, 3);
     EXPECT_EQ(Values.Count(), 3);
     EXPECT_EQ(Values(0), 2);
     EXPECT_EQ(Values(1), 3);
     EXPECT_EQ(Values(2), 4);
+    EXPECT_EQ(Iter, Set.Begin()+1);
   }
 
   // With lower bound iterator, already exists
   {
     set Set = {2, 4};
     auto &Values = helper::GetValues(Set);
-    Set.Insert(Set.Begin()+1, 4);
+    auto Iter = Set.Insert(Set.Begin()+1, 4);
     EXPECT_EQ(Values.Count(), 2);
     EXPECT_EQ(Values(0), 2);
     EXPECT_EQ(Values(1), 4);
+    EXPECT_EQ(Iter, Set.Begin()+1);
   }
 
 }

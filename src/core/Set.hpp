@@ -108,11 +108,12 @@ public:
     }
   }
 
-  void Insert(iterator LowerBoundIter, const value_type &Value) {
+  iterator Insert(iterator LowerBoundIter, const value_type &Value) {
     auto ValuesIter = Values_.Begin() + (LowerBoundIter - Begin());
     if (ValuesIter == Values_.End() || Compare_(Value, *ValuesIter)) {
       ValuesIter = Values_.Insert(ValuesIter, Value);
     }
+    return iterator(Values_.Data() + (ValuesIter - Values_.Begin()));
   }
 
   void Erase(const value_type &Value) {
@@ -123,9 +124,9 @@ public:
   }
 
   iterator Erase(iterator Pos) {
-    index_type iValue = index_type(Pos - Begin());
-    Values_.Erase(iValue);
-    return iterator(Values_.Data() + iValue);
+    auto ValuesIter = Values_.Begin() + (Pos - Begin());
+    ValuesIter = Values_.Erase(ValuesIter);
+    return iterator(Values_.Data() + (ValuesIter - Values_.Begin()));
   }
 
   template <typename F, OVK_FUNCTION_REQUIRES(core::IsCallableAs<F &&, bool(const value_type &)>())>
