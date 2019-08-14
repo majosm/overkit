@@ -10,6 +10,8 @@
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Requires.hpp>
+#include <ovk/core/ScopeGuard.hpp>
+#include <ovk/core/TypeTraits.hpp>
 
 #include <mpi.h>
 
@@ -58,6 +60,9 @@ array<int> DynamicHandshake(comm_view Comm, array_view<const int> Ranks);
 // Generate permutation corresponding to ascending-order sort
 template <typename ArrayType, OVK_FUNCDECL_REQUIRES(IsArray<ArrayType>() && ArrayRank<ArrayType>()
   == 1)> void SortPermutation(const ArrayType &Array, array_view<long long> Permutation);
+
+template <typename F, OVK_FUNCDECL_REQUIRES(IsCallableWith<F &&>())> auto Serialize(comm_view Comm,
+  F &&Func) -> decltype(std::forward<F>(Func)());
 
 }}
 
