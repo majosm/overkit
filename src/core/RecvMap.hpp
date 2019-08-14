@@ -22,7 +22,8 @@ public:
   };
 
   recv_map() = default;
-  recv_map(long long NumValues, array<long long> RecvOrder, array_view<const int> SourceRanks);
+  recv_map(array_view<const int> SourceRanks);
+  recv_map(array_view<const int> SourceRanks, array<long long> RecvOrder);
 
   floating_ref<const recv_map> GetFloatingRef() const {
     return FloatingRefGenerator_.Generate(*this);
@@ -43,6 +44,8 @@ private:
   array<recv> Recvs_;
   array<long long> RecvOrder_;
   array<int> RecvIndices_;
+
+  static array<long long> MakeDefaultRecvOrder_(long long NumValues);
 
 };
 

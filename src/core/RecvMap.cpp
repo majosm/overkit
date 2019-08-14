@@ -16,10 +16,15 @@
 namespace ovk {
 namespace core {
 
-recv_map::recv_map(long long NumValues, array<long long> RecvOrder, array_view<const int>
-  SourceRanks):
+recv_map::recv_map(array_view<const int> SourceRanks):
+  recv_map(SourceRanks, MakeDefaultRecvOrder_(SourceRanks.Count()))
+{}
+
+recv_map::recv_map(array_view<const int> SourceRanks, array<long long> RecvOrder):
   RecvOrder_(std::move(RecvOrder))
 {
+
+  long long NumValues = SourceRanks.Count();
 
   RecvIndices_.Resize({NumValues}, -1);
 
@@ -57,6 +62,18 @@ recv_map::recv_map(long long NumValues, array<long long> RecvOrder, array_view<c
       RecvIndices_(iValue) = RankToRecvIndex(Rank);
     }
   }
+
+}
+
+array<long long> recv_map::MakeDefaultRecvOrder_(long long NumValues) {
+
+  array<long long> RecvOrder({NumValues});
+
+  for (long long iValue = 0; iValue < NumValues; ++iValue) {
+    RecvOrder(iValue) = iValue;
+  }
+
+  return RecvOrder;
 
 }
 

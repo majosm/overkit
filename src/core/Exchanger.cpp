@@ -794,8 +794,7 @@ void exchanger::ResetExchanges_() {
       LocalM.CollectMap = core::collect_map(MGrid.Partition(), ConnectivityM.Extents());
       array<long long> Order = GetSendRecvOrder(ConnectivityM.Destinations(),
         NGridInfo.Cart().Range());
-      LocalM.SendMap = core::send_map(ConnectivityM.Count(), std::move(Order),
-        LocalM.DestinationRanks);
+      LocalM.SendMap = core::send_map(LocalM.DestinationRanks, std::move(Order));
     }
     if (NGridInfo.IsLocal()) {
       const grid &NGrid = Domain.Grid(NGridID);
@@ -804,8 +803,7 @@ void exchanger::ResetExchanges_() {
       LocalN.Recvs.Clear();
       LocalN.Disperses.Clear();
       array<long long> Order = GetSendRecvOrder(ConnectivityN.Points(), NGrid.GlobalRange());
-      LocalN.RecvMap = core::recv_map(ConnectivityN.Count(), std::move(Order),
-        LocalN.SourceRanks);
+      LocalN.RecvMap = core::recv_map(LocalN.SourceRanks, std::move(Order));
       LocalN.DisperseMap = core::disperse_map(ConnectivityN.Points());
     }
   }

@@ -16,10 +16,15 @@
 namespace ovk {
 namespace core {
 
-send_map::send_map(long long NumValues, array<long long> SendOrder, array_view<const int>
-  DestinationRanks):
+send_map::send_map(array_view<const int> DestinationRanks):
+  send_map(DestinationRanks, MakeDefaultSendOrder_(DestinationRanks.Count()))
+{}
+
+send_map::send_map(array_view<const int> DestinationRanks, array<long long> SendOrder):
   SendOrder_(std::move(SendOrder))
 {
+
+  long long NumValues = DestinationRanks.Count();
 
   SendIndices_.Resize({NumValues}, -1);
 
@@ -57,6 +62,18 @@ send_map::send_map(long long NumValues, array<long long> SendOrder, array_view<c
       SendIndices_(iValue) = RankToSendIndex(Rank);
     }
   }
+
+}
+
+array<long long> send_map::MakeDefaultSendOrder_(long long NumValues) {
+
+  array<long long> SendOrder({NumValues});
+
+  for (long long iValue = 0; iValue < NumValues; ++iValue) {
+    SendOrder(iValue) = iValue;
+  }
+
+  return SendOrder;
 
 }
 

@@ -22,7 +22,8 @@ public:
   };
 
   send_map() = default;
-  send_map(long long NumValues, array<long long> SendOrder, array_view<const int> DestinationRanks);
+  send_map(array_view<const int> DestinationRanks);
+  send_map(array_view<const int> DestinationRanks, array<long long> SendOrder);
 
   floating_ref<const send_map> GetFloatingRef() const {
     return FloatingRefGenerator_.Generate(*this);
@@ -43,6 +44,8 @@ private:
   array<send> Sends_;
   array<long long> SendOrder_;
   array<int> SendIndices_;
+
+  static array<long long> MakeDefaultSendOrder_(long long NumValues);
 
 };
 
