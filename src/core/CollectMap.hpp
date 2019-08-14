@@ -5,7 +5,6 @@
 #define OVK_CORE_COLLECT_MAP_HPP_INCLUDED
 
 #include <ovk/core/Array.hpp>
-#include <ovk/core/Cart.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
@@ -32,7 +31,7 @@ public:
   };
 
   collect_map() = default;
-  collect_map(const cart &Cart, const partition &Partition, array<int,3> CellExtents);
+  collect_map(const partition &Partition, array<int,3> CellExtents);
 
   floating_ref<const collect_map> GetFloatingRef() const {
     return FloatingRefGenerator_.Generate(*this);
@@ -71,8 +70,8 @@ private:
   array<long long *> RemoteVertexRecvBufferIndices_;
   array<long long> RemoteVertexRecvBufferIndicesData_;
 
-  void CreateSendData_(const cart &Cart, const partition &Partition);
-  void CreateRecvData_(const cart &Cart, const partition &Partition);
+  void CreateSendData_(const partition &Partition);
+  void CreateRecvData_(const partition &Partition);
 
 };
 

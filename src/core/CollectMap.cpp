@@ -24,7 +24,7 @@
 namespace ovk {
 namespace core {
 
-collect_map::collect_map(const cart &Cart, const partition &Partition, array<int,3> CellExtents):
+collect_map::collect_map(const partition &Partition, array<int,3> CellExtents):
   CellExtents_(std::move(CellExtents))
 {
 
@@ -37,17 +37,18 @@ collect_map::collect_map(const cart &Cart, const partition &Partition, array<int
     MaxVertices_ = Max(MaxVertices_, NumVertices);
   }
 
-  CreateSendData_(Cart, Partition);
-  CreateRecvData_(Cart, Partition);
+  CreateSendData_(Partition);
+  CreateRecvData_(Partition);
 
 }
 
-void collect_map::CreateSendData_(const cart &Cart, const partition &Partition) {
+void collect_map::CreateSendData_(const partition &Partition) {
 
   long long NumCells = CellExtents_.Size(2);
 
   if (NumCells > 0) {
 
+    const cart &Cart = Partition.Cart();
     int NumDims = Cart.Dimension();
     const range &GlobalRange = Cart.Range();
     const range &LocalRange = Partition.LocalRange();
@@ -219,12 +220,13 @@ void collect_map::CreateSendData_(const cart &Cart, const partition &Partition) 
 
 }
 
-void collect_map::CreateRecvData_(const cart &Cart, const partition &Partition) {
+void collect_map::CreateRecvData_(const partition &Partition) {
 
   long long NumCells = CellExtents_.Size(2);
 
   if (NumCells > 0) {
 
+    const cart &Cart = Partition.Cart();
     int NumDims = Cart.Dimension();
     const range &GlobalRange = Cart.Range();
     const range &LocalRange = Partition.LocalRange();
