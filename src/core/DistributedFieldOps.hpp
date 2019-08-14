@@ -35,6 +35,11 @@ void DetectEdge(const distributed_field<bool> &Mask, edge_type EdgeType, mask_bc
 void DilateMask(distributed_field<bool> &Mask, int Amount, mask_bc BoundaryCondition);
 void ErodeMask(distributed_field<bool> &Mask, int Amount, mask_bc BoundaryCondition);
 
+void ConnectedComponents(const distributed_field<bool> &Mask, int &NumComponents,
+  distributed_field<int> &ComponentLabels);
+
+void FloodMask(distributed_field<bool> &Mask, const distributed_field<bool> &BarrierMask);
+
 }}
 
 #endif

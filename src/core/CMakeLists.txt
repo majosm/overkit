@@ -187,6 +187,7 @@ set(INTERNAL_HEADERS
   TextProcessing.inl
   TypeSequence.hpp
   TypeTraits.hpp
+  UnionFind.hpp
   Vector.hpp
 )
 

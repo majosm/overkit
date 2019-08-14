@@ -1241,3 +1241,344 @@ TEST_F(DistributedFieldOpsTests, ErodeMask) {
   }
 
 }
+
+TEST_F(DistributedFieldOpsTests, ConnectedComponents) {
+
+  ASSERT_GE(TestComm().Size(), 8);
+
+  ovk::comm CommOfSize2 = ovk::CreateSubsetComm(TestComm(), TestComm().Rank() < 2);
+  ovk::comm CommOfSize4 = ovk::CreateSubsetComm(TestComm(), TestComm().Rank() < 4);
+  ovk::comm CommOfSize8 = ovk::CreateSubsetComm(TestComm(), TestComm().Rank() < 8);
+
+  auto ToRange1D = [](int LowerCorner, int UpperCorner) -> ovk::range {
+    return {{LowerCorner,0,0}, {UpperCorner+1,1,1}};
+  };
+
+  auto ToRange2D = [](const ovk::elem<int,2> &LowerCorner, const ovk::elem<int,2> &UpperCorner) ->
+    ovk::range {
+    return {{LowerCorner(0),LowerCorner(1),0}, {UpperCorner(0)+1,UpperCorner(1)+1,1}};
+  };
+
+  auto ToRange3D = [](const ovk::elem<int,3> &LowerCorner, const ovk::elem<int,3> &UpperCorner) ->
+    ovk::range {
+    return {{LowerCorner(0),LowerCorner(1),LowerCorner(2)}, {UpperCorner(0)+1,UpperCorner(1)+1,
+      UpperCorner(2)+1}};
+  };
+
+  // 1D, interior
+  if (CommOfSize2) {
+    ovk::comm CartComm;
+    auto Partition = CreatePartition(1, CommOfSize2, {{8,1,1}}, {2,1,1}, false, false, CartComm);
+    ovk::distributed_field<bool> Mask(Partition, false);
+    Mask.Fill(ToRange1D(4, 4), true);
+    int NumComponents;
+    ovk::distributed_field<int> ComponentLabels;
+    ovk::core::ConnectedComponents(Mask, NumComponents, ComponentLabels);
+    ovk::distributed_field<int> ExpectedValues(Partition, 0);
+    ExpectedValues.Fill(ToRange1D(4, 4), 1);
+    ExpectedValues.Fill(ToRange1D(5, 7), 2);
+    EXPECT_EQ(NumComponents, 3);
+    EXPECT_THAT(ComponentLabels, ElementsAreArray(ExpectedValues));
+  }
+
+  // 1D, periodic boundary, unique
+  if (CommOfSize2) {
+    ovk::comm CartComm;
+    auto Partition = CreatePartition(1, CommOfSize2, {{8,1,1}}, {2,1,1}, true, false, CartComm);
+    ovk::distributed_field<bool> Mask(Partition, false);
+    Mask.Fill(ToRange1D(7, 8), true);
+    int NumComponents;
+    ovk::distributed_field<int> ComponentLabels;
+    ovk::core::ConnectedComponents(Mask, NumComponents, ComponentLabels);
+    ovk::distributed_field<int> ExpectedValues(Partition, 1);
+    ExpectedValues.Fill(ToRange1D(7, 8), 0);
+    EXPECT_EQ(NumComponents, 2);
+    EXPECT_THAT(ComponentLabels, ElementsAreArray(ExpectedValues));
+  }
+
+  // 1D, periodic boundary, duplicated
+  if (CommOfSize2) {
+    ovk::comm CartComm;
+    auto Partition = CreatePartition(1, CommOfSize2, {{8,1,1}}, {2,1,1}, true, true, CartComm);
+    ovk::distributed_field<bool> Mask(Partition, false);
+    Mask.Fill(ToRange1D(7, 8), true);
+    int NumComponents;
+    ovk::distributed_field<int> ComponentLabels;
+    ovk::core::ConnectedComponents(Mask, NumComponents, ComponentLabels);
+    ovk::distributed_field<int> ExpectedValues(Partition, 1);
+    ExpectedValues.Fill(ToRange1D(7, 8), 0);
+    EXPECT_EQ(NumComponents, 2);
+    EXPECT_THAT(ComponentLabels, ElementsAreArray(ExpectedValues));
+  }
+
+  // 2D, interior
+  if (CommOfSize4) {
+    ovk::comm CartComm;
+    auto Partition = CreatePartition(2, CommOfSize4, {{9,9,1}}, {2,2,1}, false, false, CartComm);
+    ovk::distributed_field<bool> Mask(Partition, false);
+    Mask.Fill(ToRange2D({1,1}, {7,1}), true);
+    Mask.Fill(ToRange2D({7,1}, {7,7}), true);
+    Mask.Fill(ToRange2D({2,7}, {7,7}), true);
+    Mask.Fill(ToRange2D({2,3}, {2,7}), true);
+    Mask.Fill(ToRange2D({2,3}, {5,5}), true);
+    Mask.Fill(ToRange2D({3,4}, {4,4}), false);
+    int NumComponents;
+    ovk::distributed_field<int> ComponentLabels;
+    ovk::core::ConnectedComponents(Mask, NumComponents, ComponentLabels);
+    ovk::distributed_field<int> ExpectedValues(Partition, 0);
+    ExpectedValues.Fill(ToRange2D({1,1}, {7,1}), 1);
+    ExpectedValues.Fill(ToRange2D({7,1}, {7,7}), 1);
+    ExpectedValues.Fill(ToRange2D({2,7}, {7,7}), 1);
+    ExpectedValues.Fill(ToRange2D({2,3}, {2,7}), 1);
+    ExpectedValues.Fill(ToRange2D({2,3}, {5,5}), 1);
+    ExpectedValues.Fill(ToRange2D({3,4}, {4,4}), 2);
+    EXPECT_EQ(NumComponents, 3);
+    EXPECT_THAT(ComponentLabels, ElementsAreArray(ExpectedValues));
+  }
+
+  // 2D, periodic boundary, unique
+  if (CommOfSize4) {
+    ovk::comm CartComm;
+    auto Partition = CreatePartition(2, CommOfSize4, {{8,8,1}}, {2,2,1}, true, false, CartComm);
+    ovk::distributed_field<bool> Mask(Partition, false);
+    Mask.Fill(ToRange2D({1,7}, {6,8}), true);
+    int NumComponents;
+    ovk::distributed_field<int> ComponentLabels;
+    ovk::core::ConnectedComponents(Mask, NumComponents, ComponentLabels);
+    ovk::distributed_field<int> ExpectedValues(Partition, 0);
+    ExpectedValues.Fill(ToRange2D({1,7}, {6,8}), 1);
+    EXPECT_EQ(NumComponents, 2);
+    EXPECT_THAT(ComponentLabels, ElementsAreArray(ExpectedValues));
+  }
+
+  // 2D, periodic boundary, duplicated
+  if (CommOfSize4) {
+    ovk::comm CartComm;
+    auto Partition = CreatePartition(2, CommOfSize4, {{8,8,1}}, {2,2,1}, true, true, CartComm);
+    ovk::distributed_field<bool> Mask(Partition, false);
+    Mask.Fill(ToRange2D({1,7}, {6,8}), true);
+    int NumComponents;
+    ovk::distributed_field<int> ComponentLabels;
+    ovk::core::ConnectedComponents(Mask, NumComponents, ComponentLabels);
+    ovk::distributed_field<int> ExpectedValues(Partition, 0);
+    ExpectedValues.Fill(ToRange2D({1,7}, {6,8}), 1);
+    EXPECT_EQ(NumComponents, 2);
+    EXPECT_THAT(ComponentLabels, ElementsAreArray(ExpectedValues));
+  }
+
+  // 3D, interior
+  if (CommOfSize8) {
+    ovk::comm CartComm;
+    auto Partition = CreatePartition(3, CommOfSize8, {{9,9,9}}, {2,2,2}, false, false, CartComm);
+    ovk::distributed_field<bool> Mask(Partition, false);
+    Mask.Fill(ToRange3D({1,1,1}, {7,7,1}), true);
+    Mask.Fill(ToRange3D({7,7,1}, {7,7,7}), true);
+    Mask.Fill(ToRange3D({2,2,7}, {7,7,7}), true);
+    Mask.Fill(ToRange3D({2,2,3}, {2,2,7}), true);
+    Mask.Fill(ToRange3D({2,2,3}, {5,5,5}), true);
+    Mask.Fill(ToRange3D({3,3,4}, {4,4,4}), false);
+    int NumComponents;
+    ovk::distributed_field<int> ComponentLabels;
+    ovk::core::ConnectedComponents(Mask, NumComponents, ComponentLabels);
+    ovk::distributed_field<int> ExpectedValues(Partition, 0);
+    ExpectedValues.Fill(ToRange3D({1,1,1}, {7,7,1}), 1);
+    ExpectedValues.Fill(ToRange3D({7,7,1}, {7,7,7}), 1);
+    ExpectedValues.Fill(ToRange3D({2,2,7}, {7,7,7}), 1);
+    ExpectedValues.Fill(ToRange3D({2,2,3}, {2,2,7}), 1);
+    ExpectedValues.Fill(ToRange3D({2,2,3}, {5,5,5}), 1);
+    ExpectedValues.Fill(ToRange3D({3,3,4}, {4,4,4}), 2);
+    EXPECT_EQ(NumComponents, 3);
+    EXPECT_THAT(ComponentLabels, ElementsAreArray(ExpectedValues));
+  }
+
+  // 3D, periodic boundary, unique
+  if (CommOfSize8) {
+    ovk::comm CartComm;
+    auto Partition = CreatePartition(3, CommOfSize8, {{8,8,8}}, {2,2,2}, true, false, CartComm);
+    ovk::distributed_field<bool> Mask(Partition, false);
+    Mask.Fill(ToRange3D({1,1,7}, {6,6,8}), true);
+    int NumComponents;
+    ovk::distributed_field<int> ComponentLabels;
+    ovk::core::ConnectedComponents(Mask, NumComponents, ComponentLabels);
+    ovk::distributed_field<int> ExpectedValues(Partition, 0);
+    ExpectedValues.Fill(ToRange3D({1,1,7}, {6,6,8}), 1);
+    EXPECT_EQ(NumComponents, 2);
+    EXPECT_THAT(ComponentLabels, ElementsAreArray(ExpectedValues));
+  }
+
+  // 3D, periodic boundary, duplicated
+  if (CommOfSize8) {
+    ovk::comm CartComm;
+    auto Partition = CreatePartition(3, CommOfSize8, {{8,8,8}}, {2,2,2}, true, true, CartComm);
+    ovk::distributed_field<bool> Mask(Partition, false);
+    Mask.Fill(ToRange3D({1,1,7}, {6,6,8}), true);
+    int NumComponents;
+    ovk::distributed_field<int> ComponentLabels;
+    ovk::core::ConnectedComponents(Mask, NumComponents, ComponentLabels);
+    ovk::distributed_field<int> ExpectedValues(Partition, 0);
+    ExpectedValues.Fill(ToRange3D({1,1,7}, {6,6,8}), 1);
+    EXPECT_EQ(NumComponents, 2);
+    EXPECT_THAT(ComponentLabels, ElementsAreArray(ExpectedValues));
+  }
+
+}
+
+TEST_F(DistributedFieldOpsTests, FloodMask) {
+
+  ASSERT_GE(TestComm().Size(), 8);
+
+  ovk::comm CommOfSize2 = ovk::CreateSubsetComm(TestComm(), TestComm().Rank() < 2);
+  ovk::comm CommOfSize4 = ovk::CreateSubsetComm(TestComm(), TestComm().Rank() < 4);
+  ovk::comm CommOfSize8 = ovk::CreateSubsetComm(TestComm(), TestComm().Rank() < 8);
+
+  auto ToRange1D = [](int LowerCorner, int UpperCorner) -> ovk::range {
+    return {{LowerCorner,0,0}, {UpperCorner+1,1,1}};
+  };
+
+  auto ToRange2D = [](const ovk::elem<int,2> &LowerCorner, const ovk::elem<int,2> &UpperCorner) ->
+    ovk::range {
+    return {{LowerCorner(0),LowerCorner(1),0}, {UpperCorner(0)+1,UpperCorner(1)+1,1}};
+  };
+
+  auto ToRange3D = [](const ovk::elem<int,3> &LowerCorner, const ovk::elem<int,3> &UpperCorner) ->
+    ovk::range {
+    return {{LowerCorner(0),LowerCorner(1),LowerCorner(2)}, {UpperCorner(0)+1,UpperCorner(1)+1,
+      UpperCorner(2)+1}};
+  };
+
+  // 1D, interior
+  if (CommOfSize2) {
+    ovk::comm CartComm;
+    auto Partition = CreatePartition(1, CommOfSize2, {{8,1,1}}, {2,1,1}, false, false, CartComm);
+    ovk::distributed_field<bool> BarrierMask(Partition, false);
+    BarrierMask.Fill(ToRange1D(1, 6), true);
+    BarrierMask.Fill(ToRange1D(2, 5), false);
+    ovk::distributed_field<bool> Mask(Partition, false);
+    Mask.Fill(ToRange1D(2, 2), true);
+    ovk::core::FloodMask(Mask, BarrierMask);
+    ovk::distributed_field<bool> ExpectedValues(Partition, false);
+    ExpectedValues.Fill(ToRange1D(2, 5), true);
+    EXPECT_THAT(Mask, ElementsAreArray(ExpectedValues));
+  }
+
+  // 1D, periodic boundary, unique
+  if (CommOfSize2) {
+    ovk::comm CartComm;
+    auto Partition = CreatePartition(1, CommOfSize2, {{8,1,1}}, {2,1,1}, true, false, CartComm);
+    ovk::distributed_field<bool> BarrierMask(Partition, false);
+    BarrierMask.Fill(ToRange1D(5, 10), true);
+    BarrierMask.Fill(ToRange1D(6, 9), false);
+    ovk::distributed_field<bool> Mask(Partition, false);
+    Mask.Fill(ToRange1D(6, 6), true);
+    ovk::core::FloodMask(Mask, BarrierMask);
+    ovk::distributed_field<bool> ExpectedValues(Partition, false);
+    ExpectedValues.Fill(ToRange1D(6, 9), true);
+    EXPECT_THAT(Mask, ElementsAreArray(ExpectedValues));
+  }
+
+  // 1D, periodic boundary, duplicated
+  if (CommOfSize2) {
+    ovk::comm CartComm;
+    auto Partition = CreatePartition(1, CommOfSize2, {{8,1,1}}, {2,1,1}, true, true, CartComm);
+    ovk::distributed_field<bool> BarrierMask(Partition, false);
+    BarrierMask.Fill(ToRange1D(5, 10), true);
+    BarrierMask.Fill(ToRange1D(6, 9), false);
+    ovk::distributed_field<bool> Mask(Partition, false);
+    Mask.Fill(ToRange1D(6, 6), true);
+    ovk::core::FloodMask(Mask, BarrierMask);
+    ovk::distributed_field<bool> ExpectedValues(Partition, false);
+    ExpectedValues.Fill(ToRange1D(6, 9), true);
+    EXPECT_THAT(Mask, ElementsAreArray(ExpectedValues));
+  }
+
+  // 2D, interior
+  if (CommOfSize4) {
+    ovk::comm CartComm;
+    auto Partition = CreatePartition(2, CommOfSize4, {{8,8,1}}, {2,2,1}, false, false, CartComm);
+    ovk::distributed_field<bool> BarrierMask(Partition, false);
+    BarrierMask.Fill(ToRange2D({1,1}, {6,6}), true);
+    BarrierMask.Fill(ToRange2D({2,2}, {5,5}), false);
+    ovk::distributed_field<bool> Mask(Partition, false);
+    Mask.Fill(ToRange2D({2,2}, {2,2}), true);
+    ovk::core::FloodMask(Mask, BarrierMask);
+    ovk::distributed_field<bool> ExpectedValues(Partition, false);
+    ExpectedValues.Fill(ToRange2D({2,2}, {5,5}), true);
+    EXPECT_THAT(Mask, ElementsAreArray(ExpectedValues));
+  }
+
+  // 2D, periodic boundary, unique
+  if (CommOfSize4) {
+    ovk::comm CartComm;
+    auto Partition = CreatePartition(2, CommOfSize4, {{8,8,1}}, {2,2,1}, true, false, CartComm);
+    ovk::distributed_field<bool> BarrierMask(Partition, false);
+    BarrierMask.Fill(ToRange2D({5,5}, {10,10}), true);
+    BarrierMask.Fill(ToRange2D({6,6}, {9,9}), false);
+    ovk::distributed_field<bool> Mask(Partition, false);
+    Mask.Fill(ToRange2D({6,6}, {6,6}), true);
+    ovk::core::FloodMask(Mask, BarrierMask);
+    ovk::distributed_field<bool> ExpectedValues(Partition, false);
+    ExpectedValues.Fill(ToRange2D({6,6}, {9,9}), true);
+    EXPECT_THAT(Mask, ElementsAreArray(ExpectedValues));
+  }
+
+  // 2D, periodic boundary, duplicated
+  if (CommOfSize4) {
+    ovk::comm CartComm;
+    auto Partition = CreatePartition(2, CommOfSize4, {{8,8,1}}, {2,2,1}, true, true, CartComm);
+    ovk::distributed_field<bool> BarrierMask(Partition, false);
+    BarrierMask.Fill(ToRange2D({5,5}, {10,10}), true);
+    BarrierMask.Fill(ToRange2D({6,6}, {9,9}), false);
+    ovk::distributed_field<bool> Mask(Partition, false);
+    Mask.Fill(ToRange2D({6,6}, {6,6}), true);
+    ovk::core::FloodMask(Mask, BarrierMask);
+    ovk::distributed_field<bool> ExpectedValues(Partition, false);
+    ExpectedValues.Fill(ToRange2D({6,6}, {9,9}), true);
+    EXPECT_THAT(Mask, ElementsAreArray(ExpectedValues));
+  }
+
+  // 3D, interior
+  if (CommOfSize8) {
+    ovk::comm CartComm;
+    auto Partition = CreatePartition(3, CommOfSize8, {{8,8,8}}, {2,2,2}, false, false, CartComm);
+    ovk::distributed_field<bool> BarrierMask(Partition, false);
+    BarrierMask.Fill(ToRange3D({1,1,1}, {6,6,6}), true);
+    BarrierMask.Fill(ToRange3D({2,2,2}, {5,5,5}), false);
+    ovk::distributed_field<bool> Mask(Partition, false);
+    Mask.Fill(ToRange3D({2,2,2}, {2,2,2}), true);
+    ovk::core::FloodMask(Mask, BarrierMask);
+    ovk::distributed_field<bool> ExpectedValues(Partition, false);
+    ExpectedValues.Fill(ToRange3D({2,2,2}, {5,5,5}), true);
+    EXPECT_THAT(Mask, ElementsAreArray(ExpectedValues));
+  }
+
+  // 3D, periodic boundary, unique
+  if (CommOfSize8) {
+    ovk::comm CartComm;
+    auto Partition = CreatePartition(3, CommOfSize8, {{8,8,8}}, {2,2,2}, true, false, CartComm);
+    ovk::distributed_field<bool> BarrierMask(Partition, false);
+    BarrierMask.Fill(ToRange3D({5,5,5}, {10,10,10}), true);
+    BarrierMask.Fill(ToRange3D({6,6,6}, {9,9,9}), false);
+    ovk::distributed_field<bool> Mask(Partition, false);
+    Mask.Fill(ToRange3D({6,6,6}, {6,6,6}), true);
+    ovk::core::FloodMask(Mask, BarrierMask);
+    ovk::distributed_field<bool> ExpectedValues(Partition, false);
+    ExpectedValues.Fill(ToRange3D({6,6,6}, {9,9,9}), true);
+    EXPECT_THAT(Mask, ElementsAreArray(ExpectedValues));
+  }
+
+  // 3D, periodic boundary, duplicated
+  if (CommOfSize8) {
+    ovk::comm CartComm;
+    auto Partition = CreatePartition(3, CommOfSize8, {{8,8,8}}, {2,2,2}, true, true, CartComm);
+    ovk::distributed_field<bool> BarrierMask(Partition, false);
+    BarrierMask.Fill(ToRange3D({5,5,5}, {10,10,10}), true);
+    BarrierMask.Fill(ToRange3D({6,6,6}, {9,9,9}), false);
+    ovk::distributed_field<bool> Mask(Partition, false);
+    Mask.Fill(ToRange3D({6,6,6}, {6,6,6}), true);
+    ovk::core::FloodMask(Mask, BarrierMask);
+    ovk::distributed_field<bool> ExpectedValues(Partition, false);
+    ExpectedValues.Fill(ToRange3D({6,6,6}, {9,9,9}), true);
+    EXPECT_THAT(Mask, ElementsAreArray(ExpectedValues));
+  }
+
+}
