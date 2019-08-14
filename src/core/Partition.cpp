@@ -59,7 +59,7 @@ partition::partition(std::shared_ptr<context> Context, const cart &Cart, comm_vi
   LocalSubregions_(CreateSubregions(Cart.Dimension(), LocalRange, NumSubregions)),
   ExtendedSubregions_(CreateSubregions(Cart.Dimension(), ExtendedRange_, NumSubregions)),
   Neighbors_(core::RetrieveDecompInfo(Comm_, NeighborRanks, LocalRange, ExtendedRange_)),
-  Halo_(Context_, Cart, Comm_, LocalRange, ExtendedRange_, Neighbors_)
+  Halo_(Context_, Cart, DuplicateComm(Comm_), LocalRange, ExtendedRange_, Neighbors_)
 {}
 
 namespace core {

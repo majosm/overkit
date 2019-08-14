@@ -193,10 +193,10 @@ halo_map::halo_map(const cart &Cart, const range &LocalRange, const range &Exten
 
 }
 
-halo::halo(std::shared_ptr<context> Context, const cart &Cart, comm_view Comm, const range
+halo::halo(std::shared_ptr<context> Context, const cart &Cart, comm Comm, const range
   &LocalRange, const range &ExtendedRange, const map<int,decomp_info> &Neighbors):
   Context_(std::move(Context)),
-  Comm_(Comm)
+  Comm_(std::move(Comm))
 {
 
   profiler &Profiler = Context_->core_Profiler();
