@@ -40,6 +40,19 @@
 
 namespace ovk {
 
+namespace {
+
+void GenerateActiveMask(const grid &Grid, const distributed_field<state_flags> &Flags,
+  distributed_field<bool> &ActiveMask);
+void GenerateCellActiveMask(const grid &Grid, const distributed_field<state_flags> &Flags,
+  distributed_field<bool> &CellActiveMask);
+void GenerateDomainBoundaryMask(const grid &Grid, const distributed_field<state_flags> &Flags,
+  distributed_field<bool> &DomainBoundaryMask);
+void GenerateInternalBoundaryMask(const grid &Grid, const distributed_field<state_flags> &Flags,
+  distributed_field<bool> &InternalBoundaryMask);
+
+}
+
 void assembler::Assemble() {
 
   const domain &Domain = *Domain_;
@@ -93,74 +106,19 @@ void assembler::InitializeAssembly_() {
     VertexOffsetRange.End(iDim) = 2;
   }
 
-  array<request> Requests;
-  Requests.Reserve(2*Domain.LocalGridCount());
-
-  auto FlagsMatchAll = [](state_flags Flags, state_flags Mask) -> bool {
-    return (Flags & Mask) == Mask;
-  };
-
   for (int GridID : Domain.LocalGridIDs()) {
     const grid &Grid = Domain.Grid(GridID);
-    const range &ExtendedRange = Grid.ExtendedRange();
-    const range &CellLocalRange = Grid.CellLocalRange();
     auto &Flags = StateComponent.State(GridID).Flags();
     core::partition_pool PartitionPool(Context_, Grid.Comm(), Grid.Partition().NeighborRanks());
     PartitionPool.Insert(Grid.SharedPartition());
     PartitionPool.Insert(Grid.SharedCellPartition());
     local_grid_aux_data &GridAuxData = AssemblyData.LocalGridAuxData.Insert(GridID,
       std::move(PartitionPool));
-    distributed_field<bool> &ActiveMask = GridAuxData.ActiveMask;
-    distributed_field<bool> &CellActiveMask = GridAuxData.CellActiveMask;
-    distributed_field<bool> &DomainBoundaryMask = GridAuxData.DomainBoundaryMask;
-    distributed_field<bool> &InternalBoundaryMask = GridAuxData.InternalBoundaryMask;
-    ActiveMask.Assign(Grid.SharedPartition());
-    for (int k = ExtendedRange.Begin(2); k < ExtendedRange.End(2); ++k) {
-      for (int j = ExtendedRange.Begin(1); j < ExtendedRange.End(1); ++j) {
-        for (int i = ExtendedRange.Begin(0); i < ExtendedRange.End(0); ++i) {
-          ActiveMask(i,j,k) = FlagsMatchAll(Flags(i,j,k), state_flags::ACTIVE);
-        }
-      }
-    }
-    CellActiveMask.Assign(Grid.SharedCellPartition());
-    for (int k = CellLocalRange.Begin(2); k < CellLocalRange.End(2); ++k) {
-      for (int j = CellLocalRange.Begin(1); j < CellLocalRange.End(1); ++j) {
-        for (int i = CellLocalRange.Begin(0); i < CellLocalRange.End(0); ++i) {
-          tuple<int> Cell = {i,j,k};
-          CellActiveMask(Cell) = true;
-          for (int o = VertexOffsetRange.Begin(2); o < VertexOffsetRange.End(2); ++o) {
-            for (int n = VertexOffsetRange.Begin(1); n < VertexOffsetRange.End(1); ++n) {
-              for (int m = VertexOffsetRange.Begin(0); m < VertexOffsetRange.End(0); ++m) {
-                tuple<int> Vertex = {Cell(0)+m,Cell(1)+n,Cell(2)+o};
-                CellActiveMask(Cell) = CellActiveMask(Cell) && ActiveMask(Vertex);
-              }
-            }
-          }
-        }
-      }
-    }
-    Requests.Append(CellActiveMask.Exchange());
-    DomainBoundaryMask.Assign(Grid.SharedPartition());
-    for (int k = ExtendedRange.Begin(2); k < ExtendedRange.End(2); ++k) {
-      for (int j = ExtendedRange.Begin(1); j < ExtendedRange.End(1); ++j) {
-        for (int i = ExtendedRange.Begin(0); i < ExtendedRange.End(0); ++i) {
-          DomainBoundaryMask(i,j,k) = FlagsMatchAll(Flags(i,j,k), state_flags::ACTIVE |
-            state_flags::DOMAIN_BOUNDARY);
-        }
-      }
-    }
-    InternalBoundaryMask.Assign(Grid.SharedPartition());
-    for (int k = ExtendedRange.Begin(2); k < ExtendedRange.End(2); ++k) {
-      for (int j = ExtendedRange.Begin(1); j < ExtendedRange.End(1); ++j) {
-        for (int i = ExtendedRange.Begin(0); i < ExtendedRange.End(0); ++i) {
-          InternalBoundaryMask(i,j,k) = FlagsMatchAll(Flags(i,j,k), state_flags::ACTIVE |
-            state_flags::INTERNAL_BOUNDARY);
-        }
-      }
-    }
+    GenerateActiveMask(Grid, Flags, GridAuxData.ActiveMask);
+    GenerateCellActiveMask(Grid, Flags, GridAuxData.CellActiveMask);
+    GenerateDomainBoundaryMask(Grid, Flags, GridAuxData.DomainBoundaryMask);
+    GenerateInternalBoundaryMask(Grid, Flags, GridAuxData.InternalBoundaryMask);
   }
-
-  WaitAll(Requests);
 
 }
 
@@ -184,6 +142,98 @@ void assembler::ValidateOptions_() {
   }
 
   // This is incomplete; add rest
+
+}
+
+namespace {
+
+void GenerateActiveMask(const grid &Grid, const distributed_field<state_flags> &Flags,
+  distributed_field<bool> &ActiveMask) {
+
+  long long NumExtended = Grid.ExtendedRange().Count();
+
+  ActiveMask.Assign(Grid.SharedPartition());
+
+  for (long long l = 0; l < NumExtended; ++l) {
+    ActiveMask[l] = (Flags[l] & state_flags::ACTIVE) != state_flags::NONE;
+  }
+
+}
+
+void GenerateCellActiveMask(const grid &Grid, const distributed_field<state_flags> &Flags,
+  distributed_field<bool> &CellActiveMask) {
+
+  int NumDims = Grid.Dimension();
+  const range &CellLocalRange = Grid.CellLocalRange();
+
+  CellActiveMask.Assign(Grid.SharedCellPartition());
+
+  for (int k = CellLocalRange.Begin(2); k < CellLocalRange.End(2); ++k) {
+    for (int j = CellLocalRange.Begin(1); j < CellLocalRange.End(1); ++j) {
+      for (int i = CellLocalRange.Begin(0); i < CellLocalRange.End(0); ++i) {
+        tuple<int> Cell = {i,j,k};
+        CellActiveMask(Cell) = true;
+        range NeighborRange;
+        for (int iDim = 0; iDim < NumDims; ++iDim) {
+          NeighborRange.Begin(iDim) = Cell(iDim);
+          NeighborRange.End(iDim) = Cell(iDim)+2;
+        }
+        for (int iDim = NumDims; iDim < MAX_DIMS; ++iDim) {
+          NeighborRange.Begin(iDim) = 0;
+          NeighborRange.End(iDim) = 1;
+        }
+        for (int o = NeighborRange.Begin(2); o < NeighborRange.End(2); ++o) {
+          for (int n = NeighborRange.Begin(1); n < NeighborRange.End(1); ++n) {
+            for (int m = NeighborRange.Begin(0); m < NeighborRange.End(0); ++m) {
+              tuple<int> Point = {m,n,o};
+              CellActiveMask(Cell) = CellActiveMask(Cell) && (Flags(Point) & state_flags::ACTIVE)
+                != state_flags::NONE;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  CellActiveMask.Exchange();
+
+}
+
+void GenerateDomainBoundaryMask(const grid &Grid, const distributed_field<state_flags> &Flags,
+  distributed_field<bool> &DomainBoundaryMask) {
+
+  long long NumExtended = Grid.ExtendedRange().Count();
+
+  DomainBoundaryMask.Assign(Grid.SharedPartition());
+
+  auto MatchesAll = [](state_flags Flags, state_flags Mask) -> bool {
+    return (Flags & Mask) == Mask;
+  };
+
+  for (long long l = 0; l < NumExtended; ++l) {
+    DomainBoundaryMask[l] = MatchesAll(Flags[l], state_flags::ACTIVE |
+      state_flags::DOMAIN_BOUNDARY);
+  }
+
+}
+
+void GenerateInternalBoundaryMask(const grid &Grid, const distributed_field<state_flags> &Flags,
+  distributed_field<bool> &InternalBoundaryMask) {
+
+  long long NumExtended = Grid.ExtendedRange().Count();
+
+  InternalBoundaryMask.Assign(Grid.SharedPartition());
+
+  auto MatchesAll = [](state_flags Flags, state_flags Mask) -> bool {
+    return (Flags & Mask) == Mask;
+  };
+
+  for (long long l = 0; l < NumExtended; ++l) {
+    InternalBoundaryMask[l] = MatchesAll(Flags[l], state_flags::ACTIVE |
+      state_flags::INTERNAL_BOUNDARY);
+  }
+
+}
 
 }
 
