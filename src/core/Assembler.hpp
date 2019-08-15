@@ -268,6 +268,7 @@ private:
     bounding_box_hash BoundingBoxHash;
     elem_map<int,2,local_overlap_m_aux_data> LocalOverlapMAuxData;
     elem_map<int,2,local_overlap_n_aux_data> LocalOverlapNAuxData;
+    elem_map<int,2,distributed_field<bool>> ProjectedBoundaryMasks;
     assembly_data(int NumDims, comm_view Comm);
   };
 
@@ -297,6 +298,7 @@ private:
   void ValidateOptions_();
   void DetectOverlap_();
   void InferBoundaries_();
+  void CutBoundaryHoles_();
 
 };
 

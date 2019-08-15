@@ -954,3 +954,21 @@ TEST_F(AssemblerTests, OverlapPeriodic) {
 //   }
 
 }
+
+// TEST_F(AssemblerTests, BoundaryHoleCutting2D) {
+
+//   // Cylinder in box case
+
+// }
+
+// TEST_F(AssemblerTests, BoundaryHoleCutting3D) {
+
+//   // Sphere in box case (yin-yang spherical grids)
+
+// }
+
+// TEST_F(AssemblerTests, BoundaryHoleCuttingBlanked) {
+
+//   // Box in box with boundary in the center + blanking inside
+
+// }

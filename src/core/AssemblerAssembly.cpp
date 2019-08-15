@@ -88,6 +88,7 @@ void assembler::Assemble() {
   InitializeAssembly_();
   DetectOverlap_();
   InferBoundaries_();
+  CutBoundaryHoles_();
 
   AssemblyManifest_.DetectOverlap.Clear();
   AssemblyManifest_.InferBoundaries.Clear();
@@ -1553,6 +1554,539 @@ void assembler::InferBoundaries_() {
   MPI_Barrier(Domain.Comm());
 
   Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Done inferring non-overlapping boundaries.");
+
+}
+
+void assembler::CutBoundaryHoles_() {
+
+  domain &Domain = *Domain_;
+  core::logger &Logger = Context_->core_Logger();
+
+  MPI_Barrier(Domain.Comm());
+
+  Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Cutting boundary holes...");
+
+  int NumDims = Domain.Dimension();
+  assembly_data &AssemblyData = *AssemblyData_;
+
+  auto &OverlapComponent = Domain.Component<overlap_component>(OverlapComponentID_);
+
+  auto StateComponentEditHandle = Domain.EditComponent<state_component>(StateComponentID_);
+  state_component &StateComponent = *StateComponentEditHandle;
+
+  elem_set<int,2> LocalCutMPairIDs;
+  elem_set<int,2> LocalCutNPairIDs;
+  set<int> LocalCutMGridIDs;
+  set<int> LocalCutNGridIDs;
+
+  for (int MGridID : Domain.GridIDs()) {
+    for (int NGridID : Domain.GridIDs()) {
+      elem<int,2> IDPair = {MGridID,NGridID};
+      if (Options_.CutBoundaryHoles(IDPair)) {
+        if (Domain.GridIsLocal(MGridID)) {
+          LocalCutMPairIDs.Insert(IDPair);
+          LocalCutMGridIDs.Insert(MGridID);
+        }
+        if (Domain.GridIsLocal(NGridID)) {
+          LocalCutNPairIDs.Insert(IDPair);
+          LocalCutNGridIDs.Insert(NGridID);
+        }
+      }
+    }
+  }
+
+  // Exchanging in reverse, from points to cells
+
+  struct reverse_exchange_m {
+    core::recv_map RecvMap;
+    core::recv Recv;
+    array<bool> RecvBuffer;
+  };
+
+  struct reverse_exchange_n {
+    core::send_map SendMap;
+    core::send Send;
+    array<bool> SendBuffer;
+  };
+
+  elem_map<int,2,reverse_exchange_m> ReverseExchangeMs;
+  elem_map<int,2,reverse_exchange_n> ReverseExchangeNs;
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
+    if (!LocalCutNPairIDs.Contains({OverlapID(1),OverlapID(0)})) continue;
+    const overlap_m &OverlapM = OverlapComponent.OverlapM(OverlapID);
+    reverse_exchange_m &ExchangeM = ReverseExchangeMs.Insert(OverlapID);
+    ExchangeM.RecvMap = core::recv_map(OverlapM.DestinationRanks());
+    ExchangeM.Recv = core::CreateRecv(Context_, Domain.Comm(), ExchangeM.RecvMap, data_type::BOOL,
+      1, 0);
+    ExchangeM.RecvBuffer.Resize({OverlapM.Count()});
+  }
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    if (!LocalCutMPairIDs.Contains({OverlapID(1),OverlapID(0)})) continue;
+    const overlap_n &OverlapN = OverlapComponent.OverlapN(OverlapID);
+    reverse_exchange_n &ExchangeN = ReverseExchangeNs.Insert(OverlapID);
+    ExchangeN.SendMap = core::send_map(OverlapN.SourceRanks());
+    ExchangeN.Send = core::CreateSend(Context_, Domain.Comm(), ExchangeN.SendMap, data_type::BOOL,
+      1, 0);
+    ExchangeN.SendBuffer.Resize({OverlapN.Count()});
+  }
+
+  array<request> Requests;
+
+  Requests.Reserve(OverlapComponent.LocalOverlapMCount() + OverlapComponent.LocalOverlapNCount());
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
+    if (!LocalCutNPairIDs.Contains({OverlapID(1),OverlapID(0)})) continue;
+    reverse_exchange_m &ExchangeM = ReverseExchangeMs(OverlapID);
+    core::recv &Recv = ExchangeM.Recv;
+    request &Request = Requests.Append();
+    bool *RecvBufferData = ExchangeM.RecvBuffer.Data();
+    Request = Recv.Recv(&RecvBufferData);
+  }
+
+  elem_map<int,2,distributed_field<bool>> OverlapEdgeMasks;
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    if (!LocalCutMPairIDs.Contains({OverlapID(1),OverlapID(0)})) continue;
+    const overlap_n &OverlapN = OverlapComponent.OverlapN(OverlapID);
+    const array<int,2> &Points = OverlapN.Points();
+    const local_overlap_n_aux_data &OverlapNAuxData = AssemblyData.LocalOverlapNAuxData(OverlapID);
+    const distributed_field<bool> &OverlapMask = OverlapNAuxData.OverlapMask;
+    distributed_field<bool> &OverlapEdgeMask = OverlapEdgeMasks.Insert(OverlapID);
+    core::DetectEdge(OverlapMask, core::edge_type::INNER, core::mask_bc::FALSE, false,
+      OverlapEdgeMask);
+    reverse_exchange_n &ExchangeN = ReverseExchangeNs(OverlapID);
+    core::send &Send = ExchangeN.Send;
+    array<bool> &SendBuffer = ExchangeN.SendBuffer;
+    for (long long iOverlapped = 0; iOverlapped < OverlapN.Count(); ++iOverlapped) {
+      tuple<int> Point = {
+        Points(0,iOverlapped),
+        Points(1,iOverlapped),
+        Points(2,iOverlapped)
+      };
+      SendBuffer(iOverlapped) = OverlapEdgeMask(Point);
+    }
+    request &Request = Requests.Append();
+    bool *SendBufferData = SendBuffer.Data();
+    Request = Send.Send(&SendBufferData);
+  }
+
+  WaitAll(Requests);
+  Requests.Clear();
+
+  OverlapEdgeMasks.Clear();
+
+  elem_map<int,2,distributed_field<bool>> CoverMasks;
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
+    if (!LocalCutNPairIDs.Contains({OverlapID(1),OverlapID(0)})) continue;
+    int MGridID = OverlapID(0);
+    const grid &MGrid = Domain.Grid(MGridID);
+    const range &LocalRange = MGrid.LocalRange();
+    const range &CellExtendedRange = MGrid.CellExtendedRange();
+    const overlap_m &OverlapM = OverlapComponent.OverlapM(OverlapID);
+    const array<int,2> &Cells = OverlapM.Cells();
+    reverse_exchange_m &ExchangeM = ReverseExchangeMs(OverlapID);
+    const array<bool> &RecvBuffer = ExchangeM.RecvBuffer;
+    distributed_field<bool> CellCoverMask(MGrid.SharedPartition(), false);
+    for (long long iOverlapping = 0; iOverlapping < OverlapM.Count(); ++iOverlapping) {
+      tuple<int> Cell = {
+        Cells(0,iOverlapping),
+        Cells(1,iOverlapping),
+        Cells(2,iOverlapping)
+      };
+      CellCoverMask(Cell) = CellCoverMask(Cell) || RecvBuffer(iOverlapping);
+    }
+    CellCoverMask.Exchange();
+    distributed_field<bool> &CoverMask = CoverMasks.Insert(OverlapID, MGrid.SharedPartition(),
+      false);
+    for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
+      for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
+        for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
+          tuple<int> Point = {i,j,k};
+          range NeighborCellRange;
+          for (int iDim = 0; iDim < NumDims; ++iDim) {
+            NeighborCellRange.Begin(iDim) = Point(iDim)-1;
+            NeighborCellRange.End(iDim) = Point(iDim)+1;
+          }
+          for (int iDim = NumDims; iDim < MAX_DIMS; ++iDim) {
+            NeighborCellRange.Begin(iDim) = 0;
+            NeighborCellRange.End(iDim) = 1;
+          }
+          NeighborCellRange = IntersectRanges(CellExtendedRange, NeighborCellRange);
+          for (int o = NeighborCellRange.Begin(2); o < NeighborCellRange.End(2); ++o) {
+            for (int n = NeighborCellRange.Begin(1); n < NeighborCellRange.End(1); ++n) {
+              for (int m = NeighborCellRange.Begin(0); m < NeighborCellRange.End(0); ++m) {
+                tuple<int> NeighborCell = {m,n,o};
+                CoverMask(Point) = CoverMask(Point) || CellCoverMask(NeighborCell);
+              }
+            }
+          }
+        }
+      }
+    }
+    CoverMask.Exchange();
+  }
+
+  elem_map<int,2,int> NumDilates;
+
+  auto GlobalAny = [](const distributed_field<bool> &Mask) -> bool {
+    int Any = ArrayAny(Mask);
+    MPI_Allreduce(MPI_IN_PLACE, &Any, 1, MPI_INT, MPI_LOR, Mask.Comm());
+    return Any;
+  };
+
+  for (auto &OverlapID : LocalCutNPairIDs) {
+    int MGridID = OverlapID(0);
+    int NGridID = OverlapID(1);
+    const grid &NGrid = Domain.Grid(NGridID);
+    long long NumExtended = NGrid.ExtendedRange().Count();
+    const local_overlap_n_aux_data &OverlapNAuxData = AssemblyData.LocalOverlapNAuxData(OverlapID);
+    const distributed_field<bool> &OverlapMask = OverlapNAuxData.OverlapMask;
+    distributed_field<bool> UncoveredEdgeMask;
+    core::DetectEdge(OverlapMask, core::edge_type::OUTER, core::mask_bc::MIRROR, false,
+      UncoveredEdgeMask);
+    distributed_field<bool> &CoverMask = CoverMasks({NGridID,MGridID});
+    for (long long l = 0; l < NumExtended; ++l) {
+      UncoveredEdgeMask[l] = UncoveredEdgeMask[l] && !CoverMask[l];
+    }
+    int &d = NumDilates.Insert(OverlapID, 0);
+    while (GlobalAny(UncoveredEdgeMask)) {
+      core::DilateMask(CoverMask, 1, core::mask_bc::FALSE);
+      for (long long l = 0; l < NumExtended; ++l) {
+        UncoveredEdgeMask[l] = UncoveredEdgeMask[l] && !CoverMask[l];
+      }
+      ++d;
+    }
+  }
+
+  Requests.Reserve(OverlapComponent.LocalOverlapMCount() + OverlapComponent.LocalOverlapNCount());
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
+    if (!LocalCutNPairIDs.Contains({OverlapID(1),OverlapID(0)})) continue;
+    reverse_exchange_m &ExchangeM = ReverseExchangeMs(OverlapID);
+    core::recv &Recv = ExchangeM.Recv;
+    request &Request = Requests.Append();
+    bool *RecvBufferData = ExchangeM.RecvBuffer.Data();
+    Request = Recv.Recv(&RecvBufferData);
+  }
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    if (!LocalCutMPairIDs.Contains({OverlapID(1),OverlapID(0)})) continue;
+    int NGridID = OverlapID(1);
+    const local_grid_aux_data &GridAuxData = AssemblyData.LocalGridAuxData(NGridID);
+    const distributed_field<bool> &BoundaryMask = GridAuxData.DomainBoundaryMask;
+    const overlap_n &OverlapN = OverlapComponent.OverlapN(OverlapID);
+    const array<int,2> &Points = OverlapN.Points();
+    reverse_exchange_n &ExchangeN = ReverseExchangeNs(OverlapID);
+    core::send &Send = ExchangeN.Send;
+    array<bool> &SendBuffer = ExchangeN.SendBuffer;
+    for (long long iOverlapped = 0; iOverlapped < OverlapN.Count(); ++iOverlapped) {
+      tuple<int> Point = {
+        Points(0,iOverlapped),
+        Points(1,iOverlapped),
+        Points(2,iOverlapped)
+      };
+      SendBuffer(iOverlapped) = BoundaryMask(Point);
+    }
+    request &Request = Requests.Append();
+    bool *SendBufferData = SendBuffer.Data();
+    Request = Send.Send(&SendBufferData);
+  }
+
+  WaitAll(Requests);
+  Requests.Clear();
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
+    if (!LocalCutNPairIDs.Contains({OverlapID(1),OverlapID(0)})) continue;
+    int MGridID = OverlapID(0);
+    const grid &MGrid = Domain.Grid(MGridID);
+    const range &LocalRange = MGrid.LocalRange();
+    const range &CellExtendedRange = MGrid.CellExtendedRange();
+    const overlap_m &OverlapM = OverlapComponent.OverlapM(OverlapID);
+    const array<int,2> &Cells = OverlapM.Cells();
+    reverse_exchange_m &ExchangeM = ReverseExchangeMs(OverlapID);
+    const array<bool> &RecvBuffer = ExchangeM.RecvBuffer;
+    distributed_field<bool> CellCoverMask(MGrid.SharedPartition(), false);
+    for (long long iOverlapping = 0; iOverlapping < OverlapM.Count(); ++iOverlapping) {
+      tuple<int> Cell = {
+        Cells(0,iOverlapping),
+        Cells(1,iOverlapping),
+        Cells(2,iOverlapping)
+      };
+      CellCoverMask(Cell) = CellCoverMask(Cell) || RecvBuffer(iOverlapping);
+    }
+    CellCoverMask.Exchange();
+    distributed_field<bool> &CoverMask = CoverMasks(OverlapID);
+    CoverMask.Fill(false);
+    for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
+      for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
+        for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
+          tuple<int> Point = {i,j,k};
+          range NeighborCellRange;
+          for (int iDim = 0; iDim < NumDims; ++iDim) {
+            NeighborCellRange.Begin(iDim) = Point(iDim)-1;
+            NeighborCellRange.End(iDim) = Point(iDim)+1;
+          }
+          for (int iDim = NumDims; iDim < MAX_DIMS; ++iDim) {
+            NeighborCellRange.Begin(iDim) = 0;
+            NeighborCellRange.End(iDim) = 1;
+          }
+          NeighborCellRange = IntersectRanges(CellExtendedRange, NeighborCellRange);
+          for (int o = NeighborCellRange.Begin(2); o < NeighborCellRange.End(2); ++o) {
+            for (int n = NeighborCellRange.Begin(1); n < NeighborCellRange.End(1); ++n) {
+              for (int m = NeighborCellRange.Begin(0); m < NeighborCellRange.End(0); ++m) {
+                tuple<int> NeighborCell = {m,n,o};
+                CoverMask(Point) = CoverMask(Point) || CellCoverMask(NeighborCell);
+              }
+            }
+          }
+        }
+      }
+    }
+    CoverMask.Exchange();
+  }
+
+  ReverseExchangeMs.Clear();
+  ReverseExchangeNs.Clear();
+
+  elem_map<int,2,distributed_field<bool>> &ProjectedBoundaryMasks = AssemblyData
+    .ProjectedBoundaryMasks;
+
+  for (auto &OverlapID : LocalCutNPairIDs) {
+    if (!Options_.CutBoundaryHoles(OverlapID)) continue;
+    int MGridID = OverlapID(0);
+    int NGridID = OverlapID(1);
+    const grid &NGrid = Domain.Grid(NGridID);
+    long long NumExtended = NGrid.ExtendedRange().Count();
+    const local_overlap_n_aux_data &OverlapNAuxData = AssemblyData.LocalOverlapNAuxData(OverlapID);
+    const distributed_field<bool> &OverlapMask = OverlapNAuxData.OverlapMask;
+    distributed_field<bool> &CoverMask = CoverMasks({NGridID,MGridID});
+    core::DilateMask(CoverMask, NumDilates(OverlapID), core::mask_bc::FALSE);
+    for (long long l = 0; l < NumExtended; ++l) {
+      CoverMask[l] = CoverMask[l] && !OverlapMask[l];
+    }
+    distributed_field<bool> &ProjectedBoundaryMask = ProjectedBoundaryMasks.Insert(OverlapID);
+    core::DetectEdge(CoverMask, core::edge_type::OUTER, core::mask_bc::FALSE, false,
+      ProjectedBoundaryMask);
+    for (long long l = 0; l < NumExtended; ++l) {
+      ProjectedBoundaryMask[l] = ProjectedBoundaryMask[l] && OverlapMask[l];
+    }
+  }
+
+  NumDilates.Clear();
+
+  map<int,distributed_field<bool>> BoundaryMasks;
+  map<int,distributed_field<bool>> InteriorMasks;
+
+  for (int GridID : LocalCutNGridIDs) {
+    const grid &Grid = Domain.Grid(GridID);
+    const local_grid_aux_data &GridAuxData = AssemblyData.LocalGridAuxData(GridID);
+    const distributed_field<bool> &OwnBoundaryMask = GridAuxData.DomainBoundaryMask;
+    distributed_field<bool> &BoundaryMask = BoundaryMasks.Insert(GridID);
+    BoundaryMask = OwnBoundaryMask;
+    distributed_field<bool> &InteriorMask = InteriorMasks.Insert(GridID);
+    InteriorMask.Assign(Grid.SharedPartition(), false);
+  }
+
+  for (auto &OverlapID : LocalCutNPairIDs) {
+    int NGridID = OverlapID(1);
+    const grid &NGrid = Domain.Grid(NGridID);
+    long long NumExtended = NGrid.ExtendedRange().Count();
+    const local_overlap_n_aux_data &OverlapNAuxData = AssemblyData.LocalOverlapNAuxData(OverlapID);
+    const distributed_field<bool> &OverlapMask = OverlapNAuxData.OverlapMask;
+    distributed_field<bool> &BoundaryMask = BoundaryMasks(NGridID);
+    const distributed_field<bool> &ProjectedBoundaryMask = ProjectedBoundaryMasks(OverlapID);
+    for (long long l = 0; l < NumExtended; ++l) {
+      BoundaryMask[l] = BoundaryMask[l] || ProjectedBoundaryMask[l];
+    }
+    distributed_field<bool> ProjectedInteriorEdgeMask;
+    core::DetectEdge(ProjectedBoundaryMask, core::edge_type::OUTER, core::mask_bc::FALSE, false,
+      ProjectedInteriorEdgeMask);
+    for (long long l = 0; l < NumExtended; ++l) {
+      ProjectedInteriorEdgeMask[l] = ProjectedInteriorEdgeMask[l] && OverlapMask[l];
+    }
+    distributed_field<bool> &InteriorMask = InteriorMasks(NGridID);
+    for (long long l = 0; l < NumExtended; ++l) {
+      InteriorMask[l] = InteriorMask[l] || ProjectedInteriorEdgeMask[l];
+    }
+  }
+
+  map<int,distributed_field<bool>> BoundaryHoleMasks;
+
+  for (int GridID : LocalCutNGridIDs) {
+    const grid &Grid = Domain.Grid(GridID);
+    long long NumExtended = Grid.ExtendedRange().Count();
+    const local_grid_aux_data &GridAuxData = AssemblyData.LocalGridAuxData(GridID);
+    const distributed_field<bool> &ActiveMask = GridAuxData.ActiveMask;
+    const distributed_field<bool> &OwnBoundaryMask = GridAuxData.DomainBoundaryMask;
+    distributed_field<bool> &BoundaryMask = BoundaryMasks(GridID);
+    distributed_field<bool> &InteriorMask = InteriorMasks(GridID);
+    distributed_field<bool> &BoundaryHoleMask = BoundaryHoleMasks.Insert(GridID,
+      Grid.SharedPartition());
+    long long NumInterior = core::CountDistributedMask(InteriorMask);
+    if (NumInterior > 0) {
+      core::FloodMask(InteriorMask, BoundaryMask);
+      distributed_field<bool> ActiveEdgeMask;
+      core::DetectEdge(ActiveMask, core::edge_type::INNER, core::mask_bc::FALSE, false,
+        ActiveEdgeMask);
+      distributed_field<bool> InteriorEdgeMask;
+      core::DetectEdge(InteriorMask, core::edge_type::OUTER, core::mask_bc::FALSE, false,
+        InteriorEdgeMask);
+      for (long long l = 0; l < NumExtended; ++l) {
+        if (OwnBoundaryMask[l] && ActiveEdgeMask[l] && !InteriorEdgeMask[l]) {
+          BoundaryMask[l] = false;
+        }
+      }
+      for (long long l = 0; l < NumExtended; ++l) {
+        BoundaryHoleMask[l] = ActiveMask[l] && !InteriorMask[l] && !BoundaryMask[l];
+      }
+    } else {
+      BoundaryHoleMask.Fill(false);
+    }
+  }
+
+  map<int,long long> NumRemovedForGrid;
+
+  for (int GridID : LocalCutNGridIDs) {
+    long long &NumRemoved = NumRemovedForGrid.Insert(GridID);
+    NumRemoved = core::CountDistributedMask(BoundaryHoleMasks(GridID));
+  }
+
+  for (int GridID : LocalCutNGridIDs) {
+    if (NumRemovedForGrid(GridID) == 0) continue;
+    const grid &Grid = Domain.Grid(GridID);
+    long long NumExtended = Grid.ExtendedRange().Count();
+    local_grid_aux_data &GridAuxData = AssemblyData.LocalGridAuxData(GridID);
+    {
+      auto StateEditHandle = StateComponent.EditState(GridID);
+      auto FlagsEditHandle = StateEditHandle->EditFlags();
+      distributed_field<state_flags> &Flags = *FlagsEditHandle;
+      const distributed_field<bool> &BoundaryHoleMask = BoundaryHoleMasks(GridID);
+      for (long long l = 0; l < NumExtended; ++l) {
+        if (BoundaryHoleMask[l]) {
+          Flags[l] = (Flags[l] & ~state_flags::ACTIVE) | state_flags::BOUNDARY_HOLE;
+        }
+      }
+    }
+    auto &Flags = StateComponent.State(GridID).Flags();
+    GenerateActiveMask(Grid, Flags, GridAuxData.ActiveMask);
+    GenerateCellActiveMask(Grid, Flags, GridAuxData.CellActiveMask);
+    GenerateDomainBoundaryMask(Grid, Flags, GridAuxData.DomainBoundaryMask);
+    GenerateInternalBoundaryMask(Grid, Flags, GridAuxData.InternalBoundaryMask);
+  }
+
+  for (auto &OverlapID : LocalCutNPairIDs) {
+    int NGridID = OverlapID(1);
+    const grid &NGrid = Domain.Grid(NGridID);
+    long long NumExtended = NGrid.ExtendedRange().Count();
+    local_grid_aux_data &GridAuxData = AssemblyData.LocalGridAuxData(NGridID);
+    const distributed_field<bool> &ActiveMask = GridAuxData.ActiveMask;
+    local_overlap_n_aux_data &OverlapNAuxData = AssemblyData.LocalOverlapNAuxData(OverlapID);
+    distributed_field<bool> &OverlapMask = OverlapNAuxData.OverlapMask;
+    for (long long l = 0; l < NumExtended; ++l) {
+      OverlapMask[l] = OverlapMask[l] && ActiveMask[l];
+    }
+  }
+
+  struct exchange_m {
+    core::collect Collect;
+    core::send Send;
+    array<bool> SendBuffer;
+  };
+
+  struct exchange_n {
+    core::recv Recv;
+    array<bool> RecvBuffer;
+    core::disperse Disperse;
+  };
+
+  elem_map<int,2,exchange_m> ExchangeMs;
+  elem_map<int,2,exchange_n> ExchangeNs;
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
+    int MGridID = OverlapID(0);
+    const grid &MGrid = Domain.Grid(MGridID);
+    const overlap_m &OverlapM = OverlapComponent.OverlapM(OverlapID);
+    const local_overlap_m_aux_data &OverlapMAuxData = AssemblyData.LocalOverlapMAuxData(OverlapID);
+    exchange_m &ExchangeM = ExchangeMs.Insert(OverlapID);
+    ExchangeM.Collect = core::CreateCollectAll(Context_, MGrid.Comm(), MGrid.Cart(),
+      MGrid.LocalRange(), OverlapMAuxData.CollectMap, data_type::BOOL, 1, MGrid.ExtendedRange(),
+      array_layout::COLUMN_MAJOR);
+    ExchangeM.Send = core::CreateSend(Context_, Domain.Comm(), OverlapMAuxData.SendMap,
+      data_type::BOOL, 1, 0);
+    ExchangeM.SendBuffer.Resize({OverlapM.Count()});
+  }
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    int NGridID = OverlapID(1);
+    const grid &NGrid = Domain.Grid(NGridID);
+    const overlap_n &OverlapN = OverlapComponent.OverlapN(OverlapID);
+    const local_overlap_n_aux_data &OverlapNAuxData = AssemblyData.LocalOverlapNAuxData(OverlapID);
+    exchange_n &ExchangeN = ExchangeNs.Insert(OverlapID);
+    ExchangeN.Recv = core::CreateRecv(Context_, Domain.Comm(), OverlapNAuxData.RecvMap,
+      data_type::BOOL, 1, 0);
+    ExchangeN.RecvBuffer.Resize({OverlapN.Count()});
+    ExchangeN.Disperse = core::CreateDisperseOverwrite(Context_, OverlapNAuxData.DisperseMap,
+      data_type::BOOL, 1, NGrid.ExtendedRange(), array_layout::COLUMN_MAJOR);
+  }
+
+  Requests.Reserve(OverlapComponent.LocalOverlapMCount() + OverlapComponent.LocalOverlapNCount());
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    exchange_n &ExchangeN = ExchangeNs(OverlapID);
+    core::recv &Recv = ExchangeN.Recv;
+    request &Request = Requests.Append();
+    bool *RecvBufferData = ExchangeN.RecvBuffer.Data();
+    Request = Recv.Recv(&RecvBufferData);
+  }
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
+    int MGridID = OverlapID(0);
+    const local_grid_aux_data &GridAuxData = AssemblyData.LocalGridAuxData(MGridID);
+    const distributed_field<bool> &ActiveMask = GridAuxData.ActiveMask;
+    exchange_m &ExchangeM = ExchangeMs(OverlapID);
+    core::collect &Collect = ExchangeM.Collect;
+    core::send &Send = ExchangeM.Send;
+    const bool *ActiveMaskData = ActiveMask.Data();
+    bool *SendBufferData = ExchangeM.SendBuffer.Data();
+    Collect.Collect(&ActiveMaskData, &SendBufferData);
+    request &Request = Requests.Append();
+    Request = Send.Send(&SendBufferData);
+  }
+
+  WaitAll(Requests);
+  Requests.Clear();
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    local_overlap_n_aux_data &OverlapNAuxData = AssemblyData.LocalOverlapNAuxData(OverlapID);
+    distributed_field<bool> &OverlapMask = OverlapNAuxData.OverlapMask;
+    exchange_n &ExchangeN = ExchangeNs(OverlapID);
+    core::disperse &Disperse = ExchangeN.Disperse;
+    const bool *RecvBufferData = ExchangeN.RecvBuffer.Data();
+    bool *OverlapMaskData = OverlapMask.Data();
+    Disperse.Disperse(&RecvBufferData, &OverlapMaskData);
+    OverlapMask.Exchange();
+  }
+
+  MPI_Barrier(Domain.Comm());
+
+  if (Logger.LoggingDebug()) {
+    for (int GridID : Domain.GridIDs()) {
+      if (LocalCutNGridIDs.Contains(GridID)) {
+        const grid &Grid = Domain.Grid(GridID);
+        long long NumRemoved = NumRemovedForGrid(GridID);
+        if (NumRemoved > 0) {
+          std::string NumRemovedString = core::FormatNumber(NumRemoved, "points", "point");
+          Logger.LogDebug(Grid.Comm().Rank() == 0, 2, "%s removed from grid %s.",
+            NumRemovedString, Grid.Name());
+        }
+      }
+      MPI_Barrier(Domain.Comm());
+    }
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Done cutting boundary holes.");
+  }
 
 }
 
