@@ -83,6 +83,10 @@ void assembler::InitializeAssembly_() {
       Domain.GridInfo(GridID).Name());
   }
 
+  if (OVK_DEBUG) {
+    ValidateOptions_();
+  }
+
   range VertexOffsetRange = MakeEmptyRange(NumDims);
   for (int iDim = 0; iDim < NumDims; ++iDim) {
     VertexOffsetRange.Begin(iDim) = 0;
@@ -157,6 +161,29 @@ void assembler::InitializeAssembly_() {
   }
 
   WaitAll(Requests);
+
+}
+
+void assembler::ValidateOptions_() {
+
+  domain &Domain = *Domain_;
+
+  for (int MGridID : Domain.GridIDs()) {
+    for (int NGridID : Domain.GridIDs()) {
+      const std::string &MGridName = Domain.GridInfo(MGridID).Name();
+      const std::string &NGridName = Domain.GridInfo(NGridID).Name();
+      if (Options_.CutBoundaryHoles({MGridID,NGridID})) {
+        OVK_DEBUG_ASSERT(Options_.Overlappable({MGridID,NGridID}), "Grid %s being boundary-hole-"
+          "cut by grid %s requires %s to be overlappable by %s.", NGridName, MGridName, NGridName,
+          MGridName);
+        OVK_DEBUG_ASSERT(Options_.Overlappable({NGridID,MGridID}), "Grid %s being boundary-hole-"
+          "cut by grid %s requires %s to be overlappable by %s.", NGridName, MGridName, MGridName,
+          NGridName);
+      }
+    }
+  }
+
+  // This is incomplete; add rest
 
 }
 

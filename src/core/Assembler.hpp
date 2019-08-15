@@ -271,6 +271,7 @@ private:
   void RemoveAssemblyManifestEntries_();
 
   void InitializeAssembly_();
+  void ValidateOptions_();
 
 };
 
