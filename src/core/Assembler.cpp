@@ -6,16 +6,22 @@
 #include "ovk/core/Array.hpp"
 #include "ovk/core/ArrayView.hpp"
 #include "ovk/core/Comm.hpp"
+#include "ovk/core/ConnectivityComponent.hpp"
+#include "ovk/core/Context.hpp"
 #include "ovk/core/Debug.hpp"
+#include "ovk/core/Domain.hpp"
+#include "ovk/core/Event.hpp"
 #include "ovk/core/FloatingRef.hpp"
+#include "ovk/core/GeometryComponent.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
 #include "ovk/core/IDMap.hpp"
 #include "ovk/core/IDSet.hpp"
+#include "ovk/core/OverlapComponent.hpp"
+#include "ovk/core/StateComponent.hpp"
 
 #include <mpi.h>
 
-#include <map>
 #include <memory>
 #include <string>
 #include <utility>
@@ -143,6 +149,8 @@ void assembler::Bind(domain &Domain, bindings Bindings) {
 
   MPI_Barrier(Domain.Comm());
 
+  AssemblyData_ = assembly_data(Domain.Dimension(), Domain.Comm());
+
   core::logger &Logger = Context_->core_Logger();
   Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Bound assembler %s to domain %s.", *Name_,
     Domain.Name());
@@ -216,11 +224,11 @@ edit_handle<assembler::options> assembler::EditOptions() {
 
   if (!OptionsEditor_.Active()) {
     MPI_Barrier(Domain.Comm());
-    OnOptionsEdit_();
+    OnOptionsStartEdit_();
     floating_ref<assembler> FloatingRef = FloatingRefGenerator_.Generate(*this);
     auto DeactivateFunc = [FloatingRef] {
       assembler &Assembler = *FloatingRef;
-      Assembler.OnOptionsRestore_();
+      Assembler.OnOptionsEndEdit_();
       MPI_Barrier(Assembler.Domain().Comm());
     };
     OptionsEditor_.Activate(std::move(DeactivateFunc));
@@ -241,17 +249,28 @@ void assembler::RestoreOptions() {
 
 }
 
-void assembler::OnOptionsEdit_() {
+void assembler::OnOptionsStartEdit_() {
 
   CachedOptions_ = Options_;
 
 }
 
-void assembler::OnOptionsRestore_() {
-
-  // TODO: Make this more fine-grained
+void assembler::OnOptionsEndEdit_() {
 
   const domain &Domain = *Domain_;
+
+  // No self-intersections, etc.
+  for (int GridID : Domain.GridIDs()) {
+    Options_.ResetOverlappable(GridID,GridID);
+    Options_.ResetOverlapTolerance(GridID,GridID);
+    Options_.ResetCutBoundaryHoles(GridID,GridID);
+    Options_.ResetOccludes(GridID,GridID);
+    Options_.ResetEdgePadding(GridID,GridID);
+    Options_.ResetConnectionType(GridID,GridID);
+    Options_.ResetMinimizeOverlap(GridID,GridID);
+  }
+
+  // TODO: Make this more fine-grained
 
   const id_set<1> &GridIDs = Domain.GridIDs();
   id_set<2> GridIDPairs;

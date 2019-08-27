@@ -12,12 +12,14 @@
 #include <ovk/core/Context.hpp>
 #include <ovk/core/Domain.hpp>
 #include <ovk/core/Event.hpp>
+#include <ovk/core/Field.hpp>
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/GeometryComponent.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Grid.hpp>
 #include <ovk/core/IDMap.hpp>
 #include <ovk/core/IDSet.hpp>
+#include <ovk/core/Optional.hpp>
 #include <ovk/core/OverlapComponent.hpp>
 #include <ovk/core/StateComponent.hpp>
 #include <ovk/core/StringWrapper.hpp>
@@ -227,6 +229,20 @@ private:
 
   assembly_manifest AssemblyManifest_;
 
+  struct local_grid_aux_data {
+    field<bool> ActiveMask;
+    field<bool> CellActiveMask;
+    field<bool> DomainBoundaryMask;
+    field<bool> InternalBoundaryMask;
+  };
+
+  struct assembly_data {
+    id_map<1,local_grid_aux_data> LocalGridAuxData;
+    assembly_data(int NumDims, comm_view Comm);
+  };
+
+  optional<assembly_data> AssemblyData_;
+
   assembler(std::shared_ptr<context> &&Context, params &&Params);
 
   void OnGridEvent_(int GridID, grid_event_flags Flags, bool LastInSequence);
@@ -237,14 +253,16 @@ private:
   void OnConnectivityEvent_(int MGrid, int NGridID, connectivity_event_flags Flags, bool
     LastInSequence);
 
-  void OnOptionsEdit_();
-  void OnOptionsRestore_();
+  void OnOptionsStartEdit_();
+  void OnOptionsEndEdit_();
 
   void Update_();
 
   void AddGridsToOptions_();
   void RemoveGridsFromOptions_();
   void RemoveAssemblyManifestEntries_();
+
+  void InitializeAssembly_();
 
 };
 
