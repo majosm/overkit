@@ -49,6 +49,10 @@ add_executable(InterfaceC InterfaceC.c)
 list(APPEND LOCAL_TARGETS InterfaceC)
 list(APPEND C_TARGETS InterfaceC)
 
+add_executable(Blobs Blobs.cpp)
+list(APPEND LOCAL_TARGETS Blobs)
+list(APPEND CXX_TARGETS Blobs)
+
 #-------------------
 # Compiling/linking
 #-------------------
