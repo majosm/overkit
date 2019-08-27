@@ -4,6 +4,8 @@
 #ifndef OVK_SUPPORT_DECOMP_HPP_LOADED
 #define OVK_SUPPORT_DECOMP_HPP_LOADED
 
+#include <support/Decomp.h>
+
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Range.hpp>
 #include <ovk/core/Tuple.hpp>

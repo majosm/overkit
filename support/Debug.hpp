@@ -4,6 +4,8 @@
 #ifndef OVK_SUPPORT_DEBUG_HPP_LOADED
 #define OVK_SUPPORT_DEBUG_HPP_LOADED
 
+#include <support/Debug.h>
+
 namespace support {
 
 #ifdef OVK_POSIX_SYSTEM
