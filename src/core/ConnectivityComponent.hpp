@@ -138,13 +138,13 @@ public:
 
   const elem_set<int,2> &ConnectivityIDs() const;
 
-  bool ConnectivityExists(const elem<int,2> &GridIDPair) const;
+  bool ConnectivityExists(const elem<int,2> &ConnectivityID) const;
 
-  void CreateConnectivity(const elem<int,2> &GridIDPair);
-  void CreateConnectivities(array_view<const elem<int,2>> GridIDPairs);
+  void CreateConnectivity(const elem<int,2> &ConnectivityID);
+  void CreateConnectivities(array_view<const elem<int,2>> ConnectivityIDs);
 
-  void DestroyConnectivity(const elem<int,2> &GridIDPair);
-  void DestroyConnectivities(array_view<const elem<int,2>> GridIDPairs);
+  void DestroyConnectivity(const elem<int,2> &ConnectivityID);
+  void DestroyConnectivities(array_view<const elem<int,2>> ConnectivityIDs);
 
   void ClearConnectivities();
 
@@ -153,20 +153,20 @@ public:
 
   const elem_set<int,2> &LocalConnectivityMIDs() const;
 
-  const connectivity_m &ConnectivityM(const elem<int,2> &GridIDPair) const;
-  bool EditingConnectivityM(const elem<int,2> &GridIDPair) const;
-  edit_handle<connectivity_m> EditConnectivityM(const elem<int,2> &GridIDPair);
-  void RestoreConnectivityM(const elem<int,2> &GridIDPair);
+  const connectivity_m &ConnectivityM(const elem<int,2> &ConnectivityID) const;
+  bool EditingConnectivityM(const elem<int,2> &ConnectivityID) const;
+  edit_handle<connectivity_m> EditConnectivityM(const elem<int,2> &ConnectivityID);
+  void RestoreConnectivityM(const elem<int,2> &ConnectivityID);
 
   int LocalConnectivityNCount() const;
   int LocalConnectivityNCountForGrid(int NGridID) const;
 
   const elem_set<int,2> &LocalConnectivityNIDs() const;
 
-  const connectivity_n &ConnectivityN(const elem<int,2> &GridIDPair) const;
-  bool EditingConnectivityN(const elem<int,2> &GridIDPair) const;
-  edit_handle<connectivity_n> EditConnectivityN(const elem<int,2> &GridIDPair);
-  void RestoreConnectivityN(const elem<int,2> &GridIDPair);
+  const connectivity_n &ConnectivityN(const elem<int,2> &ConnectivityID) const;
+  bool EditingConnectivityN(const elem<int,2> &ConnectivityID) const;
+  edit_handle<connectivity_n> EditConnectivityN(const elem<int,2> &ConnectivityID);
+  void RestoreConnectivityN(const elem<int,2> &ConnectivityID);
 
   void StartEdit();
   void EndEdit();

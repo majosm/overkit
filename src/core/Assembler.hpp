@@ -251,9 +251,9 @@ private:
   void OnComponentEvent_(int ComponentID, component_event_flags Flags);
   void OnGeometryEvent_(int GridID, geometry_event_flags Flags, bool LastInSequence);
   void OnStateEvent_(int GridID, state_event_flags Flags, bool LastInSequence);
-  void OnOverlapEvent_(const elem<int,2> &GridIDPair, overlap_event_flags Flags, bool
+  void OnOverlapEvent_(const elem<int,2> &OverlapID, overlap_event_flags Flags, bool
     LastInSequence);
-  void OnConnectivityEvent_(const elem<int,2> &GridIDPair, connectivity_event_flags Flags, bool
+  void OnConnectivityEvent_(const elem<int,2> &ConnectivityID, connectivity_event_flags Flags, bool
     LastInSequence);
 
   void OnOptionsStartEdit_();

@@ -131,9 +131,9 @@ void assembler::Bind(domain &Domain, bindings Bindings) {
 
   auto &OverlapComponent = Domain.Component<overlap_component>(OverlapComponentID_);
   OverlapEventListener_ = OverlapComponent.AddOverlapEventListener([FloatingRef](const elem<int,2>
-    &GridIDPair, overlap_event_flags Flags, bool LastInSequence) {
+    &OverlapID, overlap_event_flags Flags, bool LastInSequence) {
     assembler &Assembler = *FloatingRef;
-    Assembler.OnOverlapEvent_(GridIDPair, Flags, LastInSequence);
+    Assembler.OnOverlapEvent_(OverlapID, Flags, LastInSequence);
   });
 
   ConnectivityComponentID_ = Bindings.ConnectivityComponentID_;
@@ -143,9 +143,9 @@ void assembler::Bind(domain &Domain, bindings Bindings) {
 
   auto &ConnectivityComponent = Domain.Component<connectivity_component>(ConnectivityComponentID_);
   ConnectivityEventListener_ = ConnectivityComponent.AddConnectivityEventListener([FloatingRef](
-    const elem<int,2> &GridIDPair, connectivity_event_flags Flags, bool LastInSequence) {
+    const elem<int,2> &ConnectivityID, connectivity_event_flags Flags, bool LastInSequence) {
     assembler &Assembler = *FloatingRef;
-    Assembler.OnConnectivityEvent_(GridIDPair, Flags, LastInSequence);
+    Assembler.OnConnectivityEvent_(ConnectivityID, Flags, LastInSequence);
   });
 
   MPI_Barrier(Domain.Comm());
@@ -400,7 +400,7 @@ void assembler::OnStateEvent_(int GridID, state_event_flags Flags, bool LastInSe
 
 }
 
-void assembler::OnOverlapEvent_(const elem<int,2> &GridIDPair, overlap_event_flags Flags, bool
+void assembler::OnOverlapEvent_(const elem<int,2> &OverlapID, overlap_event_flags Flags, bool
   LastInSequence) {
 
   // TODO: Make this more fine-grained
@@ -428,8 +428,8 @@ void assembler::OnOverlapEvent_(const elem<int,2> &GridIDPair, overlap_event_fla
 
 }
 
-void assembler::OnConnectivityEvent_(const elem<int,2> &GridIDPair, connectivity_event_flags Flags,
-  bool LastInSequence) {
+void assembler::OnConnectivityEvent_(const elem<int,2> &ConnectivityID, connectivity_event_flags
+  Flags, bool LastInSequence) {
 
   // Nothing to do
 

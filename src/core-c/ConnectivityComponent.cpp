@@ -62,12 +62,12 @@ void ovkCreateConnectivities(ovk_connectivity_component *ConnectivityComponent, 
   auto &ConnectivityComponentCPP = *reinterpret_cast<ovk::connectivity_component *>(
     ConnectivityComponent);
 
-  ovk::array<ovk::elem<int,2>> GridIDPairs({Count});
+  ovk::array<ovk::elem<int,2>> ConnectivityIDs({Count});
   for (int iCreate = 0; iCreate < Count; ++iCreate) {
-    GridIDPairs(iCreate) = {MGridIDs[iCreate],NGridIDs[iCreate]};
+    ConnectivityIDs(iCreate) = {MGridIDs[iCreate],NGridIDs[iCreate]};
   }
 
-  ConnectivityComponentCPP.CreateConnectivities(GridIDPairs);
+  ConnectivityComponentCPP.CreateConnectivities(ConnectivityIDs);
 
 }
 
@@ -91,12 +91,12 @@ void ovkDestroyConnectivities(ovk_connectivity_component *ConnectivityComponent,
   auto &ConnectivityComponentCPP = *reinterpret_cast<ovk::connectivity_component *>(
     ConnectivityComponent);
 
-  ovk::array<ovk::elem<int,2>> GridIDPairs({Count});
+  ovk::array<ovk::elem<int,2>> ConnectivityIDs({Count});
   for (int iDestroy = 0; iDestroy < Count; ++iDestroy) {
-    GridIDPairs(iDestroy) = {MGridIDs[iDestroy],NGridIDs[iDestroy]};
+    ConnectivityIDs(iDestroy) = {MGridIDs[iDestroy],NGridIDs[iDestroy]};
   }
 
-  ConnectivityComponentCPP.DestroyConnectivities(GridIDPairs);
+  ConnectivityComponentCPP.DestroyConnectivities(ConnectivityIDs);
 
 }
 

@@ -104,40 +104,40 @@ public:
 
   const domain &Domain() const;
 
-  const set<int> &CollectIDs(const elem<int,2> &GridIDPair) const;
-  bool CollectExists(const elem<int,2> &GridIDPair, int CollectID) const;
-  void CreateCollect(const elem<int,2> &GridIDPair, int CollectID, collect_op CollectOp,
+  const set<int> &CollectIDs(const elem<int,2> &ConnectivityID) const;
+  bool CollectExists(const elem<int,2> &ConnectivityID, int CollectID) const;
+  void CreateCollect(const elem<int,2> &ConnectivityID, int CollectID, collect_op CollectOp,
     data_type ValueType, int Count, const range &GridValuesRange, array_layout GridValuesLayout);
-  void DestroyCollect(const elem<int,2> &GridIDPair, int CollectID);
+  void DestroyCollect(const elem<int,2> &ConnectivityID, int CollectID);
   // "GridValues" actual type is const T * const *
   // "DonorValues" actual type is T **
-  void Collect(const elem<int,2> &GridIDPair, int CollectID, const void *GridValues, void
+  void Collect(const elem<int,2> &ConnectivityID, int CollectID, const void *GridValues, void
     *DonorValues);
 
-  const set<int> &SendIDs(const elem<int,2> &GridIDPair) const;
-  bool SendExists(const elem<int,2> &GridIDPair, int SendID) const;
-  void CreateSend(const elem<int,2> &GridIDPair, int SendID, data_type ValueType, int Count, int
+  const set<int> &SendIDs(const elem<int,2> &ConnectivityID) const;
+  bool SendExists(const elem<int,2> &ConnectivityID, int SendID) const;
+  void CreateSend(const elem<int,2> &ConnectivityID, int SendID, data_type ValueType, int Count, int
     Tag);
-  void DestroySend(const elem<int,2> &GridIDPair, int SendID);
+  void DestroySend(const elem<int,2> &ConnectivityID, int SendID);
   // "DonorValues" actual type is const T * const *
-  request Send(const elem<int,2> &GridIDPair, int SendID, const void *DonorValues);
+  request Send(const elem<int,2> &ConnectivityID, int SendID, const void *DonorValues);
 
-  const set<int> &ReceiveIDs(const elem<int,2> &GridIDPair) const;
-  bool ReceiveExists(const elem<int,2> &GridIDPair, int RecvID) const;
-  void CreateReceive(const elem<int,2> &GridIDPair, int RecvID, data_type ValueType, int Count, int
-    Tag);
-  void DestroyReceive(const elem<int,2> &GridIDPair, int RecvID);
+  const set<int> &ReceiveIDs(const elem<int,2> &ConnectivityID) const;
+  bool ReceiveExists(const elem<int,2> &ConnectivityID, int RecvID) const;
+  void CreateReceive(const elem<int,2> &ConnectivityID, int RecvID, data_type ValueType, int Count,
+    int Tag);
+  void DestroyReceive(const elem<int,2> &ConnectivityID, int RecvID);
   // "ReceiverValues" actual type is T **
-  request Receive(const elem<int,2> &GridIDPair, int RecvID, void *ReceiverValues);
+  request Receive(const elem<int,2> &ConnectivityID, int RecvID, void *ReceiverValues);
 
-  const set<int> &DisperseIDs(const elem<int,2> &GridIDPair) const;
-  bool DisperseExists(const elem<int,2> &GridIDPair, int DisperseID) const;
-  void CreateDisperse(const elem<int,2> &GridIDPair, int DisperseID, disperse_op DisperseOp,
+  const set<int> &DisperseIDs(const elem<int,2> &ConnectivityID) const;
+  bool DisperseExists(const elem<int,2> &ConnectivityID, int DisperseID) const;
+  void CreateDisperse(const elem<int,2> &ConnectivityID, int DisperseID, disperse_op DisperseOp,
     data_type ValueType, int Count, const range &GridValuesRange, array_layout GridValuesLayout);
-  void DestroyDisperse(const elem<int,2> &GridIDPair, int DisperseID);
+  void DestroyDisperse(const elem<int,2> &ConnectivityID, int DisperseID);
   // "ReceiverValues" actual type is const T * const *
   // "GridValues" actual type is T **
-  void Disperse(const elem<int,2> &GridIDPair, int DisperseID, const void *ReceiverValues, void
+  void Disperse(const elem<int,2> &ConnectivityID, int DisperseID, const void *ReceiverValues, void
     *GridValues);
 
   static exchanger internal_Create(std::shared_ptr<context> &&Context, params &&Params);
@@ -190,7 +190,7 @@ private:
   exchanger(std::shared_ptr<context> &&Context, params &&Params);
 
   void OnComponentEvent_(int ComponentID, component_event_flags Flags);
-  void OnConnectivityEvent_(const elem<int,2> &GridIDPair, connectivity_event_flags Flags, bool
+  void OnConnectivityEvent_(const elem<int,2> &ConnectivityID, connectivity_event_flags Flags, bool
     LastInSequence);
 
   void Update_();

@@ -56,12 +56,12 @@ void ovkCreateOverlaps(ovk_overlap_component *OverlapComponent, int Count, const
 
   auto &OverlapComponentCPP = *reinterpret_cast<ovk::overlap_component *>(OverlapComponent);
 
-  ovk::array<ovk::elem<int,2>> GridIDPairs({Count});
+  ovk::array<ovk::elem<int,2>> OverlapIDs({Count});
   for (int iCreate = 0; iCreate < Count; ++iCreate) {
-    GridIDPairs(iCreate) = {MGridIDs[iCreate],NGridIDs[iCreate]};
+    OverlapIDs(iCreate) = {MGridIDs[iCreate],NGridIDs[iCreate]};
   }
 
-  OverlapComponentCPP.CreateOverlaps(GridIDPairs);
+  OverlapComponentCPP.CreateOverlaps(OverlapIDs);
 
 }
 
@@ -82,12 +82,12 @@ void ovkDestroyOverlaps(ovk_overlap_component *OverlapComponent, int Count, cons
 
   auto &OverlapComponentCPP = *reinterpret_cast<ovk::overlap_component *>(OverlapComponent);
 
-  ovk::array<ovk::elem<int,2>> GridIDPairs({Count});
+  ovk::array<ovk::elem<int,2>> OverlapIDs({Count});
   for (int iDestroy = 0; iDestroy < Count; ++iDestroy) {
-    GridIDPairs(iDestroy) = {MGridIDs[iDestroy],NGridIDs[iDestroy]};
+    OverlapIDs(iDestroy) = {MGridIDs[iDestroy],NGridIDs[iDestroy]};
   }
 
-  OverlapComponentCPP.DestroyOverlaps(GridIDPairs);
+  OverlapComponentCPP.DestroyOverlaps(OverlapIDs);
 
 }
 
