@@ -24,49 +24,44 @@ ovk::domain Interface2D(const ovk::comm &Comm, const ovk::box &Bounds, const ovk
     .SetComm(Comm)
   );
 
+  bool LowerIsLocal = Comm.Rank() < ovk::Max(Comm.Size()/2, 1);
+  bool UpperIsLocal = Comm.Rank() >= Comm.Size()/2;
+
+  ovk::comm LowerComm = ovk::CreateSubsetComm(Comm, LowerIsLocal);
+  if (LowerIsLocal) {
+    LowerComm = ovk::CreateCartComm(LowerComm, 2, {0,0,1}, Periodic);
+  }
+
+  ovk::comm UpperComm = ovk::CreateSubsetComm(Comm, UpperIsLocal);
+  if (UpperIsLocal) {
+    UpperComm = ovk::CreateCartComm(UpperComm, 2, {0,0,1}, Periodic);
+  }
+
   ovk::array<int> GridIDs({2}, {1, 2});
-
-  bool Grid1IsLocal = Comm.Rank() < ovk::Max(Comm.Size()/2, 1);
-  bool Grid2IsLocal = Comm.Rank() >= Comm.Size()/2;
-
-  ovk::comm Grid1Comm;
-  if (Grid1IsLocal) {
-    Grid1Comm = ovk::CreateSubsetComm(Comm, true);
-    Grid1Comm = ovk::CreateCartComm(Grid1Comm, 2, {0,0,1}, Periodic);
-  } else {
-    Grid1Comm = ovk::CreateSubsetComm(Comm, false);
-  }
-
-  ovk::comm Grid2Comm;
-  if (Grid2IsLocal) {
-    Grid2Comm = ovk::CreateSubsetComm(Comm, true);
-    Grid2Comm = ovk::CreateCartComm(Grid2Comm, 2, {0,0,1}, Periodic);
-  } else {
-    Grid2Comm = ovk::CreateSubsetComm(Comm, false);
-  }
-
   ovk::array<ovk::optional<ovk::grid::params>> MaybeGridParams({2});
 
-  if (Grid1IsLocal) {
+  if (LowerIsLocal) {
     ovk::tuple<int> GridSize = {Size(0), (Size(1)+2)/2, Size(2)};
-    ovk::range LocalRange = support::CartesianDecomp(2, {GridSize}, Grid1Comm);
+    ovk::range LocalRange = support::CartesianDecomp(2, {GridSize}, LowerComm);
     MaybeGridParams(0) = Domain.MakeGridParams()
       .SetName("Lower")
-      .SetComm(Grid1Comm)
+      .SetComm(LowerComm)
       .SetGlobalRange({GridSize})
       .SetLocalRange(LocalRange)
-      .SetPeriodic(Periodic);
+      .SetPeriodic(Periodic)
+      .SetPeriodicStorage(PeriodicStorage);
   }
 
-  if (Grid2IsLocal) {
+  if (UpperIsLocal) {
     ovk::tuple<int> GridSize = {Size(0), Size(1)+2-(Size(1)+2)/2, Size(2)};
-    ovk::range LocalRange = support::CartesianDecomp(2, {GridSize}, Grid2Comm);
+    ovk::range LocalRange = support::CartesianDecomp(2, {GridSize}, UpperComm);
     MaybeGridParams(1) = Domain.MakeGridParams()
       .SetName("Upper")
-      .SetComm(Grid2Comm)
+      .SetComm(UpperComm)
       .SetGlobalRange({GridSize})
       .SetLocalRange(LocalRange)
-      .SetPeriodic(Periodic);
+      .SetPeriodic(Periodic)
+      .SetPeriodicStorage(PeriodicStorage);
   }
 
   Domain.CreateGrids(GridIDs, MaybeGridParams);
@@ -80,10 +75,10 @@ ovk::domain Interface2DManualConnectivity(const ovk::comm &Comm, const ovk::box 
 
   ovk::domain Domain = Interface2D(Comm, Bounds, Size, Periodic, PeriodicStorage);
 
-  bool Grid1IsLocal = Domain.GridIsLocal(1);
-  bool Grid2IsLocal = Domain.GridIsLocal(2);
+  bool LowerIsLocal = Domain.GridIsLocal(1);
+  bool UpperIsLocal = Domain.GridIsLocal(2);
 
-  ovk::tuple<int> Grid1Size = Domain.GridInfo(1).GlobalRange().Size();
+  ovk::tuple<int> LowerSize = Domain.GridInfo(1).GlobalRange().Size();
 
   Domain.CreateComponent<ovk::connectivity_component>(1);
 
@@ -94,12 +89,12 @@ ovk::domain Interface2DManualConnectivity(const ovk::comm &Comm, const ovk::box 
 
   ConnectivityComponent.CreateConnectivities(ConnectivityIDs);
 
-  if (Grid1IsLocal) {
+  if (LowerIsLocal) {
 
     const ovk::grid &Grid = Domain.Grid(1);
     const ovk::range &LocalRange = Grid.LocalRange();
 
-    bool HasInterface = LocalRange.End(1) == Grid1Size(1);
+    bool HasInterface = LocalRange.End(1) == LowerSize(1);
 
     auto ConnectivityMEditHandle = ConnectivityComponent.EditConnectivityM({1,2});
     ovk::connectivity_m &ConnectivityM = *ConnectivityMEditHandle;
@@ -120,7 +115,7 @@ ovk::domain Interface2DManualConnectivity(const ovk::comm &Comm, const ovk::box 
       long long iDonor = 0;
       for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
         Extents(0,0,iDonor) = i;
-        Extents(0,1,iDonor) = Grid1Size(1)-2;
+        Extents(0,1,iDonor) = LowerSize(1)-2;
         Extents(1,0,iDonor) = Extents(0,0,iDonor)+1;
         Extents(1,1,iDonor) = Extents(0,1,iDonor)+1;
         Coords(0,iDonor) = 0.;
@@ -148,7 +143,7 @@ ovk::domain Interface2DManualConnectivity(const ovk::comm &Comm, const ovk::box 
       long long iReceiver = 0;
       for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
         Points(0,iReceiver) = i; 
-        Points(1,iReceiver) = Grid1Size(1)-1;
+        Points(1,iReceiver) = LowerSize(1)-1;
         Sources(0,iReceiver) = i;
         Sources(1,iReceiver) = 1;
         ++iReceiver;
@@ -157,7 +152,7 @@ ovk::domain Interface2DManualConnectivity(const ovk::comm &Comm, const ovk::box 
 
   }
 
-  if (Grid2IsLocal) {
+  if (UpperIsLocal) {
 
     const ovk::grid &Grid = Domain.Grid(2);
     const ovk::range &LocalRange = Grid.LocalRange();
@@ -191,7 +186,7 @@ ovk::domain Interface2DManualConnectivity(const ovk::comm &Comm, const ovk::box 
         InterpCoefs(0,0,iDonor) = 1.;
         InterpCoefs(1,0,iDonor) = 1.;
         Destinations(0,iDonor) = i;
-        Destinations(1,iDonor) = Grid1Size(1)-1;
+        Destinations(1,iDonor) = LowerSize(1)-1;
         ++iDonor;
       }
     }
@@ -213,7 +208,7 @@ ovk::domain Interface2DManualConnectivity(const ovk::comm &Comm, const ovk::box 
         Points(0,iReceiver) = i;
         Points(1,iReceiver) = 0;
         Sources(0,iReceiver) = i;
-        Sources(1,iReceiver) = Grid1Size(1)-2;
+        Sources(1,iReceiver) = LowerSize(1)-2;
         ++iReceiver;
       }
     }
@@ -238,49 +233,44 @@ ovk::domain Interface3D(const ovk::comm &Comm, const ovk::box &Bounds, const ovk
     .SetComm(Comm)
   );
 
+  bool LowerIsLocal = Comm.Rank() < ovk::Max(Comm.Size()/2, 1);
+  bool UpperIsLocal = Comm.Rank() >= Comm.Size()/2;
+
+  ovk::comm LowerComm = ovk::CreateSubsetComm(Comm, LowerIsLocal);
+  if (LowerIsLocal) {
+    LowerComm = ovk::CreateCartComm(LowerComm, 3, {0,0,0}, Periodic);
+  }
+
+  ovk::comm UpperComm = ovk::CreateSubsetComm(Comm, UpperIsLocal);
+  if (UpperIsLocal) {
+    UpperComm = ovk::CreateCartComm(UpperComm, 3, {0,0,0}, Periodic);
+  }
+
   ovk::array<int> GridIDs({2}, {1, 2});
-
-  bool Grid1IsLocal = Comm.Rank() < ovk::Max(Comm.Size()/2, 1);
-  bool Grid2IsLocal = Comm.Rank() >= Comm.Size()/2;
-
-  ovk::comm Grid1Comm;
-  if (Grid1IsLocal) {
-    Grid1Comm = ovk::CreateSubsetComm(Comm, true);
-    Grid1Comm = ovk::CreateCartComm(Grid1Comm, 3, {0,0,0}, Periodic);
-  } else {
-    Grid1Comm = ovk::CreateSubsetComm(Comm, false);
-  }
-
-  ovk::comm Grid2Comm;
-  if (Grid2IsLocal) {
-    Grid2Comm = ovk::CreateSubsetComm(Comm, true);
-    Grid2Comm = ovk::CreateCartComm(Grid2Comm, 3, {0,0,0}, Periodic);
-  } else {
-    Grid2Comm = ovk::CreateSubsetComm(Comm, false);
-  }
-
   ovk::array<ovk::optional<ovk::grid::params>> MaybeGridParams({2});
 
-  if (Grid1IsLocal) {
+  if (LowerIsLocal) {
     ovk::tuple<int> GridSize = {Size(0), Size(1), (Size(2)+2)/2};
-    ovk::range LocalRange = support::CartesianDecomp(3, {GridSize}, Grid1Comm);
+    ovk::range LocalRange = support::CartesianDecomp(3, {GridSize}, LowerComm);
     MaybeGridParams(0) = Domain.MakeGridParams()
       .SetName("Lower")
-      .SetComm(Grid1Comm)
+      .SetComm(LowerComm)
       .SetGlobalRange({GridSize})
       .SetLocalRange(LocalRange)
-      .SetPeriodic(Periodic);
+      .SetPeriodic(Periodic)
+      .SetPeriodicStorage(PeriodicStorage);
   }
 
-  if (Grid2IsLocal) {
+  if (UpperIsLocal) {
     ovk::tuple<int> GridSize = {Size(0), Size(1), Size(2)+2-(Size(2)+2)/2};
-    ovk::range LocalRange = support::CartesianDecomp(3, {GridSize}, Grid2Comm);
+    ovk::range LocalRange = support::CartesianDecomp(3, {GridSize}, UpperComm);
     MaybeGridParams(1) = Domain.MakeGridParams()
       .SetName("Upper")
-      .SetComm(Grid2Comm)
+      .SetComm(UpperComm)
       .SetGlobalRange({GridSize})
       .SetLocalRange(LocalRange)
-      .SetPeriodic(Periodic);
+      .SetPeriodic(Periodic)
+      .SetPeriodicStorage(PeriodicStorage);
   }
 
   Domain.CreateGrids(GridIDs, MaybeGridParams);
@@ -294,10 +284,10 @@ ovk::domain Interface3DManualConnectivity(const ovk::comm &Comm, const ovk::box 
 
   ovk::domain Domain = Interface3D(Comm, Bounds, Size, Periodic, PeriodicStorage);
 
-  bool Grid1IsLocal = Domain.GridIsLocal(1);
-  bool Grid2IsLocal = Domain.GridIsLocal(2);
+  bool LowerIsLocal = Domain.GridIsLocal(1);
+  bool UpperIsLocal = Domain.GridIsLocal(2);
 
-  ovk::tuple<int> Grid1Size = Domain.GridInfo(1).GlobalRange().Size();
+  ovk::tuple<int> LowerSize = Domain.GridInfo(1).GlobalRange().Size();
 
   Domain.CreateComponent<ovk::connectivity_component>(1);
 
@@ -308,12 +298,12 @@ ovk::domain Interface3DManualConnectivity(const ovk::comm &Comm, const ovk::box 
 
   ConnectivityComponent.CreateConnectivities(ConnectivityIDs);
 
-  if (Grid1IsLocal) {
+  if (LowerIsLocal) {
 
     const ovk::grid &Grid = Domain.Grid(1);
     const ovk::range &LocalRange = Grid.LocalRange();
 
-    bool HasInterface = LocalRange.End(2) == Grid1Size(2);
+    bool HasInterface = LocalRange.End(2) == LowerSize(2);
 
     auto ConnectivityMEditHandle = ConnectivityComponent.EditConnectivityM({1,2});
     ovk::connectivity_m &ConnectivityM = *ConnectivityMEditHandle;
@@ -336,7 +326,7 @@ ovk::domain Interface3DManualConnectivity(const ovk::comm &Comm, const ovk::box 
         for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
           Extents(0,0,iDonor) = i;
           Extents(0,1,iDonor) = j;
-          Extents(0,2,iDonor) = Grid1Size(2)-2;
+          Extents(0,2,iDonor) = LowerSize(2)-2;
           Extents(1,0,iDonor) = Extents(0,0,iDonor)+1;
           Extents(1,1,iDonor) = Extents(0,1,iDonor)+1;
           Extents(1,2,iDonor) = Extents(0,2,iDonor)+1;
@@ -371,7 +361,7 @@ ovk::domain Interface3DManualConnectivity(const ovk::comm &Comm, const ovk::box 
         for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
           Points(0,iReceiver) = i;
           Points(1,iReceiver) = j;
-          Points(2,iReceiver) = Grid1Size(2)-1;
+          Points(2,iReceiver) = LowerSize(2)-1;
           Sources(0,iReceiver) = i;
           Sources(1,iReceiver) = j;
           Sources(2,iReceiver) = 1;
@@ -382,7 +372,7 @@ ovk::domain Interface3DManualConnectivity(const ovk::comm &Comm, const ovk::box 
 
   }
 
-  if (Grid2IsLocal) {
+  if (UpperIsLocal) {
 
     const ovk::grid &Grid = Domain.Grid(2);
     const ovk::range &LocalRange = Grid.LocalRange();
@@ -422,7 +412,7 @@ ovk::domain Interface3DManualConnectivity(const ovk::comm &Comm, const ovk::box 
           InterpCoefs(2,0,iDonor) = 1.;
           Destinations(0,iDonor) = i;
           Destinations(1,iDonor) = j;
-          Destinations(2,iDonor) = Grid1Size(2)-1;
+          Destinations(2,iDonor) = LowerSize(2)-1;
           ++iDonor;
         }
       }
@@ -448,7 +438,7 @@ ovk::domain Interface3DManualConnectivity(const ovk::comm &Comm, const ovk::box 
           Points(2,iReceiver) = 0;
           Sources(0,iReceiver) = i;
           Sources(1,iReceiver) = j;
-          Sources(2,iReceiver) = Grid1Size(2)-2;
+          Sources(2,iReceiver) = LowerSize(2)-2;
           ++iReceiver;
         }
       }

@@ -99,18 +99,18 @@ static void Interface() {
   int GridIDs[] = {1, 2};
   ovk_grid_params *MaybeGridParams[] = {NULL, NULL};
 
-  bool Grid1IsLocal = WorldRank < max(NumWorldProcs/2, 1);
-  bool Grid2IsLocal = WorldRank >= NumWorldProcs/2;
+  bool LeftIsLocal = WorldRank < max(NumWorldProcs/2, 1);
+  bool RightIsLocal = WorldRank >= NumWorldProcs/2;
 
-  int Grid1Size[] = {(Size[0]+2)/2, Size[1], Size[2]};
-  int Grid2Size[] = {Size[0]+2-(Size[0]+2)/2, Size[1], Size[2]};
+  int LeftSize[] = {(Size[0]+2)/2, Size[1], Size[2]};
+  int RightSize[] = {Size[0]+2-(Size[0]+2)/2, Size[1], Size[2]};
 
-  grid_data Grid1Data, Grid2Data;
-  CreateGridData(&Grid1Data);
-  CreateGridData(&Grid2Data);
+  grid_data LeftData, RightData;
+  CreateGridData(&LeftData);
+  CreateGridData(&RightData);
 
-  if (Grid1IsLocal) {
-    grid_data *Data = &Grid1Data;
+  if (LeftIsLocal) {
+    grid_data *Data = &LeftData;
     MPI_Comm TempComm;
     MPI_Comm_split(MPI_COMM_WORLD, 0, WorldRank, &TempComm);
     int NumGridProcs;
@@ -120,9 +120,9 @@ static void Interface() {
     MPI_Dims_create(NumGridProcs, 2, CartDims);
     MPI_Cart_create(TempComm, 2, CartDims, CartPeriods, 1, &Data->Comm);
     MPI_Comm_free(&TempComm);
-    Data->Size[0] = Grid1Size[0];
-    Data->Size[1] = Grid1Size[1];
-    Data->Size[2] = Grid1Size[2];
+    Data->Size[0] = LeftSize[0];
+    Data->Size[1] = LeftSize[1];
+    Data->Size[2] = LeftSize[2];
     CartesianDecomp(2, Data->Size, Data->Comm, Data->LocalRange);
     Data->NumLocalPoints =
       (long long)(Data->LocalRange[3] - Data->LocalRange[0]) *
@@ -144,8 +144,8 @@ static void Interface() {
     MPI_Comm_split(MPI_COMM_WORLD, MPI_UNDEFINED, WorldRank, &DummyComm);
   }
 
-  if (Grid2IsLocal) {
-    grid_data *Data = &Grid2Data;
+  if (RightIsLocal) {
+    grid_data *Data = &RightData;
     MPI_Comm TempComm;
     MPI_Comm_split(MPI_COMM_WORLD, 0, WorldRank, &TempComm);
     int NumGridProcs;
@@ -155,9 +155,9 @@ static void Interface() {
     MPI_Dims_create(NumGridProcs, 2, CartDims);
     MPI_Cart_create(TempComm, 2, CartDims, CartPeriods, 1, &Data->Comm);
     MPI_Comm_free(&TempComm);
-    Data->Size[0] = Grid2Size[0];
-    Data->Size[1] = Grid2Size[1];
-    Data->Size[2] = Grid2Size[2];
+    Data->Size[0] = RightSize[0];
+    Data->Size[1] = RightSize[1];
+    Data->Size[2] = RightSize[2];
     CartesianDecomp(2, Data->Size, Data->Comm, Data->LocalRange);
     Data->NumLocalPoints =
       (long long)(Data->LocalRange[3] - Data->LocalRange[0]) *
@@ -179,26 +179,26 @@ static void Interface() {
     MPI_Comm_split(MPI_COMM_WORLD, MPI_UNDEFINED, WorldRank, &DummyComm);
   }
 
-  if (Grid1IsLocal) {
+  if (LeftIsLocal) {
     ovkCreateGridParams(&MaybeGridParams[0]);
     ovk_grid_params *GridParams = MaybeGridParams[0];
     ovkSetGridParamName(GridParams, "Left");
     ovkSetGridParamDimension(GridParams, 2);
-    ovkSetGridParamComm(GridParams, Grid1Data.Comm);
+    ovkSetGridParamComm(GridParams, LeftData.Comm);
     const int Zero[3] = {0,0,0};
-    ovkSetGridParamGlobalRange(GridParams, Zero, Grid1Data.Size);
-    ovkSetGridParamLocalRange(GridParams, Grid1Data.LocalRange, Grid1Data.LocalRange+3);
+    ovkSetGridParamGlobalRange(GridParams, Zero, LeftData.Size);
+    ovkSetGridParamLocalRange(GridParams, LeftData.LocalRange, LeftData.LocalRange+3);
   }
 
-  if (Grid2IsLocal) {
+  if (RightIsLocal) {
     ovkCreateGridParams(&MaybeGridParams[1]);
     ovk_grid_params *GridParams = MaybeGridParams[1];
     ovkSetGridParamName(GridParams, "Right");
     ovkSetGridParamDimension(GridParams, 2);
-    ovkSetGridParamComm(GridParams, Grid2Data.Comm);
+    ovkSetGridParamComm(GridParams, RightData.Comm);
     const int Zero[3] = {0,0,0};
-    ovkSetGridParamGlobalRange(GridParams, Zero, Grid2Data.Size);
-    ovkSetGridParamLocalRange(GridParams, Grid2Data.LocalRange, Grid2Data.LocalRange+3);
+    ovkSetGridParamGlobalRange(GridParams, Zero, RightData.Size);
+    ovkSetGridParamLocalRange(GridParams, RightData.LocalRange, RightData.LocalRange+3);
   }
 
   ovkCreateGrids(Domain, 2, GridIDs, MaybeGridParams);
@@ -217,7 +217,7 @@ static void Interface() {
 
     ovkCreateConnectivities(ConnectivityComponent, 2, MGridIDs, NGridIDs);
 
-    if (Grid1IsLocal) {
+    if (LeftIsLocal) {
 
       const ovk_grid *Grid;
       ovkGetGrid(Domain, 1, &Grid);
@@ -327,7 +327,7 @@ static void Interface() {
 
     }
 
-    if (Grid2IsLocal) {
+    if (RightIsLocal) {
 
       const ovk_grid *Grid;
       ovkGetGrid(Domain, 2, &Grid);
@@ -376,7 +376,7 @@ static void Interface() {
           Coords[1][iDonor] = 0.;
           InterpCoefs[0][0][iDonor] = 1.;
           InterpCoefs[1][0][iDonor] = 1.;
-          Destinations[0][iDonor] = Grid1Size[0]-1;
+          Destinations[0][iDonor] = LeftSize[0]-1;
           Destinations[1][iDonor] = j;
           ++iDonor;
         }
@@ -420,7 +420,7 @@ static void Interface() {
         for (j = LocalRange[1]; j < LocalRange[4]; ++j) {
           Points[0][iReceiver] = 0;
           Points[1][iReceiver] = j;
-          Sources[0][iReceiver] = Grid1Size[0]-2;
+          Sources[0][iReceiver] = LeftSize[0]-2;
           Sources[1][iReceiver] = j;
           ++iReceiver;
         }
@@ -453,9 +453,9 @@ static void Interface() {
   const ovk_connectivity_component *ConnectivityComponent;
   ovkGetComponent(Domain, CONNECTIVITY_ID, OVK_COMPONENT_TYPE_CONNECTIVITY, &ConnectivityComponent);
 
-  double *Grid1DonorValues, *Grid1ReceiverValues;
-  if (Grid1IsLocal) {
-    grid_data *Data = &Grid1Data;
+  double *LeftDonorValues, *LeftReceiverValues;
+  if (LeftIsLocal) {
+    grid_data *Data = &LeftData;
     const ovk_connectivity_m *ConnectivityM;
     ovkGetConnectivityM(ConnectivityComponent, 1, 2, &ConnectivityM);
     ovkCreateExchangerCollect(Exchanger, 1, 2, 1, OVK_COLLECT_INTERPOLATE,
@@ -463,7 +463,7 @@ static void Interface() {
     ovkCreateExchangerSend(Exchanger, 1, 2, 1, OVK_DOUBLE, 1, 1);
     long long NumDonors;
     ovkGetConnectivityMCount(ConnectivityM, &NumDonors);
-    Grid1DonorValues = malloc(NumDonors*sizeof(double));
+    LeftDonorValues = malloc(NumDonors*sizeof(double));
     const ovk_connectivity_n *ConnectivityN;
     ovkGetConnectivityN(ConnectivityComponent, 2, 1, &ConnectivityN);
     ovkCreateExchangerReceive(Exchanger, 2, 1, 1, OVK_DOUBLE, 1, 1);
@@ -471,12 +471,12 @@ static void Interface() {
       Data->ExtendedRange, Data->ExtendedRange+3, OVK_ROW_MAJOR);
     long long NumReceivers;
     ovkGetConnectivityNCount(ConnectivityN, &NumReceivers);
-    Grid1ReceiverValues = malloc(NumReceivers*sizeof(double));
+    LeftReceiverValues = malloc(NumReceivers*sizeof(double));
   }
 
-  double *Grid2DonorValues, *Grid2ReceiverValues;
-  if (Grid2IsLocal) {
-    grid_data *Data = &Grid2Data;
+  double *RightDonorValues, *RightReceiverValues;
+  if (RightIsLocal) {
+    grid_data *Data = &RightData;
     const ovk_connectivity_m *ConnectivityM;
     ovkGetConnectivityM(ConnectivityComponent, 2, 1, &ConnectivityM);
     ovkCreateExchangerCollect(Exchanger, 2, 1, 1, OVK_COLLECT_INTERPOLATE,
@@ -484,7 +484,7 @@ static void Interface() {
     ovkCreateExchangerSend(Exchanger, 2, 1, 1, OVK_DOUBLE, 1, 1);
     long long NumDonors;
     ovkGetConnectivityMCount(ConnectivityM, &NumDonors);
-    Grid2DonorValues = malloc(NumDonors*sizeof(double));
+    RightDonorValues = malloc(NumDonors*sizeof(double));
     const ovk_connectivity_n *ConnectivityN;
     ovkGetConnectivityN(ConnectivityComponent, 1, 2, &ConnectivityN);
     ovkCreateExchangerReceive(Exchanger, 1, 2, 1, OVK_DOUBLE, 1, 1);
@@ -492,45 +492,45 @@ static void Interface() {
       Data->ExtendedRange, Data->ExtendedRange+3, OVK_ROW_MAJOR);
     long long NumReceivers;
     ovkGetConnectivityNCount(ConnectivityN, &NumReceivers);
-    Grid2ReceiverValues = malloc(NumReceivers*sizeof(double));
+    RightReceiverValues = malloc(NumReceivers*sizeof(double));
   }
 
-  double *Grid1FieldValues;
-  if (Grid1IsLocal) {
-    grid_data *Data = &Grid1Data;
-    Grid1FieldValues = malloc(Data->NumExtendedPoints*sizeof(double));
-    memset(Grid1FieldValues, -1., Data->NumExtendedPoints);
+  double *LeftFieldValues;
+  if (LeftIsLocal) {
+    grid_data *Data = &LeftData;
+    LeftFieldValues = malloc(Data->NumExtendedPoints*sizeof(double));
+    memset(LeftFieldValues, -1., Data->NumExtendedPoints);
   }
 
-  double *Grid2FieldValues;
-  if (Grid2IsLocal) {
-    grid_data *Data = &Grid2Data;
-    Grid2FieldValues = malloc(Data->NumExtendedPoints*sizeof(double));
-    memset(Grid2FieldValues, 1., Data->NumExtendedPoints);
+  double *RightFieldValues;
+  if (RightIsLocal) {
+    grid_data *Data = &RightData;
+    RightFieldValues = malloc(Data->NumExtendedPoints*sizeof(double));
+    memset(RightFieldValues, 1., Data->NumExtendedPoints);
   }
 
   ovk_request **Requests = malloc(4*sizeof(ovk_request *));
   int NumRequests = 0;
 
-  if (Grid1IsLocal) {
-    ovkExchangerReceive(Exchanger, 2, 1, 1, &Grid1ReceiverValues, &Requests[NumRequests]);
+  if (LeftIsLocal) {
+    ovkExchangerReceive(Exchanger, 2, 1, 1, &LeftReceiverValues, &Requests[NumRequests]);
     ++NumRequests;
   }
 
-  if (Grid2IsLocal) {
-    ovkExchangerReceive(Exchanger, 1, 2, 1, &Grid2ReceiverValues, &Requests[NumRequests]);
+  if (RightIsLocal) {
+    ovkExchangerReceive(Exchanger, 1, 2, 1, &RightReceiverValues, &Requests[NumRequests]);
     ++NumRequests;
   }
 
-  if (Grid1IsLocal) {
-    ovkExchangerCollect(Exchanger, 1, 2, 1, &Grid1FieldValues, &Grid1DonorValues);
-    ovkExchangerSend(Exchanger, 1, 2, 1, &Grid1DonorValues, &Requests[NumRequests]);
+  if (LeftIsLocal) {
+    ovkExchangerCollect(Exchanger, 1, 2, 1, &LeftFieldValues, &LeftDonorValues);
+    ovkExchangerSend(Exchanger, 1, 2, 1, &LeftDonorValues, &Requests[NumRequests]);
     ++NumRequests;
   }
 
-  if (Grid2IsLocal) {
-    ovkExchangerCollect(Exchanger, 2, 1, 1, &Grid2FieldValues, &Grid2DonorValues);
-    ovkExchangerSend(Exchanger, 2, 1, 1, &Grid2DonorValues, &Requests[NumRequests]);
+  if (RightIsLocal) {
+    ovkExchangerCollect(Exchanger, 2, 1, 1, &RightFieldValues, &RightDonorValues);
+    ovkExchangerSend(Exchanger, 2, 1, 1, &RightDonorValues, &Requests[NumRequests]);
     ++NumRequests;
   }
 
@@ -538,24 +538,24 @@ static void Interface() {
 
   free(Requests);
 
-  if (Grid1IsLocal) {
-    ovkExchangerDisperse(Exchanger, 2, 1, 1, &Grid1ReceiverValues, &Grid1FieldValues);
+  if (LeftIsLocal) {
+    ovkExchangerDisperse(Exchanger, 2, 1, 1, &LeftReceiverValues, &LeftFieldValues);
   }
 
-  if (Grid2IsLocal) {
-    ovkExchangerDisperse(Exchanger, 1, 2, 1, &Grid2ReceiverValues, &Grid2FieldValues);
+  if (RightIsLocal) {
+    ovkExchangerDisperse(Exchanger, 1, 2, 1, &RightReceiverValues, &RightFieldValues);
   }
 
-  if (Grid1IsLocal) {
-    free(Grid1DonorValues);
-    free(Grid1ReceiverValues);
-    free(Grid1FieldValues);
+  if (LeftIsLocal) {
+    free(LeftDonorValues);
+    free(LeftReceiverValues);
+    free(LeftFieldValues);
   }
 
-  if (Grid2IsLocal) {
-    free(Grid2DonorValues);
-    free(Grid2ReceiverValues);
-    free(Grid2FieldValues);
+  if (RightIsLocal) {
+    free(RightDonorValues);
+    free(RightReceiverValues);
+    free(RightFieldValues);
   }
 
   ovkDestroyExchanger(&Exchanger);
@@ -563,7 +563,7 @@ static void Interface() {
 
   ovkResetSharedContext(&SharedContext);
 
-  DestroyGridData(&Grid1Data);
-  DestroyGridData(&Grid2Data);
+  DestroyGridData(&LeftData);
+  DestroyGridData(&RightData);
 
 }

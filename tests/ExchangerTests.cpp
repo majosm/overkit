@@ -16,6 +16,7 @@
 #include <ovk/core/ConnectivityM.hpp>
 #include <ovk/core/ConnectivityN.hpp>
 #include <ovk/core/Domain.hpp>
+#include <ovk/core/Field.hpp>
 #include <ovk/core/Grid.hpp>
 #include <ovk/core/Range.hpp>
 #include <ovk/core/Tuple.hpp>
@@ -43,10 +44,10 @@ TEST_F(ExchangerTests, Exchange2D) {
     ovk::domain Domain = Interface2DManualConnectivity(Comm, {{-1.,-1.,0.}, {1.,1.,0.}}, Size,
       {false, false, false}, ovk::periodic_storage::UNIQUE);
 
-    bool Grid1IsLocal = Domain.GridIsLocal(1);
-    bool Grid2IsLocal = Domain.GridIsLocal(2);
+    bool LowerIsLocal = Domain.GridIsLocal(1);
+    bool UpperIsLocal = Domain.GridIsLocal(2);
 
-    ovk::tuple<int> Grid1Size = Domain.GridInfo(1).GlobalRange().Size();
+    ovk::tuple<int> LowerSize = Domain.GridInfo(1).GlobalRange().Size();
 
     ovk::exchanger Exchanger = ovk::CreateExchanger(Domain.SharedContext());
 
@@ -54,127 +55,125 @@ TEST_F(ExchangerTests, Exchange2D) {
       .SetConnectivityComponentID(1)
     );
 
-    using field_values = ovk::array<double,ovk::MAX_DIMS,ovk::array_layout::COLUMN_MAJOR>;
-
-    field_values Grid1FieldValues;
-    if (Grid1IsLocal) {
+    ovk::field<double> LowerFieldValues;
+    if (LowerIsLocal) {
       const ovk::grid &Grid = Domain.Grid(1);
       const ovk::range &LocalRange = Grid.LocalRange();
-      Grid1FieldValues.Resize(LocalRange, 0.);
-      for (int j = LocalRange.Begin(1); j < ovk::Min(LocalRange.End(1),Grid1Size(1)-1); ++j) {
+      LowerFieldValues.Resize(LocalRange, 0.);
+      for (int j = LocalRange.Begin(1); j < ovk::Min(LocalRange.End(1),LowerSize(1)-1); ++j) {
         for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
           double U = double(i);
           double V = double(j);
-          Grid1FieldValues(i,j,0) = U*V;
+          LowerFieldValues(i,j,0) = U*V;
         }
       }
     }
 
-    field_values Grid2FieldValues;
-    if (Grid2IsLocal) {
+    ovk::field<double> UpperFieldValues;
+    if (UpperIsLocal) {
       const ovk::grid &Grid = Domain.Grid(2);
       const ovk::range &LocalRange = Grid.LocalRange();
-      Grid2FieldValues.Resize(LocalRange, 0.);
+      UpperFieldValues.Resize(LocalRange, 0.);
       for (int j = ovk::Max(LocalRange.Begin(1), 1); j < LocalRange.End(1); ++j) {
         for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
           double U = double(i);
-          double V = double(Grid1Size(1)-2+j);
-          Grid2FieldValues(i,j,0) = U*V;
+          double V = double(LowerSize(1)-2+j);
+          UpperFieldValues(i,j,0) = U*V;
         }
       }
     }
 
-    field_values ExpectedGrid1FieldValues;
-    if (Grid1IsLocal) {
+    ovk::field<double> ExpectedLowerFieldValues;
+    if (LowerIsLocal) {
       const ovk::grid &Grid = Domain.Grid(1);
       const ovk::range &LocalRange = Grid.LocalRange();
-      ExpectedGrid1FieldValues.Resize(LocalRange);
+      ExpectedLowerFieldValues.Resize(LocalRange);
       for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
         for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
           double U = double(i);
           double V = double(j);
-          ExpectedGrid1FieldValues(i,j,0) = U*V;
+          ExpectedLowerFieldValues(i,j,0) = U*V;
         }
       }
       // Sanity check
-      if (LocalRange.End(1) == Grid1Size(1)) {
-        EXPECT_THAT(Grid1FieldValues, Not(ElementsAreArray(ExpectedGrid1FieldValues)));
+      if (LocalRange.End(1) == LowerSize(1)) {
+        EXPECT_THAT(LowerFieldValues, Not(ElementsAreArray(ExpectedLowerFieldValues)));
       }
     }
 
-    field_values ExpectedGrid2FieldValues;
-    if (Grid2IsLocal) {
+    ovk::field<double> ExpectedUpperFieldValues;
+    if (UpperIsLocal) {
       const ovk::grid &Grid = Domain.Grid(2);
       const ovk::range &LocalRange = Grid.LocalRange();
-      ExpectedGrid2FieldValues.Resize(LocalRange);
+      ExpectedUpperFieldValues.Resize(LocalRange);
       for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
         for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
           double U = double(i);
-          double V = double(Grid1Size(1)-2+j);
-          ExpectedGrid2FieldValues(i,j,0) = U*V;
+          double V = double(LowerSize(1)-2+j);
+          ExpectedUpperFieldValues(i,j,0) = U*V;
         }
       }
       // Sanity check
       if (LocalRange.Begin(1) == 0) {
-        EXPECT_THAT(Grid2FieldValues, Not(ElementsAreArray(ExpectedGrid2FieldValues)));
+        EXPECT_THAT(UpperFieldValues, Not(ElementsAreArray(ExpectedUpperFieldValues)));
       }
     }
 
-    ovk::array<double> Grid1DonorValues, Grid1ReceiverValues;
-    ovk::array<double> ExpectedGrid1DonorValues, ExpectedGrid1ReceiverValues;
-    if (Grid1IsLocal) {
+    ovk::array<double> LowerDonorValues, LowerReceiverValues;
+    ovk::array<double> ExpectedLowerDonorValues, ExpectedLowerReceiverValues;
+    if (LowerIsLocal) {
       const ovk::grid &Grid = Domain.Grid(1);
       const ovk::range &LocalRange = Grid.LocalRange();
-      if (LocalRange.End(1) == Grid1Size(1)) {
-        Grid1DonorValues.Resize({LocalRange.Size(0)}, 0.);
-        Grid1ReceiverValues.Resize({LocalRange.Size(0)}, 0.);
-        ExpectedGrid1DonorValues.Resize({LocalRange.Size(0)});
+      if (LocalRange.End(1) == LowerSize(1)) {
+        LowerDonorValues.Resize({LocalRange.Size(0)}, 0.);
+        LowerReceiverValues.Resize({LocalRange.Size(0)}, 0.);
+        ExpectedLowerDonorValues.Resize({LocalRange.Size(0)});
         long long iDonor = 0;
         for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
           double U = double(i);
-          double V = double(Grid1Size(1)-2);
-          ExpectedGrid1DonorValues(iDonor) = U*V;
+          double V = double(LowerSize(1)-2);
+          ExpectedLowerDonorValues(iDonor) = U*V;
           ++iDonor;
         }
-        ExpectedGrid1ReceiverValues.Resize({LocalRange.Size(0)});
+        ExpectedLowerReceiverValues.Resize({LocalRange.Size(0)});
         long long iReceiver = 0;
         for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
           double U = double(i);
-          double V = double(Grid1Size(1)-1);
-          ExpectedGrid1ReceiverValues(iReceiver) = U*V;
+          double V = double(LowerSize(1)-1);
+          ExpectedLowerReceiverValues(iReceiver) = U*V;
           ++iReceiver;
         }
       }
     }
 
-    ovk::array<double> Grid2DonorValues, Grid2ReceiverValues;
-    ovk::array<double> ExpectedGrid2DonorValues, ExpectedGrid2ReceiverValues;
-    if (Grid2IsLocal) {
+    ovk::array<double> UpperDonorValues, UpperReceiverValues;
+    ovk::array<double> ExpectedUpperDonorValues, ExpectedUpperReceiverValues;
+    if (UpperIsLocal) {
       const ovk::grid &Grid = Domain.Grid(2);
       const ovk::range &LocalRange = Grid.LocalRange();
       if (LocalRange.Begin(1) == 0) {
-        Grid2DonorValues.Resize({LocalRange.Size(0)}, 0.);
-        Grid2ReceiverValues.Resize({LocalRange.Size(0)}, 0.);
-        ExpectedGrid2DonorValues.Resize({LocalRange.Size(0)});
+        UpperDonorValues.Resize({LocalRange.Size(0)}, 0.);
+        UpperReceiverValues.Resize({LocalRange.Size(0)}, 0.);
+        ExpectedUpperDonorValues.Resize({LocalRange.Size(0)});
         long long iDonor = 0;
         for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
           double U = double(i);
-          double V = double(Grid1Size(1)-1);
-          ExpectedGrid2DonorValues(iDonor) = U*V;
+          double V = double(LowerSize(1)-1);
+          ExpectedUpperDonorValues(iDonor) = U*V;
           ++iDonor;
         }
-        ExpectedGrid2ReceiverValues.Resize({LocalRange.Size(0)});
+        ExpectedUpperReceiverValues.Resize({LocalRange.Size(0)});
         long long iReceiver = 0;
         for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
           double U = double(i);
-          double V = double(Grid1Size(1)-2);
-          ExpectedGrid2ReceiverValues(iReceiver) = U*V;
+          double V = double(LowerSize(1)-2);
+          ExpectedUpperReceiverValues(iReceiver) = U*V;
           ++iReceiver;
         }
       }
     }
 
-    if (Grid1IsLocal) {
+    if (LowerIsLocal) {
       const ovk::grid &Grid = Domain.Grid(1);
       const ovk::range &LocalRange = Grid.LocalRange();
       Exchanger.CreateCollect({1,2}, 1, ovk::collect_op::INTERPOLATE, ovk::data_type::DOUBLE, 1,
@@ -185,7 +184,7 @@ TEST_F(ExchangerTests, Exchange2D) {
         LocalRange, ovk::array_layout::COLUMN_MAJOR);
     }
 
-    if (Grid2IsLocal) {
+    if (UpperIsLocal) {
       const ovk::grid &Grid = Domain.Grid(2);
       const ovk::range &LocalRange = Grid.LocalRange();
       Exchanger.CreateCollect({2,1}, 1, ovk::collect_op::INTERPOLATE, ovk::data_type::DOUBLE, 1,
@@ -196,62 +195,62 @@ TEST_F(ExchangerTests, Exchange2D) {
         LocalRange, ovk::array_layout::COLUMN_MAJOR);
     }
 
-    if (Grid1IsLocal) {
-      const double *FieldValues = Grid1FieldValues.Data();
-      double *DonorValues = Grid1DonorValues.Data();
+    if (LowerIsLocal) {
+      const double *FieldValues = LowerFieldValues.Data();
+      double *DonorValues = LowerDonorValues.Data();
       Exchanger.Collect({1,2}, 1, &FieldValues, &DonorValues);
-      EXPECT_THAT(Grid1DonorValues, ElementsAreArray(ExpectedGrid1DonorValues));
+      EXPECT_THAT(LowerDonorValues, ElementsAreArray(ExpectedLowerDonorValues));
     }
 
-    if (Grid2IsLocal) {
-      const double *FieldValues = Grid2FieldValues.Data();
-      double *DonorValues = Grid2DonorValues.Data();
+    if (UpperIsLocal) {
+      const double *FieldValues = UpperFieldValues.Data();
+      double *DonorValues = UpperDonorValues.Data();
       Exchanger.Collect({2,1}, 1, &FieldValues, &DonorValues);
-      EXPECT_THAT(Grid2DonorValues, ElementsAreArray(ExpectedGrid2DonorValues));
+      EXPECT_THAT(UpperDonorValues, ElementsAreArray(ExpectedUpperDonorValues));
     }
 
     ovk::array<ovk::request> Requests;
 
-    if (Grid1IsLocal) {
-      double *ReceiverValues = Grid1ReceiverValues.Data();
+    if (LowerIsLocal) {
+      double *ReceiverValues = LowerReceiverValues.Data();
       ovk::request Request = Exchanger.Receive({2,1}, 1, &ReceiverValues);
       Requests.Append(std::move(Request));
     }
 
-    if (Grid2IsLocal) {
-      double *ReceiverValues = Grid2ReceiverValues.Data();
+    if (UpperIsLocal) {
+      double *ReceiverValues = UpperReceiverValues.Data();
       ovk::request Request = Exchanger.Receive({1,2}, 1, &ReceiverValues);
       Requests.Append(std::move(Request));
     }
 
-    if (Grid1IsLocal) {
-      const double *DonorValues = Grid1DonorValues.Data();
+    if (LowerIsLocal) {
+      const double *DonorValues = LowerDonorValues.Data();
       ovk::request Request = Exchanger.Send({1,2}, 1, &DonorValues);
       Requests.Append(std::move(Request));
     }
 
-    if (Grid2IsLocal) {
-      const double *DonorValues = Grid2DonorValues.Data();
+    if (UpperIsLocal) {
+      const double *DonorValues = UpperDonorValues.Data();
       ovk::request Request = Exchanger.Send({2,1}, 1, &DonorValues);
       Requests.Append(std::move(Request));
     }
 
     ovk::WaitAll(Requests);
 
-    if (Grid1IsLocal) {
-      EXPECT_THAT(Grid1ReceiverValues, ElementsAreArray(ExpectedGrid1ReceiverValues));
-      const double *ReceiverValues = Grid1ReceiverValues.Data();
-      double *FieldValues = Grid1FieldValues.Data();
+    if (LowerIsLocal) {
+      EXPECT_THAT(LowerReceiverValues, ElementsAreArray(ExpectedLowerReceiverValues));
+      const double *ReceiverValues = LowerReceiverValues.Data();
+      double *FieldValues = LowerFieldValues.Data();
       Exchanger.Disperse({2,1}, 1, &ReceiverValues, &FieldValues);
-      EXPECT_THAT(Grid1FieldValues, ElementsAreArray(ExpectedGrid1FieldValues));
+      EXPECT_THAT(LowerFieldValues, ElementsAreArray(ExpectedLowerFieldValues));
     }
 
-    if (Grid2IsLocal) {
-      EXPECT_THAT(Grid2ReceiverValues, ElementsAreArray(ExpectedGrid2ReceiverValues));
-      const double *ReceiverValues = Grid2ReceiverValues.Data();
-      double *FieldValues = Grid2FieldValues.Data();
+    if (UpperIsLocal) {
+      EXPECT_THAT(UpperReceiverValues, ElementsAreArray(ExpectedUpperReceiverValues));
+      const double *ReceiverValues = UpperReceiverValues.Data();
+      double *FieldValues = UpperFieldValues.Data();
       Exchanger.Disperse({1,2}, 1, &ReceiverValues, &FieldValues);
-      EXPECT_THAT(Grid2FieldValues, ElementsAreArray(ExpectedGrid2FieldValues));
+      EXPECT_THAT(UpperFieldValues, ElementsAreArray(ExpectedUpperFieldValues));
     }
 
   }
@@ -269,10 +268,10 @@ TEST_F(ExchangerTests, Exchange3D) {
     ovk::domain Domain = Interface3DManualConnectivity(Comm, {{-1.,-1.,-1}, {1.,1.,1.}}, Size,
       {false, false, false}, ovk::periodic_storage::UNIQUE);
 
-    bool Grid1IsLocal = Domain.GridIsLocal(1);
-    bool Grid2IsLocal = Domain.GridIsLocal(2);
+    bool LowerIsLocal = Domain.GridIsLocal(1);
+    bool UpperIsLocal = Domain.GridIsLocal(2);
 
-    ovk::tuple<int> Grid1Size = Domain.GridInfo(1).GlobalRange().Size();
+    ovk::tuple<int> LowerSize = Domain.GridInfo(1).GlobalRange().Size();
 
     ovk::exchanger Exchanger = ovk::CreateExchanger(Domain.SharedContext());
 
@@ -280,151 +279,149 @@ TEST_F(ExchangerTests, Exchange3D) {
       .SetConnectivityComponentID(1)
     );
 
-    using field_values = ovk::array<double,ovk::MAX_DIMS,ovk::array_layout::COLUMN_MAJOR>;
-
-    field_values Grid1FieldValues;
-    if (Grid1IsLocal) {
+    ovk::field<double> LowerFieldValues;
+    if (LowerIsLocal) {
       const ovk::grid &Grid = Domain.Grid(1);
       const ovk::range &LocalRange = Grid.LocalRange();
-      Grid1FieldValues.Resize(LocalRange, 0.);
-      for (int k = LocalRange.Begin(2); k < ovk::Min(LocalRange.End(2),Grid1Size(2)-1); ++k) {
+      LowerFieldValues.Resize(LocalRange, 0.);
+      for (int k = LocalRange.Begin(2); k < ovk::Min(LocalRange.End(2),LowerSize(2)-1); ++k) {
         for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
           for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
             double U = double(i);
             double V = double(j);
             double W = double(k);
-            Grid1FieldValues(i,j,k) = U*V*W;
+            LowerFieldValues(i,j,k) = U*V*W;
           }
         }
       }
     }
 
-    field_values Grid2FieldValues;
-    if (Grid2IsLocal) {
+    ovk::field<double> UpperFieldValues;
+    if (UpperIsLocal) {
       const ovk::grid &Grid = Domain.Grid(2);
       const ovk::range &LocalRange = Grid.LocalRange();
-      Grid2FieldValues.Resize(LocalRange, 0.);
+      UpperFieldValues.Resize(LocalRange, 0.);
       for (int k = ovk::Max(LocalRange.Begin(2), 1); k < LocalRange.End(2); ++k) {
         for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
           for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
             double U = double(i);
             double V = double(j);
-            double W = double(Grid1Size(2)-2+k);
-            Grid2FieldValues(i,j,k) = U*V*W;
+            double W = double(LowerSize(2)-2+k);
+            UpperFieldValues(i,j,k) = U*V*W;
           }
         }
       }
     }
 
-    field_values ExpectedGrid1FieldValues;
-    if (Grid1IsLocal) {
+    ovk::field<double> ExpectedLowerFieldValues;
+    if (LowerIsLocal) {
       const ovk::grid &Grid = Domain.Grid(1);
       const ovk::range &LocalRange = Grid.LocalRange();
-      ExpectedGrid1FieldValues.Resize(LocalRange);
+      ExpectedLowerFieldValues.Resize(LocalRange);
       for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
         for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
           for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
             double U = double(i);
             double V = double(j);
             double W = double(k);
-            ExpectedGrid1FieldValues(i,j,k) = U*V*W;
+            ExpectedLowerFieldValues(i,j,k) = U*V*W;
           }
         }
       }
       // Sanity check
-      if (LocalRange.End(2) == Grid1Size(2)) {
-        EXPECT_THAT(Grid1FieldValues, Not(ElementsAreArray(ExpectedGrid1FieldValues)));
+      if (LocalRange.End(2) == LowerSize(2)) {
+        EXPECT_THAT(LowerFieldValues, Not(ElementsAreArray(ExpectedLowerFieldValues)));
       }
     }
 
-    field_values ExpectedGrid2FieldValues;
-    if (Grid2IsLocal) {
+    ovk::field<double> ExpectedUpperFieldValues;
+    if (UpperIsLocal) {
       const ovk::grid &Grid = Domain.Grid(2);
       const ovk::range &LocalRange = Grid.LocalRange();
-      ExpectedGrid2FieldValues.Resize(LocalRange);
+      ExpectedUpperFieldValues.Resize(LocalRange);
       for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
         for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
           for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
             double U = double(i);
             double V = double(j);
-            double W = double(Grid1Size(2)-2+k);
-            ExpectedGrid2FieldValues(i,j,k) = U*V*W;
+            double W = double(LowerSize(2)-2+k);
+            ExpectedUpperFieldValues(i,j,k) = U*V*W;
           }
         }
       }
       // Sanity check
       if (LocalRange.Begin(2) == 0) {
-        EXPECT_THAT(Grid2FieldValues, Not(ElementsAreArray(ExpectedGrid2FieldValues)));
+        EXPECT_THAT(UpperFieldValues, Not(ElementsAreArray(ExpectedUpperFieldValues)));
       }
     }
 
-    ovk::array<double> Grid1DonorValues, Grid1ReceiverValues;
-    ovk::array<double> ExpectedGrid1DonorValues, ExpectedGrid1ReceiverValues;
-    if (Grid1IsLocal) {
+    ovk::array<double> LowerDonorValues, LowerReceiverValues;
+    ovk::array<double> ExpectedLowerDonorValues, ExpectedLowerReceiverValues;
+    if (LowerIsLocal) {
       const ovk::grid &Grid = Domain.Grid(1);
       const ovk::range &LocalRange = Grid.LocalRange();
-      if (LocalRange.End(2) == Grid1Size(2)) {
-        Grid1DonorValues.Resize({LocalRange.Size(0)*LocalRange.Size(1)}, 0.);
-        Grid1ReceiverValues.Resize({LocalRange.Size(0)*LocalRange.Size(1)}, 0.);
-        ExpectedGrid1DonorValues.Resize({LocalRange.Size(0)*LocalRange.Size(1)});
+      if (LocalRange.End(2) == LowerSize(2)) {
+        LowerDonorValues.Resize({LocalRange.Size(0)*LocalRange.Size(1)}, 0.);
+        LowerReceiverValues.Resize({LocalRange.Size(0)*LocalRange.Size(1)}, 0.);
+        ExpectedLowerDonorValues.Resize({LocalRange.Size(0)*LocalRange.Size(1)});
         long long iDonor = 0;
         for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
           for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
             double U = double(i);
             double V = double(j);
-            double W = double(Grid1Size(2)-2);
-            ExpectedGrid1DonorValues(iDonor) = U*V*W;
+            double W = double(LowerSize(2)-2);
+            ExpectedLowerDonorValues(iDonor) = U*V*W;
             ++iDonor;
           }
         }
-        ExpectedGrid1ReceiverValues.Resize({LocalRange.Size(0)*LocalRange.Size(1)});
+        ExpectedLowerReceiverValues.Resize({LocalRange.Size(0)*LocalRange.Size(1)});
         long long iReceiver = 0;
         for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
           for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
             double U = double(i);
             double V = double(j);
-            double W = double(Grid1Size(2)-1);
-            ExpectedGrid1ReceiverValues(iReceiver) = U*V*W;
+            double W = double(LowerSize(2)-1);
+            ExpectedLowerReceiverValues(iReceiver) = U*V*W;
             ++iReceiver;
           }
         }
       }
     }
 
-    ovk::array<double> Grid2DonorValues, Grid2ReceiverValues;
-    ovk::array<double> ExpectedGrid2DonorValues, ExpectedGrid2ReceiverValues;
-    if (Grid2IsLocal) {
+    ovk::array<double> UpperDonorValues, UpperReceiverValues;
+    ovk::array<double> ExpectedUpperDonorValues, ExpectedUpperReceiverValues;
+    if (UpperIsLocal) {
       const ovk::grid &Grid = Domain.Grid(2);
       const ovk::range &LocalRange = Grid.LocalRange();
       if (LocalRange.Begin(2) == 0) {
-        Grid2DonorValues.Resize({LocalRange.Size(0)*LocalRange.Size(1)}, 0.);
-        Grid2ReceiverValues.Resize({LocalRange.Size(0)*LocalRange.Size(1)}, 0.);
-        ExpectedGrid2DonorValues.Resize({LocalRange.Size(0)*LocalRange.Size(1)});
+        UpperDonorValues.Resize({LocalRange.Size(0)*LocalRange.Size(1)}, 0.);
+        UpperReceiverValues.Resize({LocalRange.Size(0)*LocalRange.Size(1)}, 0.);
+        ExpectedUpperDonorValues.Resize({LocalRange.Size(0)*LocalRange.Size(1)});
         long long iDonor = 0;
         for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
           for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
             double U = double(i);
             double V = double(j);
-            double W = double(Grid1Size(2)-1);
-            ExpectedGrid2DonorValues(iDonor) = U*V*W;
+            double W = double(LowerSize(2)-1);
+            ExpectedUpperDonorValues(iDonor) = U*V*W;
             ++iDonor;
           }
         }
-        ExpectedGrid2ReceiverValues.Resize({LocalRange.Size(0)*LocalRange.Size(1)});
+        ExpectedUpperReceiverValues.Resize({LocalRange.Size(0)*LocalRange.Size(1)});
         long long iReceiver = 0;
         for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
           for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
             double U = double(i);
             double V = double(j);
-            double W = double(Grid1Size(2)-2);
-            ExpectedGrid2ReceiverValues(iReceiver) = U*V*W;
+            double W = double(LowerSize(2)-2);
+            ExpectedUpperReceiverValues(iReceiver) = U*V*W;
             ++iReceiver;
           }
         }
       }
     }
 
-    if (Grid1IsLocal) {
+    if (LowerIsLocal) {
       const ovk::grid &Grid = Domain.Grid(1);
       const ovk::range &LocalRange = Grid.LocalRange();
       Exchanger.CreateCollect({1,2}, 1, ovk::collect_op::INTERPOLATE, ovk::data_type::DOUBLE, 1,
@@ -435,7 +432,7 @@ TEST_F(ExchangerTests, Exchange3D) {
         LocalRange, ovk::array_layout::COLUMN_MAJOR);
     }
 
-    if (Grid2IsLocal) {
+    if (UpperIsLocal) {
       const ovk::grid &Grid = Domain.Grid(2);
       const ovk::range &LocalRange = Grid.LocalRange();
       Exchanger.CreateCollect({2,1}, 1, ovk::collect_op::INTERPOLATE, ovk::data_type::DOUBLE, 1,
@@ -446,62 +443,62 @@ TEST_F(ExchangerTests, Exchange3D) {
         LocalRange, ovk::array_layout::COLUMN_MAJOR);
     }
 
-    if (Grid1IsLocal) {
-      const double *FieldValues = Grid1FieldValues.Data();
-      double *DonorValues = Grid1DonorValues.Data();
+    if (LowerIsLocal) {
+      const double *FieldValues = LowerFieldValues.Data();
+      double *DonorValues = LowerDonorValues.Data();
       Exchanger.Collect({1,2}, 1, &FieldValues, &DonorValues);
-      EXPECT_THAT(Grid1DonorValues, ElementsAreArray(ExpectedGrid1DonorValues));
+      EXPECT_THAT(LowerDonorValues, ElementsAreArray(ExpectedLowerDonorValues));
     }
 
-    if (Grid2IsLocal) {
-      const double *FieldValues = Grid2FieldValues.Data();
-      double *DonorValues = Grid2DonorValues.Data();
+    if (UpperIsLocal) {
+      const double *FieldValues = UpperFieldValues.Data();
+      double *DonorValues = UpperDonorValues.Data();
       Exchanger.Collect({2,1}, 1, &FieldValues, &DonorValues);
-      EXPECT_THAT(Grid2DonorValues, ElementsAreArray(ExpectedGrid2DonorValues));
+      EXPECT_THAT(UpperDonorValues, ElementsAreArray(ExpectedUpperDonorValues));
     }
 
     ovk::array<ovk::request> Requests;
 
-    if (Grid1IsLocal) {
-      double *ReceiverValues = Grid1ReceiverValues.Data();
+    if (LowerIsLocal) {
+      double *ReceiverValues = LowerReceiverValues.Data();
       ovk::request Request = Exchanger.Receive({2,1}, 1, &ReceiverValues);
       Requests.Append(std::move(Request));
     }
 
-    if (Grid2IsLocal) {
-      double *ReceiverValues = Grid2ReceiverValues.Data();
+    if (UpperIsLocal) {
+      double *ReceiverValues = UpperReceiverValues.Data();
       ovk::request Request = Exchanger.Receive({1,2}, 1, &ReceiverValues);
       Requests.Append(std::move(Request));
     }
 
-    if (Grid1IsLocal) {
-      const double *DonorValues = Grid1DonorValues.Data();
+    if (LowerIsLocal) {
+      const double *DonorValues = LowerDonorValues.Data();
       ovk::request Request = Exchanger.Send({1,2}, 1, &DonorValues);
       Requests.Append(std::move(Request));
     }
 
-    if (Grid2IsLocal) {
-      const double *DonorValues = Grid2DonorValues.Data();
+    if (UpperIsLocal) {
+      const double *DonorValues = UpperDonorValues.Data();
       ovk::request Request = Exchanger.Send({2,1}, 1, &DonorValues);
       Requests.Append(std::move(Request));
     }
 
     ovk::WaitAll(Requests);
 
-    if (Grid1IsLocal) {
-      EXPECT_THAT(Grid1ReceiverValues, ElementsAreArray(ExpectedGrid1ReceiverValues));
-      const double *ReceiverValues = Grid1ReceiverValues.Data();
-      double *FieldValues = Grid1FieldValues.Data();
+    if (LowerIsLocal) {
+      EXPECT_THAT(LowerReceiverValues, ElementsAreArray(ExpectedLowerReceiverValues));
+      const double *ReceiverValues = LowerReceiverValues.Data();
+      double *FieldValues = LowerFieldValues.Data();
       Exchanger.Disperse({2,1}, 1, &ReceiverValues, &FieldValues);
-      EXPECT_THAT(Grid1FieldValues, ElementsAreArray(ExpectedGrid1FieldValues));
+      EXPECT_THAT(LowerFieldValues, ElementsAreArray(ExpectedLowerFieldValues));
     }
 
-    if (Grid2IsLocal) {
-      EXPECT_THAT(Grid2ReceiverValues, ElementsAreArray(ExpectedGrid2ReceiverValues));
-      const double *ReceiverValues = Grid2ReceiverValues.Data();
-      double *FieldValues = Grid2FieldValues.Data();
+    if (UpperIsLocal) {
+      EXPECT_THAT(UpperReceiverValues, ElementsAreArray(ExpectedUpperReceiverValues));
+      const double *ReceiverValues = UpperReceiverValues.Data();
+      double *FieldValues = UpperFieldValues.Data();
       Exchanger.Disperse({1,2}, 1, &ReceiverValues, &FieldValues);
-      EXPECT_THAT(Grid2FieldValues, ElementsAreArray(ExpectedGrid2FieldValues));
+      EXPECT_THAT(UpperFieldValues, ElementsAreArray(ExpectedUpperFieldValues));
     }
 
   }
