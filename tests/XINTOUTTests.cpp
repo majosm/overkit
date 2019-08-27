@@ -64,8 +64,8 @@ TEST_F(XINTOUTTests, ImportStandard2D) {
 
       bool HasInterface = LocalRange.End(1) == GlobalRange.End(1);
 
-      const ovk::connectivity_m &ConnectivityM = ConnectivityComponent.ConnectivityM(1,2);
-      const ovk::connectivity_n &ConnectivityN = ConnectivityComponent.ConnectivityN(2,1);
+      const ovk::connectivity_m &ConnectivityM = ConnectivityComponent.ConnectivityM({1,2});
+      const ovk::connectivity_n &ConnectivityN = ConnectivityComponent.ConnectivityN({2,1});
 
       if (HasInterface) {
 
@@ -139,8 +139,8 @@ TEST_F(XINTOUTTests, ImportStandard2D) {
 
       bool HasInterface = LocalRange.Begin(1) == GlobalRange.Begin(1);
 
-      const ovk::connectivity_m &ConnectivityM = ConnectivityComponent.ConnectivityM(2,1);
-      const ovk::connectivity_n &ConnectivityN = ConnectivityComponent.ConnectivityN(1,2);
+      const ovk::connectivity_m &ConnectivityM = ConnectivityComponent.ConnectivityM({2,1});
+      const ovk::connectivity_n &ConnectivityN = ConnectivityComponent.ConnectivityN({1,2});
 
       if (HasInterface) {
 
@@ -243,8 +243,8 @@ TEST_F(XINTOUTTests, ImportStandard3D) {
 
       bool HasInterface = LocalRange.End(2) == GlobalRange.End(2);
 
-      const ovk::connectivity_m &ConnectivityM = ConnectivityComponent.ConnectivityM(1,2);
-      const ovk::connectivity_n &ConnectivityN = ConnectivityComponent.ConnectivityN(2,1);
+      const ovk::connectivity_m &ConnectivityM = ConnectivityComponent.ConnectivityM({1,2});
+      const ovk::connectivity_n &ConnectivityN = ConnectivityComponent.ConnectivityN({2,1});
 
       if (HasInterface) {
 
@@ -321,8 +321,8 @@ TEST_F(XINTOUTTests, ImportStandard3D) {
 
       bool HasInterface = LocalRange.Begin(2) == GlobalRange.Begin(2);
 
-      const ovk::connectivity_m &ConnectivityM = ConnectivityComponent.ConnectivityM(2,1);
-      const ovk::connectivity_n &ConnectivityN = ConnectivityComponent.ConnectivityN(1,2);
+      const ovk::connectivity_m &ConnectivityM = ConnectivityComponent.ConnectivityM({2,1});
+      const ovk::connectivity_n &ConnectivityN = ConnectivityComponent.ConnectivityN({1,2});
 
       if (HasInterface) {
 
@@ -429,8 +429,8 @@ TEST_F(XINTOUTTests, ImportExtended2D) {
 
       bool HasInterface = LocalRange.End(1) == GlobalRange.End(1);
 
-      const ovk::connectivity_m &ConnectivityM = ConnectivityComponent.ConnectivityM(1,2);
-      const ovk::connectivity_n &ConnectivityN = ConnectivityComponent.ConnectivityN(2,1);
+      const ovk::connectivity_m &ConnectivityM = ConnectivityComponent.ConnectivityM({1,2});
+      const ovk::connectivity_n &ConnectivityN = ConnectivityComponent.ConnectivityN({2,1});
 
       if (HasInterface) {
 
@@ -504,8 +504,8 @@ TEST_F(XINTOUTTests, ImportExtended2D) {
 
       bool HasInterface = LocalRange.Begin(1) == GlobalRange.Begin(1);
 
-      const ovk::connectivity_m &ConnectivityM = ConnectivityComponent.ConnectivityM(2,1);
-      const ovk::connectivity_n &ConnectivityN = ConnectivityComponent.ConnectivityN(1,2);
+      const ovk::connectivity_m &ConnectivityM = ConnectivityComponent.ConnectivityM({2,1});
+      const ovk::connectivity_n &ConnectivityN = ConnectivityComponent.ConnectivityN({1,2});
 
       if (HasInterface) {
 
@@ -608,8 +608,8 @@ TEST_F(XINTOUTTests, ImportExtended3D) {
 
       bool HasInterface = LocalRange.End(2) == GlobalRange.End(2);
 
-      const ovk::connectivity_m &ConnectivityM = ConnectivityComponent.ConnectivityM(1,2);
-      const ovk::connectivity_n &ConnectivityN = ConnectivityComponent.ConnectivityN(2,1);
+      const ovk::connectivity_m &ConnectivityM = ConnectivityComponent.ConnectivityM({1,2});
+      const ovk::connectivity_n &ConnectivityN = ConnectivityComponent.ConnectivityN({2,1});
 
       if (HasInterface) {
 
@@ -686,8 +686,8 @@ TEST_F(XINTOUTTests, ImportExtended3D) {
 
       bool HasInterface = LocalRange.Begin(2) == GlobalRange.Begin(2);
 
-      const ovk::connectivity_m &ConnectivityM = ConnectivityComponent.ConnectivityM(2,1);
-      const ovk::connectivity_n &ConnectivityN = ConnectivityComponent.ConnectivityN(1,2);
+      const ovk::connectivity_m &ConnectivityM = ConnectivityComponent.ConnectivityM({2,1});
+      const ovk::connectivity_n &ConnectivityN = ConnectivityComponent.ConnectivityN({1,2});
 
       if (HasInterface) {
 

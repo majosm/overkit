@@ -150,7 +150,7 @@ bool ovkExchangerCollectExists(const ovk_exchanger *Exchanger, int MGridID, int 
   OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
 
   auto &ExchangerCPP = *reinterpret_cast<const ovk::exchanger *>(Exchanger);
-  return ExchangerCPP.CollectExists(MGridID, NGridID, CollectID);
+  return ExchangerCPP.CollectExists({MGridID,NGridID}, CollectID);
 
 }
 
@@ -160,7 +160,7 @@ void ovkGetNextAvailableExchangerCollectID(const ovk_exchanger *Exchanger, int M
   OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
 
   auto &ExchangerCPP = *reinterpret_cast<const ovk::exchanger *>(Exchanger);
-  *CollectID = ovk::NextAvailableID(ExchangerCPP.CollectIDs(MGridID, NGridID));
+  *CollectID = ovk::NextAvailableID(ExchangerCPP.CollectIDs({MGridID,NGridID}));
 
 }
 
@@ -182,7 +182,7 @@ void ovkCreateExchangerCollect(ovk_exchanger *Exchanger, int MGridID, int NGridI
     GridValuesRange.End(iDim) = GridValuesEnd[iDim];
   }
 
-  ExchangerCPP.CreateCollect(MGridID, NGridID, CollectID, ovk::collect_op(CollectOp),
+  ExchangerCPP.CreateCollect({MGridID,NGridID}, CollectID, ovk::collect_op(CollectOp),
     ovk::data_type(ValueType), Count, GridValuesRange, ovk::array_layout(GridValuesLayout));
 
 }
@@ -192,7 +192,7 @@ void ovkDestroyExchangerCollect(ovk_exchanger *Exchanger, int MGridID, int NGrid
   OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
 
   auto &ExchangerCPP = *reinterpret_cast<ovk::exchanger *>(Exchanger);
-  ExchangerCPP.DestroyCollect(MGridID, NGridID, CollectID);
+  ExchangerCPP.DestroyCollect({MGridID,NGridID}, CollectID);
 
 }
 
@@ -202,7 +202,7 @@ void ovkExchangerCollect(ovk_exchanger *Exchanger, int MGridID, int NGridID, int
   OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
 
   auto &ExchangerCPP = *reinterpret_cast<ovk::exchanger *>(Exchanger);
-  ExchangerCPP.Collect(MGridID, NGridID, CollectID, GridValues, DonorValues);
+  ExchangerCPP.Collect({MGridID,NGridID}, CollectID, GridValues, DonorValues);
 
 }
 
@@ -211,7 +211,7 @@ bool ovkExchangerSendExists(const ovk_exchanger *Exchanger, int MGridID, int NGr
   OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
 
   auto &ExchangerCPP = *reinterpret_cast<const ovk::exchanger *>(Exchanger);
-  return ExchangerCPP.SendExists(MGridID, NGridID, SendID);
+  return ExchangerCPP.SendExists({MGridID,NGridID}, SendID);
 
 }
 
@@ -221,7 +221,7 @@ void ovkGetNextAvailableExchangerSendID(const ovk_exchanger *Exchanger, int MGri
   OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
 
   auto &ExchangerCPP = *reinterpret_cast<const ovk::exchanger *>(Exchanger);
-  *SendID = ovk::NextAvailableID(ExchangerCPP.SendIDs(MGridID, NGridID));
+  *SendID = ovk::NextAvailableID(ExchangerCPP.SendIDs({MGridID,NGridID}));
 
 }
 
@@ -231,7 +231,7 @@ void ovkCreateExchangerSend(ovk_exchanger *Exchanger, int MGridID, int NGridID, 
   OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
 
   auto &ExchangerCPP = *reinterpret_cast<ovk::exchanger *>(Exchanger);
-  ExchangerCPP.CreateSend(MGridID, NGridID, SendID, ovk::data_type(ValueType), Count, Tag);
+  ExchangerCPP.CreateSend({MGridID,NGridID}, SendID, ovk::data_type(ValueType), Count, Tag);
 
 }
 
@@ -240,7 +240,7 @@ void ovkDestroyExchangerSend(ovk_exchanger *Exchanger, int MGridID, int NGridID,
   OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
 
   auto &ExchangerCPP = *reinterpret_cast<ovk::exchanger *>(Exchanger);
-  ExchangerCPP.DestroySend(MGridID, NGridID, SendID);
+  ExchangerCPP.DestroySend({MGridID,NGridID}, SendID);
 
 }
 
@@ -253,7 +253,7 @@ void ovkExchangerSend(ovk_exchanger *Exchanger, int MGridID, int NGridID, int Se
   auto &ExchangerCPP = *reinterpret_cast<ovk::exchanger *>(Exchanger);
   auto RequestCPPPtr = new ovk::request();
 
-  *RequestCPPPtr = ExchangerCPP.Send(MGridID, NGridID, SendID, DonorValues);
+  *RequestCPPPtr = ExchangerCPP.Send({MGridID,NGridID}, SendID, DonorValues);
 
   *Request = reinterpret_cast<ovk_request *>(RequestCPPPtr);
 
@@ -265,7 +265,7 @@ bool ovkExchangerReceiveExists(const ovk_exchanger *Exchanger, int MGridID, int 
   OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
 
   auto &ExchangerCPP = *reinterpret_cast<const ovk::exchanger *>(Exchanger);
-  return ExchangerCPP.ReceiveExists(MGridID, NGridID, RecvID);
+  return ExchangerCPP.ReceiveExists({MGridID,NGridID}, RecvID);
 
 }
 
@@ -275,7 +275,7 @@ void ovkGetNextAvailableExchangerReceiveID(const ovk_exchanger *Exchanger, int M
   OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
 
   auto &ExchangerCPP = *reinterpret_cast<const ovk::exchanger *>(Exchanger);
-  *RecvID = ovk::NextAvailableID(ExchangerCPP.ReceiveIDs(MGridID, NGridID));
+  *RecvID = ovk::NextAvailableID(ExchangerCPP.ReceiveIDs({MGridID,NGridID}));
 
 }
 
@@ -285,7 +285,7 @@ void ovkCreateExchangerReceive(ovk_exchanger *Exchanger, int MGridID, int NGridI
   OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
 
   auto &ExchangerCPP = *reinterpret_cast<ovk::exchanger *>(Exchanger);
-  ExchangerCPP.CreateReceive(MGridID, NGridID, RecvID, ovk::data_type(ValueType), Count, Tag);
+  ExchangerCPP.CreateReceive({MGridID,NGridID}, RecvID, ovk::data_type(ValueType), Count, Tag);
 
 }
 
@@ -294,7 +294,7 @@ void ovkDestroyExchangerReceive(ovk_exchanger *Exchanger, int MGridID, int NGrid
   OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
 
   auto &ExchangerCPP = *reinterpret_cast<ovk::exchanger *>(Exchanger);
-  ExchangerCPP.DestroyReceive(MGridID, NGridID, RecvID);
+  ExchangerCPP.DestroyReceive({MGridID,NGridID}, RecvID);
 
 }
 
@@ -307,7 +307,7 @@ void ovkExchangerReceive(ovk_exchanger *Exchanger, int MGridID, int NGridID, int
   auto &ExchangerCPP = *reinterpret_cast<ovk::exchanger *>(Exchanger);
   auto RequestCPPPtr = new ovk::request();
 
-  *RequestCPPPtr = ExchangerCPP.Receive(MGridID, NGridID, RecvID, ReceiverValues);
+  *RequestCPPPtr = ExchangerCPP.Receive({MGridID,NGridID}, RecvID, ReceiverValues);
 
   *Request = reinterpret_cast<ovk_request *>(RequestCPPPtr);
 
@@ -319,7 +319,7 @@ bool ovkExchangerDisperseExists(const ovk_exchanger *Exchanger, int MGridID, int
   OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
 
   auto &ExchangerCPP = *reinterpret_cast<const ovk::exchanger *>(Exchanger);
-  return ExchangerCPP.DisperseExists(MGridID, NGridID, DisperseID);
+  return ExchangerCPP.DisperseExists({MGridID,NGridID}, DisperseID);
 
 }
 
@@ -329,7 +329,7 @@ void ovkGetNextAvailableExchangerDisperseID(const ovk_exchanger *Exchanger, int 
   OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
 
   auto &ExchangerCPP = *reinterpret_cast<const ovk::exchanger *>(Exchanger);
-  *DisperseID = ovk::NextAvailableID(ExchangerCPP.DisperseIDs(MGridID, NGridID));
+  *DisperseID = ovk::NextAvailableID(ExchangerCPP.DisperseIDs({MGridID,NGridID}));
 
 }
 
@@ -351,7 +351,7 @@ void ovkCreateExchangerDisperse(ovk_exchanger *Exchanger, int MGridID, int NGrid
     GridValuesRange.End(iDim) = GridValuesEnd[iDim];
   }
 
-  ExchangerCPP.CreateDisperse(MGridID, NGridID, DisperseID, ovk::disperse_op(DisperseOp),
+  ExchangerCPP.CreateDisperse({MGridID,NGridID}, DisperseID, ovk::disperse_op(DisperseOp),
     ovk::data_type(ValueType), Count, GridValuesRange, ovk::array_layout(GridValuesLayout));
 
 }
@@ -362,7 +362,7 @@ void ovkDestroyExchangerDisperse(ovk_exchanger *Exchanger, int MGridID, int NGri
   OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
 
   auto &ExchangerCPP = *reinterpret_cast<ovk::exchanger *>(Exchanger);
-  ExchangerCPP.DestroyDisperse(MGridID, NGridID, DisperseID);
+  ExchangerCPP.DestroyDisperse({MGridID,NGridID}, DisperseID);
 
 }
 
@@ -372,7 +372,7 @@ void ovkExchangerDisperse(ovk_exchanger *Exchanger, int MGridID, int NGridID, in
   OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
 
   auto &ExchangerCPP = *reinterpret_cast<ovk::exchanger *>(Exchanger);
-  ExchangerCPP.Disperse(MGridID, NGridID, DisperseID, ReceiverValues, GridValues);
+  ExchangerCPP.Disperse({MGridID,NGridID}, DisperseID, ReceiverValues, GridValues);
 
 }
 

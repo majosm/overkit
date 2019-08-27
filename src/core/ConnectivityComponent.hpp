@@ -138,17 +138,12 @@ public:
 
   const elem_set<int,2> &ConnectivityIDs() const;
 
-  bool ConnectivityExists(int MGridID, int NGridID) const;
   bool ConnectivityExists(const elem<int,2> &GridIDPair) const;
 
-  void CreateConnectivity(int MGridID, int NGridID);
   void CreateConnectivity(const elem<int,2> &GridIDPair);
-  void CreateConnectivities(array_view<const int> MGridIDs, array_view<const int> NGridIDs);
   void CreateConnectivities(array_view<const elem<int,2>> GridIDPairs);
 
-  void DestroyConnectivity(int MGridID, int NGridID);
   void DestroyConnectivity(const elem<int,2> &GridIDPair);
-  void DestroyConnectivities(array_view<const int> MGridIDs, array_view<const int> NGridIDs);
   void DestroyConnectivities(array_view<const elem<int,2>> GridIDPairs);
 
   void ClearConnectivities();
@@ -158,13 +153,9 @@ public:
 
   const elem_set<int,2> &LocalConnectivityMIDs() const;
 
-  const connectivity_m &ConnectivityM(int MGridID, int NGridID) const;
   const connectivity_m &ConnectivityM(const elem<int,2> &GridIDPair) const;
-  bool EditingConnectivityM(int MGridID, int NGridID) const;
   bool EditingConnectivityM(const elem<int,2> &GridIDPair) const;
-  edit_handle<connectivity_m> EditConnectivityM(int MGridID, int NGridID);
   edit_handle<connectivity_m> EditConnectivityM(const elem<int,2> &GridIDPair);
-  void RestoreConnectivityM(int MGridID, int NGridID);
   void RestoreConnectivityM(const elem<int,2> &GridIDPair);
 
   int LocalConnectivityNCount() const;
@@ -172,19 +163,15 @@ public:
 
   const elem_set<int,2> &LocalConnectivityNIDs() const;
 
-  const connectivity_n &ConnectivityN(int MGridID, int NGridID) const;
   const connectivity_n &ConnectivityN(const elem<int,2> &GridIDPair) const;
-  bool EditingConnectivityN(int MGridID, int NGridID) const;
   bool EditingConnectivityN(const elem<int,2> &GridIDPair) const;
-  edit_handle<connectivity_n> EditConnectivityN(int MGridID, int NGridID);
   edit_handle<connectivity_n> EditConnectivityN(const elem<int,2> &GridIDPair);
-  void RestoreConnectivityN(int MGridID, int NGridID);
   void RestoreConnectivityN(const elem<int,2> &GridIDPair);
 
   void StartEdit();
   void EndEdit();
 
-  template <typename F, OVK_FUNCTION_REQUIRES(core::IsCallableWith<F, int, int,
+  template <typename F, OVK_FUNCTION_REQUIRES(core::IsCallableWith<F, const elem<int,2> &,
     connectivity_event_flags, bool>())> event_listener_handle AddConnectivityEventListener(F
     Listener) const {
     return ConnectivityEvent_.AddListener(std::move(Listener));
@@ -229,7 +216,7 @@ private:
   elem_map_noncontig<int,2,local_m> LocalMs_;
   elem_map_noncontig<int,2,local_n> LocalNs_;
 
-  mutable event<void(int, int, connectivity_event_flags, bool)> ConnectivityEvent_;
+  mutable event<void(const elem<int,2> &, connectivity_event_flags, bool)> ConnectivityEvent_;
 
   void OnGridEvent_();
   void DestroyConnectivitiesForDyingGrids_();

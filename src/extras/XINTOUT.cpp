@@ -2429,15 +2429,19 @@ void ImportConnectivityData(int NumGrids, int NumLocalGrids, const array<int> &L
   auto ConnectivityComponent = Domain.EditComponent<connectivity_component>(
     ConnectivityComponentID);
 
+  ovk::array<elem<int,2>> ConnectivityIDs;
+
   for (int iGrid = 0; iGrid < NumGrids; ++iGrid) {
     for (int jGrid = 0; jGrid < NumGrids; ++jGrid) {
       if (NumConnections(iGrid,jGrid) > 0) {
         int MGridID = iGrid+1;
         int NGridID = jGrid+1;
-        ConnectivityComponent->CreateConnectivity(MGridID, NGridID);
+        ConnectivityIDs.Append({MGridID,NGridID});
       }
     }
   }
+
+  ConnectivityComponent->CreateConnectivities(ConnectivityIDs);
 
   for (int iLocalGrid = 0; iLocalGrid < NumLocalGrids; ++iLocalGrid) {
 
@@ -2471,13 +2475,11 @@ void ImportConnectivityData(int NumGrids, int NumLocalGrids, const array<int> &L
     for (int jGrid = 0; jGrid < NumGrids; ++jGrid) {
       int OtherGridID = jGrid+1;
       if (NumConnections(iGrid,jGrid) > 0) {
-        ConnectivityMs.Append(ConnectivityComponent->EditConnectivityM(LocalGridID,
-          OtherGridID));
+        ConnectivityMs.Append(ConnectivityComponent->EditConnectivityM({LocalGridID,OtherGridID}));
         DestinationGridIDs.Append(OtherGridID);
       }
       if (NumConnections(jGrid,iGrid) > 0) {
-        ConnectivityNs.Append(ConnectivityComponent->EditConnectivityN(OtherGridID,
-          LocalGridID));
+        ConnectivityNs.Append(ConnectivityComponent->EditConnectivityN({OtherGridID,LocalGridID}));
         SourceGridIDs.Append(OtherGridID);
       }
     }

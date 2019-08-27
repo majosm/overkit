@@ -89,12 +89,12 @@ public:
 
   class options {
   public:
-    bool Overlappable(int MGridID, int NGridID) const;
-    options &SetOverlappable(int MGridID, int NGridID, bool Overlappable);
-    options &ResetOverlappable(int MGridID, int NGridID);
-    double OverlapTolerance(int MGridID, int NGridID) const;
-    options &SetOverlapTolerance(int MGridID, int NGridID, double OverlapTolerance);
-    options &ResetOverlapTolerance(int MGridID, int NGridID);
+    bool Overlappable(const elem<int,2> &GridIDPair) const;
+    options &SetOverlappable(const elem<int,2> &GridIDPair, bool Overlappable);
+    options &ResetOverlappable(const elem<int,2> &GridIDPair);
+    double OverlapTolerance(const elem<int,2> &GridIDPair) const;
+    options &SetOverlapTolerance(const elem<int,2> &GridIDPair, double OverlapTolerance);
+    options &ResetOverlapTolerance(const elem<int,2> &GridIDPair);
     double OverlapAccelDepthAdjust(int MGridID) const;
     options &SetOverlapAccelDepthAdjust(int MGridID, double OverlapAccelDepthAdjust);
     options &ResetOverlapAccelDepthAdjust(int MGridID);
@@ -104,27 +104,27 @@ public:
     bool InferBoundaries(int GridID) const;
     options &SetInferBoundaries(int GridID, bool InferBoundaries);
     options &ResetInferBoundaries(int GridID);
-    bool CutBoundaryHoles(int MGridID, int NGridID) const;
-    options &SetCutBoundaryHoles(int MGridID, int NGridID, bool CutBoundaryHoles);
-    options &ResetCutBoundaryHoles(int MGridID, int NGridID);
-    occludes Occludes(int MGridID, int NGridID) const;
-    options &SetOccludes(int MGridID, int NGridID, occludes Occludes);
-    options &ResetOccludes(int MGridID, int NGridID);
-    int EdgePadding(int MGridID, int NGridID) const;
-    options &SetEdgePadding(int MGridID, int NGridID, int EdgePadding);
-    options &ResetEdgePadding(int MGridID, int NGridID);
+    bool CutBoundaryHoles(const elem<int,2> &GridIDPair) const;
+    options &SetCutBoundaryHoles(const elem<int,2> &GridIDPair, bool CutBoundaryHoles);
+    options &ResetCutBoundaryHoles(const elem<int,2> &GridIDPair);
+    occludes Occludes(const elem<int,2> &GridIDPair) const;
+    options &SetOccludes(const elem<int,2> &GridIDPair, occludes Occludes);
+    options &ResetOccludes(const elem<int,2> &GridIDPair);
+    int EdgePadding(const elem<int,2> &GridIDPair) const;
+    options &SetEdgePadding(const elem<int,2> &GridIDPair, int EdgePadding);
+    options &ResetEdgePadding(const elem<int,2> &GridIDPair);
     int EdgeSmoothing(int NGridID) const;
     options &SetEdgeSmoothing(int NGridID, int EdgeSmoothing);
     options &ResetEdgeSmoothing(int NGridID);
-    connection_type ConnectionType(int MGridID, int NGridID) const;
-    options &SetConnectionType(int MGridID, int NGridID, connection_type ConnectionType);
-    options &ResetConnectionType(int MGridID, int NGridID);
+    connection_type ConnectionType(const elem<int,2> &GridIDPair) const;
+    options &SetConnectionType(const elem<int,2> &GridIDPair, connection_type ConnectionType);
+    options &ResetConnectionType(const elem<int,2> &GridIDPair);
     int FringeSize(int NGridID) const;
     options &SetFringeSize(int NGridID, int FringeSize);
     options &ResetFringeSize(int NGridID);
-    bool MinimizeOverlap(int MGridID, int NGridID) const;
-    options &SetMinimizeOverlap(int MGridID, int NGridID, bool MinimizeOverlap);
-    options &ResetMinimizeOverlap(int MGridID, int NGridID);
+    bool MinimizeOverlap(const elem<int,2> &GridIDPair) const;
+    options &SetMinimizeOverlap(const elem<int,2> &GridIDPair, bool MinimizeOverlap);
+    options &ResetMinimizeOverlap(const elem<int,2> &GridIDPair);
   private:
     set<int> GridIDs_;
     elem_map<int,2,bool> Overlappable_;
@@ -143,11 +143,11 @@ public:
     void AddGrids(const set<int> &GridIDs);
     void RemoveGrids(const set<int> &GridIDs);
     template <typename T> T GetOption_(const map<int,T> &Option, int GridID, T DefaultValue) const;
-    template <typename T> T GetOption_(const elem_map<int,2,T> &Option, int MGridID, int NGridID, T
-      DefaultValue) const;
+    template <typename T> T GetOption_(const elem_map<int,2,T> &Option, const elem<int,2>
+      &GridIDPair, T DefaultValue) const;
     template <typename T> void SetOption_(map<int,T> &Option, int GridID, T Value, T DefaultValue);
-    template <typename T> void SetOption_(elem_map<int,2,T> &Option, int MGridID, int NGridID, T
-      Value, T DefaulValue);
+    template <typename T> void SetOption_(elem_map<int,2,T> &Option, const elem<int,2> &GridIDPair,
+      T Value, T DefaulValue);
     void PrintOptions_();
     friend class assembler;
   };
@@ -251,8 +251,9 @@ private:
   void OnComponentEvent_(int ComponentID, component_event_flags Flags);
   void OnGeometryEvent_(int GridID, geometry_event_flags Flags, bool LastInSequence);
   void OnStateEvent_(int GridID, state_event_flags Flags, bool LastInSequence);
-  void OnOverlapEvent_(int MGridID, int NGridID, overlap_event_flags Flags, bool LastInSequence);
-  void OnConnectivityEvent_(int MGrid, int NGridID, connectivity_event_flags Flags, bool
+  void OnOverlapEvent_(const elem<int,2> &GridIDPair, overlap_event_flags Flags, bool
+    LastInSequence);
+  void OnConnectivityEvent_(const elem<int,2> &GridIDPair, connectivity_event_flags Flags, bool
     LastInSequence);
 
   void OnOptionsStartEdit_();

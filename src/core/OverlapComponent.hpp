@@ -133,17 +133,12 @@ public:
 
   const elem_set<int,2> &OverlapIDs() const;
 
-  bool OverlapExists(int MGridID, int NGridID) const;
   bool OverlapExists(const elem<int,2> &GridIDPair) const;
 
-  void CreateOverlap(int MGridID, int NGridID);
   void CreateOverlap(const elem<int,2> &GridIDPair);
-  void CreateOverlaps(array_view<const int> MGridIDs, array_view<const int> NGridIDs);
   void CreateOverlaps(array_view<const elem<int,2>> GridIDPairs);
 
-  void DestroyOverlap(int MGridID, int NGridID);
   void DestroyOverlap(const elem<int,2> &GridIDPair);
-  void DestroyOverlaps(array_view<const int> MGridIDs, array_view<const int> NGridIDs);
   void DestroyOverlaps(array_view<const elem<int,2>> GridIDPairs);
 
   void ClearOverlaps();
@@ -153,13 +148,9 @@ public:
 
   const elem_set<int,2> &LocalOverlapMIDs() const;
 
-  const overlap_m &OverlapM(int MGridID, int NGridID) const;
   const overlap_m &OverlapM(const elem<int,2> &GridIDPair) const;
-  bool EditingOverlapM(int MGridID, int NGridID) const;
   bool EditingOverlapM(const elem<int,2> &GridIDPair) const;
-  edit_handle<overlap_m> EditOverlapM(int MGridID, int NGridID);
   edit_handle<overlap_m> EditOverlapM(const elem<int,2> &GridIDPair);
-  void RestoreOverlapM(int MGridID, int NGridID);
   void RestoreOverlapM(const elem<int,2> &GridIDPair);
 
   int LocalOverlapNCount() const;
@@ -167,19 +158,15 @@ public:
 
   const elem_set<int,2> &LocalOverlapNIDs() const;
 
-  const overlap_n &OverlapN(int MGridID, int NGridID) const;
   const overlap_n &OverlapN(const elem<int,2> &GridIDPair) const;
-  bool EditingOverlapN(int MGridID, int NGridID) const;
   bool EditingOverlapN(const elem<int,2> &GridIDPair) const;
-  edit_handle<overlap_n> EditOverlapN(int MGridID, int NGridID);
   edit_handle<overlap_n> EditOverlapN(const elem<int,2> &GridIDPair);
-  void RestoreOverlapN(int MGridID, int NGridID);
   void RestoreOverlapN(const elem<int,2> &GridIDPair);
 
   void StartEdit();
   void EndEdit();
 
-  template <typename F, OVK_FUNCTION_REQUIRES(core::IsCallableWith<F, int, int,
+  template <typename F, OVK_FUNCTION_REQUIRES(core::IsCallableWith<F, const elem<int,2> &,
     overlap_event_flags, bool>())> event_listener_handle AddOverlapEventListener(F Listener) const {
     return OverlapEvent_.AddListener(std::move(Listener));
   }
@@ -222,7 +209,7 @@ private:
   elem_map_noncontig<int,2,local_m> LocalMs_;
   elem_map_noncontig<int,2,local_n> LocalNs_;
 
-  mutable event<void(int, int, overlap_event_flags, bool)> OverlapEvent_;
+  mutable event<void(const elem<int,2> &, overlap_event_flags, bool)> OverlapEvent_;
 
   void OnGridEvent_();
   void DestroyOverlapsForDyingGrids_();

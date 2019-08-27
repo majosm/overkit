@@ -130,10 +130,10 @@ void assembler::Bind(domain &Domain, bindings Bindings) {
     OverlapComponentID_);
 
   auto &OverlapComponent = Domain.Component<overlap_component>(OverlapComponentID_);
-  OverlapEventListener_ = OverlapComponent.AddOverlapEventListener([FloatingRef](int
-    MGridID, int NGridID, overlap_event_flags Flags, bool LastInSequence) {
+  OverlapEventListener_ = OverlapComponent.AddOverlapEventListener([FloatingRef](const elem<int,2>
+    &GridIDPair, overlap_event_flags Flags, bool LastInSequence) {
     assembler &Assembler = *FloatingRef;
-    Assembler.OnOverlapEvent_(MGridID, NGridID, Flags, LastInSequence);
+    Assembler.OnOverlapEvent_(GridIDPair, Flags, LastInSequence);
   });
 
   ConnectivityComponentID_ = Bindings.ConnectivityComponentID_;
@@ -142,10 +142,10 @@ void assembler::Bind(domain &Domain, bindings Bindings) {
     ConnectivityComponentID_);
 
   auto &ConnectivityComponent = Domain.Component<connectivity_component>(ConnectivityComponentID_);
-  ConnectivityEventListener_ = ConnectivityComponent.AddConnectivityEventListener([FloatingRef](int
-    MGridID, int NGridID, connectivity_event_flags Flags, bool LastInSequence) {
+  ConnectivityEventListener_ = ConnectivityComponent.AddConnectivityEventListener([FloatingRef](
+    const elem<int,2> &GridIDPair, connectivity_event_flags Flags, bool LastInSequence) {
     assembler &Assembler = *FloatingRef;
-    Assembler.OnConnectivityEvent_(MGridID, NGridID, Flags, LastInSequence);
+    Assembler.OnConnectivityEvent_(GridIDPair, Flags, LastInSequence);
   });
 
   MPI_Barrier(Domain.Comm());
@@ -262,13 +262,14 @@ void assembler::OnOptionsEndEdit_() {
 
   // No self-intersections, etc.
   for (int GridID : Domain.GridIDs()) {
-    Options_.ResetOverlappable(GridID, GridID);
-    Options_.ResetOverlapTolerance(GridID, GridID);
-    Options_.ResetCutBoundaryHoles(GridID, GridID);
-    Options_.ResetOccludes(GridID, GridID);
-    Options_.ResetEdgePadding(GridID, GridID);
-    Options_.ResetConnectionType(GridID, GridID);
-    Options_.ResetMinimizeOverlap(GridID, GridID);
+    elem<int,2> SelfPair = {GridID,GridID};
+    Options_.ResetOverlappable(SelfPair);
+    Options_.ResetOverlapTolerance(SelfPair);
+    Options_.ResetCutBoundaryHoles(SelfPair);
+    Options_.ResetOccludes(SelfPair);
+    Options_.ResetEdgePadding(SelfPair);
+    Options_.ResetConnectionType(SelfPair);
+    Options_.ResetMinimizeOverlap(SelfPair);
   }
 
   // TODO: Make this more fine-grained
@@ -399,7 +400,7 @@ void assembler::OnStateEvent_(int GridID, state_event_flags Flags, bool LastInSe
 
 }
 
-void assembler::OnOverlapEvent_(int MGridID, int NGridID, overlap_event_flags Flags, bool
+void assembler::OnOverlapEvent_(const elem<int,2> &GridIDPair, overlap_event_flags Flags, bool
   LastInSequence) {
 
   // TODO: Make this more fine-grained
@@ -427,7 +428,7 @@ void assembler::OnOverlapEvent_(int MGridID, int NGridID, overlap_event_flags Fl
 
 }
 
-void assembler::OnConnectivityEvent_(int MGridID, int NGridID, connectivity_event_flags Flags,
+void assembler::OnConnectivityEvent_(const elem<int,2> &GridIDPair, connectivity_event_flags Flags,
   bool LastInSequence) {
 
   // Nothing to do

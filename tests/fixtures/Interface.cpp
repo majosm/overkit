@@ -90,10 +90,9 @@ ovk::domain Interface2DManualConnectivity(const ovk::comm &Comm, const ovk::box 
   auto ConnectivityComponentEditHandle = Domain.EditComponent<ovk::connectivity_component>(1);
   ovk::connectivity_component &ConnectivityComponent = *ConnectivityComponentEditHandle;
 
-  ovk::array<int> MGridIDs({2}, {1, 2});
-  ovk::array<int> NGridIDs({2}, {2, 1});
+  ovk::array<ovk::elem<int,2>> ConnectivityIDs({2}, {{1,2}, {2,1}});
 
-  ConnectivityComponent.CreateConnectivities(MGridIDs, NGridIDs);
+  ConnectivityComponent.CreateConnectivities(ConnectivityIDs);
 
   if (Grid1IsLocal) {
 
@@ -102,7 +101,7 @@ ovk::domain Interface2DManualConnectivity(const ovk::comm &Comm, const ovk::box 
 
     bool HasInterface = LocalRange.End(1) == Grid1Size(1);
 
-    auto ConnectivityMEditHandle = ConnectivityComponent.EditConnectivityM(1, 2);
+    auto ConnectivityMEditHandle = ConnectivityComponent.EditConnectivityM({1,2});
     ovk::connectivity_m &ConnectivityM = *ConnectivityMEditHandle;
 
     long long NumDonors = HasInterface ? LocalRange.Size(0) : 0;
@@ -134,7 +133,7 @@ ovk::domain Interface2DManualConnectivity(const ovk::comm &Comm, const ovk::box 
       }
     }
 
-    auto ConnectivityNEditHandle = ConnectivityComponent.EditConnectivityN(2, 1);
+    auto ConnectivityNEditHandle = ConnectivityComponent.EditConnectivityN({2,1});
     ovk::connectivity_n &ConnectivityN = *ConnectivityNEditHandle;
 
     long long NumReceivers = HasInterface ? LocalRange.Size(0) : 0;
@@ -165,7 +164,7 @@ ovk::domain Interface2DManualConnectivity(const ovk::comm &Comm, const ovk::box 
 
     bool HasInterface = LocalRange.Begin(1) == 0;
 
-    auto ConnectivityMEditHandle = ConnectivityComponent.EditConnectivityM(2, 1);
+    auto ConnectivityMEditHandle = ConnectivityComponent.EditConnectivityM({2,1});
     ovk::connectivity_m &ConnectivityM = *ConnectivityMEditHandle;
 
     long long NumDonors = HasInterface ? LocalRange.Size(0) : 0;
@@ -197,7 +196,7 @@ ovk::domain Interface2DManualConnectivity(const ovk::comm &Comm, const ovk::box 
       }
     }
 
-    auto ConnectivityNEditHandle = ConnectivityComponent.EditConnectivityN(1, 2);
+    auto ConnectivityNEditHandle = ConnectivityComponent.EditConnectivityN({1,2});
     ovk::connectivity_n &ConnectivityN = *ConnectivityNEditHandle;
 
     long long NumReceivers = HasInterface ? LocalRange.Size(0) : 0;
@@ -305,10 +304,9 @@ ovk::domain Interface3DManualConnectivity(const ovk::comm &Comm, const ovk::box 
   auto ConnectivityComponentEditHandle = Domain.EditComponent<ovk::connectivity_component>(1);
   ovk::connectivity_component &ConnectivityComponent = *ConnectivityComponentEditHandle;
 
-  ovk::array<int> MGridIDs({2}, {1, 2});
-  ovk::array<int> NGridIDs({2}, {2, 1});
+  ovk::array<ovk::elem<int,2>> ConnectivityIDs({2}, {{1,2}, {2,1}});
 
-  ConnectivityComponent.CreateConnectivities(MGridIDs, NGridIDs);
+  ConnectivityComponent.CreateConnectivities(ConnectivityIDs);
 
   if (Grid1IsLocal) {
 
@@ -317,7 +315,7 @@ ovk::domain Interface3DManualConnectivity(const ovk::comm &Comm, const ovk::box 
 
     bool HasInterface = LocalRange.End(2) == Grid1Size(2);
 
-    auto ConnectivityMEditHandle = ConnectivityComponent.EditConnectivityM(1, 2);
+    auto ConnectivityMEditHandle = ConnectivityComponent.EditConnectivityM({1,2});
     ovk::connectivity_m &ConnectivityM = *ConnectivityMEditHandle;
 
     long long NumDonors = HasInterface ? LocalRange.Size(0)*LocalRange.Size(1) : 0;
@@ -356,7 +354,7 @@ ovk::domain Interface3DManualConnectivity(const ovk::comm &Comm, const ovk::box 
       }
     }
 
-    auto ConnectivityNEditHandle = ConnectivityComponent.EditConnectivityN(2, 1);
+    auto ConnectivityNEditHandle = ConnectivityComponent.EditConnectivityN({2,1});
     ovk::connectivity_n &ConnectivityN = *ConnectivityNEditHandle;
 
     long long NumReceivers = HasInterface ? LocalRange.Size(0)*LocalRange.Size(1) : 0;
@@ -391,7 +389,7 @@ ovk::domain Interface3DManualConnectivity(const ovk::comm &Comm, const ovk::box 
 
     bool HasInterface = LocalRange.Begin(2) == 0;
 
-    auto ConnectivityMEditHandle = ConnectivityComponent.EditConnectivityM(2, 1);
+    auto ConnectivityMEditHandle = ConnectivityComponent.EditConnectivityM({2,1});
     ovk::connectivity_m &ConnectivityM = *ConnectivityMEditHandle;
 
     long long NumDonors = HasInterface ? LocalRange.Size(0)*LocalRange.Size(1) : 0;
@@ -430,7 +428,7 @@ ovk::domain Interface3DManualConnectivity(const ovk::comm &Comm, const ovk::box 
       }
     }
 
-    auto ConnectivityNEditHandle = ConnectivityComponent.EditConnectivityN(1, 2);
+    auto ConnectivityNEditHandle = ConnectivityComponent.EditConnectivityN({1,2});
     ovk::connectivity_n &ConnectivityN = *ConnectivityNEditHandle;
 
     long long NumReceivers = HasInterface ? LocalRange.Size(0)*LocalRange.Size(1) : 0;

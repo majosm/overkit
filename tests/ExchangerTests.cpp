@@ -177,36 +177,36 @@ TEST_F(ExchangerTests, Exchange2D) {
     if (Grid1IsLocal) {
       const ovk::grid &Grid = Domain.Grid(1);
       const ovk::range &LocalRange = Grid.LocalRange();
-      Exchanger.CreateCollect(1, 2, 1, ovk::collect_op::INTERPOLATE, ovk::data_type::DOUBLE, 1,
+      Exchanger.CreateCollect({1,2}, 1, ovk::collect_op::INTERPOLATE, ovk::data_type::DOUBLE, 1,
         LocalRange, ovk::array_layout::COLUMN_MAJOR);
-      Exchanger.CreateSend(1, 2, 1, ovk::data_type::DOUBLE, 1, 1);
-      Exchanger.CreateReceive(2, 1, 1, ovk::data_type::DOUBLE, 1, 1);
-      Exchanger.CreateDisperse(2, 1, 1, ovk::disperse_op::OVERWRITE, ovk::data_type::DOUBLE, 1,
+      Exchanger.CreateSend({1,2}, 1, ovk::data_type::DOUBLE, 1, 1);
+      Exchanger.CreateReceive({2,1}, 1, ovk::data_type::DOUBLE, 1, 1);
+      Exchanger.CreateDisperse({2,1}, 1, ovk::disperse_op::OVERWRITE, ovk::data_type::DOUBLE, 1,
         LocalRange, ovk::array_layout::COLUMN_MAJOR);
     }
 
     if (Grid2IsLocal) {
       const ovk::grid &Grid = Domain.Grid(2);
       const ovk::range &LocalRange = Grid.LocalRange();
-      Exchanger.CreateCollect(2, 1, 1, ovk::collect_op::INTERPOLATE, ovk::data_type::DOUBLE, 1,
+      Exchanger.CreateCollect({2,1}, 1, ovk::collect_op::INTERPOLATE, ovk::data_type::DOUBLE, 1,
         LocalRange, ovk::array_layout::COLUMN_MAJOR);
-      Exchanger.CreateSend(2, 1, 1, ovk::data_type::DOUBLE, 1, 1);
-      Exchanger.CreateReceive(1, 2, 1, ovk::data_type::DOUBLE, 1, 1);
-      Exchanger.CreateDisperse(1, 2, 1, ovk::disperse_op::OVERWRITE, ovk::data_type::DOUBLE, 1,
+      Exchanger.CreateSend({2,1}, 1, ovk::data_type::DOUBLE, 1, 1);
+      Exchanger.CreateReceive({1,2}, 1, ovk::data_type::DOUBLE, 1, 1);
+      Exchanger.CreateDisperse({1,2}, 1, ovk::disperse_op::OVERWRITE, ovk::data_type::DOUBLE, 1,
         LocalRange, ovk::array_layout::COLUMN_MAJOR);
     }
 
     if (Grid1IsLocal) {
       const double *FieldValues = Grid1FieldValues.Data();
       double *DonorValues = Grid1DonorValues.Data();
-      Exchanger.Collect(1, 2, 1, &FieldValues, &DonorValues);
+      Exchanger.Collect({1,2}, 1, &FieldValues, &DonorValues);
       EXPECT_THAT(Grid1DonorValues, ElementsAreArray(ExpectedGrid1DonorValues));
     }
 
     if (Grid2IsLocal) {
       const double *FieldValues = Grid2FieldValues.Data();
       double *DonorValues = Grid2DonorValues.Data();
-      Exchanger.Collect(2, 1, 1, &FieldValues, &DonorValues);
+      Exchanger.Collect({2,1}, 1, &FieldValues, &DonorValues);
       EXPECT_THAT(Grid2DonorValues, ElementsAreArray(ExpectedGrid2DonorValues));
     }
 
@@ -214,25 +214,25 @@ TEST_F(ExchangerTests, Exchange2D) {
 
     if (Grid1IsLocal) {
       double *ReceiverValues = Grid1ReceiverValues.Data();
-      ovk::request Request = Exchanger.Receive(2, 1, 1, &ReceiverValues);
+      ovk::request Request = Exchanger.Receive({2,1}, 1, &ReceiverValues);
       Requests.Append(std::move(Request));
     }
 
     if (Grid2IsLocal) {
       double *ReceiverValues = Grid2ReceiverValues.Data();
-      ovk::request Request = Exchanger.Receive(1, 2, 1, &ReceiverValues);
+      ovk::request Request = Exchanger.Receive({1,2}, 1, &ReceiverValues);
       Requests.Append(std::move(Request));
     }
 
     if (Grid1IsLocal) {
       const double *DonorValues = Grid1DonorValues.Data();
-      ovk::request Request = Exchanger.Send(1, 2, 1, &DonorValues);
+      ovk::request Request = Exchanger.Send({1,2}, 1, &DonorValues);
       Requests.Append(std::move(Request));
     }
 
     if (Grid2IsLocal) {
       const double *DonorValues = Grid2DonorValues.Data();
-      ovk::request Request = Exchanger.Send(2, 1, 1, &DonorValues);
+      ovk::request Request = Exchanger.Send({2,1}, 1, &DonorValues);
       Requests.Append(std::move(Request));
     }
 
@@ -242,7 +242,7 @@ TEST_F(ExchangerTests, Exchange2D) {
       EXPECT_THAT(Grid1ReceiverValues, ElementsAreArray(ExpectedGrid1ReceiverValues));
       const double *ReceiverValues = Grid1ReceiverValues.Data();
       double *FieldValues = Grid1FieldValues.Data();
-      Exchanger.Disperse(2, 1, 1, &ReceiverValues, &FieldValues);
+      Exchanger.Disperse({2,1}, 1, &ReceiverValues, &FieldValues);
       EXPECT_THAT(Grid1FieldValues, ElementsAreArray(ExpectedGrid1FieldValues));
     }
 
@@ -250,7 +250,7 @@ TEST_F(ExchangerTests, Exchange2D) {
       EXPECT_THAT(Grid2ReceiverValues, ElementsAreArray(ExpectedGrid2ReceiverValues));
       const double *ReceiverValues = Grid2ReceiverValues.Data();
       double *FieldValues = Grid2FieldValues.Data();
-      Exchanger.Disperse(1, 2, 1, &ReceiverValues, &FieldValues);
+      Exchanger.Disperse({1,2}, 1, &ReceiverValues, &FieldValues);
       EXPECT_THAT(Grid2FieldValues, ElementsAreArray(ExpectedGrid2FieldValues));
     }
 
@@ -427,36 +427,36 @@ TEST_F(ExchangerTests, Exchange3D) {
     if (Grid1IsLocal) {
       const ovk::grid &Grid = Domain.Grid(1);
       const ovk::range &LocalRange = Grid.LocalRange();
-      Exchanger.CreateCollect(1, 2, 1, ovk::collect_op::INTERPOLATE, ovk::data_type::DOUBLE, 1,
+      Exchanger.CreateCollect({1,2}, 1, ovk::collect_op::INTERPOLATE, ovk::data_type::DOUBLE, 1,
         LocalRange, ovk::array_layout::COLUMN_MAJOR);
-      Exchanger.CreateSend(1, 2, 1, ovk::data_type::DOUBLE, 1, 1);
-      Exchanger.CreateReceive(2, 1, 1, ovk::data_type::DOUBLE, 1, 1);
-      Exchanger.CreateDisperse(2, 1, 1, ovk::disperse_op::OVERWRITE, ovk::data_type::DOUBLE, 1,
+      Exchanger.CreateSend({1,2}, 1, ovk::data_type::DOUBLE, 1, 1);
+      Exchanger.CreateReceive({2,1}, 1, ovk::data_type::DOUBLE, 1, 1);
+      Exchanger.CreateDisperse({2,1}, 1, ovk::disperse_op::OVERWRITE, ovk::data_type::DOUBLE, 1,
         LocalRange, ovk::array_layout::COLUMN_MAJOR);
     }
 
     if (Grid2IsLocal) {
       const ovk::grid &Grid = Domain.Grid(2);
       const ovk::range &LocalRange = Grid.LocalRange();
-      Exchanger.CreateCollect(2, 1, 1, ovk::collect_op::INTERPOLATE, ovk::data_type::DOUBLE, 1,
+      Exchanger.CreateCollect({2,1}, 1, ovk::collect_op::INTERPOLATE, ovk::data_type::DOUBLE, 1,
         LocalRange, ovk::array_layout::COLUMN_MAJOR);
-      Exchanger.CreateSend(2, 1, 1, ovk::data_type::DOUBLE, 1, 1);
-      Exchanger.CreateReceive(1, 2, 1, ovk::data_type::DOUBLE, 1, 1);
-      Exchanger.CreateDisperse(1, 2, 1, ovk::disperse_op::OVERWRITE, ovk::data_type::DOUBLE, 1,
+      Exchanger.CreateSend({2,1}, 1, ovk::data_type::DOUBLE, 1, 1);
+      Exchanger.CreateReceive({1,2}, 1, ovk::data_type::DOUBLE, 1, 1);
+      Exchanger.CreateDisperse({1,2}, 1, ovk::disperse_op::OVERWRITE, ovk::data_type::DOUBLE, 1,
         LocalRange, ovk::array_layout::COLUMN_MAJOR);
     }
 
     if (Grid1IsLocal) {
       const double *FieldValues = Grid1FieldValues.Data();
       double *DonorValues = Grid1DonorValues.Data();
-      Exchanger.Collect(1, 2, 1, &FieldValues, &DonorValues);
+      Exchanger.Collect({1,2}, 1, &FieldValues, &DonorValues);
       EXPECT_THAT(Grid1DonorValues, ElementsAreArray(ExpectedGrid1DonorValues));
     }
 
     if (Grid2IsLocal) {
       const double *FieldValues = Grid2FieldValues.Data();
       double *DonorValues = Grid2DonorValues.Data();
-      Exchanger.Collect(2, 1, 1, &FieldValues, &DonorValues);
+      Exchanger.Collect({2,1}, 1, &FieldValues, &DonorValues);
       EXPECT_THAT(Grid2DonorValues, ElementsAreArray(ExpectedGrid2DonorValues));
     }
 
@@ -464,25 +464,25 @@ TEST_F(ExchangerTests, Exchange3D) {
 
     if (Grid1IsLocal) {
       double *ReceiverValues = Grid1ReceiverValues.Data();
-      ovk::request Request = Exchanger.Receive(2, 1, 1, &ReceiverValues);
+      ovk::request Request = Exchanger.Receive({2,1}, 1, &ReceiverValues);
       Requests.Append(std::move(Request));
     }
 
     if (Grid2IsLocal) {
       double *ReceiverValues = Grid2ReceiverValues.Data();
-      ovk::request Request = Exchanger.Receive(1, 2, 1, &ReceiverValues);
+      ovk::request Request = Exchanger.Receive({1,2}, 1, &ReceiverValues);
       Requests.Append(std::move(Request));
     }
 
     if (Grid1IsLocal) {
       const double *DonorValues = Grid1DonorValues.Data();
-      ovk::request Request = Exchanger.Send(1, 2, 1, &DonorValues);
+      ovk::request Request = Exchanger.Send({1,2}, 1, &DonorValues);
       Requests.Append(std::move(Request));
     }
 
     if (Grid2IsLocal) {
       const double *DonorValues = Grid2DonorValues.Data();
-      ovk::request Request = Exchanger.Send(2, 1, 1, &DonorValues);
+      ovk::request Request = Exchanger.Send({2,1}, 1, &DonorValues);
       Requests.Append(std::move(Request));
     }
 
@@ -492,7 +492,7 @@ TEST_F(ExchangerTests, Exchange3D) {
       EXPECT_THAT(Grid1ReceiverValues, ElementsAreArray(ExpectedGrid1ReceiverValues));
       const double *ReceiverValues = Grid1ReceiverValues.Data();
       double *FieldValues = Grid1FieldValues.Data();
-      Exchanger.Disperse(2, 1, 1, &ReceiverValues, &FieldValues);
+      Exchanger.Disperse({2,1}, 1, &ReceiverValues, &FieldValues);
       EXPECT_THAT(Grid1FieldValues, ElementsAreArray(ExpectedGrid1FieldValues));
     }
 
@@ -500,7 +500,7 @@ TEST_F(ExchangerTests, Exchange3D) {
       EXPECT_THAT(Grid2ReceiverValues, ElementsAreArray(ExpectedGrid2ReceiverValues));
       const double *ReceiverValues = Grid2ReceiverValues.Data();
       double *FieldValues = Grid2FieldValues.Data();
-      Exchanger.Disperse(1, 2, 1, &ReceiverValues, &FieldValues);
+      Exchanger.Disperse({1,2}, 1, &ReceiverValues, &FieldValues);
       EXPECT_THAT(Grid2FieldValues, ElementsAreArray(ExpectedGrid2FieldValues));
     }
 

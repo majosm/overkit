@@ -364,7 +364,7 @@ void ovkGetAssemblerOptionOverlappable(const ovk_assembler_options *Options, int
   OVK_DEBUG_ASSERT(Overlappable, "Invalid overlappable pointer.");
 
   auto &OptionsCPP = *reinterpret_cast<const ovk::assembler::options *>(Options);
-  *Overlappable = OptionsCPP.Overlappable(MGridID, NGridID);
+  *Overlappable = OptionsCPP.Overlappable({MGridID,NGridID});
 
 }
 
@@ -374,7 +374,7 @@ void ovkSetAssemblerOptionOverlappable(ovk_assembler_options *Options, int MGrid
   OVK_DEBUG_ASSERT(Options, "Invalid options pointer.");
 
   auto &OptionsCPP = *reinterpret_cast<ovk::assembler::options *>(Options);
-  OptionsCPP.SetOverlappable(MGridID, NGridID, Overlappable);
+  OptionsCPP.SetOverlappable({MGridID,NGridID}, Overlappable);
 
 }
 
@@ -383,7 +383,7 @@ void ovkResetAssemblerOptionOverlappable(ovk_assembler_options *Options, int MGr
   OVK_DEBUG_ASSERT(Options, "Invalid options pointer.");
 
   auto &OptionsCPP = *reinterpret_cast<ovk::assembler::options *>(Options);
-  OptionsCPP.ResetOverlappable(MGridID, NGridID);
+  OptionsCPP.ResetOverlappable({MGridID,NGridID});
 
 }
 
@@ -394,7 +394,7 @@ void ovkGetAssemblerOptionOverlapTolerance(const ovk_assembler_options *Options,
   OVK_DEBUG_ASSERT(OverlapTolerance, "Invalid overlap tolerance pointer.");
 
   auto &OptionsCPP = *reinterpret_cast<const ovk::assembler::options *>(Options);
-  *OverlapTolerance = OptionsCPP.OverlapTolerance(MGridID, NGridID);
+  *OverlapTolerance = OptionsCPP.OverlapTolerance({MGridID,NGridID});
 
 }
 
@@ -404,7 +404,7 @@ void ovkSetAssemblerOptionOverlapTolerance(ovk_assembler_options *Options, int M
   OVK_DEBUG_ASSERT(Options, "Invalid options pointer.");
 
   auto &OptionsCPP = *reinterpret_cast<ovk::assembler::options *>(Options);
-  OptionsCPP.SetOverlapTolerance(MGridID, NGridID, OverlapTolerance);
+  OptionsCPP.SetOverlapTolerance({MGridID,NGridID}, OverlapTolerance);
 
 }
 
@@ -414,7 +414,7 @@ void ovkResetAssemblerOptionOverlapTolerance(ovk_assembler_options *Options, int
   OVK_DEBUG_ASSERT(Options, "Invalid options pointer.");
 
   auto &OptionsCPP = *reinterpret_cast<ovk::assembler::options *>(Options);
-  OptionsCPP.ResetOverlapTolerance(MGridID, NGridID);
+  OptionsCPP.ResetOverlapTolerance({MGridID,NGridID});
 
 }
 
@@ -516,7 +516,7 @@ void ovkGetAssemblerOptionCutBoundaryHoles(const ovk_assembler_options *Options,
   OVK_DEBUG_ASSERT(CutBoundaryHoles, "Invalid cut boundary holes pointer.");
 
   auto &OptionsCPP = *reinterpret_cast<const ovk::assembler::options *>(Options);
-  *CutBoundaryHoles = OptionsCPP.CutBoundaryHoles(MGridID, NGridID);
+  *CutBoundaryHoles = OptionsCPP.CutBoundaryHoles({MGridID,NGridID});
 
 }
 
@@ -526,7 +526,7 @@ void ovkSetAssemblerOptionCutBoundaryHoles(ovk_assembler_options *Options, int M
   OVK_DEBUG_ASSERT(Options, "Invalid options pointer.");
 
   auto &OptionsCPP = *reinterpret_cast<ovk::assembler::options *>(Options);
-  OptionsCPP.SetCutBoundaryHoles(MGridID, NGridID, CutBoundaryHoles);
+  OptionsCPP.SetCutBoundaryHoles({MGridID,NGridID}, CutBoundaryHoles);
 
 }
 
@@ -536,7 +536,7 @@ void ovkResetAssemblerOptionCutBoundaryHoles(ovk_assembler_options *Options, int
   OVK_DEBUG_ASSERT(Options, "Invalid options pointer.");
 
   auto &OptionsCPP = *reinterpret_cast<ovk::assembler::options *>(Options);
-  OptionsCPP.ResetCutBoundaryHoles(MGridID, NGridID);
+  OptionsCPP.ResetCutBoundaryHoles({MGridID,NGridID});
 
 }
 
@@ -547,7 +547,7 @@ void ovkGetAssemblerOptionOccludes(const ovk_assembler_options *Options, int MGr
   OVK_DEBUG_ASSERT(Occludes, "Invalid occludes pointer.");
 
   auto &OptionsCPP = *reinterpret_cast<const ovk::assembler::options *>(Options);
-  *Occludes = ovk_occludes(OptionsCPP.Occludes(MGridID, NGridID));
+  *Occludes = ovk_occludes(OptionsCPP.Occludes({MGridID,NGridID}));
 
 }
 
@@ -557,7 +557,7 @@ void ovkSetAssemblerOptionOccludes(ovk_assembler_options *Options, int MGridID, 
   OVK_DEBUG_ASSERT(Options, "Invalid options pointer.");
 
   auto &OptionsCPP = *reinterpret_cast<ovk::assembler::options *>(Options);
-  OptionsCPP.SetOccludes(MGridID, NGridID, ovk::occludes(Occludes));
+  OptionsCPP.SetOccludes({MGridID,NGridID}, ovk::occludes(Occludes));
 
 }
 
@@ -566,7 +566,7 @@ void ovkResetAssemblerOptionOccludes(ovk_assembler_options *Options, int MGridID
   OVK_DEBUG_ASSERT(Options, "Invalid options pointer.");
 
   auto &OptionsCPP = *reinterpret_cast<ovk::assembler::options *>(Options);
-  OptionsCPP.ResetOccludes(MGridID, NGridID);
+  OptionsCPP.ResetOccludes({MGridID,NGridID});
 
 }
 
@@ -577,7 +577,7 @@ void ovkGetAssemblerOptionEdgePadding(const ovk_assembler_options *Options, int 
   OVK_DEBUG_ASSERT(EdgePadding, "Invalid edge padding pointer.");
 
   auto &OptionsCPP = *reinterpret_cast<const ovk::assembler::options *>(Options);
-  *EdgePadding = OptionsCPP.EdgePadding(MGridID, NGridID);
+  *EdgePadding = OptionsCPP.EdgePadding({MGridID,NGridID});
 
 }
 
@@ -587,7 +587,7 @@ void ovkSetAssemblerOptionEdgePadding(ovk_assembler_options *Options, int MGridI
   OVK_DEBUG_ASSERT(Options, "Invalid options pointer.");
 
   auto &OptionsCPP = *reinterpret_cast<ovk::assembler::options *>(Options);
-  OptionsCPP.SetEdgePadding(MGridID, NGridID, EdgePadding);
+  OptionsCPP.SetEdgePadding({MGridID,NGridID}, EdgePadding);
 
 }
 
@@ -596,7 +596,7 @@ void ovkResetAssemblerOptionEdgePadding(ovk_assembler_options *Options, int MGri
   OVK_DEBUG_ASSERT(Options, "Invalid options pointer.");
 
   auto &OptionsCPP = *reinterpret_cast<ovk::assembler::options *>(Options);
-  OptionsCPP.ResetEdgePadding(MGridID, NGridID);
+  OptionsCPP.ResetEdgePadding({MGridID,NGridID});
 
 }
 
@@ -637,7 +637,7 @@ void ovkGetAssemblerOptionConnectionType(const ovk_assembler_options *Options, i
   OVK_DEBUG_ASSERT(ConnectionType, "Invalid connection type pointer.");
 
   auto &OptionsCPP = *reinterpret_cast<const ovk::assembler::options *>(Options);
-  *ConnectionType = ovk_connection_type(OptionsCPP.ConnectionType(MGridID, NGridID));
+  *ConnectionType = ovk_connection_type(OptionsCPP.ConnectionType({MGridID,NGridID}));
 
 }
 
@@ -647,7 +647,7 @@ void ovkSetAssemblerOptionConnectionType(ovk_assembler_options *Options, int MGr
   OVK_DEBUG_ASSERT(Options, "Invalid options pointer.");
 
   auto &OptionsCPP = *reinterpret_cast<ovk::assembler::options *>(Options);
-  OptionsCPP.SetConnectionType(MGridID, NGridID, ovk::connection_type(ConnectionType));
+  OptionsCPP.SetConnectionType({MGridID,NGridID}, ovk::connection_type(ConnectionType));
 
 }
 
@@ -657,7 +657,7 @@ void ovkResetAssemblerOptionConnectionType(ovk_assembler_options *Options, int M
   OVK_DEBUG_ASSERT(Options, "Invalid options pointer.");
 
   auto &OptionsCPP = *reinterpret_cast<ovk::assembler::options *>(Options);
-  OptionsCPP.ResetConnectionType(MGridID, NGridID);
+  OptionsCPP.ResetConnectionType({MGridID,NGridID});
 
 }
 
@@ -697,7 +697,7 @@ void ovkGetAssemblerOptionMinimizeOverlap(const ovk_assembler_options *Options, 
   OVK_DEBUG_ASSERT(MinimizeOverlap, "Invalid minimize overlap pointer.");
 
   auto &OptionsCPP = *reinterpret_cast<const ovk::assembler::options *>(Options);
-  *MinimizeOverlap = OptionsCPP.MinimizeOverlap(MGridID, NGridID);
+  *MinimizeOverlap = OptionsCPP.MinimizeOverlap({MGridID,NGridID});
 
 }
 
@@ -707,7 +707,7 @@ void ovkSetAssemblerOptionMinimizeOverlap(ovk_assembler_options *Options, int MG
   OVK_DEBUG_ASSERT(Options, "Invalid options pointer.");
 
   auto &OptionsCPP = *reinterpret_cast<ovk::assembler::options *>(Options);
-  OptionsCPP.SetMinimizeOverlap(MGridID, NGridID, MinimizeOverlap);
+  OptionsCPP.SetMinimizeOverlap({MGridID,NGridID}, MinimizeOverlap);
 
 }
 
@@ -717,7 +717,7 @@ void ovkResetAssemblerOptionMinimizeOverlap(ovk_assembler_options *Options, int 
   OVK_DEBUG_ASSERT(Options, "Invalid options pointer.");
 
   auto &OptionsCPP = *reinterpret_cast<ovk::assembler::options *>(Options);
-  OptionsCPP.ResetMinimizeOverlap(MGridID, NGridID);
+  OptionsCPP.ResetMinimizeOverlap({MGridID,NGridID});
 
 }
 

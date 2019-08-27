@@ -38,7 +38,7 @@ bool ovkConnectivityExists(const ovk_connectivity_component *ConnectivityCompone
 
   auto &ConnectivityComponentCPP = *reinterpret_cast<const ovk::connectivity_component *>(
     ConnectivityComponent);
-  return ConnectivityComponentCPP.ConnectivityExists(MGridID, NGridID);
+  return ConnectivityComponentCPP.ConnectivityExists({MGridID,NGridID});
 
 }
 
@@ -49,7 +49,7 @@ void ovkCreateConnectivity(ovk_connectivity_component *ConnectivityComponent, in
 
   auto &ConnectivityComponentCPP = *reinterpret_cast<ovk::connectivity_component *>(
     ConnectivityComponent);
-  ConnectivityComponentCPP.CreateConnectivity(MGridID, NGridID);
+  ConnectivityComponentCPP.CreateConnectivity({MGridID,NGridID});
 
 }
 
@@ -61,7 +61,13 @@ void ovkCreateConnectivities(ovk_connectivity_component *ConnectivityComponent, 
 
   auto &ConnectivityComponentCPP = *reinterpret_cast<ovk::connectivity_component *>(
     ConnectivityComponent);
-  ConnectivityComponentCPP.CreateConnectivities({MGridIDs, {Count}}, {NGridIDs, {Count}});
+
+  ovk::array<ovk::elem<int,2>> GridIDPairs({Count});
+  for (int iCreate = 0; iCreate < Count; ++iCreate) {
+    GridIDPairs(iCreate) = {MGridIDs[iCreate],NGridIDs[iCreate]};
+  }
+
+  ConnectivityComponentCPP.CreateConnectivities(GridIDPairs);
 
 }
 
@@ -72,7 +78,7 @@ void ovkDestroyConnectivity(ovk_connectivity_component *ConnectivityComponent, i
 
   auto &ConnectivityComponentCPP = *reinterpret_cast<ovk::connectivity_component *>(
     ConnectivityComponent);
-  ConnectivityComponentCPP.DestroyConnectivity(MGridID, NGridID);
+  ConnectivityComponentCPP.DestroyConnectivity({MGridID,NGridID});
 
 }
 
@@ -84,7 +90,13 @@ void ovkDestroyConnectivities(ovk_connectivity_component *ConnectivityComponent,
 
   auto &ConnectivityComponentCPP = *reinterpret_cast<ovk::connectivity_component *>(
     ConnectivityComponent);
-  ConnectivityComponentCPP.DestroyConnectivities({MGridIDs, {Count}}, {NGridIDs, {Count}});
+
+  ovk::array<ovk::elem<int,2>> GridIDPairs({Count});
+  for (int iDestroy = 0; iDestroy < Count; ++iDestroy) {
+    GridIDPairs(iDestroy) = {MGridIDs[iDestroy],NGridIDs[iDestroy]};
+  }
+
+  ConnectivityComponentCPP.DestroyConnectivities(GridIDPairs);
 
 }
 
@@ -118,7 +130,7 @@ void ovkGetConnectivityM(const ovk_connectivity_component *ConnectivityComponent
   auto &ConnectivityComponentCPP = *reinterpret_cast<const ovk::connectivity_component *>(
     ConnectivityComponent);
   *ConnectivityM = reinterpret_cast<const ovk_connectivity_m *>(&ConnectivityComponentCPP
-    .ConnectivityM(MGridID, NGridID));
+    .ConnectivityM({MGridID,NGridID}));
 
 }
 
@@ -129,7 +141,7 @@ bool ovkEditingConnectivityM(const ovk_connectivity_component *ConnectivityCompo
 
   auto &ConnectivityComponentCPP = *reinterpret_cast<const ovk::connectivity_component *>(
     ConnectivityComponent);
-  return ConnectivityComponentCPP.EditingConnectivityM(MGridID, NGridID);
+  return ConnectivityComponentCPP.EditingConnectivityM({MGridID,NGridID});
 
 }
 
@@ -143,7 +155,7 @@ void ovkEditConnectivityM(ovk_connectivity_component *ConnectivityComponent, int
     ConnectivityComponent);
 
   ovk::edit_handle<ovk::connectivity_m> EditHandle = ConnectivityComponentCPP.EditConnectivityM(
-    MGridID, NGridID);
+    {MGridID,NGridID});
   auto ConnectivityMCPPPtr = EditHandle.Release();
 
   *ConnectivityM = reinterpret_cast<ovk_connectivity_m *>(ConnectivityMCPPPtr);
@@ -159,7 +171,7 @@ void ovkRestoreConnectivityM(ovk_connectivity_component *ConnectivityComponent, 
 
   auto &ConnectivityComponentCPP = *reinterpret_cast<ovk::connectivity_component *>(
     ConnectivityComponent);
-  ConnectivityComponentCPP.RestoreConnectivityM(MGridID, NGridID);
+  ConnectivityComponentCPP.RestoreConnectivityM({MGridID,NGridID});
 
   *ConnectivityM = nullptr;
 
@@ -195,7 +207,7 @@ void ovkGetConnectivityN(const ovk_connectivity_component *ConnectivityComponent
   auto &ConnectivityComponentCPP = *reinterpret_cast<const ovk::connectivity_component *>(
     ConnectivityComponent);
   *ConnectivityN = reinterpret_cast<const ovk_connectivity_n *>(&ConnectivityComponentCPP
-    .ConnectivityN(MGridID, NGridID));
+    .ConnectivityN({MGridID,NGridID}));
 
 }
 
@@ -206,7 +218,7 @@ bool ovkEditingConnectivityN(const ovk_connectivity_component *ConnectivityCompo
 
   auto &ConnectivityComponentCPP = *reinterpret_cast<const ovk::connectivity_component *>(
     ConnectivityComponent);
-  return ConnectivityComponentCPP.EditingConnectivityN(MGridID, NGridID);
+  return ConnectivityComponentCPP.EditingConnectivityN({MGridID,NGridID});
 
 }
 
@@ -220,7 +232,7 @@ void ovkEditConnectivityN(ovk_connectivity_component *ConnectivityComponent, int
     ConnectivityComponent);
 
   ovk::edit_handle<ovk::connectivity_n> EditHandle = ConnectivityComponentCPP.EditConnectivityN(
-    MGridID, NGridID);
+    {MGridID,NGridID});
   auto ConnectivityNCPPPtr = EditHandle.Release();
 
   *ConnectivityN = reinterpret_cast<ovk_connectivity_n *>(ConnectivityNCPPPtr);
@@ -236,7 +248,7 @@ void ovkRestoreConnectivityN(ovk_connectivity_component *ConnectivityComponent, 
 
   auto &ConnectivityComponentCPP = *reinterpret_cast<ovk::connectivity_component *>(
     ConnectivityComponent);
-  ConnectivityComponentCPP.RestoreConnectivityN(MGridID, NGridID);
+  ConnectivityComponentCPP.RestoreConnectivityN({MGridID,NGridID});
 
   *ConnectivityN = nullptr;
 

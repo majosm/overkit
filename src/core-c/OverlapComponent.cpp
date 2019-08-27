@@ -35,7 +35,7 @@ bool ovkOverlapExists(const ovk_overlap_component *OverlapComponent, int MGridID
   OVK_DEBUG_ASSERT(OverlapComponent, "Invalid overlap component pointer.");
 
   auto &OverlapComponentCPP = *reinterpret_cast<const ovk::overlap_component *>(OverlapComponent);
-  return OverlapComponentCPP.OverlapExists(MGridID, NGridID);
+  return OverlapComponentCPP.OverlapExists({MGridID,NGridID});
 
 }
 
@@ -44,7 +44,7 @@ void ovkCreateOverlap(ovk_overlap_component *OverlapComponent, int MGridID, int 
   OVK_DEBUG_ASSERT(OverlapComponent, "Invalid overlap component pointer.");
 
   auto &OverlapComponentCPP = *reinterpret_cast<ovk::overlap_component *>(OverlapComponent);
-  OverlapComponentCPP.CreateOverlap(MGridID, NGridID);
+  OverlapComponentCPP.CreateOverlap({MGridID,NGridID});
 
 }
 
@@ -55,7 +55,13 @@ void ovkCreateOverlaps(ovk_overlap_component *OverlapComponent, int Count, const
   OVK_DEBUG_ASSERT(Count >= 0, "Invalid count value.");
 
   auto &OverlapComponentCPP = *reinterpret_cast<ovk::overlap_component *>(OverlapComponent);
-  OverlapComponentCPP.CreateOverlaps({MGridIDs, {Count}}, {NGridIDs, {Count}});
+
+  ovk::array<ovk::elem<int,2>> GridIDPairs({Count});
+  for (int iCreate = 0; iCreate < Count; ++iCreate) {
+    GridIDPairs(iCreate) = {MGridIDs[iCreate],NGridIDs[iCreate]};
+  }
+
+  OverlapComponentCPP.CreateOverlaps(GridIDPairs);
 
 }
 
@@ -64,7 +70,7 @@ void ovkDestroyOverlap(ovk_overlap_component *OverlapComponent, int MGridID, int
   OVK_DEBUG_ASSERT(OverlapComponent, "Invalid overlap component pointer.");
 
   auto &OverlapComponentCPP = *reinterpret_cast<ovk::overlap_component *>(OverlapComponent);
-  OverlapComponentCPP.DestroyOverlap(MGridID, NGridID);
+  OverlapComponentCPP.DestroyOverlap({MGridID,NGridID});
 
 }
 
@@ -75,7 +81,13 @@ void ovkDestroyOverlaps(ovk_overlap_component *OverlapComponent, int Count, cons
   OVK_DEBUG_ASSERT(Count >= 0, "Invalid count value.");
 
   auto &OverlapComponentCPP = *reinterpret_cast<ovk::overlap_component *>(OverlapComponent);
-  OverlapComponentCPP.DestroyOverlaps({MGridIDs, {Count}}, {NGridIDs, {Count}});
+
+  ovk::array<ovk::elem<int,2>> GridIDPairs({Count});
+  for (int iDestroy = 0; iDestroy < Count; ++iDestroy) {
+    GridIDPairs(iDestroy) = {MGridIDs[iDestroy],NGridIDs[iDestroy]};
+  }
+
+  OverlapComponentCPP.DestroyOverlaps(GridIDPairs);
 
 }
 
@@ -104,8 +116,8 @@ void ovkGetOverlapM(const ovk_overlap_component *OverlapComponent, int MGridID, 
   OVK_DEBUG_ASSERT(OverlapM, "Invalid overlap M pointer.");
 
   auto &OverlapComponentCPP = *reinterpret_cast<const ovk::overlap_component *>(OverlapComponent);
-  *OverlapM = reinterpret_cast<const ovk_overlap_m *>(&OverlapComponentCPP.OverlapM(MGridID,
-    NGridID));
+  *OverlapM = reinterpret_cast<const ovk_overlap_m *>(&OverlapComponentCPP.OverlapM({MGridID,
+    NGridID}));
 
 }
 
@@ -114,7 +126,7 @@ bool ovkEditingOverlapM(const ovk_overlap_component *OverlapComponent, int MGrid
   OVK_DEBUG_ASSERT(OverlapComponent, "Invalid overlap component pointer.");
 
   auto &OverlapComponentCPP = *reinterpret_cast<const ovk::overlap_component *>(OverlapComponent);
-  return OverlapComponentCPP.EditingOverlapM(MGridID, NGridID);
+  return OverlapComponentCPP.EditingOverlapM({MGridID,NGridID});
 
 }
 
@@ -126,7 +138,7 @@ void ovkEditOverlapM(ovk_overlap_component *OverlapComponent, int MGridID, int N
 
   auto &OverlapComponentCPP = *reinterpret_cast<ovk::overlap_component *>(OverlapComponent);
 
-  ovk::edit_handle<ovk::overlap_m> EditHandle = OverlapComponentCPP.EditOverlapM(MGridID, NGridID);
+  ovk::edit_handle<ovk::overlap_m> EditHandle = OverlapComponentCPP.EditOverlapM({MGridID,NGridID});
   auto OverlapMCPPPtr = EditHandle.Release();
 
   *OverlapM = reinterpret_cast<ovk_overlap_m *>(OverlapMCPPPtr);
@@ -141,7 +153,7 @@ void ovkRestoreOverlapM(ovk_overlap_component *OverlapComponent, int MGridID, in
   OVK_DEBUG_ASSERT(*OverlapM, "Invalid overlap M pointer.");
 
   auto &OverlapComponentCPP = *reinterpret_cast<ovk::overlap_component *>(OverlapComponent);
-  OverlapComponentCPP.RestoreOverlapM(MGridID, NGridID);
+  OverlapComponentCPP.RestoreOverlapM({MGridID,NGridID});
 
   *OverlapM = nullptr;
 
@@ -174,7 +186,7 @@ void ovkGetOverlapN(const ovk_overlap_component *OverlapComponent, int MGridID, 
 
   auto &OverlapComponentCPP = *reinterpret_cast<const ovk::overlap_component *>(OverlapComponent);
   *OverlapN = reinterpret_cast<const ovk_overlap_n *>(&OverlapComponentCPP
-    .OverlapN(MGridID, NGridID));
+    .OverlapN({MGridID,NGridID}));
 
 }
 
@@ -183,7 +195,7 @@ bool ovkEditingOverlapN(const ovk_overlap_component *OverlapComponent, int MGrid
   OVK_DEBUG_ASSERT(OverlapComponent, "Invalid overlap component pointer.");
 
   auto &OverlapComponentCPP = *reinterpret_cast<const ovk::overlap_component *>(OverlapComponent);
-  return OverlapComponentCPP.EditingOverlapN(MGridID, NGridID);
+  return OverlapComponentCPP.EditingOverlapN({MGridID,NGridID});
 
 }
 
@@ -195,7 +207,7 @@ void ovkEditOverlapN(ovk_overlap_component *OverlapComponent, int MGridID, int N
 
   auto &OverlapComponentCPP = *reinterpret_cast<ovk::overlap_component *>(OverlapComponent);
 
-  ovk::edit_handle<ovk::overlap_n> EditHandle = OverlapComponentCPP.EditOverlapN(MGridID, NGridID);
+  ovk::edit_handle<ovk::overlap_n> EditHandle = OverlapComponentCPP.EditOverlapN({MGridID,NGridID});
   auto OverlapNCPPPtr = EditHandle.Release();
 
   *OverlapN = reinterpret_cast<ovk_overlap_n *>(OverlapNCPPPtr);
@@ -210,7 +222,7 @@ void ovkRestoreOverlapN(ovk_overlap_component *OverlapComponent, int MGridID, in
   OVK_DEBUG_ASSERT(*OverlapN, "Invalid overlap N pointer.");
 
   auto &OverlapComponentCPP = *reinterpret_cast<ovk::overlap_component *>(OverlapComponent);
-  OverlapComponentCPP.RestoreOverlapN(MGridID, NGridID);
+  OverlapComponentCPP.RestoreOverlapN({MGridID,NGridID});
 
   *OverlapN = nullptr;
 

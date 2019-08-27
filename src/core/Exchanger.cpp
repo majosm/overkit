@@ -118,10 +118,10 @@ void exchanger::Bind(const domain &Domain, bindings Bindings) {
     ConnectivityComponentID_);
 
   auto &ConnectivityComponent = Domain.Component<connectivity_component>(ConnectivityComponentID_);
-  ConnectivityEventListener_ = ConnectivityComponent.AddConnectivityEventListener([FloatingRef](int
-    MGridID, int NGridID, connectivity_event_flags Flags, bool LastInSequence) {
+  ConnectivityEventListener_ = ConnectivityComponent.AddConnectivityEventListener([FloatingRef](
+    const elem<int,2> &GridIDPair, connectivity_event_flags Flags, bool LastInSequence) {
     exchanger &Exchanger = *FloatingRef;
-    Exchanger.OnConnectivityEvent_(MGridID, NGridID, Flags, LastInSequence);
+    Exchanger.OnConnectivityEvent_(GridIDPair, Flags, LastInSequence);
   });
 
   MPI_Barrier(Domain.Comm());
@@ -187,10 +187,8 @@ void exchanger::OnComponentEvent_(int ComponentID, component_event_flags Flags) 
 
 }
 
-void exchanger::OnConnectivityEvent_(int MGridID, int NGridID, connectivity_event_flags Flags,
+void exchanger::OnConnectivityEvent_(const elem<int,2> &GridIDPair, connectivity_event_flags Flags,
   bool LastInSequence) {
-
-  elem<int,2> IDPair = {MGridID,NGridID};
 
   auto FlagsMatchAny = [&Flags](connectivity_event_flags Mask) -> bool {
     return (Flags & Mask) != connectivity_event_flags::NONE;
@@ -203,19 +201,19 @@ void exchanger::OnConnectivityEvent_(int MGridID, int NGridID, connectivity_even
   bool EditSources = FlagsMatchAny(connectivity_event_flags::EDIT_N_SOURCES);
 
   if (Create) {
-    UpdateManifest_.CreateLocal.Insert(IDPair);
+    UpdateManifest_.CreateLocal.Insert(GridIDPair);
   }
 
   if (Destroy) {
-    UpdateManifest_.DestroyLocal.Insert(IDPair);
+    UpdateManifest_.DestroyLocal.Insert(GridIDPair);
   }
 
   if (Create || EditDests || EditSources) {
-    UpdateManifest_.UpdateSourceDestRanks.Insert(IDPair);
+    UpdateManifest_.UpdateSourceDestRanks.Insert(GridIDPair);
   }
 
   if (Create || EditAny) {
-    UpdateManifest_.ResetExchanges.Insert(IDPair);
+    UpdateManifest_.ResetExchanges.Insert(GridIDPair);
   }
 
   if (LastInSequence) {
@@ -814,63 +812,68 @@ void exchanger::ResetExchanges_() {
 
 }
 
-const set<int> &exchanger::CollectIDs(int MGridID, int NGridID) const {
+const set<int> &exchanger::CollectIDs(const elem<int,2> &GridIDPair) const {
 
   OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
 
   const domain &Domain = *Domain_;
 
+  int MGridID = GridIDPair(0);
+  int NGridID = GridIDPair(1);
+
   OVK_DEBUG_ASSERT(MGridID >= 0, "Invalid M grid ID.");
   OVK_DEBUG_ASSERT(NGridID >= 0, "Invalid N grid ID.");
 
-  elem<int,2> IDPair = {MGridID,NGridID};
-
   auto &ConnectivityComponent = Domain.Component<connectivity_component>(ConnectivityComponentID_);
 
-  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(IDPair), "Connectivity (%i,%i) does "
+  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(GridIDPair), "Connectivity (%i,%i) does "
     "not exist.", MGridID, NGridID);
   OVK_DEBUG_ASSERT(Domain.GridIsLocal(MGridID), "Grid %s is not local to rank @rank@.",
     Domain.GridInfo(MGridID).Name());
 
-  const local_m &LocalM = LocalMs_(IDPair);
+  const local_m &LocalM = LocalMs_(GridIDPair);
   const map<int,core::collect> &Collects = LocalM.Collects;
 
   return Collects.Keys();
 
 }
 
-bool exchanger::CollectExists(int MGridID, int NGridID, int CollectID) const {
+bool exchanger::CollectExists(const elem<int,2> &GridIDPair, int CollectID) const {
 
   OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
 
   const domain &Domain = *Domain_;
 
+  int MGridID = GridIDPair(0);
+  int NGridID = GridIDPair(1);
+
   OVK_DEBUG_ASSERT(MGridID >= 0, "Invalid M grid ID.");
   OVK_DEBUG_ASSERT(NGridID >= 0, "Invalid N grid ID.");
   OVK_DEBUG_ASSERT(CollectID >= 0, "Invalid collect ID.");
 
-  elem<int,2> IDPair = {MGridID,NGridID};
-
   auto &ConnectivityComponent = Domain.Component<connectivity_component>(ConnectivityComponentID_);
 
-  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(IDPair), "Connectivity (%i,%i) does "
+  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(GridIDPair), "Connectivity (%i,%i) does "
     "not exist.", MGridID, NGridID);
   OVK_DEBUG_ASSERT(Domain.GridIsLocal(MGridID), "Grid %s is not local to rank @rank@.",
     Domain.GridInfo(MGridID).Name());
 
-  const local_m &LocalM = LocalMs_(IDPair);
+  const local_m &LocalM = LocalMs_(GridIDPair);
   const map<int,core::collect> &Collects = LocalM.Collects;
 
   return Collects.Contains(CollectID);
 
 }
 
-void exchanger::CreateCollect(int MGridID, int NGridID, int CollectID, collect_op CollectOp,
+void exchanger::CreateCollect(const elem<int,2> &GridIDPair, int CollectID, collect_op CollectOp,
   data_type ValueType, int Count, const range &GridValuesRange, array_layout GridValuesLayout) {
 
   OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
 
   const domain &Domain = *Domain_;
+
+  int MGridID = GridIDPair(0);
+  int NGridID = GridIDPair(1);
 
   OVK_DEBUG_ASSERT(MGridID >= 0, "Invalid M grid ID.");
   OVK_DEBUG_ASSERT(NGridID >= 0, "Invalid N grid ID.");
@@ -880,11 +883,9 @@ void exchanger::CreateCollect(int MGridID, int NGridID, int CollectID, collect_o
   OVK_DEBUG_ASSERT(Count >= 0, "Invalid count.");
   OVK_DEBUG_ASSERT(ValidArrayLayout(GridValuesLayout), "Invalid grid values layout.");
 
-  elem<int,2> IDPair = {MGridID,NGridID};
-
   auto &ConnectivityComponent = Domain.Component<connectivity_component>(ConnectivityComponentID_);
 
-  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(IDPair), "Connectivity (%i,%i) does "
+  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(GridIDPair), "Connectivity (%i,%i) does "
     "not exist.", MGridID, NGridID);
   OVK_DEBUG_ASSERT(Domain.GridIsLocal(MGridID), "Grid %s is not local to rank @rank@.",
     Domain.GridInfo(MGridID).Name());
@@ -896,7 +897,7 @@ void exchanger::CreateCollect(int MGridID, int NGridID, int CollectID, collect_o
 
   MPI_Barrier(GridComm);
 
-  local_m &LocalM = LocalMs_(IDPair);
+  local_m &LocalM = LocalMs_(GridIDPair);
   const connectivity_m &ConnectivityM = *LocalM.Connectivity;
   const core::collect_map &CollectMap = LocalM.CollectMap;
   map<int,core::collect> &Collects = LocalM.Collects;
@@ -941,21 +942,22 @@ void exchanger::CreateCollect(int MGridID, int NGridID, int CollectID, collect_o
 
 }
 
-void exchanger::DestroyCollect(int MGridID, int NGridID, int CollectID) {
+void exchanger::DestroyCollect(const elem<int,2> &GridIDPair, int CollectID) {
 
   OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
 
   const domain &Domain = *Domain_;
 
+  int MGridID = GridIDPair(0);
+  int NGridID = GridIDPair(1);
+
   OVK_DEBUG_ASSERT(MGridID >= 0, "Invalid M grid ID.");
   OVK_DEBUG_ASSERT(NGridID >= 0, "Invalid N grid ID.");
   OVK_DEBUG_ASSERT(CollectID >= 0, "Invalid collect ID.");
 
-  elem<int,2> IDPair = {MGridID,NGridID};
-
   auto &ConnectivityComponent = Domain.Component<connectivity_component>(ConnectivityComponentID_);
 
-  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(IDPair), "Connectivity (%i,%i) does "
+  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(GridIDPair), "Connectivity (%i,%i) does "
     "not exist.", MGridID, NGridID);
 
   OVK_DEBUG_ASSERT(Domain.GridIsLocal(MGridID), "Grid %s is not local to rank @rank@.",
@@ -966,7 +968,7 @@ void exchanger::DestroyCollect(int MGridID, int NGridID, int CollectID) {
 
   MPI_Barrier(GridComm);
 
-  local_m &LocalM = LocalMs_(IDPair);
+  local_m &LocalM = LocalMs_(GridIDPair);
   map<int,core::collect> &Collects = LocalM.Collects;
 
   OVK_DEBUG_ASSERT(Collects.Contains(CollectID), "Collect %i does not exist.", CollectID);
@@ -977,22 +979,23 @@ void exchanger::DestroyCollect(int MGridID, int NGridID, int CollectID) {
 
 }
 
-void exchanger::Collect(int MGridID, int NGridID, int CollectID, const void *GridValues, void
+void exchanger::Collect(const elem<int,2> &GridIDPair, int CollectID, const void *GridValues, void
   *DonorValues) {
 
   OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
 
   const domain &Domain = *Domain_;
 
+  int MGridID = GridIDPair(0);
+  int NGridID = GridIDPair(1);
+
   OVK_DEBUG_ASSERT(MGridID >= 0, "Invalid M grid ID.");
   OVK_DEBUG_ASSERT(NGridID >= 0, "Invalid N grid ID.");
   OVK_DEBUG_ASSERT(CollectID >= 0, "Invalid collect ID.");
 
-  elem<int,2> IDPair = {MGridID,NGridID};
-
   auto &ConnectivityComponent = Domain.Component<connectivity_component>(ConnectivityComponentID_);
 
-  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(IDPair), "Connectivity (%i,%i) does "
+  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(GridIDPair), "Connectivity (%i,%i) does "
     "not exist.", MGridID, NGridID);
   OVK_DEBUG_ASSERT(Domain.GridIsLocal(MGridID), "Grid %s is not local to rank @rank@.",
     Domain.GridInfo(MGridID).Name());
@@ -1002,7 +1005,7 @@ void exchanger::Collect(int MGridID, int NGridID, int CollectID, const void *Gri
 
   MPI_Barrier(GridComm);
 
-  local_m &LocalM = LocalMs_(IDPair);
+  local_m &LocalM = LocalMs_(GridIDPair);
   map<int,core::collect> &Collects = LocalM.Collects;
 
   core::profiler &Profiler = Context_->core_Profiler();
@@ -1021,63 +1024,68 @@ void exchanger::Collect(int MGridID, int NGridID, int CollectID, const void *Gri
 
 }
 
-const set<int> &exchanger::SendIDs(int MGridID, int NGridID) const {
+const set<int> &exchanger::SendIDs(const elem<int,2> &GridIDPair) const {
 
   OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
 
   const domain &Domain = *Domain_;
 
+  int MGridID = GridIDPair(0);
+  int NGridID = GridIDPair(1);
+
   OVK_DEBUG_ASSERT(MGridID >= 0, "Invalid M grid ID.");
   OVK_DEBUG_ASSERT(NGridID >= 0, "Invalid N grid ID.");
 
-  elem<int,2> IDPair = {MGridID,NGridID};
-
   auto &ConnectivityComponent = Domain.Component<connectivity_component>(ConnectivityComponentID_);
 
-  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(IDPair), "Connectivity (%i,%i) does "
+  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(GridIDPair), "Connectivity (%i,%i) does "
     "not exist.", MGridID, NGridID);
   OVK_DEBUG_ASSERT(Domain.GridIsLocal(MGridID), "Grid %s is not local to rank @rank@.",
     Domain.GridInfo(MGridID).Name());
 
-  const local_m &LocalM = LocalMs_(IDPair);
+  const local_m &LocalM = LocalMs_(GridIDPair);
   const map<int,core::send> &Sends = LocalM.Sends;
 
   return Sends.Keys();
 
 }
 
-bool exchanger::SendExists(int MGridID, int NGridID, int SendID) const {
+bool exchanger::SendExists(const elem<int,2> &GridIDPair, int SendID) const {
 
   OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
 
   const domain &Domain = *Domain_;
 
+  int MGridID = GridIDPair(0);
+  int NGridID = GridIDPair(1);
+
   OVK_DEBUG_ASSERT(MGridID >= 0, "Invalid M grid ID.");
   OVK_DEBUG_ASSERT(NGridID >= 0, "Invalid N grid ID.");
   OVK_DEBUG_ASSERT(SendID >= 0, "Invalid send ID.");
 
-  elem<int,2> IDPair = {MGridID,NGridID};
-
   auto &ConnectivityComponent = Domain.Component<connectivity_component>(ConnectivityComponentID_);
 
-  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(IDPair), "Connectivity (%i,%i) does "
+  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(GridIDPair), "Connectivity (%i,%i) does "
     "not exist.", MGridID, NGridID);
   OVK_DEBUG_ASSERT(Domain.GridIsLocal(MGridID), "Grid %s is not local to rank @rank@.",
     Domain.GridInfo(MGridID).Name());
 
-  const local_m &LocalM = LocalMs_(IDPair);
+  const local_m &LocalM = LocalMs_(GridIDPair);
   const map<int,core::send> &Sends = LocalM.Sends;
 
   return Sends.Contains(SendID);
 
 }
 
-void exchanger::CreateSend(int MGridID, int NGridID, int SendID, data_type ValueType, int Count, int
-  Tag) {
+void exchanger::CreateSend(const elem<int,2> &GridIDPair, int SendID, data_type ValueType, int
+  Count, int Tag) {
 
   OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
 
   const domain &Domain = *Domain_;
+
+  int MGridID = GridIDPair(0);
+  int NGridID = GridIDPair(1);
 
   OVK_DEBUG_ASSERT(MGridID >= 0, "Invalid M grid ID.");
   OVK_DEBUG_ASSERT(NGridID >= 0, "Invalid N grid ID.");
@@ -1086,16 +1094,14 @@ void exchanger::CreateSend(int MGridID, int NGridID, int SendID, data_type Value
   OVK_DEBUG_ASSERT(Count >= 0, "Invalid count.");
   OVK_DEBUG_ASSERT(Tag >= 0, "Invalid tag.");
 
-  elem<int,2> IDPair = {MGridID,NGridID};
-
   auto &ConnectivityComponent = Domain.Component<connectivity_component>(ConnectivityComponentID_);
 
-  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(IDPair), "Connectivity (%i,%i) does "
+  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(GridIDPair), "Connectivity (%i,%i) does "
     "not exist.", MGridID, NGridID);
   OVK_DEBUG_ASSERT(Domain.GridIsLocal(MGridID), "Grid %s is not local to rank @rank@.",
     Domain.GridInfo(MGridID).Name());
 
-  local_m &LocalM = LocalMs_(IDPair);
+  local_m &LocalM = LocalMs_(GridIDPair);
   const core::send_map &SendMap = LocalM.SendMap;
   map<int,core::send> &Sends = LocalM.Sends;
 
@@ -1103,7 +1109,7 @@ void exchanger::CreateSend(int MGridID, int NGridID, int SendID, data_type Value
 
   const elem_set<int,2> &ConnectivityIDs = ConnectivityComponent.ConnectivityIDs();
   int GlobalTagMultiplier = ConnectivityIDs.Count();
-  int GlobalTagOffset = ConnectivityIDs.Find(IDPair) - ConnectivityIDs.Begin();
+  int GlobalTagOffset = ConnectivityIDs.Find(GridIDPair) - ConnectivityIDs.Begin();
   int GlobalTag = GlobalTagMultiplier*Tag + GlobalTagOffset;
 
   core::send Send = core::CreateSend(Context_, Domain.Comm(), SendMap, ValueType, Count, GlobalTag);
@@ -1112,26 +1118,27 @@ void exchanger::CreateSend(int MGridID, int NGridID, int SendID, data_type Value
 
 }
 
-void exchanger::DestroySend(int MGridID, int NGridID, int SendID) {
+void exchanger::DestroySend(const elem<int,2> &GridIDPair, int SendID) {
 
   OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
 
   const domain &Domain = *Domain_;
 
+  int MGridID = GridIDPair(0);
+  int NGridID = GridIDPair(1);
+
   OVK_DEBUG_ASSERT(MGridID >= 0, "Invalid M grid ID.");
   OVK_DEBUG_ASSERT(NGridID >= 0, "Invalid N grid ID.");
   OVK_DEBUG_ASSERT(SendID >= 0, "Invalid send ID.");
 
-  elem<int,2> IDPair = {MGridID,NGridID};
-
   auto &ConnectivityComponent = Domain.Component<connectivity_component>(ConnectivityComponentID_);
 
-  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(IDPair), "Connectivity (%i,%i) does "
+  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(GridIDPair), "Connectivity (%i,%i) does "
     "not exist.", MGridID, NGridID);
   OVK_DEBUG_ASSERT(Domain.GridIsLocal(MGridID), "Grid %s is not local to rank @rank@.",
     Domain.GridInfo(MGridID).Name());
 
-  local_m &LocalM = LocalMs_(IDPair);
+  local_m &LocalM = LocalMs_(GridIDPair);
   map<int,core::send> &Sends = LocalM.Sends;
 
   OVK_DEBUG_ASSERT(Sends.Contains(SendID), "Send %i does not exist.", SendID);
@@ -1140,26 +1147,27 @@ void exchanger::DestroySend(int MGridID, int NGridID, int SendID) {
 
 }
 
-request exchanger::Send(int MGridID, int NGridID, int SendID, const void *DonorValues) {
+request exchanger::Send(const elem<int,2> &GridIDPair, int SendID, const void *DonorValues) {
 
   OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
 
   const domain &Domain = *Domain_;
 
+  int MGridID = GridIDPair(0);
+  int NGridID = GridIDPair(1);
+
   OVK_DEBUG_ASSERT(MGridID >= 0, "Invalid M grid ID.");
   OVK_DEBUG_ASSERT(NGridID >= 0, "Invalid N grid ID.");
   OVK_DEBUG_ASSERT(SendID >= 0, "Invalid send ID.");
 
-  elem<int,2> IDPair = {MGridID,NGridID};
-
   auto &ConnectivityComponent = Domain.Component<connectivity_component>(ConnectivityComponentID_);
 
-  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(IDPair), "Connectivity (%i,%i) does "
+  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(GridIDPair), "Connectivity (%i,%i) does "
     "not exist.", MGridID, NGridID);
   OVK_DEBUG_ASSERT(Domain.GridIsLocal(MGridID), "Grid %s is not local to rank @rank@.",
     Domain.GridInfo(MGridID).Name());
 
-  local_m &LocalM = LocalMs_(IDPair);
+  local_m &LocalM = LocalMs_(GridIDPair);
   map<int,core::send> &Sends = LocalM.Sends;
 
   core::profiler &Profiler = Context_->core_Profiler();
@@ -1178,63 +1186,68 @@ request exchanger::Send(int MGridID, int NGridID, int SendID, const void *DonorV
 
 }
 
-const set<int> &exchanger::ReceiveIDs(int MGridID, int NGridID) const {
+const set<int> &exchanger::ReceiveIDs(const elem<int,2> &GridIDPair) const {
 
   OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
 
   const domain &Domain = *Domain_;
 
+  int MGridID = GridIDPair(0);
+  int NGridID = GridIDPair(1);
+
   OVK_DEBUG_ASSERT(MGridID >= 0, "Invalid M grid ID.");
   OVK_DEBUG_ASSERT(NGridID >= 0, "Invalid N grid ID.");
 
-  elem<int,2> IDPair = {MGridID,NGridID};
-
   auto &ConnectivityComponent = Domain.Component<connectivity_component>(ConnectivityComponentID_);
 
-  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(IDPair), "Connectivity (%i,%i) does "
+  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(GridIDPair), "Connectivity (%i,%i) does "
     "not exist.", MGridID, NGridID);
   OVK_DEBUG_ASSERT(Domain.GridIsLocal(NGridID), "Grid %s is not local to rank @rank@.",
     Domain.GridInfo(NGridID).Name());
 
-  const local_n &LocalN = LocalNs_(IDPair);
+  const local_n &LocalN = LocalNs_(GridIDPair);
   const map<int,core::recv> &Recvs = LocalN.Recvs;
 
   return Recvs.Keys();
 
 }
 
-bool exchanger::ReceiveExists(int MGridID, int NGridID, int RecvID) const {
+bool exchanger::ReceiveExists(const elem<int,2> &GridIDPair, int RecvID) const {
 
   OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
 
   const domain &Domain = *Domain_;
 
+  int MGridID = GridIDPair(0);
+  int NGridID = GridIDPair(1);
+
   OVK_DEBUG_ASSERT(MGridID >= 0, "Invalid M grid ID.");
   OVK_DEBUG_ASSERT(NGridID >= 0, "Invalid N grid ID.");
   OVK_DEBUG_ASSERT(RecvID >= 0, "Invalid receive ID.");
 
-  elem<int,2> IDPair = {MGridID,NGridID};
-
   auto &ConnectivityComponent = Domain.Component<connectivity_component>(ConnectivityComponentID_);
 
-  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(IDPair), "Connectivity (%i,%i) does "
+  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(GridIDPair), "Connectivity (%i,%i) does "
     "not exist.", MGridID, NGridID);
   OVK_DEBUG_ASSERT(Domain.GridIsLocal(NGridID), "Grid %s is not local to rank @rank@.",
     Domain.GridInfo(NGridID).Name());
 
-  const local_n &LocalN = LocalNs_(IDPair);
+  const local_n &LocalN = LocalNs_(GridIDPair);
   const map<int,core::recv> &Recvs = LocalN.Recvs;
 
   return Recvs.Contains(RecvID);
 
 }
 
-void exchanger::CreateReceive(int MGridID, int NGridID, int RecvID, data_type ValueType, int Count,
-  int Tag) {
+void exchanger::CreateReceive(const elem<int,2> &GridIDPair, int RecvID, data_type ValueType, int
+  Count, int Tag) {
 
   OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
 
   const domain &Domain = *Domain_;
+
+  int MGridID = GridIDPair(0);
+  int NGridID = GridIDPair(1);
 
   OVK_DEBUG_ASSERT(MGridID >= 0, "Invalid M grid ID.");
   OVK_DEBUG_ASSERT(NGridID >= 0, "Invalid N grid ID.");
@@ -1243,16 +1256,14 @@ void exchanger::CreateReceive(int MGridID, int NGridID, int RecvID, data_type Va
   OVK_DEBUG_ASSERT(Count >= 0, "Invalid count.");
   OVK_DEBUG_ASSERT(Tag >= 0, "Invalid tag.");
 
-  elem<int,2> IDPair = {MGridID,NGridID};
-
   auto &ConnectivityComponent = Domain.Component<connectivity_component>(ConnectivityComponentID_);
 
-  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(IDPair), "Connectivity (%i,%i) does "
+  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(GridIDPair), "Connectivity (%i,%i) does "
     "not exist.", MGridID, NGridID);
   OVK_DEBUG_ASSERT(Domain.GridIsLocal(NGridID), "Grid %s is not local to rank @rank@.",
     Domain.GridInfo(NGridID).Name());
 
-  local_n &LocalN = LocalNs_(IDPair);
+  local_n &LocalN = LocalNs_(GridIDPair);
   const core::recv_map &RecvMap = LocalN.RecvMap;
   map<int,core::recv> &Recvs = LocalN.Recvs;
 
@@ -1260,7 +1271,7 @@ void exchanger::CreateReceive(int MGridID, int NGridID, int RecvID, data_type Va
 
   const elem_set<int,2> &ConnectivityIDs = ConnectivityComponent.ConnectivityIDs();
   int GlobalTagMultiplier = ConnectivityIDs.Count();
-  int GlobalTagOffset = ConnectivityIDs.Find(IDPair) - ConnectivityIDs.Begin();
+  int GlobalTagOffset = ConnectivityIDs.Find(GridIDPair) - ConnectivityIDs.Begin();
   int GlobalTag = GlobalTagMultiplier*Tag + GlobalTagOffset;
 
   core::recv Recv = core::CreateRecv(Context_, Domain.Comm(), RecvMap, ValueType, Count, GlobalTag);
@@ -1269,26 +1280,27 @@ void exchanger::CreateReceive(int MGridID, int NGridID, int RecvID, data_type Va
 
 }
 
-void exchanger::DestroyReceive(int MGridID, int NGridID, int RecvID) {
+void exchanger::DestroyReceive(const elem<int,2> &GridIDPair, int RecvID) {
 
   OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
 
   const domain &Domain = *Domain_;
 
+  int MGridID = GridIDPair(0);
+  int NGridID = GridIDPair(1);
+
   OVK_DEBUG_ASSERT(MGridID >= 0, "Invalid M grid ID.");
   OVK_DEBUG_ASSERT(NGridID >= 0, "Invalid N grid ID.");
   OVK_DEBUG_ASSERT(RecvID >= 0, "Invalid receive ID.");
 
-  elem<int,2> IDPair = {MGridID,NGridID};
-
   auto &ConnectivityComponent = Domain.Component<connectivity_component>(ConnectivityComponentID_);
 
-  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(IDPair), "Connectivity (%i,%i) does "
+  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(GridIDPair), "Connectivity (%i,%i) does "
     "not exist.", MGridID, NGridID);
   OVK_DEBUG_ASSERT(Domain.GridIsLocal(NGridID), "Grid %s is not local to rank @rank@.",
     Domain.GridInfo(NGridID).Name());
 
-  local_n &LocalN = LocalNs_({MGridID,NGridID});
+  local_n &LocalN = LocalNs_(GridIDPair);
   map<int,core::recv> &Recvs = LocalN.Recvs;
 
   OVK_DEBUG_ASSERT(Recvs.Contains(RecvID), "Receive %i does not exist.", RecvID);
@@ -1297,26 +1309,27 @@ void exchanger::DestroyReceive(int MGridID, int NGridID, int RecvID) {
 
 }
 
-request exchanger::Receive(int MGridID, int NGridID, int RecvID, void *ReceiverValues) {
+request exchanger::Receive(const elem<int,2> &GridIDPair, int RecvID, void *ReceiverValues) {
 
   OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
 
   const domain &Domain = *Domain_;
 
+  int MGridID = GridIDPair(0);
+  int NGridID = GridIDPair(1);
+
   OVK_DEBUG_ASSERT(MGridID >= 0, "Invalid M grid ID.");
   OVK_DEBUG_ASSERT(NGridID >= 0, "Invalid N grid ID.");
   OVK_DEBUG_ASSERT(RecvID >= 0, "Invalid receive ID.");
 
-  elem<int,2> IDPair = {MGridID,NGridID};
-
   auto &ConnectivityComponent = Domain.Component<connectivity_component>(ConnectivityComponentID_);
 
-  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(IDPair), "Connectivity (%i,%i) does "
+  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(GridIDPair), "Connectivity (%i,%i) does "
     "not exist.", MGridID, NGridID);
   OVK_DEBUG_ASSERT(Domain.GridIsLocal(NGridID), "Grid %s is not local to rank @rank@.",
     Domain.GridInfo(NGridID).Name());
 
-  local_n &LocalN = LocalNs_(IDPair);
+  local_n &LocalN = LocalNs_(GridIDPair);
   map<int,core::recv> &Recvs = LocalN.Recvs;
 
   core::profiler &Profiler = Context_->core_Profiler();
@@ -1335,63 +1348,68 @@ request exchanger::Receive(int MGridID, int NGridID, int RecvID, void *ReceiverV
 
 }
 
-const set<int> &exchanger::DisperseIDs(int MGridID, int NGridID) const {
+const set<int> &exchanger::DisperseIDs(const elem<int,2> &GridIDPair) const {
 
   OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
 
   const domain &Domain = *Domain_;
 
+  int MGridID = GridIDPair(0);
+  int NGridID = GridIDPair(1);
+
   OVK_DEBUG_ASSERT(MGridID >= 0, "Invalid M grid ID.");
   OVK_DEBUG_ASSERT(NGridID >= 0, "Invalid N grid ID.");
 
-  elem<int,2> IDPair = {MGridID,NGridID};
-
   auto &ConnectivityComponent = Domain.Component<connectivity_component>(ConnectivityComponentID_);
 
-  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(IDPair), "Connectivity (%i,%i) does "
+  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(GridIDPair), "Connectivity (%i,%i) does "
     "not exist.", MGridID, NGridID);
   OVK_DEBUG_ASSERT(Domain.GridIsLocal(NGridID), "Grid %s is not local to rank @rank@.",
     Domain.GridInfo(NGridID).Name());
 
-  const local_n &LocalN = LocalNs_(IDPair);
+  const local_n &LocalN = LocalNs_(GridIDPair);
   const map<int,core::disperse> &Disperses = LocalN.Disperses;
 
   return Disperses.Keys();
 
 }
 
-bool exchanger::DisperseExists(int MGridID, int NGridID, int DisperseID) const {
+bool exchanger::DisperseExists(const elem<int,2> &GridIDPair, int DisperseID) const {
 
   OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
 
   const domain &Domain = *Domain_;
 
+  int MGridID = GridIDPair(0);
+  int NGridID = GridIDPair(1);
+
   OVK_DEBUG_ASSERT(MGridID >= 0, "Invalid M grid ID.");
   OVK_DEBUG_ASSERT(NGridID >= 0, "Invalid N grid ID.");
   OVK_DEBUG_ASSERT(DisperseID >= 0, "Invalid disperse ID.");
 
-  elem<int,2> IDPair = {MGridID,NGridID};
-
   auto &ConnectivityComponent = Domain.Component<connectivity_component>(ConnectivityComponentID_);
 
-  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(IDPair), "Connectivity (%i,%i) does "
+  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(GridIDPair), "Connectivity (%i,%i) does "
     "not exist.", MGridID, NGridID);
   OVK_DEBUG_ASSERT(Domain.GridIsLocal(NGridID), "Grid %s is not local to rank @rank@.",
     Domain.GridInfo(NGridID).Name());
 
-  const local_n &LocalN = LocalNs_(IDPair);
+  const local_n &LocalN = LocalNs_(GridIDPair);
   const map<int,core::disperse> &Disperses = LocalN.Disperses;
 
   return Disperses.Contains(DisperseID);
 
 }
 
-void exchanger::CreateDisperse(int MGridID, int NGridID, int DisperseID, disperse_op DisperseOp,
+void exchanger::CreateDisperse(const elem<int,2> &GridIDPair, int DisperseID, disperse_op DisperseOp,
   data_type ValueType, int Count, const range &GridValuesRange, array_layout GridValuesLayout) {
 
   OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
 
   const domain &Domain = *Domain_;
+
+  int MGridID = GridIDPair(0);
+  int NGridID = GridIDPair(1);
 
   OVK_DEBUG_ASSERT(MGridID >= 0, "Invalid M grid ID.");
   OVK_DEBUG_ASSERT(NGridID >= 0, "Invalid N grid ID.");
@@ -1401,11 +1419,9 @@ void exchanger::CreateDisperse(int MGridID, int NGridID, int DisperseID, dispers
   OVK_DEBUG_ASSERT(Count >= 0, "Invalid count.");
   OVK_DEBUG_ASSERT(ValidArrayLayout(GridValuesLayout), "Invalid grid values layout.");
 
-  elem<int,2> IDPair = {MGridID,NGridID};
-
   auto &ConnectivityComponent = Domain.Component<connectivity_component>(ConnectivityComponentID_);
 
-  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(IDPair), "Connectivity "
+  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(GridIDPair), "Connectivity "
     "(%i,%i) does not exist.", MGridID, NGridID);
   OVK_DEBUG_ASSERT(Domain.GridIsLocal(NGridID), "Grid %s is not local to rank @rank@.",
     Domain.GridInfo(NGridID).Name());
@@ -1414,7 +1430,7 @@ void exchanger::CreateDisperse(int MGridID, int NGridID, int DisperseID, dispers
 
   OVK_DEBUG_ASSERT(GridValuesRange.Includes(NGrid.LocalRange()), "Invalid grid values range.");
 
-  local_n &LocalN = LocalNs_(IDPair);
+  local_n &LocalN = LocalNs_(GridIDPair);
   const core::disperse_map &DisperseMap = LocalN.DisperseMap;
   map<int,core::disperse> &Disperses = LocalN.Disperses;
 
@@ -1437,26 +1453,27 @@ void exchanger::CreateDisperse(int MGridID, int NGridID, int DisperseID, dispers
 
 }
 
-void exchanger::DestroyDisperse(int MGridID, int NGridID, int DisperseID) {
+void exchanger::DestroyDisperse(const elem<int,2> &GridIDPair, int DisperseID) {
 
   OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
 
   const domain &Domain = *Domain_;
 
+  int MGridID = GridIDPair(0);
+  int NGridID = GridIDPair(1);
+
   OVK_DEBUG_ASSERT(MGridID >= 0, "Invalid M grid ID.");
   OVK_DEBUG_ASSERT(NGridID >= 0, "Invalid N grid ID.");
   OVK_DEBUG_ASSERT(DisperseID >= 0, "Invalid disperse ID.");
 
-  elem<int,2> IDPair = {MGridID,NGridID};
-
   auto &ConnectivityComponent = Domain.Component<connectivity_component>(ConnectivityComponentID_);
 
-  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(IDPair), "Connectivity (%i,%i) does "
+  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(GridIDPair), "Connectivity (%i,%i) does "
     "not exist.", MGridID, NGridID);
   OVK_DEBUG_ASSERT(Domain.GridIsLocal(NGridID), "Grid %s is not local to rank @rank@.",
     Domain.GridInfo(NGridID).Name());
 
-  local_n &LocalN = LocalNs_(IDPair);
+  local_n &LocalN = LocalNs_(GridIDPair);
   map<int,core::disperse> &Disperses = LocalN.Disperses;
 
   OVK_DEBUG_ASSERT(Disperses.Contains(DisperseID), "Disperse %i does not exist.", DisperseID);
@@ -1465,27 +1482,28 @@ void exchanger::DestroyDisperse(int MGridID, int NGridID, int DisperseID) {
 
 }
 
-void exchanger::Disperse(int MGridID, int NGridID, int DisperseID, const void *ReceiverValues, void
-  *GridValues) {
+void exchanger::Disperse(const elem<int,2> &GridIDPair, int DisperseID, const void *ReceiverValues,
+  void *GridValues) {
 
   OVK_DEBUG_ASSERT(Domain_, "Exchanger is not bound to a domain.");
 
   const domain &Domain = *Domain_;
 
+  int MGridID = GridIDPair(0);
+  int NGridID = GridIDPair(1);
+
   OVK_DEBUG_ASSERT(MGridID >= 0, "Invalid M grid ID.");
   OVK_DEBUG_ASSERT(NGridID >= 0, "Invalid N grid ID.");
   OVK_DEBUG_ASSERT(DisperseID >= 0, "Invalid disperse ID.");
 
-  elem<int,2> IDPair = {MGridID,NGridID};
-
   auto &ConnectivityComponent = Domain.Component<connectivity_component>(ConnectivityComponentID_);
 
-  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(IDPair), "Connectivity (%i,%i) does "
+  OVK_DEBUG_ASSERT(ConnectivityComponent.ConnectivityExists(GridIDPair), "Connectivity (%i,%i) does "
     "not exist.", MGridID, NGridID);
   OVK_DEBUG_ASSERT(Domain.GridIsLocal(NGridID), "Grid %s is not local to rank @rank@.",
     Domain.GridInfo(NGridID).Name());
 
-  local_n &LocalN = LocalNs_(IDPair);
+  local_n &LocalN = LocalNs_(GridIDPair);
   map<int,core::disperse> &Disperses = LocalN.Disperses;
 
   core::profiler &Profiler = Context_->core_Profiler();
