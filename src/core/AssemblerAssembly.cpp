@@ -104,12 +104,12 @@ void assembler::InitializeAssembly_() {
     core::partition_pool PartitionPool(Context_, Grid.Comm(), Grid.Partition().NeighborRanks());
     PartitionPool.Insert(Grid.SharedPartition());
     PartitionPool.Insert(Grid.SharedCellPartition());
-    local_grid_aux_data &LocalGridAuxData = AssemblyData.LocalGridAuxData.Insert(GridID,
+    local_grid_aux_data &GridAuxData = AssemblyData.LocalGridAuxData.Insert(GridID,
       std::move(PartitionPool));
-    distributed_field<bool> &ActiveMask = LocalGridAuxData.ActiveMask;
-    distributed_field<bool> &CellActiveMask = LocalGridAuxData.CellActiveMask;
-    distributed_field<bool> &DomainBoundaryMask = LocalGridAuxData.DomainBoundaryMask;
-    distributed_field<bool> &InternalBoundaryMask = LocalGridAuxData.InternalBoundaryMask;
+    distributed_field<bool> &ActiveMask = GridAuxData.ActiveMask;
+    distributed_field<bool> &CellActiveMask = GridAuxData.CellActiveMask;
+    distributed_field<bool> &DomainBoundaryMask = GridAuxData.DomainBoundaryMask;
+    distributed_field<bool> &InternalBoundaryMask = GridAuxData.InternalBoundaryMask;
     ActiveMask.Assign(Grid.SharedPartition());
     for (int k = ExtendedRange.Begin(2); k < ExtendedRange.End(2); ++k) {
       for (int j = ExtendedRange.Begin(1); j < ExtendedRange.End(1); ++j) {
