@@ -21,6 +21,8 @@ set(SOURCES
 )
 
 set(HEADERS
+  Constants.h
+  Constants.hpp
   Debug.h
   Debug.hpp
   Decomp.h

@@ -4,6 +4,7 @@
 #ifndef OVK_EXAMPLES_COMMON_H_LOADED
 #define OVK_EXAMPLES_COMMON_H_LOADED
 
+#include <support/Constants.h>
 #include <support/Decomp.h>
 
 #include <mpi.h>
@@ -11,6 +12,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define EXAMPLES_PI SUPPORT_PI
 
 void examples_DecomposeDomain(int NumGrids, const long long *NumPointsPerGrid, int NumProcs, int
   *GridProcRanges) {
