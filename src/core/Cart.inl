@@ -20,7 +20,7 @@ inline cart::cart(int NumDims, const range &Range, const tuple<bool> &Periodic, 
 
 inline tuple<int> cart::GetPeriod(const tuple<int> &Tuple) const {
 
-  tuple<int> Period = MakeUniformTuple<int>(NumDims_, 0);
+  tuple<int> Period;
 
   switch (PeriodicStorage_) {
   case periodic_storage::UNIQUE:
@@ -29,6 +29,8 @@ inline tuple<int> cart::GetPeriod(const tuple<int> &Tuple) const {
         int PeriodSize = Range_.Size(iDim);
         int Offset = Tuple(iDim) - Range_.Begin(iDim);
         Period(iDim) = Offset/PeriodSize - int(Offset % PeriodSize < 0);
+      } else {
+        Period(iDim) = 0;
       }
     }
     break;
@@ -38,6 +40,8 @@ inline tuple<int> cart::GetPeriod(const tuple<int> &Tuple) const {
         int PeriodSize = Range_.Size(iDim)-1;
         int Offset = Tuple(iDim) - Range_.Begin(iDim);
         Period(iDim) = Offset/PeriodSize - int(Offset % PeriodSize < 0);
+      } else {
+        Period(iDim) = 0;
       }
     }
     break;
