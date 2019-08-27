@@ -17,8 +17,6 @@
 
 using examples::CartesianDecomp;
 
-#define Print(...) printf(__VA_ARGS__); fflush(stdout)
-
 namespace {
 void Interface();
 }
@@ -30,9 +28,9 @@ int main(int argc, char **argv) {
   try {
     Interface();
   } catch (const std::exception &Exception) {
-    Print("Encountered error:\n%s\n", Exception.what());
+    std::printf("Encountered error:\n%s\n", Exception.what()); std::fflush(stdout);
   } catch (...) {
-    Print("Unknown error occurred.\n");
+    std::printf("Unknown error occurred.\n"); std::fflush(stdout);
   }
 
   MPI_Finalize();

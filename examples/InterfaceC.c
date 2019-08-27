@@ -16,13 +16,16 @@
 
 #define CartesianDecomp examples_CartesianDecomp
 
-static void Interface();
+static int Interface();
 
 int main(int argc, char **argv) {
 
   MPI_Init(&argc, &argv);
 
-  Interface();
+  int Error = Interface();
+  if (Error) {
+    printf("Error occurred.\n"); fflush(stdout);
+  }
 
   MPI_Finalize();
 
@@ -61,7 +64,7 @@ static void DestroyGridData(grid_data *Data) {
 
 }
 
-static void Interface() {
+static int Interface() {
 
   int iDim, iCoef;
   int j;
@@ -79,9 +82,7 @@ static void Interface() {
   ovk_context *Context;
   ovk_error CreateError;
   ovkCreateContext(&Context, &ContextParams, &CreateError);
-  if (CreateError != OVK_ERROR_NONE) {
-    MPI_Abort(MPI_COMM_WORLD, 1);
-  }
+  if (CreateError != OVK_ERROR_NONE) return 1;
 
   ovk_shared_context *SharedContext;
   ovkShareContext(&Context, &SharedContext);
@@ -565,5 +566,7 @@ static void Interface() {
 
   DestroyGridData(&LeftData);
   DestroyGridData(&RightData);
+
+  return 0;
 
 }
