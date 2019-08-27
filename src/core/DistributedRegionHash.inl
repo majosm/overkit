@@ -75,8 +75,6 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
     }
   }
 
-  OverlappedBinIndices.Clear();
-
   for (int Rank : RecvFromRanks) {
     NumRegionsFromRank.Insert(Rank, 0);
   }
@@ -142,13 +140,14 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
 
   }
 
-  for (int Rank : SendToRanks) {
-    for (int iRegion = 0; iRegion < NumLocalRegions; ++iRegion) {
-      MPI_Isend(LocalRegionExtents(iRegion).Begin().Data(), MAX_DIMS, MPICoordType, Rank, 0, Comm_,
-        &Requests.Append());
-      MPI_Isend(LocalRegionExtents(iRegion).End().Data(), MAX_DIMS, MPICoordType, Rank, 0, Comm_,
-        &Requests.Append());
-      MPI_Isend(&LocalRegionTags(iRegion), 1, MPI_INT, Rank, 0, Comm_, &Requests.Append());
+  for (int iRegion = 0; iRegion < NumLocalRegions; ++iRegion) {
+    auto &IndexSet = OverlappedBinIndices(iRegion);
+    for (int BinIndex : IndexSet) {
+      MPI_Isend(LocalRegionExtents(iRegion).Begin().Data(), MAX_DIMS, MPICoordType, BinIndex, 0,
+        Comm_, &Requests.Append());
+      MPI_Isend(LocalRegionExtents(iRegion).End().Data(), MAX_DIMS, MPICoordType, BinIndex, 0,
+        Comm_, &Requests.Append());
+      MPI_Isend(&LocalRegionTags(iRegion), 1, MPI_INT, BinIndex, 0, Comm_, &Requests.Append());
     }
   }
 
