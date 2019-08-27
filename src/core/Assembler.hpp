@@ -11,6 +11,7 @@
 #include <ovk/core/ConnectivityComponent.hpp>
 #include <ovk/core/Context.hpp>
 #include <ovk/core/DistributedField.hpp>
+#include <ovk/core/DistributedRegionHash.hpp>
 #include <ovk/core/Domain.hpp>
 #include <ovk/core/ElemMap.hpp>
 #include <ovk/core/ElemSet.hpp>
@@ -243,8 +244,13 @@ private:
     {}
   };
 
+  using bounding_box_hash = core::distributed_region_hash<double>;
+  using bounding_box_hash_bin = core::distributed_region_hash_bin<double>;
+  using bounding_box_hash_region_data = core::distributed_region_data<double>;
+
   struct assembly_data {
     map<int,local_grid_aux_data> LocalGridAuxData;
+    bounding_box_hash BoundingBoxHash;
     assembly_data(int NumDims, comm_view Comm);
   };
 
@@ -272,6 +278,7 @@ private:
 
   void InitializeAssembly_();
   void ValidateOptions_();
+  void DetectOverlap_();
 
 };
 

@@ -44,6 +44,7 @@ set(SOURCES
   ArrayTests.cpp
   ArrayTraitsTests.cpp
   ArrayViewTests.cpp
+  AssemblerTests.cpp
   BoxTests.cpp
   CartTests.cpp
   CommTests.cpp
@@ -69,7 +70,9 @@ set(SOURCES
   TupleTests.cpp
   UnitTestMain.cpp
   VectorTests.cpp
+  fixtures/CylinderInCylinder.cpp
   fixtures/Interface.cpp
+  fixtures/WavyInWavy.cpp
 )
 if(XPACC)
 list(APPEND SOURCES
@@ -80,7 +83,9 @@ endif()
 set(HEADERS
   MPIPrinter.hpp
   MPITest.hpp
+  fixtures/CylinderInCylinder.hpp
   fixtures/Interface.hpp
+  fixtures/WavyInWavy.hpp
   mocks/MultidimArray.hpp
   mocks/Noncopyable.hpp
   mocks/Nondefaultconstructible.hpp
