@@ -51,7 +51,7 @@ overlap_n::overlap_n(std::shared_ptr<context> &&Context, const grid &Grid, grid_
   overlap_n_base(std::move(Context), Grid, std::move(SourceGridInfo)),
   NumDims_(Grid_->Dimension()),
   Count_(0),
-  Mask_(Grid_->ExtendedRange(), false),
+  Mask_(Grid_->LocalRange(), false),
   Points_({{MAX_DIMS,0}}),
   Sources_({{MAX_DIMS,0}}),
   SourceRanks_({0})
@@ -172,8 +172,6 @@ void overlap_n::RestorePoints() {
 
 void overlap_n::UpdateMask_() {
 
-  const partition &Partition = Grid_->Partition();
-
   Mask_.Fill(false);
 
   tuple<int> GlobalBeginMinusOne = Grid_->GlobalRange().Begin();
@@ -191,8 +189,6 @@ void overlap_n::UpdateMask_() {
       Mask_(Point) = true;
     }
   }
-
-  Partition.Exchange(Mask_);
 
 }
 
