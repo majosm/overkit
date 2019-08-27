@@ -14,7 +14,6 @@
 #define min(a, b) ovk_min(a, b)
 #define max(a, b) ovk_max(a, b)
 
-#define Print(...) printf(__VA_ARGS__); fflush(stdout)
 #define CartesianDecomp examples_CartesianDecomp
 
 static void Interface();
