@@ -760,6 +760,9 @@ template <typename T, int Rank_, array_layout Layout_> struct array_traits<array
   static T *Data(array<T, Rank, Layout> &Array) { return Array.Data(); }
 };
 
+template <typename T, int Rank=1> using array_r = array<T, Rank, array_layout::ROW_MAJOR>;
+template <typename T, int Rank=1> using array_c = array<T, Rank, array_layout::COLUMN_MAJOR>;
+
 template <typename T, int Rank, array_layout Layout> typename array<T, Rank, Layout>::iterator
   begin(array<T, Rank, Layout> &Array) {
   return Array.Begin();

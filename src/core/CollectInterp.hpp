@@ -31,7 +31,6 @@ protected:
 
   using parent_type = collect_base_for_type<T, Layout>;
 
-  using typename parent_type::cell_indexer;
   using parent_type::Context_;
   using parent_type::CollectMap_;
   using parent_type::Count_;
@@ -77,7 +76,7 @@ public:
     for (long long iCell = 0; iCell < CollectMap_->Count(); ++iCell) {
 
       range CellRange = parent_type::GetCellRange_(iCell);
-      cell_indexer CellIndexer(CellRange);
+      range_indexer<int,Layout> CellIndexer(CellRange);
       int NumVertices = CellRange.Count<int>();
 
       parent_type::AssembleVertexValues_(FieldValues_, RemoteValues_, iCell, CellRange, CellIndexer,

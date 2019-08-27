@@ -280,8 +280,6 @@ void exchanger::DestroyLocals_() {
 
 void exchanger::UpdateSourceDestRanks_() {
 
-  using range_indexer = indexer<long long, int, 3, ovk::array_layout::COLUMN_MAJOR>;
-
   if (UpdateManifest_.UpdateSourceDestRanks.Empty()) return;
 
   const domain &Domain = *Domain_;
@@ -373,7 +371,7 @@ void exchanger::UpdateSourceDestRanks_() {
     int NGridID = IDPair(1);
     const grid &MGrid = Domain.Grid(MGridID);
     const grid_info &NGridInfo = Domain.GridInfo(NGridID);
-    range_indexer NGridGlobalIndexer(NGridInfo.Cart().Range());
+    range_indexer_c<long long> NGridGlobalIndexer(NGridInfo.Cart().Range());
     const local_m &LocalM = LocalMs_(IDPair);
     const connectivity_m &ConnectivityM = *LocalM.Connectivity;
     const array<int,3> &Extents = ConnectivityM.Extents();
@@ -402,7 +400,7 @@ void exchanger::UpdateSourceDestRanks_() {
   for (auto &IDPair : ConnectivityNGridIDs) {
     int NGridID = IDPair(1);
     const grid &NGrid = Domain.Grid(NGridID);
-    range_indexer NGridGlobalIndexer(NGrid.GlobalRange());
+    range_indexer_c<long long> NGridGlobalIndexer(NGrid.GlobalRange());
     const local_n &LocalN = LocalNs_(IDPair);
     const connectivity_n &ConnectivityN = *LocalN.Connectivity;
     const array<int,2> &Points = ConnectivityN.Points();
@@ -437,7 +435,7 @@ void exchanger::UpdateSourceDestRanks_() {
     int NGridID = IDPair(1);
     const grid &MGrid = Domain.Grid(MGridID);
     const grid_info &NGridInfo = Domain.GridInfo(NGridID);
-    range_indexer NGridGlobalIndexer(NGridInfo.Cart().Range());
+    range_indexer_c<long long> NGridGlobalIndexer(NGridInfo.Cart().Range());
     const local_m &LocalM = LocalMs_(IDPair);
     const connectivity_m &ConnectivityM = *LocalM.Connectivity;
     const array<int,3> &Extents = ConnectivityM.Extents();
@@ -466,7 +464,7 @@ void exchanger::UpdateSourceDestRanks_() {
   for (auto &IDPair : ConnectivityNGridIDs) {
     int NGridID = IDPair(1);
     const grid &NGrid = Domain.Grid(NGridID);
-    range_indexer NGridGlobalIndexer(NGrid.GlobalRange());
+    range_indexer_c<long long> NGridGlobalIndexer(NGrid.GlobalRange());
     const local_n &LocalN = LocalNs_(IDPair);
     const connectivity_n &ConnectivityN = *LocalN.Connectivity;
     const array<int,2> &Points = ConnectivityN.Points();
@@ -688,7 +686,7 @@ void exchanger::UpdateSourceDestRanks_() {
     int NGridID = IDPair(1);
     const grid &MGrid = Domain.Grid(MGridID);
     const grid_info &NGridInfo = Domain.GridInfo(NGridID);
-    range_indexer NGridGlobalIndexer(NGridInfo.Cart().Range());
+    range_indexer_c<long long> NGridGlobalIndexer(NGridInfo.Cart().Range());
     local_m &LocalM = LocalMs_(IDPair);
     const connectivity_m &ConnectivityM = *LocalM.Connectivity;
     const array<int,3> &Extents = ConnectivityM.Extents();
@@ -718,7 +716,7 @@ void exchanger::UpdateSourceDestRanks_() {
   for (auto &IDPair : ConnectivityNGridIDs) {
     int NGridID = IDPair(1);
     const grid &NGrid = Domain.Grid(NGridID);
-    range_indexer NGridGlobalIndexer(NGrid.GlobalRange());
+    range_indexer_c<long long> NGridGlobalIndexer(NGrid.GlobalRange());
     local_n &LocalN = LocalNs_(IDPair);
     const connectivity_n &ConnectivityN = *LocalN.Connectivity;
     const array<int,2> &Points = ConnectivityN.Points();
@@ -1539,8 +1537,7 @@ array<long long> GetSendRecvOrder(const array<int,2> &ReceiverPoints, const rang
 
   array<long long> Order({NumReceivers});
 
-  using range_indexer = indexer<long long, int, MAX_DIMS, array_layout::COLUMN_MAJOR>;
-  range_indexer ReceiverGridGlobalIndexer(ReceiverGridGlobalRange);
+  range_indexer_c<long long> ReceiverGridGlobalIndexer(ReceiverGridGlobalRange);
 
   array<long long> ReceiverIndices({NumReceivers});
 

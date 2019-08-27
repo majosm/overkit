@@ -356,6 +356,11 @@ private:
 
 };
 
+template <typename T, int Rank=1> using array_view_r = array_view<T, Rank,
+  array_layout::ROW_MAJOR>;
+template <typename T, int Rank=1> using array_view_c = array_view<T, Rank,
+  array_layout::COLUMN_MAJOR>;
+
 template <typename T, int Rank, array_layout Layout> constexpr OVK_FORCE_INLINE typename
   array_view<T, Rank, Layout>::iterator begin(const array_view<T, Rank, Layout> &View) {
   return View.Begin();

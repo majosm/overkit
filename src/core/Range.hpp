@@ -6,6 +6,7 @@
 
 #include <ovk/core/ArrayTraits.hpp>
 #include <ovk/core/Global.hpp>
+#include <ovk/core/Indexer.hpp>
 #include <ovk/core/Interval.hpp>
 #include <ovk/core/ScalarOps.hpp>
 #include <ovk/core/Tuple.hpp>
@@ -20,6 +21,13 @@ inline bool RangesOverlap(const range &LeftRange, const range &RightRange);
 inline range UnionRanges(const range &LeftRange, const range &RightRange);
 inline range IntersectRanges(const range &LeftRange, const range &RightRange);
 inline tuple<int> ClampToRange(const range &Range, const tuple<int> &Point);
+
+template <typename IndexType, array_layout Layout=array_layout::ROW_MAJOR> using range_indexer =
+  indexer<IndexType, int, MAX_DIMS, Layout>;
+template <typename IndexType> using range_indexer_r = range_indexer<IndexType,
+  array_layout::ROW_MAJOR>;
+template <typename IndexType> using range_indexer_c = range_indexer<IndexType,
+  array_layout::COLUMN_MAJOR>;
 
 }
 

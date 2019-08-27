@@ -38,15 +38,13 @@ public:
 
 protected:
 
-  using range_indexer = indexer<long long, int, MAX_DIMS, Layout>;
-
   std::shared_ptr<context> Context_;
 
   floating_ref<const disperse_map> DisperseMap_;
 
   int Count_;
   range FieldValuesRange_;
-  range_indexer FieldValuesIndexer_;
+  range_indexer<long long,Layout> FieldValuesIndexer_;
 
 };
 
@@ -68,8 +66,6 @@ public:
     Count, const range &FieldValuesRange);
 
 protected:
-
-  using typename parent_type::range_indexer;
 
   using parent_type::Context_;
   using parent_type::DisperseMap_;

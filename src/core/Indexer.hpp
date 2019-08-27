@@ -404,6 +404,11 @@ public:
 
 };
 
+template <typename IndexType, typename TupleElementType, int Rank> using indexer_r = indexer<
+  IndexType, TupleElementType, Rank, array_layout::ROW_MAJOR>;
+template <typename IndexType, typename TupleElementType, int Rank> using indexer_c = indexer<
+  IndexType, TupleElementType, Rank, array_layout::COLUMN_MAJOR>;
+
 template <typename IndexType, typename TupleElementType, int Rank, array_layout Layout> constexpr
   bool operator==(const indexer<IndexType, TupleElementType, Rank, Layout> &Left, const indexer<
   IndexType, TupleElementType, Rank, Layout> &Right) {

@@ -141,8 +141,6 @@ public:
 
   using region = distributed_region_data<CoordType>;
 
-  using bin_indexer = indexer<int, int, MAX_DIMS>;
-
   distributed_region_hash(int NumDims, comm_view Comm);
   distributed_region_hash(int NumDims, comm_view Comm, int NumLocalRegions, array_view<const
     extents_type> LocalRegionExtents, array_view<const int> LocalRegionTags);
@@ -156,7 +154,7 @@ public:
   tuple<int> MapPointToBin(const tuple<coord_type> &Point) const;
   range MapExtentsToBinRange(const extents_type &Extents) const;
 
-  const bin_indexer &BinIndexer() const { return BinIndexer_; }
+  const range_indexer<int> &BinIndexer() const { return BinIndexer_; }
 
   void RetrieveBins(map<int,bin> &Bins) const;
 
@@ -172,7 +170,7 @@ private:
   extents_type GlobalExtents_;
 
   range BinRange_;
-  bin_indexer BinIndexer_;
+  range_indexer<int> BinIndexer_;
   tuple<coord_type> BinSize_;
 
   bin Bin_;

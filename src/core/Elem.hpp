@@ -428,6 +428,9 @@ private:
 
 };
 
+template <typename T, int N> using elem_less_r = elem_less<T, N, array_layout::ROW_MAJOR>;
+template <typename T, int N> using elem_less_c = elem_less<T, N, array_layout::COLUMN_MAJOR>;
+
 }
 
 #include <ovk/core/Elem.inl>

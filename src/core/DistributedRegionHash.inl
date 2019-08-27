@@ -32,7 +32,7 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
   tuple<int> NumBins = BinDecomp_(NumDims_, GlobalExtents_, Comm_.Size());
 
   BinRange_ = range(NumBins);
-  BinIndexer_ = bin_indexer(BinRange_);
+  BinIndexer_ = range_indexer<int>(BinRange_);
 
   BinSize_ = GetBinSize_(GlobalExtents_, NumBins);
 

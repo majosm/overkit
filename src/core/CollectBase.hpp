@@ -41,9 +41,6 @@ protected:
 //   collect_base &operator=(const collect_base &Other) = delete;
 //   collect_base &operator=(collect_base &&Other) noexcept = default;
 
-  using field_indexer = indexer<long long, int, MAX_DIMS, Layout>;
-  using cell_indexer = indexer<int, int, MAX_DIMS, Layout>;
-
   std::shared_ptr<context> Context_;
 
   comm_view Comm_;
@@ -57,7 +54,7 @@ protected:
   int MaxPointsInCell_;
 
   range FieldValuesRange_;
-  field_indexer FieldValuesIndexer_;
+  range_indexer<long long,Layout> FieldValuesIndexer_;
 
   array<MPI_Request> Requests_;
   array<int> LocalVertexCellIndices_;
@@ -65,7 +62,7 @@ protected:
 
   range GetCellRange_(long long iCell) const;
 
-  void GetLocalCellInfo_(const range &CellRange, const cell_indexer &CellIndexer, int
+  void GetLocalCellInfo_(const range &CellRange, const range_indexer<int,Layout> &CellIndexer, int
     &NumLocalVertices, array_view<int> LocalCellIndices, array_view<long long>
     LocalFieldValuesIndices) const;
 
@@ -96,8 +93,6 @@ public:
 
 protected:
 
-  using typename parent_type::field_indexer;
-  using typename parent_type::cell_indexer;
   using parent_type::Context_;
   using parent_type::Comm_;
   using parent_type::Cart_;
@@ -122,7 +117,7 @@ protected:
 
   void AssembleVertexValues_(array_view<array_view<const value_type>> FieldValues, const
     array<array<value_type,2>> &RemoteValues, long long iCell, const range &CellRange, const
-    cell_indexer &CellIndexer, array_view<value_type,2> VertexValues);
+    range_indexer<int,Layout> &CellIndexer, array_view<value_type,2> VertexValues);
 
 private:
 

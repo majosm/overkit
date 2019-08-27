@@ -103,11 +103,10 @@ void collect_map::CreateSendData_(const cart &Cart, const partition &Partition) 
       }
     }
 
-    using range_indexer = indexer<long long, int, MAX_DIMS, array_layout::COLUMN_MAJOR>;
-    array<range_indexer> SendToNeighborIndexers({NumNeighbors});
+    array<range_indexer_c<long long>> SendToNeighborIndexers({NumNeighbors});
     for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
       const range &SendToNeighborRange = SendToNeighborRanges(iNeighbor);
-      SendToNeighborIndexers(iNeighbor) = range_indexer(SendToNeighborRange);
+      SendToNeighborIndexers(iNeighbor) = range_indexer_c<long long>(SendToNeighborRange);
     }
 
     array<int> SendIndexToNeighbor;
@@ -140,7 +139,7 @@ void collect_map::CreateSendData_(const cart &Cart, const partition &Partition) 
       bool AwayFromEdge = GlobalRange.Includes(CellRange);
       for (int iSend = 0; iSend < NumSends; ++iSend) {
         int iNeighbor = SendIndexToNeighbor(iSend);
-        const range_indexer &Indexer = SendToNeighborIndexers(iNeighbor);
+        const range_indexer_c<long long> &Indexer = SendToNeighborIndexers(iNeighbor);
         if (AwayFromEdge) {
           bool Overlaps = RangesOverlap(Neighbors(iNeighbor).LocalRange, CellRange);
           if (Overlaps) {
@@ -200,7 +199,7 @@ void collect_map::CreateSendData_(const cart &Cart, const partition &Partition) 
       send &Send = Sends_(iSend);
       int iNeighbor = SendIndexToNeighbor(iSend);
       Send.Points.Resize({{MAX_DIMS,Send.NumPoints}});
-      const range_indexer &Indexer = SendToNeighborIndexers(iNeighbor);
+      const range_indexer_c<long long> &Indexer = SendToNeighborIndexers(iNeighbor);
       long long iSendPoint = 0;
       for (long long iPoint = 0; iPoint < SendToNeighborRanges(iNeighbor).Count(); ++iPoint) {
         if (SendMasks(iSend)(iPoint)) {
@@ -261,11 +260,10 @@ void collect_map::CreateRecvData_(const cart &Cart, const partition &Partition) 
       }
     }
 
-    using range_indexer = indexer<long long, int, MAX_DIMS, array_layout::COLUMN_MAJOR>;
-    array<range_indexer> RecvFromNeighborIndexers({NumNeighbors});
+    array<range_indexer_c<long long>> RecvFromNeighborIndexers({NumNeighbors});
     for (int iNeighbor = 0; iNeighbor < NumNeighbors; ++iNeighbor) {
       const range &RecvFromNeighborRange = RecvFromNeighborRanges(iNeighbor);
-      RecvFromNeighborIndexers(iNeighbor) = range_indexer(RecvFromNeighborRange);
+      RecvFromNeighborIndexers(iNeighbor) = range_indexer_c<long long>(RecvFromNeighborRange);
     }
 
     array<int> RecvIndexToNeighbor;
@@ -298,7 +296,7 @@ void collect_map::CreateRecvData_(const cart &Cart, const partition &Partition) 
       bool AwayFromEdge = GlobalRange.Includes(CellRange);
       for (int iRecv = 0; iRecv < NumRecvs; ++iRecv) {
         int iNeighbor = RecvIndexToNeighbor(iRecv);
-        const range_indexer &Indexer = RecvFromNeighborIndexers(iNeighbor);
+        const range_indexer_c<long long> &Indexer = RecvFromNeighborIndexers(iNeighbor);
         if (AwayFromEdge) {
           range RemoteCellRange = IntersectRanges(Neighbors(iNeighbor).LocalRange, CellRange);
           for (int k = RemoteCellRange.Begin(2); k < RemoteCellRange.End(2); ++k) {
@@ -400,8 +398,6 @@ void collect_map::CreateRecvData_(const cart &Cart, const partition &Partition) 
     array<int> CellRecvs({MaxVertices_});
     array<long long> CellRecvBufferIndices({MaxVertices_});
 
-    using donor_indexer = indexer<int, int, MAX_DIMS, array_layout::COLUMN_MAJOR>;
-
     for (long long iCell = 0; iCell < NumCells; ++iCell) {
       for (int iVertex = 0; iVertex < MaxVertices_; ++iVertex) {
         CellRecvs(iVertex) = -1;
@@ -412,11 +408,12 @@ void collect_map::CreateRecvData_(const cart &Cart, const partition &Partition) 
         CellRange.Begin(iDim) = CellExtents_(0,iDim,iCell);
         CellRange.End(iDim) = CellExtents_(1,iDim,iCell);
       }
-      donor_indexer CellIndexer(CellRange);
+      range_indexer_c<int> CellIndexer(CellRange);
       bool AwayFromEdge = GlobalRange.Includes(CellRange);
       for (int iRecv = 0; iRecv < Recvs_.Count(); ++iRecv) {
         int iNeighbor = RecvIndexToNeighbor(iRecv);
-        const range_indexer &RecvFromNeighborIndexer = RecvFromNeighborIndexers(iNeighbor);
+        const range_indexer_c<long long> &RecvFromNeighborIndexer = RecvFromNeighborIndexers(
+          iNeighbor);
         if (AwayFromEdge) {
           range RemoteCellRange = IntersectRanges(Neighbors(iNeighbor).LocalRange, CellRange);
           for (int k = RemoteCellRange.Begin(2); k < RemoteCellRange.End(2); ++k) {

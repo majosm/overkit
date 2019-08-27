@@ -63,8 +63,8 @@ template <array_layout Layout> range collect_base<Layout>::GetCellRange_(long lo
 }
 
 template <array_layout Layout> void collect_base<Layout>::GetLocalCellInfo_(const range &CellRange,
-  const cell_indexer &CellIndexer, int &NumLocalVertices, array_view<int> LocalVertexCellIndices,
-  array_view<long long> LocalVertexFieldValuesIndices) const {
+  const range_indexer<int,Layout> &CellIndexer, int &NumLocalVertices, array_view<int>
+  LocalVertexCellIndices, array_view<long long> LocalVertexFieldValuesIndices) const {
 
   bool AwayFromEdge = Cart_.Range().Includes(CellRange);
 
@@ -240,8 +240,8 @@ template <typename T, array_layout Layout> void collect_base_for_type<T, Layout>
 
 template <typename T, array_layout Layout> void collect_base_for_type<T, Layout>::
   AssembleVertexValues_(array_view<array_view<const value_type>> FieldValues, const array<
-  array<value_type,2>> &RemoteValues, long long iCell, const range &CellRange, const cell_indexer
-  &CellIndexer, array_view<value_type,2> VertexValues) {
+  array<value_type,2>> &RemoteValues, long long iCell, const range &CellRange, const range_indexer<
+  int,Layout> &CellIndexer, array_view<value_type,2> VertexValues) {
 
   int NumLocalVertices;
   parent_type::GetLocalCellInfo_(CellRange, CellIndexer, NumLocalVertices, LocalVertexCellIndices_,
