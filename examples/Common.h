@@ -12,7 +12,7 @@
 extern "C" {
 #endif
 
-void CartesianDecomp(int NumDims, const int *Size, MPI_Comm CartComm, int *LocalRange) {
+void examples_CartesianDecomp(int NumDims, const int *Size, MPI_Comm CartComm, int *LocalRange) {
 
   int Zero[] = {0,0,0};
 
