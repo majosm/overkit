@@ -181,16 +181,14 @@ template <typename T, array_layout Layout> void collect_base_for_type<T, Layout>
   if (std::is_same<value_type, mpi_value_type>::value) {
     for (int iRecv = 0; iRecv < Recvs.Count(); ++iRecv) {
       const collect_map::recv &Recv = Recvs(iRecv);
-      MPI_Request &Request = Requests_.Append();
       MPI_Irecv(RemoteValues(iRecv).Data(), Count_*Recv.NumPoints, MPIDataType, Recv.Rank, 0,
-        Comm_, &Request);
+        Comm_, &Requests_.Append());
     }
   } else {
     for (int iRecv = 0; iRecv < Recvs.Count(); ++iRecv) {
       const collect_map::recv &Recv = Recvs(iRecv);
-      MPI_Request &Request = Requests_.Append();
       MPI_Irecv(RecvBuffers_(iRecv).Data(), Count_*Recv.NumPoints, MPIDataType, Recv.Rank, 0,
-        Comm_, &Request);
+        Comm_, &Requests_.Append());
     }
   }
 
@@ -217,12 +215,12 @@ template <typename T, array_layout Layout> void collect_base_for_type<T, Layout>
 
   for (int iSend = 0; iSend < Sends.Count(); ++iSend) {
     const collect_map::send &Send = Sends(iSend);
-    MPI_Request &Request = Requests_.Append();
     MPI_Isend(SendBuffers_(iSend).Data(), Count_*Send.NumPoints, MPIDataType, Send.Rank, 0, Comm_,
-      &Request);
+      &Requests_.Append());
   }
 
   MPI_Waitall(Requests_.Count(), Requests_.Data(), MPI_STATUSES_IGNORE);
+  Requests_.Clear();
 
   Profiler.Stop(MPI_TIME);
 
@@ -233,8 +231,6 @@ template <typename T, array_layout Layout> void collect_base_for_type<T, Layout>
       }
     }
   }
-
-  Requests_.Clear();
 
 }
 
