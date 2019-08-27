@@ -10,14 +10,15 @@
 #include "ovk/core/Context.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Domain.hpp"
+#include "ovk/core/ElemSet.hpp"
 #include "ovk/core/Event.hpp"
 #include "ovk/core/FloatingRef.hpp"
 #include "ovk/core/GeometryComponent.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
-#include "ovk/core/IDMap.hpp"
-#include "ovk/core/IDSet.hpp"
+#include "ovk/core/Map.hpp"
 #include "ovk/core/OverlapComponent.hpp"
+#include "ovk/core/Set.hpp"
 #include "ovk/core/StateComponent.hpp"
 
 #include <mpi.h>
@@ -261,24 +262,24 @@ void assembler::OnOptionsEndEdit_() {
 
   // No self-intersections, etc.
   for (int GridID : Domain.GridIDs()) {
-    Options_.ResetOverlappable(GridID,GridID);
-    Options_.ResetOverlapTolerance(GridID,GridID);
-    Options_.ResetCutBoundaryHoles(GridID,GridID);
-    Options_.ResetOccludes(GridID,GridID);
-    Options_.ResetEdgePadding(GridID,GridID);
-    Options_.ResetConnectionType(GridID,GridID);
-    Options_.ResetMinimizeOverlap(GridID,GridID);
+    Options_.ResetOverlappable(GridID, GridID);
+    Options_.ResetOverlapTolerance(GridID, GridID);
+    Options_.ResetCutBoundaryHoles(GridID, GridID);
+    Options_.ResetOccludes(GridID, GridID);
+    Options_.ResetEdgePadding(GridID, GridID);
+    Options_.ResetConnectionType(GridID, GridID);
+    Options_.ResetMinimizeOverlap(GridID, GridID);
   }
 
   // TODO: Make this more fine-grained
 
-  const id_set<1> &GridIDs = Domain.GridIDs();
-  id_set<2> GridIDPairs;
+  const set<int> &GridIDs = Domain.GridIDs();
+  elem_set<int,2> GridIDPairs;
 
   for (int MGridID : GridIDs) {
     for (int NGridID : GridIDs) {
       if (MGridID != NGridID) {
-        GridIDPairs.Insert(MGridID,NGridID);
+        GridIDPairs.Insert({MGridID,NGridID});
       }
     }
   }
@@ -348,13 +349,13 @@ void assembler::OnGeometryEvent_(int GridID, geometry_event_flags Flags, bool La
 
   const domain &Domain = *Domain_;
 
-  const id_set<1> &GridIDs = Domain.GridIDs();
-  id_set<2> GridIDPairs;
+  const set<int> &GridIDs = Domain.GridIDs();
+  elem_set<int,2> GridIDPairs;
 
   for (int MGridID : GridIDs) {
     for (int NGridID : GridIDs) {
       if (MGridID != NGridID) {
-        GridIDPairs.Insert(MGridID,NGridID);
+        GridIDPairs.Insert({MGridID,NGridID});
       }
     }
   }
@@ -376,13 +377,13 @@ void assembler::OnStateEvent_(int GridID, state_event_flags Flags, bool LastInSe
 
   const domain &Domain = *Domain_;
 
-  const id_set<1> &GridIDs = Domain.GridIDs();
-  id_set<2> GridIDPairs;
+  const set<int> &GridIDs = Domain.GridIDs();
+  elem_set<int,2> GridIDPairs;
 
   for (int MGridID : GridIDs) {
     for (int NGridID : GridIDs) {
       if (MGridID != NGridID) {
-        GridIDPairs.Insert(MGridID,NGridID);
+        GridIDPairs.Insert({MGridID,NGridID});
       }
     }
   }
@@ -405,13 +406,13 @@ void assembler::OnOverlapEvent_(int MGridID, int NGridID, overlap_event_flags Fl
 
   const domain &Domain = *Domain_;
 
-  const id_set<1> &GridIDs = Domain.GridIDs();
-  id_set<2> GridIDPairs;
+  const set<int> &GridIDs = Domain.GridIDs();
+  elem_set<int,2> GridIDPairs;
 
   for (int MGridID : GridIDs) {
     for (int NGridID : GridIDs) {
       if (MGridID != NGridID) {
-        GridIDPairs.Insert(MGridID,NGridID);
+        GridIDPairs.Insert({MGridID,NGridID});
       }
     }
   }
@@ -477,7 +478,9 @@ void assembler::RemoveAssemblyManifestEntries_() {
     return UpdateManifest_.RemoveAssemblyManifestEntries.Contains(GridID);
   };
 
-  auto MatchesGridToRemovePair = [&](int MGridID, int NGridID) -> bool {
+  auto MatchesGridToRemovePair = [&](const elem<int,2> &IDPair) -> bool {
+    int MGridID = IDPair(0);
+    int NGridID = IDPair(1);
     return UpdateManifest_.RemoveAssemblyManifestEntries.Contains(MGridID) ||
       UpdateManifest_.RemoveAssemblyManifestEntries.Contains(NGridID);
   };

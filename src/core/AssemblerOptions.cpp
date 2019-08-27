@@ -5,16 +5,18 @@
 
 #include "ovk/core/ArrayView.hpp"
 #include "ovk/core/Debug.hpp"
+#include "ovk/core/ElemMap.hpp"
+#include "ovk/core/ElemSet.hpp"
 #include "ovk/core/Global.hpp"
-#include "ovk/core/IDMap.hpp"
-#include "ovk/core/IDSet.hpp"
+#include "ovk/core/Map.hpp"
+#include "ovk/core/Set.hpp"
 
 #include <cstdio>
 #include <string>
 
 namespace ovk {
 
-void assembler::options::AddGrids(const id_set<1> &GridIDs) {
+void assembler::options::AddGrids(const set<int> &GridIDs) {
 
   for (int GridID : GridIDs) {
     GridIDs_.Insert(GridID);
@@ -22,13 +24,15 @@ void assembler::options::AddGrids(const id_set<1> &GridIDs) {
 
 }
 
-void assembler::options::RemoveGrids(const id_set<1> &GridIDs) {
+void assembler::options::RemoveGrids(const set<int> &GridIDs) {
 
   auto MatchesGridToRemove = [&](int GridID) -> bool {
     return GridIDs.Contains(GridID);
   };
 
-  auto MatchesGridToRemovePair = [&](int MGridID, int NGridID) -> bool {
+  auto MatchesGridToRemovePair = [&](const elem<int,2> &IDPair) -> bool {
+    int MGridID = IDPair(0);
+    int NGridID = IDPair(1);
     return GridIDs.Contains(MGridID) || GridIDs.Contains(NGridID);
   };
 
@@ -334,29 +338,30 @@ assembler::options &assembler::options::ResetMinimizeOverlap(int MGridID, int NG
 void assembler::options::PrintOptions_() {
 
   for (auto &Entry : Overlappable_) {
-    std::printf("Overlappable(%i,%i) = %c\n", Entry.Key(0), Entry.Key(1), Entry.Value() ? 'T' :
+    std::printf("Overlappable(%i,%i) = %c\n", Entry.Key()(0), Entry.Key()(1), Entry.Value() ? 'T' :
       'F');
   }
 
   for (auto &Entry : OverlapTolerance_) {
-    std::printf("OverlapTolerance(%i,%i) = %16.8f\n", Entry.Key(0), Entry.Key(1), Entry.Value());
+    std::printf("OverlapTolerance(%i,%i) = %16.8f\n", Entry.Key()(0), Entry.Key()(1),
+      Entry.Value());
   }
 
   for (auto &Entry : OverlapAccelDepthAdjust_) {
-    std::printf("OverlapAccelDepthAdjust(%i) = %16.8f\n", Entry.Key(0), Entry.Value());
+    std::printf("OverlapAccelDepthAdjust(%i) = %16.8f\n", Entry.Key(), Entry.Value());
   }
 
   for (auto &Entry : OverlapAccelResolutionAdjust_) {
-    std::printf("OverlapAccelResolutionAdjust(%i) = %16.8f\n", Entry.Key(0), Entry.Value());
+    std::printf("OverlapAccelResolutionAdjust(%i) = %16.8f\n", Entry.Key(), Entry.Value());
   }
 
   for (auto &Entry : InferBoundaries_) {
-    std::printf("InferBoundaries(%i) = %c\n", Entry.Key(0), Entry.Value() ? 'T' : 'F');
+    std::printf("InferBoundaries(%i) = %c\n", Entry.Key(), Entry.Value() ? 'T' : 'F');
   }
 
   for (auto &Entry : CutBoundaryHoles_) {
-    std::printf("CutBoundaryHoles(%i,%i) = %c\n", Entry.Key(0), Entry.Key(1), Entry.Value() ? 'T' :
-      'F');
+    std::printf("CutBoundaryHoles(%i,%i) = %c\n", Entry.Key()(0), Entry.Key()(1), Entry.Value() ?
+      'T' : 'F');
   }
 
   for (auto &Entry : Occludes_) {
@@ -372,15 +377,15 @@ void assembler::options::PrintOptions_() {
       OccludesString = "COARSE";
       break;
     }
-    std::printf("Occludes(%i,%i) = %s\n", Entry.Key(0), Entry.Key(1), OccludesString.c_str());
+    std::printf("Occludes(%i,%i) = %s\n", Entry.Key()(0), Entry.Key()(1), OccludesString.c_str());
   }
 
   for (auto &Entry : EdgePadding_) {
-    std::printf("EdgePadding(%i,%i) = %i\n", Entry.Key(0), Entry.Key(1), Entry.Value());
+    std::printf("EdgePadding(%i,%i) = %i\n", Entry.Key()(0), Entry.Key()(1), Entry.Value());
   }
 
   for (auto &Entry : EdgeSmoothing_) {
-    std::printf("EdgeSmoothing(%i) = %i\n", Entry.Key(0), Entry.Value());
+    std::printf("EdgeSmoothing(%i) = %i\n", Entry.Key(), Entry.Value());
   }
 
   for (auto &Entry : ConnectionType_) {
@@ -399,22 +404,22 @@ void assembler::options::PrintOptions_() {
       ConnectionTypeString = "CUBIC";
       break;
     }
-    std::printf("ConnectionType(%i,%i) = %s\n", Entry.Key(0), Entry.Key(1),
+    std::printf("ConnectionType(%i,%i) = %s\n", Entry.Key()(0), Entry.Key()(1),
       ConnectionTypeString.c_str());
   }
 
   for (auto &Entry : MinimizeOverlap_) {
-    std::printf("MinimizeOverlap(%i,%i) = %c\n", Entry.Key(0), Entry.Key(1), Entry.Value() ? 'T' :
-      'F');
+    std::printf("MinimizeOverlap(%i,%i) = %c\n", Entry.Key()(0), Entry.Key()(1), Entry.Value() ?
+      'T' : 'F');
   }
 
   for (auto &Entry : FringeSize_) {
-    std::printf("FringeSize(%i) = %i\n", Entry.Key(0), Entry.Value());
+    std::printf("FringeSize(%i) = %i\n", Entry.Key(), Entry.Value());
   }
 
 }
 
-template <typename T> T assembler::options::GetOption_(const id_map<1,T> &Option, int GridID, T
+template <typename T> T assembler::options::GetOption_(const map<int,T> &Option, int GridID, T
   DefaultValue) const {
 
   OVK_DEBUG_ASSERT(GridID >= 0, "Invalid grid ID.");
@@ -431,8 +436,8 @@ template <typename T> T assembler::options::GetOption_(const id_map<1,T> &Option
 
 }
 
-template <typename T> T assembler::options::GetOption_(const id_map<2,T> &Option, int MGridID, int
-  NGridID, T DefaultValue) const {
+template <typename T> T assembler::options::GetOption_(const elem_map<int,2,T> &Option, int MGridID,
+  int NGridID, T DefaultValue) const {
 
   OVK_DEBUG_ASSERT(MGridID >= 0, "Invalid M grid ID.");
   OVK_DEBUG_ASSERT(NGridID >= 0, "Invalid N grid ID.");
@@ -441,7 +446,7 @@ template <typename T> T assembler::options::GetOption_(const id_map<2,T> &Option
 
   T Value = DefaultValue;
 
-  auto Iter = Option.Find(MGridID,NGridID);
+  auto Iter = Option.Find({MGridID,NGridID});
   if (Iter != Option.End()) {
     Value = Iter->Value();
   }
@@ -450,7 +455,7 @@ template <typename T> T assembler::options::GetOption_(const id_map<2,T> &Option
 
 }
 
-template <typename T> void assembler::options::SetOption_(id_map<1,T> &Option, int GridID, T Value,
+template <typename T> void assembler::options::SetOption_(map<int,T> &Option, int GridID, T Value,
   T DefaultValue) {
 
   OVK_DEBUG_ASSERT(GridID == ALL_GRIDS || GridIDs_.Contains(GridID), "Invalid grid ID.");
@@ -473,8 +478,8 @@ template <typename T> void assembler::options::SetOption_(id_map<1,T> &Option, i
 
 }
 
-template <typename T> void assembler::options::SetOption_(id_map<2,T> &Option, int MGridID, int
-  NGridID, T Value, T DefaultValue) {
+template <typename T> void assembler::options::SetOption_(elem_map<int,2,T> &Option, int MGridID,
+  int NGridID, T Value, T DefaultValue) {
 
   OVK_DEBUG_ASSERT(MGridID == ALL_GRIDS || GridIDs_.Contains(MGridID), "Invalid M grid ID.");
   OVK_DEBUG_ASSERT(NGridID == ALL_GRIDS || GridIDs_.Contains(NGridID), "Invalid N grid ID.");
@@ -502,14 +507,14 @@ template <typename T> void assembler::options::SetOption_(id_map<2,T> &Option, i
       Option.Clear();
     } else if (MGridID == ALL_GRIDS) {
       for (int MID : GridIDs_) {
-        Option.Erase(MID,NGridID);
+        Option.Erase({MID,NGridID});
       }
     } else if (NGridID == ALL_GRIDS) {
       for (int NID : GridIDs_) {
-        Option.Erase(MGridID,NID);
+        Option.Erase({MGridID,NID});
       }
     } else {
-      Option.Erase(MGridID,NGridID);
+      Option.Erase({MGridID,NGridID});
     }
   }
 

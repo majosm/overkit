@@ -36,8 +36,8 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
 
   BinSize_ = GetBinSize_(GlobalExtents_, NumBins);
 
-  array<id_set<1>> OverlappedBinIndices({NumLocalRegions});
-  id_set<1> AllOverlappedBinIndices;
+  array<set<int>> OverlappedBinIndices({NumLocalRegions});
+  set<int> AllOverlappedBinIndices;
 
   for (int iRegion = 0; iRegion < NumLocalRegions; ++iRegion) {
     range OverlappedBinRange = MakeEmptyRange(NumDims_);
@@ -66,8 +66,8 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
 
   array<int> RecvFromRanks = core::DynamicHandshake(Comm_, SendToRanks);
 
-  id_map<1,int> NumRegionsToRank;
-  id_map<1,int> NumRegionsFromRank;
+  map<int,int> NumRegionsToRank;
+  map<int,int> NumRegionsFromRank;
 
   for (auto &IndexSet : OverlappedBinIndices) {
     for (int BinIndex : IndexSet) {
@@ -183,7 +183,7 @@ template <typename CoordType> range distributed_region_hash<CoordType>::MapExten
 
 }
 
-template <typename CoordType> void distributed_region_hash<CoordType>::RetrieveBins(id_map<1,bin>
+template <typename CoordType> void distributed_region_hash<CoordType>::RetrieveBins(map<int,bin>
   &Bins) const {
 
   MPI_Datatype MPICoordType = GetMPIDataType<coord_type>();
@@ -203,7 +203,7 @@ template <typename CoordType> void distributed_region_hash<CoordType>::RetrieveB
 
   Requests.Reserve(SendToRanks.Count() + RecvFromRanks.Count());
 
-  id_map<1,int> NumRegionsInBin;
+  map<int,int> NumRegionsInBin;
   NumRegionsInBin.Reserve(RecvFromRanks.Count());
 
   for (int Rank : RecvFromRanks) {
@@ -261,7 +261,7 @@ template <typename CoordType> void distributed_region_hash<CoordType>::RetrieveB
     }
   }
 
-  id_map<1,bin_region_data> RetrievedBinRegionData;
+  map<int,bin_region_data> RetrievedBinRegionData;
   for (int Rank : RecvFromRanks) {
     RetrievedBinRegionData.Insert(Rank, bin_region_data(NumRegionsInBin(Rank)));
   }

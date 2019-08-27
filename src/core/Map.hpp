@@ -1,22 +1,20 @@
 // Copyright (c) 2019 Matthew J. Smith and Overkit contributors
 // License: MIT (http://opensource.org/licenses/MIT)
 
-#ifndef OVK_CORE_ID_MAP_HPP_INCLUDED
-#define OVK_CORE_ID_MAP_HPP_INCLUDED
+#ifndef OVK_CORE_MAP_HPP_INCLUDED
+#define OVK_CORE_MAP_HPP_INCLUDED
 
 #include <ovk/core/Array.hpp>
 #include <ovk/core/ArrayTraits.hpp>
-#include <ovk/core/Elem.hpp>
 #include <ovk/core/Global.hpp>
-#include <ovk/core/IDSet.hpp>
-#include <ovk/core/IntegerSequence.hpp>
 #include <ovk/core/IteratorTraits.hpp>
 #include <ovk/core/PointerIterator.hpp>
 #include <ovk/core/Requires.hpp>
-#include <ovk/core/TypeSequence.hpp>
+#include <ovk/core/Set.hpp>
 #include <ovk/core/TypeTraits.hpp>
 
 #include <algorithm>
+#include <functional>
 #include <initializer_list>
 #include <memory>
 #include <type_traits>
@@ -24,7 +22,7 @@
 
 namespace ovk {
 
-namespace id_map_internal {
+namespace map_internal {
 
 template <typename T, bool Contiguous> class value_wrapper;
 
@@ -99,27 +97,34 @@ private:
 
 };
 
-template <int Rank_, typename T, bool Contiguous_> class id_map_entry {
+}
+
+template <typename T> constexpr bool MapContiguousDefault() {
+  // 16 seems like a good number *shrug*
+  return sizeof(T) <= 16;
+}
+
+template <typename KeyType, typename ValueType, bool Contiguous_=MapContiguousDefault<ValueType>()>
+  class map_entry {
 
 public:
 
-  static constexpr int Rank = Rank_;
-  using key_type = elem<int,Rank>;
-  using value_type = T;
+  using key_type = KeyType;
+  using value_type = ValueType;
   static constexpr bool Contiguous = Contiguous_;
 
-  id_map_entry(const key_type &Key, const value_type &Value):
+  map_entry(const key_type &Key, const value_type &Value):
     Key_(Key),
     Value_(Value)
   {}
 
-  id_map_entry(const key_type &Key, value_type &&Value):
+  map_entry(const key_type &Key, value_type &&Value):
     Key_(Key),
     Value_(std::move(Value))
   {}
 
   template <typename... Args, OVK_FUNCTION_REQUIRES(std::is_constructible<value_type, Args &&...
-    >::value && !core::IsCopyOrMoveArgument<value_type, Args &&...>())> id_map_entry(const key_type
+    >::value && !core::IsCopyOrMoveArgument<value_type, Args &&...>())> map_entry(const key_type
     &Key, Args &&... Arguments):
     Key_(Key),
     Value_(std::forward<Args>(Arguments)...)
@@ -133,170 +138,47 @@ public:
 
 private:
 
-  using value_wrapper_type = value_wrapper<value_type, Contiguous>;
+  using value_wrapper_type = map_internal::value_wrapper<value_type, Contiguous>;
 
   key_type Key_;
   value_wrapper_type Value_;
 
-  friend class core::test_helper<id_map_entry>;
+  friend class core::test_helper<map_entry>;
 
 };
 
-template <int Rank, typename T, bool Contiguous, typename IndexSequence, typename IDTypeSequence>
-  class id_map_base;
-
-template <int Rank, typename T, bool Contiguous_, std::size_t... Indices, typename... IDTypes> class
-  id_map_base<Rank, T, Contiguous_, core::index_sequence<Indices...>, core::type_sequence<
-  IDTypes...>> {
+template <typename KeyType, typename ValueType, typename KeyCompareType=std::less<KeyType>,
+  bool Contiguous_=MapContiguousDefault<ValueType>()> class map {
 
 public:
 
-  using key_type = elem<int,Rank>;
-  using value_type = T;
+  using key_type = KeyType;
+  using value_type = ValueType;
+  using key_compare_type = KeyCompareType;
+  using key_set_type = set<KeyType, KeyCompareType>;
   static constexpr bool Contiguous = Contiguous_;
   using index_type = long long;
-  using id_set_type = id_set<Rank>;
-  using entry = id_map_entry<Rank,T,Contiguous>;
-  using iterator = core::pointer_iterator<id_map_base, entry *>;
-  using const_iterator = core::pointer_iterator<id_map_base, const entry *>;
+  using entry = map_entry<KeyType,ValueType,Contiguous>;
+  using iterator = core::pointer_iterator<map, entry *>;
+  using const_iterator = core::pointer_iterator<map, const entry *>;
 
-  const value_type &operator()(IDTypes... IDs) const {
-    auto KeysIter = Keys_.LowerBound(IDs...);
-    return Entries_(KeysIter - Keys_.Begin()).Value();
-  }
+  map() = default;
 
-  value_type &operator()(IDTypes... IDs) {
-    auto KeysIter = Keys_.LowerBound(IDs...);
-    return Entries_(KeysIter - Keys_.Begin()).Value();
-  }
+  map(key_compare_type KeyCompare):
+    Keys_(std::move(KeyCompare))
+  {}
 
-  value_type &Insert(IDTypes... IDs) {
-    key_type Key(IDs...);
-    auto KeysIter = Keys_.LowerBound(Key);
-    auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
-    if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
-      Keys_.Insert(KeysIter, Key);
-      EntriesIter = Entries_.Insert(EntriesIter, Key);
-    } else {
-      *EntriesIter = {Key};
-    }
-    return EntriesIter->Value();
-  }
-
-  void Erase(IDTypes... IDs) {
-    key_type Key(IDs...);
-    auto KeysIter = Keys_.LowerBound(Key);
-    auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
-    if (KeysIter != Keys_.End() && !Keys_.Less(Key, *KeysIter)) {
-      Keys_.Erase(KeysIter);
-      Entries_.Erase(EntriesIter);
+  map(std::initializer_list<entry> EntriesList) {
+    Keys_.Reserve(EntriesList.size());
+    Entries_.Reserve(EntriesList.size());
+    for (auto &Entry : EntriesList) {
+      Insert(Entry);
     }
   }
 
-  template <typename F, OVK_FUNCTION_REQUIRES(!core::IsCallableAs<F &&, bool(const entry &)>() &&
-    !core::IsCallableAs<F &&, bool(const key_type &)>() && core::IsCallableAs<F &&,
-    bool(IDTypes...)>())> void EraseIf(F &&Predicate) {
-    auto KeysIter = Keys_.Begin();
-    auto EntriesIter = Entries_.Begin();
-    while (KeysIter != Keys_.End()) {
-      if (std::forward<F>(Predicate)((*KeysIter)(Indices)...)) {
-        KeysIter = Keys_.Erase(KeysIter);
-        EntriesIter = Entries_.Erase(EntriesIter);
-      } else {
-        ++KeysIter;
-        ++EntriesIter;
-      }
-    }
-  }
-
-  bool Contains(IDTypes... IDs) const {
-    return Keys_.Contains(IDs...);
-  }
-
-  const_iterator Find(IDTypes... IDs) const {
-    auto KeysIter = Keys_.Find(IDs...);
-    return const_iterator(Entries_.Data() + (KeysIter - Keys_.Begin()));
-  }
-  iterator Find(IDTypes... IDs) {
-    auto KeysIter = Keys_.Find(IDs...);
-    return iterator(Entries_.Data() + (KeysIter - Keys_.Begin()));
-  }
-
-  const_iterator LowerBound(IDTypes... IDs) const {
-    auto KeysIter = Keys_.LowerBound(IDs...);
-    return const_iterator(Entries_.Data() + (KeysIter - Keys_.Begin()));
-  }
-  iterator LowerBound(IDTypes... IDs) {
-    auto KeysIter = Keys_.LowerBound(IDs...);
-    return iterator(Entries_.Data() + (KeysIter - Keys_.Begin()));
-  }
-
-  const_iterator UpperBound(IDTypes... IDs) const {
-    auto KeysIter = Keys_.UpperBound(IDs...);
-    return const_iterator(Entries_.Data() + (KeysIter - Keys_.Begin()));
-  }
-  iterator UpperBound(IDTypes... IDs) {
-    auto KeysIter = Keys_.UpperBound(IDs...);
-    return iterator(Entries_.Data() + (KeysIter - Keys_.Begin()));
-  }
-
-  value_type &Fetch(IDTypes... IDs) {
-    key_type Key(IDs...);
-    auto KeysIter = Keys_.LowerBound(Key);
-    auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
-    if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
-      Keys_.Insert(KeysIter, Key);
-      EntriesIter = Entries_.Insert(EntriesIter, Key);
-    }
-    return EntriesIter->Value();
-  }
-
-protected:
-
-  id_set_type Keys_;
-  array<entry> Entries_;
-
-};
-
-}
-
-template <int Rank_, typename T, bool Contiguous_=sizeof(T) <= 16> class id_map : public
-  id_map_internal::id_map_base<Rank_, T, Contiguous_, core::index_sequence_of_size<Rank_>,
-  core::repeated_type_sequence_of_size<int, Rank_>> {
-
-private:
-
-  using parent_type = id_map_internal::id_map_base<Rank_, T, Contiguous_,
-    core::index_sequence_of_size<Rank_>, core::repeated_type_sequence_of_size<int, Rank_>>;
-
-  using parent_type::Keys_;
-  using parent_type::Entries_;
-
-public:
-
-  static constexpr int Rank = Rank_;
-  using key_type = typename parent_type::key_type;
-  using value_type = typename parent_type::value_type;
-  static constexpr bool Contiguous = Contiguous_;
-  using index_type = typename parent_type::index_type;
-  using id_set_type = typename parent_type::id_set_type;
-  using entry = typename parent_type::entry;
-  using iterator = typename parent_type::iterator;
-  using const_iterator = typename parent_type::const_iterator;
-
-  using parent_type::operator();
-  using parent_type::Insert;
-  using parent_type::Erase;
-  using parent_type::EraseIf;
-  using parent_type::Contains;
-  using parent_type::Find;
-  using parent_type::LowerBound;
-  using parent_type::UpperBound;
-  using parent_type::Fetch;
-
-  id_map() = default;
-
-  id_map(std::initializer_list<entry> EntriesList) {
+  map(std::initializer_list<entry> EntriesList, key_compare_type KeyCompare):
+    Keys_(std::move(KeyCompare))
+  {
     Keys_.Reserve(EntriesList.size());
     Entries_.Reserve(EntriesList.size());
     for (auto &Entry : EntriesList) {
@@ -305,8 +187,9 @@ public:
   }
 
   // Don't care about input iterators enough to implement a second overload
-  template <typename IterType, OVK_FUNCTION_REQUIRES(core::IsForwardIterator<IterType>())>
-    id_map(IterType Begin, IterType End) {
+  template <typename IterType, OVK_FUNCTION_REQUIRES(core::IsForwardIterator<IterType>() &&
+    std::is_convertible<core::iterator_reference_type<IterType>, entry>::value)>
+    map(IterType Begin, IterType End) {
     index_type NumEntries = index_type(std::distance(Begin, End));
     Keys_.Reserve(NumEntries);
     Entries_.Reserve(NumEntries);
@@ -317,11 +200,27 @@ public:
     }
   }
 
-  id_map &operator=(std::initializer_list<entry> EntriesList) {
+  // Don't care about input iterators enough to implement a second overload
+  template <typename IterType, OVK_FUNCTION_REQUIRES(core::IsForwardIterator<IterType>() &&
+    std::is_convertible<core::iterator_reference_type<IterType>, entry>::value)>
+    map(IterType Begin, IterType End, key_compare_type KeyCompare):
+    Keys_(std::move(KeyCompare))
+  {
+    index_type NumEntries = index_type(std::distance(Begin, End));
+    Keys_.Reserve(NumEntries);
+    Entries_.Reserve(NumEntries);
+    IterType Iter = Begin;
+    while (Iter != End) {
+      Insert(*Iter);
+      ++Iter;
+    }
+  }
+
+  map &operator=(std::initializer_list<entry> EntriesList) {
     return Assign(EntriesList);
   }
 
-  id_map &Assign(std::initializer_list<entry> EntriesList) {
+  map &Assign(std::initializer_list<entry> EntriesList) {
     Keys_.Clear();
     Entries_.Clear();
     Keys_.Reserve(EntriesList.size());
@@ -333,8 +232,9 @@ public:
   }
 
   // Don't care about input iterators enough to implement a second overload
-  template <typename IterType, OVK_FUNCTION_REQUIRES(core::IsForwardIterator<IterType>())>
-    id_map &Assign(IterType Begin, IterType End) {
+  template <typename IterType, OVK_FUNCTION_REQUIRES(core::IsForwardIterator<IterType>() &&
+    std::is_convertible<core::iterator_reference_type<IterType>, entry>::value)>
+    map &Assign(IterType Begin, IterType End) {
     index_type NumEntries = index_type(std::distance(Begin, End));
     Keys_.Clear();
     Entries_.Clear();
@@ -351,7 +251,7 @@ public:
   value_type &Insert(const entry &Entry) {
     auto KeysIter = Keys_.LowerBound(Entry.Key());
     auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
-    if (KeysIter == Keys_.End() || Keys_.Less(Entry.Key(), *KeysIter)) {
+    if (KeysIter == Keys_.End() || Keys_.Compare(Entry.Key(), *KeysIter)) {
       Keys_.Insert(KeysIter, Entry.Key());
       EntriesIter = Entries_.Insert(EntriesIter, Entry);
     } else {
@@ -363,7 +263,7 @@ public:
   value_type &Insert(entry &&Entry) {
     auto KeysIter = Keys_.LowerBound(Entry.Key());
     auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
-    if (KeysIter == Keys_.End() || Keys_.Less(Entry.Key(), *KeysIter)) {
+    if (KeysIter == Keys_.End() || Keys_.Compare(Entry.Key(), *KeysIter)) {
       Keys_.Insert(KeysIter, Entry.Key());
       EntriesIter = Entries_.Insert(EntriesIter, std::move(Entry));
     } else {
@@ -375,7 +275,7 @@ public:
   value_type &Insert(const key_type &Key, const value_type &Value) {
     auto KeysIter = Keys_.LowerBound(Key);
     auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
-    if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
+    if (KeysIter == Keys_.End() || Keys_.Compare(Key, *KeysIter)) {
       Keys_.Insert(KeysIter, Key);
       EntriesIter = Entries_.Insert(EntriesIter, Key, Value);
     } else {
@@ -387,7 +287,7 @@ public:
   value_type &Insert(const key_type &Key, value_type &&Value) {
     auto KeysIter = Keys_.LowerBound(Key);
     auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
-    if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
+    if (KeysIter == Keys_.End() || Keys_.Compare(Key, *KeysIter)) {
       Keys_.Insert(KeysIter, Key);
       EntriesIter = Entries_.Insert(EntriesIter, Key, std::move(Value));
     } else {
@@ -401,7 +301,7 @@ public:
     key_type &Key, Args &&... Arguments) {
     auto KeysIter = Keys_.LowerBound(Key);
     auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
-    if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
+    if (KeysIter == Keys_.End() || Keys_.Compare(Key, *KeysIter)) {
       Keys_.Insert(KeysIter, Key);
       EntriesIter = Entries_.Insert(EntriesIter, Key, std::forward<Args>(Arguments)...);
     } else {
@@ -414,7 +314,7 @@ public:
     index_type iEntry = index_type(LowerBoundIter - Begin());
     auto KeysIter = Keys_.Begin() + iEntry;
     auto EntriesIter = Entries_.Begin() + iEntry;
-    if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
+    if (KeysIter == Keys_.End() || Keys_.Compare(Key, *KeysIter)) {
       Keys_.Insert(KeysIter, Key);
       EntriesIter = Entries_.Insert(EntriesIter, Key, Value);
     } else {
@@ -427,7 +327,7 @@ public:
     index_type iEntry = index_type(LowerBoundIter - Begin());
     auto KeysIter = Keys_.Begin() + iEntry;
     auto EntriesIter = Entries_.Begin() + iEntry;
-    if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
+    if (KeysIter == Keys_.End() || Keys_.Compare(Key, *KeysIter)) {
       Keys_.Insert(KeysIter, Key);
       EntriesIter = Entries_.Insert(EntriesIter, Key, std::move(Value));
     } else {
@@ -442,7 +342,7 @@ public:
     index_type iEntry = index_type(LowerBoundIter - Begin());
     auto KeysIter = Keys_.Begin() + iEntry;
     auto EntriesIter = Entries_.Begin() + iEntry;
-    if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
+    if (KeysIter == Keys_.End() || Keys_.Compare(Key, *KeysIter)) {
       Keys_.Insert(KeysIter, Key);
       EntriesIter = Entries_.Insert(EntriesIter, Key, std::forward<Args>(Arguments)...);
     } else {
@@ -454,7 +354,7 @@ public:
   void Erase(const key_type &Key) {
     auto KeysIter = Keys_.LowerBound(Key);
     auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
-    if (KeysIter != Keys_.End() && !Keys_.Less(Key, *KeysIter)) {
+    if (KeysIter != Keys_.End() && !Keys_.Compare(Key, *KeysIter)) {
       Keys_.Erase(KeysIter);
       Entries_.Erase(EntriesIter);
     }
@@ -538,17 +438,13 @@ public:
     return iterator(Entries_.Data() + (KeysIter - Keys_.Begin()));
   }
 
-  key_type NextAvailableKey(int iDim=0) const {
-    return Keys_.NextAvailableValue(iDim);
-  }
-
   index_type Count() const { return Entries_.Count(); }
 
   bool Empty() const { return Entries_.Empty(); }
 
   index_type Capacity() const { return Entries_.Capacity(); }
 
-  const id_set_type &Keys() const { return Keys_; }
+  const key_set_type &Keys() const { return Keys_; }
 
   const value_type &operator()(const key_type &Key) const {
     auto KeysIter = Keys_.LowerBound(Key);
@@ -563,7 +459,7 @@ public:
   value_type &Fetch(const key_type &Key, const value_type &InsertValue) {
     auto KeysIter = Keys_.LowerBound(Key);
     auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
-    if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
+    if (KeysIter == Keys_.End() || Keys_.Compare(Key, *KeysIter)) {
       Keys_.Insert(KeysIter, Key);
       EntriesIter = Entries_.Insert(EntriesIter, Key, InsertValue);
     }
@@ -573,7 +469,7 @@ public:
   value_type &Fetch(const key_type &Key, value_type &&InsertValue) {
     auto KeysIter = Keys_.LowerBound(Key);
     auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
-    if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
+    if (KeysIter == Keys_.End() || Keys_.Compare(Key, *KeysIter)) {
       Keys_.Insert(KeysIter, Key);
       EntriesIter = Entries_.Insert(EntriesIter, Key, std::move(InsertValue));
     }
@@ -585,7 +481,7 @@ public:
     key_type &Key, Args &&... Arguments) {
     auto KeysIter = Keys_.LowerBound(Key);
     auto EntriesIter = Entries_.Begin() + (KeysIter - Keys_.Begin());
-    if (KeysIter == Keys_.End() || Keys_.Less(Key, *KeysIter)) {
+    if (KeysIter == Keys_.End() || Keys_.Compare(Key, *KeysIter)) {
       Keys_.Insert(KeysIter, Key);
       EntriesIter = Entries_.Insert(EntriesIter, Key, std::forward<Args>(Arguments)...);
     }
@@ -606,48 +502,68 @@ public:
   iterator End() { return iterator(Entries_.Data() + Entries_.Count()); }
   const_iterator CEnd() const { return const_iterator(Entries_.Data() + Entries_.Count()); }
 
-  static constexpr bool KeyLess(const key_type &Left, const key_type &Right) {
-    return id_set_type::Less(Left, Right);
+  const key_compare_type &KeyCompare() const { return Keys_.Compare(); }
+
+  bool KeyCompare(const value_type &Left, const value_type &Right) const {
+    return Keys_.Compare(Left, Right);
   }
 
 private:
 
-  friend class core::test_helper<id_map>;
+  key_set_type Keys_;
+  array<entry> Entries_;
+
+  friend class core::test_helper<map>;
 
 };
 
-template <int Rank, typename T, bool Contiguous> typename id_map<Rank, T, Contiguous>::iterator
-  begin(id_map<Rank, T, Contiguous> &Map) {
+template <typename KeyType, typename ValueType, typename KeyCompareType, bool Contiguous> typename
+  map<KeyType, ValueType, KeyCompareType, Contiguous>::iterator begin(map<KeyType, ValueType,
+  KeyCompareType, Contiguous> &Map) {
   return Map.Begin();
 }
 
-template <int Rank, typename T, bool Contiguous> typename id_map<Rank, T, Contiguous>::
-  const_iterator begin(const id_map<Rank, T, Contiguous> &Map) {
+template <typename KeyType, typename ValueType, typename KeyCompareType, bool Contiguous> typename
+  map<KeyType, ValueType, KeyCompareType, Contiguous>::const_iterator begin(const map<KeyType,
+  ValueType, KeyCompareType, Contiguous> &Map) {
   return Map.Begin();
 }
 
-template <int Rank, typename T, bool Contiguous> typename id_map<Rank, T, Contiguous>::iterator
-  end(id_map<Rank, T, Contiguous> &Map) {
+template <typename KeyType, typename ValueType, typename KeyCompareType, bool Contiguous> typename
+  map<KeyType, ValueType, KeyCompareType, Contiguous>::iterator end(map<KeyType, ValueType,
+  KeyCompareType, Contiguous> &Map) {
   return Map.End();
 }
 
-template <int Rank, typename T, bool Contiguous> typename id_map<Rank, T, Contiguous>::
-  const_iterator end(const id_map<Rank, T, Contiguous> &Map) {
+template <typename KeyType, typename ValueType, typename KeyCompareType, bool Contiguous> typename
+  map<KeyType, ValueType, KeyCompareType, Contiguous>::const_iterator end(const map<KeyType,
+  ValueType, KeyCompareType, Contiguous> &Map) {
   return Map.End();
 }
 
-template <int Rank_, typename T, bool Contiguous> struct array_traits<id_map<Rank_, T, Contiguous>>
-  {
-  using value_type = typename id_map<Rank_, T, Contiguous>::entry;
+template <typename KeyType, typename ValueType, typename KeyCompareType, bool Contiguous> struct
+  array_traits<map<KeyType, ValueType, KeyCompareType, Contiguous>> {
+  using map_type = map<KeyType, ValueType, KeyCompareType, Contiguous>;
+  using value_type = typename map_type::entry;
   static constexpr int Rank = 1;
   static constexpr array_layout Layout = array_layout::ROW_MAJOR;
-  template <int> static long long ExtentBegin(const id_map<Rank_, T, Contiguous> &) { return 0; }
-  template <int> static long long ExtentEnd(const id_map<Rank_, T, Contiguous> &Map) {
+  template <int> static long long ExtentBegin(const map_type &) { return 0; }
+  template <int> static long long ExtentEnd(const map_type &Map) {
     return Map.Count();
   }
-  static const value_type *Data(const id_map<Rank_, T, Contiguous> &Map) { return Map.Data(); }
-  static value_type *Data(id_map<Rank_, T, Contiguous> &Map) { return Map.Data(); }
+  static const value_type *Data(const map_type &Map) { return Map.Data(); }
+  static value_type *Data(map_type &Map) { return Map.Data(); }
 };
+
+template <typename KeyType, typename ValueType> using map_entry_contig = map_entry<KeyType,
+  ValueType, true>;
+template <typename KeyType, typename ValueType> using map_entry_noncontig = map_entry<KeyType,
+  ValueType, false>;
+
+template <typename KeyType, typename ValueType, typename KeyCompareType=std::less<KeyType>> using
+  map_contig = map<KeyType, ValueType, KeyCompareType, true>;
+template <typename KeyType, typename ValueType, typename KeyCompareType=std::less<KeyType>> using
+  map_noncontig = map<KeyType, ValueType, KeyCompareType, false>;
 
 }
 

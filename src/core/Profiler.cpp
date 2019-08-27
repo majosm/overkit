@@ -7,6 +7,7 @@
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Global.hpp"
+#include "ovk/core/Map.hpp"
 #include "ovk/core/TextProcessing.hpp"
 
 #include <mpi.h>
@@ -19,7 +20,7 @@
 namespace ovk {
 namespace core {
 
-const id_map<1,std::string,false> profiler::TimerNames_ = {
+const map_noncontig<int,std::string> profiler::TimerNames_ = {
   {HALO_TIME, "Halo"},
   {HALO_SETUP_TIME, "Halo::Setup"},
   {HALO_EXCHANGE_TIME, "Halo::Exchange"},
@@ -122,7 +123,7 @@ std::string profiler::WriteProfile() const {
 
   if (Enabled_) {
 
-    id_set<1> GlobalTimerIDs;
+    set<int> GlobalTimerIDs;
 
     array<int> TimerWasUsed({profiler_internal_TIMER_ID_COUNT}, 0);
     for (int TimerID : Timers_.Keys()) {

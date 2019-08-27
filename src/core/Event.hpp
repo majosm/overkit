@@ -6,7 +6,8 @@
 
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
-#include <ovk/core/IDMap.hpp>
+#include <ovk/core/ID.hpp>
+#include <ovk/core/Map.hpp>
 #include <ovk/core/Requires.hpp>
 #include <ovk/core/TypeTraits.hpp>
 
@@ -38,7 +39,7 @@ private:
   floating_ref_generator FloatingRefGenerator_;
 
   // Set non-contiguous because std::function is not noexcept movable until C++20
-  id_map<1,listener,false> Listeners_;
+  map_noncontig<int,listener> Listeners_;
 
   friend class event_listener_handle;
 

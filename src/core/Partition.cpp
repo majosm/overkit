@@ -132,7 +132,7 @@ array<int> DetectNeighbors(const cart &Cart, comm_view Comm, const range &LocalR
   }
 
   array<int> ExtendedPointBinIndices({NumExtendedPoints});
-  id_set<1> UniqueBinIndices;
+  set<int> UniqueBinIndices;
 
   for (long long iPoint = 0; iPoint < NumExtendedPoints; ++iPoint) {
     tuple<int> Point = {
@@ -145,14 +145,14 @@ array<int> DetectNeighbors(const cart &Cart, comm_view Comm, const range &LocalR
     UniqueBinIndices.Insert(ExtendedPointBinIndices(iPoint));
   }
 
-  id_map<1,partition_hash_bin> Bins;
+  map<int,partition_hash_bin> Bins;
   for (int iBin : UniqueBinIndices) {
     Bins.Insert(iBin);
   }
 
   Hash.RetrieveBins(Bins);
 
-  id_set<1> UniqueExtendedRanks;
+  set<int> UniqueExtendedRanks;
 
   for (long long iPoint = 0; iPoint < NumExtendedPoints; ++iPoint) {
     tuple<int> Point = {

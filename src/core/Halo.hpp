@@ -14,7 +14,7 @@
 #include <ovk/core/Field.hpp>
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
-#include <ovk/core/IDMap.hpp>
+#include <ovk/core/Map.hpp>
 #include <ovk/core/PartitionBase.hpp>
 #include <ovk/core/Profiler.hpp>
 #include <ovk/core/Range.hpp>
@@ -24,7 +24,6 @@
 
 #include <mpi.h>
 
-#include <map>
 #include <memory>
 #include <utility>
 
@@ -145,7 +144,7 @@ private:
 
   halo_map HaloMap_;
 
-  mutable id_map<1,array<halo_exchanger>> HaloExchangers_;
+  mutable map<int,array<halo_exchanger>> HaloExchangers_;
 
   static constexpr int TOTAL_TIME = profiler::HALO_TIME;
   static constexpr int SETUP_TIME = profiler::HALO_SETUP_TIME;

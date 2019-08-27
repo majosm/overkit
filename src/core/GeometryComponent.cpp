@@ -14,8 +14,8 @@
 #include "ovk/core/Geometry.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
-#include "ovk/core/IDMap.hpp"
-#include "ovk/core/IDSet.hpp"
+#include "ovk/core/Map.hpp"
+#include "ovk/core/Set.hpp"
 #include "ovk/core/TextProcessing.hpp"
 
 #include <mpi.h>
@@ -84,7 +84,7 @@ void geometry_component::OnGridEvent_() {
 
 void geometry_component::DestroyGeometriesForDyingGrids_() {
 
-  id_set<1> DyingGridIDs;
+  set<int> DyingGridIDs;
 
   for (auto &EventEntry : GridEventFlags_) {
     int GridID = EventEntry.Key();
@@ -94,10 +94,7 @@ void geometry_component::DestroyGeometriesForDyingGrids_() {
     }
   }
 
-  if (DyingGridIDs.Count() > 0) {
-    array<int> GridIDs({DyingGridIDs.Count()}, DyingGridIDs.Begin());
-    DestroyGeometries(GridIDs);
-  }
+  DestroyGeometries(DyingGridIDs);
 
 }
 
@@ -131,7 +128,7 @@ void geometry_component::SyncEdits_() {
 
   int NumGeometries = GeometryRecords_.Count();
 
-  id_map<1,int> GridIDsToIndex;
+  map<int,int> GridIDsToIndex;
 
   int NextIndex = 0;
   for (int GridID : GeometryRecords_.Keys()) {
@@ -181,7 +178,7 @@ int geometry_component::GeometryCount() const {
 
 }
 
-const id_set<1> &geometry_component::GeometryIDs() const {
+const set<int> &geometry_component::GeometryIDs() const {
 
   return GeometryRecords_.Keys();
 
@@ -499,7 +496,7 @@ int geometry_component::LocalGeometryCount() const {
 
 }
 
-const id_set<1> &geometry_component::LocalGeometryIDs() const {
+const set<int> &geometry_component::LocalGeometryIDs() const {
 
   return Locals_.Keys();
 

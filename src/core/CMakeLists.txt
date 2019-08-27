@@ -72,6 +72,8 @@ set(PUBLIC_HEADERS
   Domain.hpp
   Editor.hpp
   Elem.hpp
+  ElemMap.hpp
+  ElemSet.hpp
   Error.hpp
   Event.hpp
   Exchanger.hpp
@@ -81,10 +83,10 @@ set(PUBLIC_HEADERS
   GeometryComponent.hpp
   Global.hpp
   Grid.hpp
-  IDMap.hpp
-  IDSet.hpp
+  ID.hpp
   Indexer.hpp
   Interval.hpp
+  Map.hpp
   Misc.hpp
   Optional.hpp
   OverlapComponent.hpp
@@ -94,6 +96,7 @@ set(PUBLIC_HEADERS
   Request.hpp
   ScalarOps.hpp
   ScalarTraits.hpp
+  Set.hpp
   State.hpp
   StateComponent.hpp
   Tuple.hpp

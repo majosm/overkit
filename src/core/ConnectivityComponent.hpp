@@ -12,13 +12,15 @@
 #include <ovk/core/Context.hpp>
 #include <ovk/core/DomainBase.hpp>
 #include <ovk/core/Elem.hpp>
+#include <ovk/core/ElemMap.hpp>
+#include <ovk/core/ElemSet.hpp>
 #include <ovk/core/Event.hpp>
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Grid.hpp>
-#include <ovk/core/IDMap.hpp>
-#include <ovk/core/IDSet.hpp>
+#include <ovk/core/Map.hpp>
 #include <ovk/core/Requires.hpp>
+#include <ovk/core/Set.hpp>
 #include <ovk/core/StringWrapper.hpp>
 #include <ovk/core/TypeTraits.hpp>
 
@@ -134,7 +136,7 @@ public:
 
   int ConnectivityCount() const;
 
-  const id_set<2> &ConnectivityIDs() const;
+  const elem_set<int,2> &ConnectivityIDs() const;
 
   bool ConnectivityExists(int MGridID, int NGridID) const;
   bool ConnectivityExists(const elem<int,2> &GridIDPair) const;
@@ -154,7 +156,7 @@ public:
   int LocalConnectivityMCount() const;
   int LocalConnectivityMCountForGrid(int MGridID) const;
 
-  const id_set<2> &LocalConnectivityMIDs() const;
+  const elem_set<int,2> &LocalConnectivityMIDs() const;
 
   const connectivity_m &ConnectivityM(int MGridID, int NGridID) const;
   const connectivity_m &ConnectivityM(const elem<int,2> &GridIDPair) const;
@@ -168,7 +170,7 @@ public:
   int LocalConnectivityNCount() const;
   int LocalConnectivityNCountForGrid(int NGridID) const;
 
-  const id_set<2> &LocalConnectivityNIDs() const;
+  const elem_set<int,2> &LocalConnectivityNIDs() const;
 
   const connectivity_n &ConnectivityN(int MGridID, int NGridID) const;
   const connectivity_n &ConnectivityN(const elem<int,2> &GridIDPair) const;
@@ -220,12 +222,12 @@ private:
 
   floating_ref_generator FloatingRefGenerator_;
 
-  id_map<1,grid_event_flags> GridEventFlags_;
+  map<int,grid_event_flags> GridEventFlags_;
   event_listener_handle GridEventListener_;
 
-  id_map<2,connectivity_record> ConnectivityRecords_;
-  id_map<2,local_m,false> LocalMs_;
-  id_map<2,local_n,false> LocalNs_;
+  elem_map<int,2,connectivity_record> ConnectivityRecords_;
+  elem_map_noncontig<int,2,local_m> LocalMs_;
+  elem_map_noncontig<int,2,local_n> LocalNs_;
 
   mutable event<void(int, int, connectivity_event_flags, bool)> ConnectivityEvent_;
 

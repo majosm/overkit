@@ -12,12 +12,14 @@
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/DomainBase.hpp"
 #include "ovk/core/Elem.hpp"
+#include "ovk/core/ElemMap.hpp"
+#include "ovk/core/ElemSet.hpp"
 #include "ovk/core/Editor.hpp"
 #include "ovk/core/FloatingRef.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
-#include "ovk/core/IDMap.hpp"
-#include "ovk/core/IDSet.hpp"
+#include "ovk/core/Map.hpp"
+#include "ovk/core/Set.hpp"
 #include "ovk/core/TextProcessing.hpp"
 
 #include <mpi.h>
@@ -86,17 +88,17 @@ void connectivity_component::OnGridEvent_() {
 
 void connectivity_component::DestroyConnectivitiesForDyingGrids_() {
 
-  id_set<1> DyingGridIDs;
+  set<int> DyingGridIDs;
 
   for (auto &EventEntry : GridEventFlags_) {
-    int GridID = EventEntry.Key(0);
+    int GridID = EventEntry.Key();
     grid_event_flags EventFlags = EventEntry.Value();
     if ((EventFlags & grid_event_flags::DESTROY) != grid_event_flags::NONE) {
       DyingGridIDs.Insert(GridID);
     }
   }
 
-  id_set<2> DyingConnectivityIDs;
+  elem_set<int,2> DyingConnectivityIDs;
 
   for (auto &IDPair : ConnectivityRecords_.Keys()) {
     if (DyingGridIDs.Contains(IDPair(0)) || DyingGridIDs.Contains(IDPair(1))) {
@@ -146,7 +148,7 @@ void connectivity_component::SyncEdits_() {
 
   int NumConnectivities = ConnectivityRecords_.Count();
 
-  id_map<2,int> GridIDsToIndex;
+  elem_map<int,2,int> GridIDsToIndex;
 
   int NextIndex = 0;
   for (auto &IDPair : ConnectivityRecords_.Keys()) {
@@ -209,7 +211,7 @@ int connectivity_component::ConnectivityCount() const {
 
 }
 
-const id_set<2> &connectivity_component::ConnectivityIDs() const {
+const elem_set<int,2> &connectivity_component::ConnectivityIDs() const {
 
   return ConnectivityRecords_.Keys();
 
@@ -224,7 +226,7 @@ bool connectivity_component::ConnectivityExists(int MGridID, int NGridID) const 
   OVK_DEBUG_ASSERT(Domain.GridExists(MGridID), "Grid %i does not exist.", MGridID);
   OVK_DEBUG_ASSERT(Domain.GridExists(NGridID), "Grid %i does not exist.", NGridID);
 
-  return ConnectivityRecords_.Contains(MGridID,NGridID);
+  return ConnectivityRecords_.Contains({MGridID,NGridID});
 
 }
 
@@ -271,7 +273,7 @@ void connectivity_component::CreateConnectivity(int MGridID, int NGridID) {
     LocalNs_.Insert({MGridID,NGridID}, std::move(ConnectivityN));
   }
 
-  ConnectivityRecords_.Insert(MGridID,NGridID);
+  ConnectivityRecords_.Insert({MGridID,NGridID});
 
   MPI_Barrier(Domain.Comm());
 
@@ -351,7 +353,7 @@ void connectivity_component::CreateConnectivities(array_view<const int> MGridIDs
   for (int iCreate = 0; iCreate < NumCreates; ++iCreate) {
     int MGridID = MGridIDs(iCreate);
     int NGridID = NGridIDs(iCreate);
-    ConnectivityRecords_.Insert(MGridID,NGridID);
+    ConnectivityRecords_.Insert({MGridID,NGridID});
   }
 
   MPI_Barrier(Domain.Comm());
@@ -413,10 +415,10 @@ void connectivity_component::DestroyConnectivity(int MGridID, int NGridID) {
     const grid_info &NGridInfo = Domain.GridInfo(NGridID);
     int Editing = 0;
     if (MGridInfo.IsLocal()) {
-      Editing = Editing || LocalMs_(MGridID,NGridID).Editor.Active();
+      Editing = Editing || LocalMs_({MGridID,NGridID}).Editor.Active();
     }
     if (NGridInfo.IsLocal()) {
-      Editing = Editing || LocalNs_(MGridID,NGridID).Editor.Active();
+      Editing = Editing || LocalNs_({MGridID,NGridID}).Editor.Active();
     }
     MPI_Allreduce(MPI_IN_PLACE, &Editing, 1, MPI_INT, MPI_LOR, Domain.Comm());
     OVK_DEBUG_ASSERT(!Editing, "Cannot destroy connectivity %s.(%s,%s); still being edited.",
@@ -437,10 +439,10 @@ void connectivity_component::DestroyConnectivity(int MGridID, int NGridID) {
   Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Destroying connectivity %s.(%s,%s)...",
     Domain.Name(), MGridInfo.Name(), NGridInfo.Name());
 
-  LocalMs_.Erase(MGridID,NGridID);
-  LocalNs_.Erase(MGridID,NGridID);
+  LocalMs_.Erase({MGridID,NGridID});
+  LocalNs_.Erase({MGridID,NGridID});
 
-  ConnectivityRecords_.Erase(MGridID,NGridID);
+  ConnectivityRecords_.Erase({MGridID,NGridID});
 
   MPI_Barrier(Domain.Comm());
 
@@ -485,10 +487,10 @@ void connectivity_component::DestroyConnectivities(array_view<const int> MGridID
       int MGridID = MGridIDs(iDestroy);
       int NGridID = NGridIDs(iDestroy);
       if (Domain.GridIsLocal(MGridID)) {
-        Editing(iDestroy) = Editing(iDestroy) || LocalMs_(MGridID,NGridID).Editor.Active();
+        Editing(iDestroy) = Editing(iDestroy) || LocalMs_({MGridID,NGridID}).Editor.Active();
       }
       if (Domain.GridIsLocal(NGridID)) {
-        Editing(iDestroy) = Editing(iDestroy) || LocalNs_(MGridID,NGridID).Editor.Active();
+        Editing(iDestroy) = Editing(iDestroy) || LocalNs_({MGridID,NGridID}).Editor.Active();
       }
     }
     MPI_Allreduce(MPI_IN_PLACE, Editing.Data(), NumDestroys, MPI_INT, MPI_LOR, Domain.Comm());
@@ -529,14 +531,14 @@ void connectivity_component::DestroyConnectivities(array_view<const int> MGridID
   for (int iDestroy = 0; iDestroy < NumDestroys; ++iDestroy) {
     int MGridID = MGridIDs(iDestroy);
     int NGridID = NGridIDs(iDestroy);
-    LocalMs_.Erase(MGridID,NGridID);
-    LocalNs_.Erase(MGridID,NGridID);
+    LocalMs_.Erase({MGridID,NGridID});
+    LocalNs_.Erase({MGridID,NGridID});
   }
 
   for (int iDestroy = 0; iDestroy < NumDestroys; ++iDestroy) {
     int MGridID = MGridIDs(iDestroy);
     int NGridID = NGridIDs(iDestroy);
-    ConnectivityRecords_.Erase(MGridID,NGridID);
+    ConnectivityRecords_.Erase({MGridID,NGridID});
   }
 
   MPI_Barrier(Domain.Comm());
@@ -650,14 +652,14 @@ int connectivity_component::LocalConnectivityMCountForGrid(int MGridID) const {
   int NumLocalMsForGrid = 0;
 
   for (auto &LocalMEntry : LocalMs_) {
-    if (LocalMEntry.Key(0) == MGridID) ++NumLocalMsForGrid;
+    if (LocalMEntry.Key()(0) == MGridID) ++NumLocalMsForGrid;
   }
 
   return NumLocalMsForGrid;
 
 }
 
-const id_set<2> &connectivity_component::LocalConnectivityMIDs() const {
+const elem_set<int,2> &connectivity_component::LocalConnectivityMIDs() const {
 
   return LocalMs_.Keys();
 
@@ -678,7 +680,7 @@ const connectivity_m &connectivity_component::ConnectivityM(int MGridID, int NGr
     OVK_DEBUG_ASSERT(GridInfo.IsLocal(), "M grid %s is not local to rank @rank@.", GridInfo.Name());
   }
 
-  return LocalMs_(MGridID,NGridID).Connectivity;
+  return LocalMs_({MGridID,NGridID}).Connectivity;
 
 }
 
@@ -703,7 +705,7 @@ bool connectivity_component::EditingConnectivityM(int MGridID, int NGridID) cons
     OVK_DEBUG_ASSERT(GridInfo.IsLocal(), "M grid %s is not local to rank @rank@.", GridInfo.Name());
   }
 
-  const local_m &LocalM = LocalMs_(MGridID,NGridID);
+  const local_m &LocalM = LocalMs_({MGridID,NGridID});
   const editor &Editor = LocalM.Editor;
 
   return Editor.Active();
@@ -731,7 +733,7 @@ edit_handle<connectivity_m> connectivity_component::EditConnectivityM(int MGridI
     OVK_DEBUG_ASSERT(GridInfo.IsLocal(), "M grid %s is not local to rank @rank@.", GridInfo.Name());
   }
 
-  local_m &LocalM = LocalMs_(MGridID,NGridID);
+  local_m &LocalM = LocalMs_({MGridID,NGridID});
   connectivity_m &ConnectivityM = LocalM.Connectivity;
   editor &Editor = LocalM.Editor;
 
@@ -768,7 +770,7 @@ void connectivity_component::RestoreConnectivityM(int MGridID, int NGridID) {
     OVK_DEBUG_ASSERT(GridInfo.IsLocal(), "M grid %s is not local to rank @rank@.", GridInfo.Name());
   }
 
-  local_m &LocalM = LocalMs_(MGridID,NGridID);
+  local_m &LocalM = LocalMs_({MGridID,NGridID});
   editor &Editor = LocalM.Editor;
 
   if (OVK_DEBUG) {
@@ -804,14 +806,14 @@ int connectivity_component::LocalConnectivityNCountForGrid(int NGridID) const {
   int NumLocalNsForGrid = 0;
 
   for (auto &LocalNEntry : LocalNs_) {
-    if (LocalNEntry.Key(1) == NGridID) ++NumLocalNsForGrid;
+    if (LocalNEntry.Key()(1) == NGridID) ++NumLocalNsForGrid;
   }
 
   return NumLocalNsForGrid;
 
 }
 
-const id_set<2> &connectivity_component::LocalConnectivityNIDs() const {
+const elem_set<int,2> &connectivity_component::LocalConnectivityNIDs() const {
 
   return LocalNs_.Keys();
 
@@ -832,7 +834,7 @@ const connectivity_n &connectivity_component::ConnectivityN(int MGridID, int NGr
     OVK_DEBUG_ASSERT(GridInfo.IsLocal(), "N grid %s is not local to rank @rank@.", GridInfo.Name());
   }
 
-  return LocalNs_(MGridID,NGridID).Connectivity;
+  return LocalNs_({MGridID,NGridID}).Connectivity;
 
 }
 
@@ -857,7 +859,7 @@ bool connectivity_component::EditingConnectivityN(int MGridID, int NGridID) cons
     OVK_DEBUG_ASSERT(GridInfo.IsLocal(), "N grid %s is not local to rank @rank@.", GridInfo.Name());
   }
 
-  const local_n &LocalN = LocalNs_(MGridID,NGridID);
+  const local_n &LocalN = LocalNs_({MGridID,NGridID});
   const editor &Editor = LocalN.Editor;
 
   return Editor.Active();
@@ -885,7 +887,7 @@ edit_handle<connectivity_n> connectivity_component::EditConnectivityN(int MGridI
     OVK_DEBUG_ASSERT(GridInfo.IsLocal(), "N grid %s is not local to rank @rank@.", GridInfo.Name());
   }
 
-  local_n &LocalN = LocalNs_(MGridID,NGridID);
+  local_n &LocalN = LocalNs_({MGridID,NGridID});
   connectivity_n &ConnectivityN = LocalN.Connectivity;
   editor &Editor = LocalN.Editor;
 
@@ -922,7 +924,7 @@ void connectivity_component::RestoreConnectivityN(int MGridID, int NGridID) {
     OVK_DEBUG_ASSERT(GridInfo.IsLocal(), "N grid %s is not local to rank @rank@.", GridInfo.Name());
   }
 
-  local_n &LocalN = LocalNs_(MGridID,NGridID);
+  local_n &LocalN = LocalNs_({MGridID,NGridID});
   editor &Editor = LocalN.Editor;
 
   if (OVK_DEBUG) {

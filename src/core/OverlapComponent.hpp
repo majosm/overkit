@@ -9,16 +9,18 @@
 #include <ovk/core/Context.hpp>
 #include <ovk/core/DomainBase.hpp>
 #include <ovk/core/Elem.hpp>
+#include <ovk/core/ElemMap.hpp>
+#include <ovk/core/ElemSet.hpp>
 #include <ovk/core/Event.hpp>
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Grid.hpp>
-#include <ovk/core/IDMap.hpp>
-#include <ovk/core/IDSet.hpp>
+#include <ovk/core/Map.hpp>
 #include <ovk/core/OverlapComponent.h>
 #include <ovk/core/OverlapM.hpp>
 #include <ovk/core/OverlapN.hpp>
 #include <ovk/core/Requires.hpp>
+#include <ovk/core/Set.hpp>
 #include <ovk/core/StringWrapper.hpp>
 #include <ovk/core/TypeTraits.hpp>
 
@@ -129,7 +131,7 @@ public:
 
   int OverlapCount() const;
 
-  const id_set<2> &OverlapIDs() const;
+  const elem_set<int,2> &OverlapIDs() const;
 
   bool OverlapExists(int MGridID, int NGridID) const;
   bool OverlapExists(const elem<int,2> &GridIDPair) const;
@@ -149,7 +151,7 @@ public:
   int LocalOverlapMCount() const;
   int LocalOverlapMCountForGrid(int MGridID) const;
 
-  const id_set<2> &LocalOverlapMIDs() const;
+  const elem_set<int,2> &LocalOverlapMIDs() const;
 
   const overlap_m &OverlapM(int MGridID, int NGridID) const;
   const overlap_m &OverlapM(const elem<int,2> &GridIDPair) const;
@@ -163,7 +165,7 @@ public:
   int LocalOverlapNCount() const;
   int LocalOverlapNCountForGrid(int NGridID) const;
 
-  const id_set<2> &LocalOverlapNIDs() const;
+  const elem_set<int,2> &LocalOverlapNIDs() const;
 
   const overlap_n &OverlapN(int MGridID, int NGridID) const;
   const overlap_n &OverlapN(const elem<int,2> &GridIDPair) const;
@@ -213,12 +215,12 @@ private:
 
   floating_ref_generator FloatingRefGenerator_;
 
-  id_map<1,grid_event_flags> GridEventFlags_;
+  map<int,grid_event_flags> GridEventFlags_;
   event_listener_handle GridEventListener_;
 
-  id_map<2,overlap_record> OverlapRecords_;
-  id_map<2,local_m,false> LocalMs_;
-  id_map<2,local_n,false> LocalNs_;
+  elem_map<int,2,overlap_record> OverlapRecords_;
+  elem_map_noncontig<int,2,local_m> LocalMs_;
+  elem_map_noncontig<int,2,local_n> LocalNs_;
 
   mutable event<void(int, int, overlap_event_flags, bool)> OverlapEvent_;
 

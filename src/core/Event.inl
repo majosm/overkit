@@ -6,7 +6,7 @@ namespace ovk {
 template <typename... Args> template <typename F, OVK_FUNCDEF_REQUIRES(core::IsCallableWith<F,
   Args...>())> event_listener_handle event<void(Args...)>::AddListener(F Listener) {
 
-  int ID = Listeners_.NextAvailableKey();
+  int ID = NextAvailableID(Listeners_.Keys());
 
   Listeners_.Insert(ID, std::move(Listener));
 

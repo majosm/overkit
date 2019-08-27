@@ -16,10 +16,10 @@
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Grid.hpp>
-#include <ovk/core/IDMap.hpp>
-#include <ovk/core/IDSet.hpp>
+#include <ovk/core/Map.hpp>
 #include <ovk/core/Optional.hpp>
 #include <ovk/core/Requires.hpp>
+#include <ovk/core/Set.hpp>
 
 #include <mpi.h>
 
@@ -97,7 +97,7 @@ public:
   }
   floating_ref<domain> GetFloatingRef() { return FloatingRefGenerator_.Generate(*this); }
 
-  const id_set<1> &ComponentIDs() const { return Components_.Keys(); }
+  const set<int> &ComponentIDs() const { return Components_.Keys(); }
 
   bool ComponentExists(int ComponentID) const;
 
@@ -128,7 +128,7 @@ private:
     {}
   };
 
-  id_map<1,component_data,false> Components_;
+  map_noncontig<int,component_data> Components_;
 
   mutable event<void(int, component_event_flags)> ComponentEvent_;
 

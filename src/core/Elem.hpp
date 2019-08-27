@@ -366,6 +366,68 @@ template <typename U, typename T, int N, OVK_FUNCDECL_REQUIRES(core::IsScalar<T>
 template <typename T, int N1, int N2> constexpr OVK_FORCE_INLINE elem<T,N1+N2> ConcatElems(const
   elem<T,N1> &Left, const elem<T,N2> &Right);
 
+template <typename T, int N, array_layout Layout=array_layout::ROW_MAJOR> class elem_less;
+
+template <typename T, int N> class elem_less<T, N, array_layout::ROW_MAJOR> {
+
+public:
+
+  using value_type = T;
+  static constexpr int Rank = N;
+  static constexpr array_layout Layout = array_layout::ROW_MAJOR;
+  using elem_type = elem<value_type,Rank>;
+
+  bool operator()(const elem_type &Left, const elem_type &Right) const {
+    return Compare_(Left, Right, index_tag<0>());
+  }
+
+private:
+
+  template <int iElement> struct index_tag {};
+
+  template <int iElement> OVK_FORCE_INLINE bool Compare_(const elem_type &Left, const elem_type
+    &Right, index_tag<iElement>) const {
+    return Left(iElement) < Right(iElement) || (Left(iElement) == Right(iElement) && Compare_(
+      Left, Right, index_tag<iElement+1>()));
+  }
+
+  OVK_FORCE_INLINE bool Compare_(const elem_type &Left, const elem_type &Right, index_tag<Rank-1>)
+    const {
+    return Left(Rank-1) < Right(Rank-1);
+  }
+
+};
+
+template <typename T, int N> class elem_less<T, N, array_layout::COLUMN_MAJOR> {
+
+public:
+
+  using value_type = T;
+  static constexpr int Rank = N;
+  static constexpr array_layout Layout = array_layout::COLUMN_MAJOR;
+  using elem_type = elem<value_type,Rank>;
+
+  bool operator()(const elem_type &Left, const elem_type &Right) const {
+    return Compare_(Left, Right, index_tag<Rank-1>());
+  }
+
+private:
+
+  template <int iElement> struct index_tag {};
+
+  template <int iElement> OVK_FORCE_INLINE bool Compare_(const elem_type &Left, const elem_type
+    &Right, index_tag<iElement>) const {
+    return Left(iElement) < Right(iElement) || (Left(iElement) == Right(iElement) && Compare_(
+      Left, Right, index_tag<iElement-1>()));
+  }
+
+  OVK_FORCE_INLINE bool Compare_(const elem_type &Left, const elem_type &Right, index_tag<0>) const
+    {
+    return Left(0) < Right(0);
+  }
+
+};
+
 }
 
 #include <ovk/core/Elem.inl>

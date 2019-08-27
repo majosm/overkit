@@ -9,6 +9,7 @@
 #include "ovk/core/Domain.hpp"
 #include "ovk/core/Exchanger.hpp"
 #include "ovk/core/Global.hpp"
+#include "ovk/core/ID.hpp"
 
 #include <mpi.h>
 
@@ -159,7 +160,7 @@ void ovkGetNextAvailableExchangerCollectID(const ovk_exchanger *Exchanger, int M
   OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
 
   auto &ExchangerCPP = *reinterpret_cast<const ovk::exchanger *>(Exchanger);
-  *CollectID = ExchangerCPP.CollectIDs(MGridID, NGridID).NextAvailableValue();
+  *CollectID = ovk::NextAvailableID(ExchangerCPP.CollectIDs(MGridID, NGridID));
 
 }
 
@@ -220,7 +221,7 @@ void ovkGetNextAvailableExchangerSendID(const ovk_exchanger *Exchanger, int MGri
   OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
 
   auto &ExchangerCPP = *reinterpret_cast<const ovk::exchanger *>(Exchanger);
-  *SendID = ExchangerCPP.SendIDs(MGridID, NGridID).NextAvailableValue();
+  *SendID = ovk::NextAvailableID(ExchangerCPP.SendIDs(MGridID, NGridID));
 
 }
 
@@ -274,7 +275,7 @@ void ovkGetNextAvailableExchangerReceiveID(const ovk_exchanger *Exchanger, int M
   OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
 
   auto &ExchangerCPP = *reinterpret_cast<const ovk::exchanger *>(Exchanger);
-  *RecvID = ExchangerCPP.ReceiveIDs(MGridID, NGridID).NextAvailableValue();
+  *RecvID = ovk::NextAvailableID(ExchangerCPP.ReceiveIDs(MGridID, NGridID));
 
 }
 
@@ -328,7 +329,7 @@ void ovkGetNextAvailableExchangerDisperseID(const ovk_exchanger *Exchanger, int 
   OVK_DEBUG_ASSERT(Exchanger, "Invalid exchanger pointer.");
 
   auto &ExchangerCPP = *reinterpret_cast<const ovk::exchanger *>(Exchanger);
-  *DisperseID = ExchangerCPP.DisperseIDs(MGridID, NGridID).NextAvailableValue();
+  *DisperseID = ovk::NextAvailableID(ExchangerCPP.DisperseIDs(MGridID, NGridID));
 
 }
 

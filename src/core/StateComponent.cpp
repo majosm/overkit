@@ -13,8 +13,8 @@
 #include "ovk/core/FloatingRef.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
-#include "ovk/core/IDMap.hpp"
-#include "ovk/core/IDSet.hpp"
+#include "ovk/core/Map.hpp"
+#include "ovk/core/Set.hpp"
 #include "ovk/core/State.hpp"
 #include "ovk/core/TextProcessing.hpp"
 
@@ -84,7 +84,7 @@ void state_component::OnGridEvent_() {
 
 void state_component::DestroyStatesForDyingGrids_() {
 
-  id_set<1> DyingGridIDs;
+  set<int> DyingGridIDs;
 
   for (auto &EventEntry : GridEventFlags_) {
     int GridID = EventEntry.Key();
@@ -94,10 +94,7 @@ void state_component::DestroyStatesForDyingGrids_() {
     }
   }
 
-  if (DyingGridIDs.Count() > 0) {
-    array<int> GridIDs({DyingGridIDs.Count()}, DyingGridIDs.Begin());
-    DestroyStates(GridIDs);
-  }
+  DestroyStates(DyingGridIDs);
 
 }
 
@@ -131,7 +128,7 @@ void state_component::SyncEdits_() {
 
   int NumStates = StateRecords_.Count();
 
-  id_map<1,int> GridIDsToIndex;
+  map<int,int> GridIDsToIndex;
 
   int NextIndex = 0;
   for (int GridID : StateRecords_.Keys()) {
@@ -181,7 +178,7 @@ int state_component::StateCount() const {
 
 }
 
-const id_set<1> &state_component::StateIDs() const {
+const set<int> &state_component::StateIDs() const {
 
   return StateRecords_.Keys();
 
@@ -499,7 +496,7 @@ int state_component::LocalStateCount() const {
 
 }
 
-const id_set<1> &state_component::LocalStateIDs() const {
+const set<int> &state_component::LocalStateIDs() const {
 
   return Locals_.Keys();
 

@@ -11,16 +11,18 @@
 #include <ovk/core/ConnectivityComponent.hpp>
 #include <ovk/core/Context.hpp>
 #include <ovk/core/Domain.hpp>
+#include <ovk/core/ElemMap.hpp>
+#include <ovk/core/ElemSet.hpp>
 #include <ovk/core/Event.hpp>
 #include <ovk/core/Field.hpp>
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/GeometryComponent.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Grid.hpp>
-#include <ovk/core/IDMap.hpp>
-#include <ovk/core/IDSet.hpp>
+#include <ovk/core/Map.hpp>
 #include <ovk/core/Optional.hpp>
 #include <ovk/core/OverlapComponent.hpp>
+#include <ovk/core/Set.hpp>
 #include <ovk/core/StateComponent.hpp>
 #include <ovk/core/StringWrapper.hpp>
 
@@ -124,28 +126,28 @@ public:
     options &SetMinimizeOverlap(int MGridID, int NGridID, bool MinimizeOverlap);
     options &ResetMinimizeOverlap(int MGridID, int NGridID);
   private:
-    id_set<1> GridIDs_;
-    id_map<2,bool> Overlappable_;
-    id_map<2,double> OverlapTolerance_;
-    id_map<1,double> OverlapAccelDepthAdjust_;
-    id_map<1,double> OverlapAccelResolutionAdjust_;
-    id_map<1,bool> InferBoundaries_;
-    id_map<2,bool> CutBoundaryHoles_;
-    id_map<2,occludes> Occludes_;
-    id_map<2,int> EdgePadding_;
-    id_map<1,int> EdgeSmoothing_;
-    id_map<2,connection_type> ConnectionType_;
-    id_map<1,int> FringeSize_;
-    id_map<2,bool> MinimizeOverlap_;
+    set<int> GridIDs_;
+    elem_map<int,2,bool> Overlappable_;
+    elem_map<int,2,double> OverlapTolerance_;
+    map<int,double> OverlapAccelDepthAdjust_;
+    map<int,double> OverlapAccelResolutionAdjust_;
+    map<int,bool> InferBoundaries_;
+    elem_map<int,2,bool> CutBoundaryHoles_;
+    elem_map<int,2,occludes> Occludes_;
+    elem_map<int,2,int> EdgePadding_;
+    map<int,int> EdgeSmoothing_;
+    elem_map<int,2,connection_type> ConnectionType_;
+    map<int,int> FringeSize_;
+    elem_map<int,2,bool> MinimizeOverlap_;
     options() = default;
-    void AddGrids(const id_set<1> &GridIDs);
-    void RemoveGrids(const id_set<1> &GridIDs);
-    template <typename T> T GetOption_(const id_map<1,T> &Option, int GridID, T DefaultValue) const;
-    template <typename T> T GetOption_(const id_map<2,T> &Option, int MGridID, int NGridID, T
+    void AddGrids(const set<int> &GridIDs);
+    void RemoveGrids(const set<int> &GridIDs);
+    template <typename T> T GetOption_(const map<int,T> &Option, int GridID, T DefaultValue) const;
+    template <typename T> T GetOption_(const elem_map<int,2,T> &Option, int MGridID, int NGridID, T
       DefaultValue) const;
-    template <typename T> void SetOption_(id_map<1,T> &Option, int GridID, T Value, T DefaultValue);
-    template <typename T> void SetOption_(id_map<2,T> &Option, int MGridID, int NGridID, T Value, T
-      DefaulValue);
+    template <typename T> void SetOption_(map<int,T> &Option, int GridID, T Value, T DefaultValue);
+    template <typename T> void SetOption_(elem_map<int,2,T> &Option, int MGridID, int NGridID, T
+      Value, T DefaulValue);
     void PrintOptions_();
     friend class assembler;
   };
@@ -183,20 +185,20 @@ public:
 private:
 
   struct update_manifest {
-    id_set<1> AddGridsToOptions;
-    id_set<1> RemoveGridsFromOptions;
-    id_set<1> RemoveAssemblyManifestEntries;
+    set<int> AddGridsToOptions;
+    set<int> RemoveGridsFromOptions;
+    set<int> RemoveAssemblyManifestEntries;
   };
 
   struct assembly_manifest {
-    id_set<2> DetectOverlap;
-    id_set<1> InferBoundaries;
-    id_set<2> CutBoundaryHoles;
-    id_set<2> ComputeOcclusion;
-    id_set<2> ApplyPadding;
-    id_set<1> ApplySmoothing;
-    id_set<2> MinimizeOverlap;
-    id_set<2> GenerateConnectivity;
+    elem_set<int,2> DetectOverlap;
+    set<int> InferBoundaries;
+    elem_set<int,2> CutBoundaryHoles;
+    elem_set<int,2> ComputeOcclusion;
+    elem_set<int,2> ApplyPadding;
+    set<int> ApplySmoothing;
+    elem_set<int,2> MinimizeOverlap;
+    elem_set<int,2> GenerateConnectivity;
   };
 
   floating_ref_generator FloatingRefGenerator_;
@@ -237,7 +239,7 @@ private:
   };
 
   struct assembly_data {
-    id_map<1,local_grid_aux_data> LocalGridAuxData;
+    map<int,local_grid_aux_data> LocalGridAuxData;
     assembly_data(int NumDims, comm_view Comm);
   };
 

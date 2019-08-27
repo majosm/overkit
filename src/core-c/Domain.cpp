@@ -17,6 +17,7 @@
 #include "ovk/core/GeometryComponent.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
+#include "ovk/core/ID.hpp"
 #include "ovk/core/Optional.hpp"
 
 #include <mpi.h>
@@ -183,7 +184,7 @@ void ovkGetNextAvailableGridID(const ovk_domain *Domain, int *GridID) {
   OVK_DEBUG_ASSERT(GridID, "Invalid grid ID pointer.");
 
   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  *GridID = DomainCPP.GridIDs().NextAvailableValue();
+  *GridID = ovk::NextAvailableID(DomainCPP.GridIDs());
 
 }
 
@@ -336,7 +337,7 @@ void ovkGetNextAvailableComponentID(const ovk_domain *Domain, int *ComponentID) 
   OVK_DEBUG_ASSERT(ComponentID, "Invalid num components pointer.");
 
   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  *ComponentID = DomainCPP.ComponentIDs().NextAvailableValue();
+  *ComponentID = ovk::NextAvailableID(DomainCPP.ComponentIDs());
 
 }
 

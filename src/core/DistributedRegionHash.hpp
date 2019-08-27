@@ -9,11 +9,12 @@
 #include <ovk/core/Box.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Global.hpp>
-#include <ovk/core/IDMap.hpp>
 #include <ovk/core/Indexer.hpp>
+#include <ovk/core/Map.hpp>
 #include <ovk/core/Misc.hpp>
 #include <ovk/core/Range.hpp>
 #include <ovk/core/ScalarOps.hpp>
+#include <ovk/core/Set.hpp>
 #include <ovk/core/Tuple.hpp>
 
 #include <mpi.h>
@@ -157,7 +158,7 @@ public:
 
   const bin_indexer &BinIndexer() const { return BinIndexer_; }
 
-  void RetrieveBins(id_map<1,bin> &Bins) const;
+  void RetrieveBins(map<int,bin> &Bins) const;
 
   bool HasBin() { return static_cast<bool>(Bin_); }
   bin &Bin() { return Bin_; }

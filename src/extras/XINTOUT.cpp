@@ -18,15 +18,15 @@
 #include "ovk/core/Domain.hpp"
 #include "ovk/core/Editor.hpp"
 #include "ovk/core/Error.hpp"
-#include "ovk/core/IDMap.hpp"
-#include "ovk/core/IDSet.hpp"
 #include "ovk/core/Logger.hpp"
+#include "ovk/core/Map.hpp"
 #include "ovk/core/Misc.hpp"
 #include "ovk/core/Optional.hpp"
 #include "ovk/core/Partition.hpp"
 #include "ovk/core/Profiler.hpp"
 #include "ovk/core/Range.hpp"
 #include "ovk/core/ScopeGuard.hpp"
+#include "ovk/core/Set.hpp"
 #include "ovk/core/TextProcessing.hpp"
 #include "ovk/core/Tuple.hpp"
 
@@ -1942,7 +1942,7 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
 
   Profiler.StartSync(IMPORT_DISTRIBUTE_MAP_TO_BINS_TIME, Comm);
 
-  id_map<1,core::partition_hash_bin> Bins;
+  map<int,core::partition_hash_bin> Bins;
 
   long long NumChunkDonors = 0;
   long long NumChunkDonorPoints = 0;
@@ -2067,7 +2067,7 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
     for (int iDim = 0; iDim < NumDims; ++iDim) {
       MaxPointsInCell *= MaxSize;
     }
-    id_set<1> UniqueRanks;
+    set<int> UniqueRanks;
     UniqueRanks.Reserve(MaxPointsInCell);
     long long iDonorPoint = 0;
     for (long long iDonor = 0; iDonor < NumChunkDonors; ++iDonor) {
@@ -2549,7 +2549,7 @@ void ImportDonors(const donor_data &GridDonors, comm_view Comm, const array<edit
 
   if (NumDestinationGrids == 0) return;
 
-  id_map<1,int> DestinationGridIDToIndex;
+  map<int,int> DestinationGridIDToIndex;
 
   for (int iDestinationGrid = 0; iDestinationGrid < NumDestinationGrids; ++iDestinationGrid) {
     DestinationGridIDToIndex.Insert(DestinationGridIDs(iDestinationGrid), iDestinationGrid);
@@ -2627,7 +2627,7 @@ void ImportReceivers(const receiver_data &GridReceivers, comm_view Comm, const a
 
   if (NumSourceGrids == 0) return;
 
-  id_map<1,int> SourceGridIDToIndex;
+  map<int,int> SourceGridIDToIndex;
 
   for (int iSourceGrid = 0; iSourceGrid < NumSourceGrids; ++iSourceGrid) {
     SourceGridIDToIndex.Insert(SourceGridIDs(iSourceGrid), iSourceGrid);

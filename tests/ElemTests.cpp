@@ -614,3 +614,54 @@ TEST_F(ElemTests, Concat) {
   EXPECT_THAT(Concat, ElementsAre(1,2,3,4,5));
 
 }
+
+TEST_F(ElemTests, Less) {
+
+  if (TestComm().Rank() != 0) return;
+
+  using less_row = ovk::elem_less<int,3,ovk::array_layout::ROW_MAJOR>;
+  using less_col = ovk::elem_less<int,3,ovk::array_layout::COLUMN_MAJOR>;
+
+  // Row major, less
+  {
+    ovk::elem<int,3> Elem1 = {1,2,3};
+    ovk::elem<int,3> Elem2 = {1,2,4};
+    EXPECT_TRUE(less_row()(Elem1, Elem2));
+  }
+
+  // Row major, equal
+  {
+    ovk::elem<int,3> Elem1 = {1,2,3};
+    ovk::elem<int,3> Elem2 = {1,2,3};
+    EXPECT_FALSE(less_row()(Elem1, Elem2));
+  }
+
+  // Row major, greater
+  {
+    ovk::elem<int,3> Elem1 = {1,2,4};
+    ovk::elem<int,3> Elem2 = {1,2,3};
+    EXPECT_FALSE(less_row()(Elem1, Elem2));
+  }
+
+  // Column major, less
+  {
+    ovk::elem<int,3> Elem1 = {1,2,3};
+    ovk::elem<int,3> Elem2 = {2,2,3};
+    EXPECT_TRUE(less_col()(Elem1, Elem2));
+  }
+
+  // Column major, equal
+  {
+    ovk::elem<int,3> Elem1 = {1,2,3};
+    ovk::elem<int,3> Elem2 = {1,2,3};
+    EXPECT_FALSE(less_col()(Elem1, Elem2));
+  }
+
+  // Column major, greater
+  {
+    ovk::elem<int,3> Elem1 = {2,2,3};
+    ovk::elem<int,3> Elem2 = {1,2,3};
+    EXPECT_FALSE(less_col()(Elem1, Elem2));
+  }
+
+}

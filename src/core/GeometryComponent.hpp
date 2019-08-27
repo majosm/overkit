@@ -14,8 +14,8 @@
 #include <ovk/core/GeometryComponent.h>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Grid.hpp>
-#include <ovk/core/IDMap.hpp>
-#include <ovk/core/IDSet.hpp>
+#include <ovk/core/Map.hpp>
+#include <ovk/core/Set.hpp>
 #include <ovk/core/Requires.hpp>
 #include <ovk/core/StringWrapper.hpp>
 #include <ovk/core/TypeTraits.hpp>
@@ -120,7 +120,7 @@ public:
 
   int GeometryCount() const;
 
-  const id_set<1> &GeometryIDs() const;
+  const set<int> &GeometryIDs() const;
 
   bool GeometryExists(int GridID) const;
 
@@ -135,7 +135,7 @@ public:
 
   int LocalGeometryCount() const;
 
-  const id_set<1> &LocalGeometryIDs() const;
+  const set<int> &LocalGeometryIDs() const;
 
   const geometry &Geometry(int GridID) const;
   bool EditingGeometry(int GridID) const;
@@ -165,11 +165,11 @@ private:
 
   floating_ref_generator FloatingRefGenerator_;
 
-  id_map<1,grid_event_flags> GridEventFlags_;
+  map<int,grid_event_flags> GridEventFlags_;
   event_listener_handle GridEventListener_;
 
-  id_map<1,geometry_record> GeometryRecords_;
-  id_map<1,local,false> Locals_;
+  map<int,geometry_record> GeometryRecords_;
+  map_noncontig<int,local> Locals_;
 
   mutable event<void(int, geometry_event_flags, bool)> GeometryEvent_;
 

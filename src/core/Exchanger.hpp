@@ -16,17 +16,19 @@
 #include <ovk/core/Disperse.hpp>
 #include <ovk/core/DisperseMap.hpp>
 #include <ovk/core/Domain.hpp>
+#include <ovk/core/ElemMap.hpp>
+#include <ovk/core/ElemSet.hpp>
 #include <ovk/core/Event.hpp>
 #include <ovk/core/Exchanger.h>
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Grid.hpp>
-#include <ovk/core/IDMap.hpp>
-#include <ovk/core/IDSet.hpp>
+#include <ovk/core/Map.hpp>
 #include <ovk/core/Recv.hpp>
 #include <ovk/core/RecvMap.hpp>
 #include <ovk/core/Send.hpp>
 #include <ovk/core/SendMap.hpp>
+#include <ovk/core/Set.hpp>
 #include <ovk/core/StringWrapper.hpp>
 
 #include <mpi.h>
@@ -101,7 +103,7 @@ public:
 
   const domain &Domain() const;
 
-  const id_set<1> &CollectIDs(int MGridID, int NGridID) const;
+  const set<int> &CollectIDs(int MGridID, int NGridID) const;
   bool CollectExists(int MGridID, int NGridID, int CollectID) const;
   void CreateCollect(int MGridID, int NGridID, int CollectID, collect_op CollectOp,
     data_type ValueType, int Count, const range &GridValuesRange, array_layout GridValuesLayout);
@@ -110,21 +112,21 @@ public:
   // "DonorValues" actual type is T **
   void Collect(int MGridID, int NGridID, int CollectID, const void *GridValues, void *DonorValues);
 
-  const id_set<1> &SendIDs(int MGridID, int NGridID) const;
+  const set<int> &SendIDs(int MGridID, int NGridID) const;
   bool SendExists(int MGridID, int NGridID, int SendID) const;
   void CreateSend(int MGridID, int NGridID, int SendID, data_type ValueType, int Count, int Tag);
   void DestroySend(int MGridID, int NGridID, int SendID);
   // "DonorValues" actual type is const T * const *
   request Send(int MGridID, int NGridID, int SendID, const void *DonorValues);
 
-  const id_set<1> &ReceiveIDs(int MGridID, int NGridID) const;
+  const set<int> &ReceiveIDs(int MGridID, int NGridID) const;
   bool ReceiveExists(int MGridID, int NGridID, int RecvID) const;
   void CreateReceive(int MGridID, int NGridID, int RecvID, data_type ValueType, int Count, int Tag);
   void DestroyReceive(int MGridID, int NGridID, int RecvID);
   // "ReceiverValues" actual type is T **
   request Receive(int MGridID, int NGridID, int RecvID, void *ReceiverValues);
 
-  const id_set<1> &DisperseIDs(int MGridID, int NGridID) const;
+  const set<int> &DisperseIDs(int MGridID, int NGridID) const;
   bool DisperseExists(int MGridID, int NGridID, int DisperseID) const;
   void CreateDisperse(int MGridID, int NGridID, int DisperseID, disperse_op DisperseOp,
     data_type ValueType, int Count, const range &GridValuesRange, array_layout GridValuesLayout);
@@ -143,8 +145,8 @@ private:
     array<int> DestinationRanks;
     core::collect_map CollectMap;
     core::send_map SendMap;
-    id_map<1,core::collect> Collects;
-    id_map<1,core::send> Sends;
+    map<int,core::collect> Collects;
+    map<int,core::send> Sends;
   };
 
   struct local_n {
@@ -152,15 +154,15 @@ private:
     array<int> SourceRanks;
     core::recv_map RecvMap;
     core::disperse_map DisperseMap;
-    id_map<1,core::recv> Recvs;
-    id_map<1,core::disperse> Disperses;
+    map<int,core::recv> Recvs;
+    map<int,core::disperse> Disperses;
   };
 
   struct update_manifest {
-    id_set<2> CreateLocal;
-    id_set<2> DestroyLocal;
-    id_set<2> UpdateSourceDestRanks;
-    id_set<2> ResetExchanges;
+    elem_set<int,2> CreateLocal;
+    elem_set<int,2> DestroyLocal;
+    elem_set<int,2> UpdateSourceDestRanks;
+    elem_set<int,2> ResetExchanges;
   };
 
   floating_ref_generator FloatingRefGenerator_;
@@ -176,8 +178,8 @@ private:
   floating_ref<const connectivity_component> ConnectivityComponent_;
   event_listener_handle ConnectivityEventListener_;
 
-  id_map<2,local_m,false> LocalMs_;
-  id_map<2,local_n,false> LocalNs_;
+  elem_map_noncontig<int,2,local_m> LocalMs_;
+  elem_map_noncontig<int,2,local_n> LocalNs_;
 
   update_manifest UpdateManifest_;
 

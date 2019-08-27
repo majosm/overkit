@@ -13,10 +13,10 @@
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Grid.hpp>
-#include <ovk/core/IDMap.hpp>
-#include <ovk/core/IDSet.hpp>
+#include <ovk/core/Map.hpp>
 #include <ovk/core/Optional.hpp>
 #include <ovk/core/Requires.hpp>
+#include <ovk/core/Set.hpp>
 #include <ovk/core/StringWrapper.hpp>
 #include <ovk/core/TypeTraits.hpp>
 
@@ -115,7 +115,7 @@ public:
 
   int GridCount() const { return GridRecords_.Count(); }
 
-  const id_set<1> &GridIDs() const { return GridRecords_.Keys(); }
+  const set<int> &GridIDs() const { return GridRecords_.Keys(); }
 
   bool GridExists(int GridID) const;
 
@@ -129,7 +129,7 @@ public:
 
   const grid_info &GridInfo(int GridID) const;
   int LocalGridCount() const { return LocalGrids_.Count(); }
-  const id_set<1> &LocalGridIDs() const { return LocalGrids_.Keys(); }
+  const set<int> &LocalGridIDs() const { return LocalGrids_.Keys(); }
   bool GridIsLocal(int GridID) const;
   const grid &Grid(int GridID) const;
 
@@ -158,8 +158,8 @@ protected:
 
   int NumDims_;
 
-  id_map<1,grid_record,false> GridRecords_;
-  id_map<1,grid,false> LocalGrids_;
+  map_noncontig<int,grid_record> GridRecords_;
+  map_noncontig<int,grid> LocalGrids_;
   
   mutable event<void(int, grid_event_flags, bool)> GridEvent_;
 

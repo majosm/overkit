@@ -12,9 +12,9 @@
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Grid.hpp>
-#include <ovk/core/IDMap.hpp>
-#include <ovk/core/IDSet.hpp>
+#include <ovk/core/Map.hpp>
 #include <ovk/core/Requires.hpp>
+#include <ovk/core/Set.hpp>
 #include <ovk/core/State.hpp>
 #include <ovk/core/StateComponent.h>
 #include <ovk/core/StringWrapper.hpp>
@@ -117,7 +117,7 @@ public:
 
   int StateCount() const;
 
-  const id_set<1> &StateIDs() const;
+  const set<int> &StateIDs() const;
 
   bool StateExists(int GridID) const;
 
@@ -131,7 +131,7 @@ public:
 
   int LocalStateCount() const;
 
-  const id_set<1> &LocalStateIDs() const;
+  const set<int> &LocalStateIDs() const;
 
   const state &State(int GridID) const;
   bool EditingState(int GridID) const;
@@ -161,11 +161,11 @@ private:
 
   floating_ref_generator FloatingRefGenerator_;
 
-  id_map<1,grid_event_flags> GridEventFlags_;
+  map<int,grid_event_flags> GridEventFlags_;
   event_listener_handle GridEventListener_;
 
-  id_map<1,state_record> StateRecords_;
-  id_map<1,local,false> Locals_;
+  map<int,state_record> StateRecords_;
+  map_noncontig<int,local> Locals_;
 
   mutable event<void(int, state_event_flags, bool)> StateEvent_;
 

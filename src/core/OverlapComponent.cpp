@@ -10,14 +10,16 @@
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/DomainBase.hpp"
 #include "ovk/core/Elem.hpp"
+#include "ovk/core/ElemMap.hpp"
+#include "ovk/core/ElemSet.hpp"
 #include "ovk/core/Editor.hpp"
 #include "ovk/core/FloatingRef.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
-#include "ovk/core/IDMap.hpp"
-#include "ovk/core/IDSet.hpp"
+#include "ovk/core/Map.hpp"
 #include "ovk/core/OverlapM.hpp"
 #include "ovk/core/OverlapN.hpp"
+#include "ovk/core/Set.hpp"
 #include "ovk/core/TextProcessing.hpp"
 
 #include <mpi.h>
@@ -85,17 +87,17 @@ void overlap_component::OnGridEvent_() {
 
 void overlap_component::DestroyOverlapsForDyingGrids_() {
 
-  id_set<1> DyingGridIDs;
+  set<int> DyingGridIDs;
 
   for (auto &EventEntry : GridEventFlags_) {
-    int GridID = EventEntry.Key(0);
+    int GridID = EventEntry.Key();
     grid_event_flags EventFlags = EventEntry.Value();
     if ((EventFlags & grid_event_flags::DESTROY) != grid_event_flags::NONE) {
       DyingGridIDs.Insert(GridID);
     }
   }
 
-  id_set<2> DyingOverlapIDs;
+  elem_set<int,2> DyingOverlapIDs;
 
   for (auto &IDPair : OverlapRecords_.Keys()) {
     if (DyingGridIDs.Contains(IDPair(0)) || DyingGridIDs.Contains(IDPair(1))) {
@@ -145,11 +147,11 @@ void overlap_component::SyncEdits_() {
 
   int NumOverlaps = OverlapRecords_.Count();
 
-  id_map<2,int> GridIDsToIndex;
+  elem_map<int,2,int> GridIDsToIndex;
 
   int NextIndex = 0;
   for (auto &IDPair : OverlapRecords_.Keys()) {
-    GridIDsToIndex.Insert(IDPair, NextIndex);
+    GridIDsToIndex.Insert({IDPair,NextIndex});
     ++NextIndex;
   }
 
@@ -208,7 +210,7 @@ int overlap_component::OverlapCount() const {
 
 }
 
-const id_set<2> &overlap_component::OverlapIDs() const {
+const elem_set<int,2> &overlap_component::OverlapIDs() const {
 
   return OverlapRecords_.Keys();
 
@@ -223,7 +225,7 @@ bool overlap_component::OverlapExists(int MGridID, int NGridID) const {
   OVK_DEBUG_ASSERT(Domain.GridExists(MGridID), "Grid %i does not exist.", MGridID);
   OVK_DEBUG_ASSERT(Domain.GridExists(NGridID), "Grid %i does not exist.", NGridID);
 
-  return OverlapRecords_.Contains(MGridID,NGridID);
+  return OverlapRecords_.Contains({MGridID,NGridID});
 
 }
 
@@ -270,7 +272,7 @@ void overlap_component::CreateOverlap(int MGridID, int NGridID) {
     LocalNs_.Insert({MGridID,NGridID}, std::move(OverlapN));
   }
 
-  OverlapRecords_.Insert(MGridID,NGridID);
+  OverlapRecords_.Insert({MGridID,NGridID});
 
   MPI_Barrier(Domain.Comm());
 
@@ -350,7 +352,7 @@ void overlap_component::CreateOverlaps(array_view<const int> MGridIDs, array_vie
   for (int iCreate = 0; iCreate < NumCreates; ++iCreate) {
     int MGridID = MGridIDs(iCreate);
     int NGridID = NGridIDs(iCreate);
-    OverlapRecords_.Insert(MGridID,NGridID);
+    OverlapRecords_.Insert({MGridID,NGridID});
   }
 
   MPI_Barrier(Domain.Comm());
@@ -410,10 +412,10 @@ void overlap_component::DestroyOverlap(int MGridID, int NGridID) {
     const grid_info &NGridInfo = Domain.GridInfo(NGridID);
     int Editing = 0;
     if (MGridInfo.IsLocal()) {
-      Editing = Editing || LocalMs_(MGridID,NGridID).Editor.Active();
+      Editing = Editing || LocalMs_({MGridID,NGridID}).Editor.Active();
     }
     if (NGridInfo.IsLocal()) {
-      Editing = Editing || LocalNs_(MGridID,NGridID).Editor.Active();
+      Editing = Editing || LocalNs_({MGridID,NGridID}).Editor.Active();
     }
     MPI_Allreduce(MPI_IN_PLACE, &Editing, 1, MPI_INT, MPI_LOR, Domain.Comm());
     OVK_DEBUG_ASSERT(!Editing, "Cannot destroy overlap %s.(%s,%s); still being edited.",
@@ -434,10 +436,10 @@ void overlap_component::DestroyOverlap(int MGridID, int NGridID) {
   Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Destroying overlap %s.(%s,%s)...", Domain.Name(),
     MGridInfo.Name(), NGridInfo.Name());
 
-  LocalMs_.Erase(MGridID,NGridID);
-  LocalNs_.Erase(MGridID,NGridID);
+  LocalMs_.Erase({MGridID,NGridID});
+  LocalNs_.Erase({MGridID,NGridID});
 
-  OverlapRecords_.Erase(MGridID,NGridID);
+  OverlapRecords_.Erase({MGridID,NGridID});
 
   MPI_Barrier(Domain.Comm());
 
@@ -482,10 +484,10 @@ void overlap_component::DestroyOverlaps(array_view<const int> MGridIDs, array_vi
       int MGridID = MGridIDs(iDestroy);
       int NGridID = NGridIDs(iDestroy);
       if (Domain.GridIsLocal(MGridID)) {
-        Editing(iDestroy) = Editing(iDestroy) || LocalMs_(MGridID,NGridID).Editor.Active();
+        Editing(iDestroy) = Editing(iDestroy) || LocalMs_({MGridID,NGridID}).Editor.Active();
       }
       if (Domain.GridIsLocal(NGridID)) {
-        Editing(iDestroy) = Editing(iDestroy) || LocalNs_(MGridID,NGridID).Editor.Active();
+        Editing(iDestroy) = Editing(iDestroy) || LocalNs_({MGridID,NGridID}).Editor.Active();
       }
     }
     MPI_Allreduce(MPI_IN_PLACE, Editing.Data(), NumDestroys, MPI_INT, MPI_LOR, Domain.Comm());
@@ -526,14 +528,14 @@ void overlap_component::DestroyOverlaps(array_view<const int> MGridIDs, array_vi
   for (int iDestroy = 0; iDestroy < NumDestroys; ++iDestroy) {
     int MGridID = MGridIDs(iDestroy);
     int NGridID = NGridIDs(iDestroy);
-    LocalMs_.Erase(MGridID,NGridID);
-    LocalNs_.Erase(MGridID,NGridID);
+    LocalMs_.Erase({MGridID,NGridID});
+    LocalNs_.Erase({MGridID,NGridID});
   }
 
   for (int iDestroy = 0; iDestroy < NumDestroys; ++iDestroy) {
     int MGridID = MGridIDs(iDestroy);
     int NGridID = NGridIDs(iDestroy);
-    OverlapRecords_.Erase(MGridID,NGridID);
+    OverlapRecords_.Erase({MGridID,NGridID});
   }
 
   MPI_Barrier(Domain.Comm());
@@ -646,14 +648,14 @@ int overlap_component::LocalOverlapMCountForGrid(int MGridID) const {
   int NumLocalMsForGrid = 0;
 
   for (auto &LocalMEntry : LocalMs_) {
-    if (LocalMEntry.Key(0) == MGridID) ++NumLocalMsForGrid;
+    if (LocalMEntry.Key()(0) == MGridID) ++NumLocalMsForGrid;
   }
 
   return NumLocalMsForGrid;
 
 }
 
-const id_set<2> &overlap_component::LocalOverlapMIDs() const {
+const elem_set<int,2> &overlap_component::LocalOverlapMIDs() const {
 
   return LocalMs_.Keys();
 
@@ -674,7 +676,7 @@ const overlap_m &overlap_component::OverlapM(int MGridID, int NGridID) const {
     OVK_DEBUG_ASSERT(GridInfo.IsLocal(), "M grid %s is not local to rank @rank@.", GridInfo.Name());
   }
 
-  return LocalMs_(MGridID,NGridID).Overlap;
+  return LocalMs_({MGridID,NGridID}).Overlap;
 
 }
 
@@ -699,7 +701,7 @@ bool overlap_component::EditingOverlapM(int MGridID, int NGridID) const {
     OVK_DEBUG_ASSERT(GridInfo.IsLocal(), "M grid %s is not local to rank @rank@.", GridInfo.Name());
   }
 
-  const local_m &LocalM = LocalMs_(MGridID,NGridID);
+  const local_m &LocalM = LocalMs_({MGridID,NGridID});
   const editor &Editor = LocalM.Editor;
 
   return Editor.Active();
@@ -727,7 +729,7 @@ edit_handle<overlap_m> overlap_component::EditOverlapM(int MGridID, int NGridID)
     OVK_DEBUG_ASSERT(GridInfo.IsLocal(), "M grid %s is not local to rank @rank@.", GridInfo.Name());
   }
 
-  local_m &LocalM = LocalMs_(MGridID,NGridID);
+  local_m &LocalM = LocalMs_({MGridID,NGridID});
   overlap_m &OverlapM = LocalM.Overlap;
   editor &Editor = LocalM.Editor;
 
@@ -763,7 +765,7 @@ void overlap_component::RestoreOverlapM(int MGridID, int NGridID) {
     OVK_DEBUG_ASSERT(GridInfo.IsLocal(), "M grid %s is not local to rank @rank@.", GridInfo.Name());
   }
 
-  local_m &LocalM = LocalMs_(MGridID,NGridID);
+  local_m &LocalM = LocalMs_({MGridID,NGridID});
   editor &Editor = LocalM.Editor;
 
   if (OVK_DEBUG) {
@@ -799,14 +801,14 @@ int overlap_component::LocalOverlapNCountForGrid(int NGridID) const {
   int NumLocalNsForGrid = 0;
 
   for (auto &LocalNEntry : LocalNs_) {
-    if (LocalNEntry.Key(1) == NGridID) ++NumLocalNsForGrid;
+    if (LocalNEntry.Key()(1) == NGridID) ++NumLocalNsForGrid;
   }
 
   return NumLocalNsForGrid;
 
 }
 
-const id_set<2> &overlap_component::LocalOverlapNIDs() const {
+const elem_set<int,2> &overlap_component::LocalOverlapNIDs() const {
 
   return LocalNs_.Keys();
 
@@ -827,7 +829,7 @@ const overlap_n &overlap_component::OverlapN(int MGridID, int NGridID) const {
     OVK_DEBUG_ASSERT(GridInfo.IsLocal(), "N grid %s is not local to rank @rank@.", GridInfo.Name());
   }
 
-  return LocalNs_(MGridID,NGridID).Overlap;
+  return LocalNs_({MGridID,NGridID}).Overlap;
 
 }
 
@@ -852,7 +854,7 @@ bool overlap_component::EditingOverlapN(int MGridID, int NGridID) const {
     OVK_DEBUG_ASSERT(GridInfo.IsLocal(), "N grid %s is not local to rank @rank@.", GridInfo.Name());
   }
 
-  const local_n &LocalN = LocalNs_(MGridID,NGridID);
+  const local_n &LocalN = LocalNs_({MGridID,NGridID});
   const editor &Editor = LocalN.Editor;
 
   return Editor.Active();
@@ -880,7 +882,7 @@ edit_handle<overlap_n> overlap_component::EditOverlapN(int MGridID, int NGridID)
     OVK_DEBUG_ASSERT(GridInfo.IsLocal(), "N grid %s is not local to rank @rank@.", GridInfo.Name());
   }
 
-  local_n &LocalN = LocalNs_(MGridID,NGridID);
+  local_n &LocalN = LocalNs_({MGridID,NGridID});
   overlap_n &OverlapN = LocalN.Overlap;
   editor &Editor = LocalN.Editor;
 
@@ -916,7 +918,7 @@ void overlap_component::RestoreOverlapN(int MGridID, int NGridID) {
     OVK_DEBUG_ASSERT(GridInfo.IsLocal(), "N grid %s is not local to rank @rank@.", GridInfo.Name());
   }
 
-  local_n &LocalN = LocalNs_(MGridID,NGridID);
+  local_n &LocalN = LocalNs_({MGridID,NGridID});
   editor &Editor = LocalN.Editor;
 
   if (OVK_DEBUG) {

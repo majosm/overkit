@@ -8,7 +8,7 @@
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Debug.hpp>
 #include <ovk/core/Global.hpp>
-#include <ovk/core/IDMap.hpp>
+#include <ovk/core/Map.hpp>
 
 #include <mpi.h>
 
@@ -112,14 +112,14 @@ private:
 
   comm_view Comm_ = MPI_COMM_SELF;
   bool Enabled_ = false;
-  id_map<1,timer_entry> Timers_;
+  map<int,timer_entry> Timers_;
 
   void Start_(int TimerID);
   void StartSync_(int TimerID, MPI_Comm Comm);
   void Stop_(int TimerID);
 
   // Set non-contiguous because std::string is not noexcept movable until C++17
-  static const id_map<1,std::string,false> TimerNames_;
+  static const map_noncontig<int,std::string> TimerNames_;
 
 };
 
