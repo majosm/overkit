@@ -10,16 +10,16 @@
 
 namespace tests {
 
-ovk::domain Interface2D(const ovk::comm &Comm, const ovk::box &Bounds, const ovk::tuple<int> &Size,
+ovk::domain Interface2D(ovk::comm_view Comm, const ovk::box &Bounds, const ovk::tuple<int> &Size,
   const ovk::tuple<bool> &Periodic, ovk::periodic_storage PeriodicStorage);
 
-ovk::domain Interface2DManualConnectivity(const ovk::comm &Comm, const ovk::box &Bounds, const
+ovk::domain Interface2DManualConnectivity(ovk::comm_view Comm, const ovk::box &Bounds, const
   ovk::tuple<int> &Size, const ovk::tuple<bool> &Periodic, ovk::periodic_storage PeriodicStorage);
 
-ovk::domain Interface3D(const ovk::comm &Comm, const ovk::box &Bounds, const ovk::tuple<int> &Size,
+ovk::domain Interface3D(ovk::comm_view Comm, const ovk::box &Bounds, const ovk::tuple<int> &Size,
   const ovk::tuple<bool> &Periodic, ovk::periodic_storage PeriodicStorage);
 
-ovk::domain Interface3DManualConnectivity(const ovk::comm &Comm, const ovk::box &Bounds, const
+ovk::domain Interface3DManualConnectivity(ovk::comm_view Comm, const ovk::box &Bounds, const
   ovk::tuple<int> &Size, const ovk::tuple<bool> &Periodic, ovk::periodic_storage PeriodicStorage);
 
 }
