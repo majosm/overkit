@@ -5,6 +5,7 @@
 #define OVK_CORE_CART_HPP_INCLUDED
 
 #include <ovk/core/Global.hpp>
+#include <ovk/core/Optional.hpp>
 #include <ovk/core/Range.hpp>
 #include <ovk/core/Tuple.hpp>
 
@@ -33,6 +34,8 @@ public:
 
   tuple<int> GetPeriod(const tuple<int> &Point) const;
   tuple<int> PeriodicAdjust(const tuple<int> &Point) const;
+
+  optional<tuple<int>> MapToRange(const range &Range, const tuple<int> &Tuple) const;
 
 private:
 

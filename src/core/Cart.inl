@@ -80,6 +80,38 @@ inline tuple<int> cart::PeriodicAdjust(const tuple<int> &Tuple) const {
 
 }
 
+inline optional<tuple<int>> cart::MapToRange(const range &Range, const tuple<int> &Tuple) const {
+
+  tuple<int> BeginPeriod = GetPeriod(Range.Begin());
+  tuple<int> TuplePeriod = GetPeriod(Tuple);
+
+  tuple<int> MappedTuple;
+
+  switch (PeriodicStorage_) {
+  case periodic_storage::UNIQUE:
+    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+      int PeriodSize = Range_.Size(iDim);
+      MappedTuple(iDim) = Tuple(iDim) + PeriodSize * (BeginPeriod(iDim) - TuplePeriod(iDim));
+      if (MappedTuple(iDim) < Range.Begin(iDim)) MappedTuple(iDim) += PeriodSize;
+    }
+    break;
+  case periodic_storage::DUPLICATED:
+    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+      int PeriodSize = Range_.Size(iDim)-1;
+      MappedTuple(iDim) = Tuple(iDim) + PeriodSize * (BeginPeriod(iDim) - TuplePeriod(iDim));
+      if (MappedTuple(iDim) < Range.Begin(iDim)) MappedTuple(iDim) += PeriodSize;
+    }
+    break;
+  }
+
+  if (Range.Contains(MappedTuple)) {
+    return MappedTuple;
+  } else {
+    return {};
+  }
+
+}
+
 inline bool operator==(const cart &Left, const cart &Right) {
 
   return
