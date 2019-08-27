@@ -10,6 +10,9 @@
 extern "C" {
 #endif
 
+void support_DecomposeDomain(int NumGrids, const long long *NumPointsPerGrid, int NumProcs, int
+  *GridProcRanges);
+
 void support_CartesianDecomp(int NumDims, const int *GlobalBegin, const int *GlobalEnd, MPI_Comm
   CartComm, int *LocalBegin, int *LocalEnd);
 void support_TriangularDecomp(int NumDims, const int *GlobalBegin, const int *GlobalEnd, MPI_Comm

@@ -12,6 +12,13 @@
 extern "C" {
 #endif
 
+void examples_DecomposeDomain(int NumGrids, const long long *NumPointsPerGrid, int NumProcs, int
+  *GridProcRanges) {
+
+  support_DecomposeDomain(NumGrids, NumPointsPerGrid, NumProcs, GridProcRanges);
+
+}
+
 void examples_CartesianDecomp(int NumDims, const int *Size, MPI_Comm CartComm, int *LocalRange) {
 
   int Zero[] = {0,0,0};

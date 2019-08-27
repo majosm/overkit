@@ -3,6 +3,8 @@
 
 #include "support/Decomp.hpp"
 
+#include <ovk/core/ArrayOps.hpp>
+#include <ovk/core/ArrayView.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Debug.hpp>
 #include <ovk/core/Indexer.hpp>
@@ -11,6 +13,66 @@
 #include <ovk/core/Tuple.hpp>
 
 #include <mpi.h>
+
+namespace support {
+
+void DecomposeDomain(ovk::array_view<const long long> NumPointsPerGrid, int NumProcs,
+  ovk::array_view<int,2> GridProcRanges) {
+
+  int NumGrids = NumPointsPerGrid.Count();
+
+  long long TotalPoints = ovk::ArraySum(NumPointsPerGrid);
+
+  long long AvgPointsPerProc = ovk::Max(TotalPoints/NumProcs, 1LL);
+
+  ovk::array<int> NumProcsPerGrid({NumGrids});
+
+  int NumRemainingProcs = NumProcs;
+  for (int iGrid = 0; iGrid < NumGrids; ++iGrid) {
+    NumProcsPerGrid(iGrid) = ovk::Max(int(NumPointsPerGrid(iGrid)/AvgPointsPerProc), 1);
+    NumRemainingProcs -= NumProcsPerGrid(iGrid);
+  }
+
+  while (NumRemainingProcs > 0) {
+    long long MaxPointsPerProc = 0;
+    int iMaxPointsPerProc = 0;
+    for (int iGrid = 0; iGrid < NumGrids; ++iGrid) {
+      long long PointsPerProc = NumPointsPerGrid(iGrid)/NumProcsPerGrid(iGrid);
+      if (PointsPerProc > MaxPointsPerProc) {
+        MaxPointsPerProc = PointsPerProc;
+        iMaxPointsPerProc = iGrid;
+      }
+    }
+    NumProcsPerGrid(iMaxPointsPerProc) += 1;
+    --NumRemainingProcs;
+  }
+
+  int ProcOffset = 0;
+  for (int iGrid = 0; iGrid < NumGrids; ++iGrid) {
+    GridProcRanges(iGrid,0) = ProcOffset;
+    GridProcRanges(iGrid,1) = ProcOffset + NumProcsPerGrid(iGrid);
+    ProcOffset = ovk::Min(ProcOffset + GridProcRanges(iGrid,1)-GridProcRanges(iGrid,0), NumProcs-1);
+  }
+
+}
+
+}
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void support_DecomposeDomain(int NumGrids, const long long *NumPointsPerGrid, int NumProcs, int
+  *GridProcRanges) {
+
+  support::DecomposeDomain({NumPointsPerGrid, {NumGrids}}, NumProcs, {GridProcRanges,
+    {{NumGrids,2}}});
+
+}
+
+#ifdef __cplusplus
+}
+#endif
 
 namespace support {
 

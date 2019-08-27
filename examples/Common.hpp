@@ -6,6 +6,7 @@
 
 #include <support/Decomp.hpp>
 
+#include <ovk/core/ArrayView.hpp>
 #include <ovk/core/Cart.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Range.hpp>
@@ -16,6 +17,15 @@
 #include <array>
 
 namespace examples {
+
+void DecomposeDomain(ovk::array_view<const long long> NumPointsPerGrid, int NumProcs,
+  ovk::array_view<int> GridProcRanges) {
+
+  int NumGrids = NumPointsPerGrid.Count();
+
+  support::DecomposeDomain(NumPointsPerGrid, NumProcs, {GridProcRanges.Data(), {{NumGrids,2}}});
+
+}
 
 std::array<int,6> CartesianDecomp(int NumDims, const std::array<int,3> &Size, MPI_Comm CartComm) {
 
