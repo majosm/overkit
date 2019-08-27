@@ -18,7 +18,6 @@ set(LOCAL_TARGETS)
 set(SOURCES
   Debug.cpp
   Decomp.cpp
-  Grid.cpp
 )
 
 set(HEADERS
@@ -26,7 +25,6 @@ set(HEADERS
   Debug.hpp
   Decomp.h
   Decomp.hpp
-  Grid.hpp
 )
 
 #----------------
