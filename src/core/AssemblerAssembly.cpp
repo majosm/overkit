@@ -12,6 +12,7 @@
 #include "ovk/core/ConnectivityN.hpp"
 #include "ovk/core/Context.hpp"
 #include "ovk/core/Debug.hpp"
+#include "ovk/core/DistributedField.hpp"
 #include "ovk/core/Domain.hpp"
 #include "ovk/core/Event.hpp"
 #include "ovk/core/Field.hpp"
@@ -24,6 +25,7 @@
 #include "ovk/core/OverlapComponent.hpp"
 #include "ovk/core/OverlapM.hpp"
 #include "ovk/core/OverlapN.hpp"
+#include "ovk/core/Partition.hpp"
 #include "ovk/core/Range.hpp"
 #include "ovk/core/Set.hpp"
 #include "ovk/core/State.hpp"
@@ -98,15 +100,13 @@ void assembler::InitializeAssembly_() {
     const grid &Grid = Domain.Grid(GridID);
     const range &ExtendedRange = Grid.ExtendedRange();
     const range &CellLocalRange = Grid.CellLocalRange();
-    const range &CellExtendedRange = Grid.CellExtendedRange();
-    const partition &CellPartition = Grid.CellPartition();
     auto &Flags = StateComponent.State(GridID).Flags();
     local_grid_aux_data &LocalGridAuxData = AssemblyData.LocalGridAuxData.Insert(GridID);
-    field<bool> &ActiveMask = LocalGridAuxData.ActiveMask;
-    field<bool> &CellActiveMask = LocalGridAuxData.CellActiveMask;
-    field<bool> &DomainBoundaryMask = LocalGridAuxData.DomainBoundaryMask;
-    field<bool> &InternalBoundaryMask = LocalGridAuxData.InternalBoundaryMask;
-    ActiveMask.Resize(ExtendedRange);
+    distributed_field<bool> &ActiveMask = LocalGridAuxData.ActiveMask;
+    distributed_field<bool> &CellActiveMask = LocalGridAuxData.CellActiveMask;
+    distributed_field<bool> &DomainBoundaryMask = LocalGridAuxData.DomainBoundaryMask;
+    distributed_field<bool> &InternalBoundaryMask = LocalGridAuxData.InternalBoundaryMask;
+    ActiveMask.Assign(Grid.PartitionShared());
     for (int k = ExtendedRange.Begin(2); k < ExtendedRange.End(2); ++k) {
       for (int j = ExtendedRange.Begin(1); j < ExtendedRange.End(1); ++j) {
         for (int i = ExtendedRange.Begin(0); i < ExtendedRange.End(0); ++i) {
@@ -114,7 +114,7 @@ void assembler::InitializeAssembly_() {
         }
       }
     }
-    CellActiveMask.Resize(CellExtendedRange);
+    CellActiveMask.Assign(Grid.CellPartitionShared());
     for (int k = CellLocalRange.Begin(2); k < CellLocalRange.End(2); ++k) {
       for (int j = CellLocalRange.Begin(1); j < CellLocalRange.End(1); ++j) {
         for (int i = CellLocalRange.Begin(0); i < CellLocalRange.End(0); ++i) {
@@ -131,8 +131,8 @@ void assembler::InitializeAssembly_() {
         }
       }
     }
-    Requests.Append(CellPartition.Exchange(CellActiveMask));
-    DomainBoundaryMask.Resize(ExtendedRange);
+    Requests.Append(CellActiveMask.Exchange());
+    DomainBoundaryMask.Assign(Grid.PartitionShared());
     for (int k = ExtendedRange.Begin(2); k < ExtendedRange.End(2); ++k) {
       for (int j = ExtendedRange.Begin(1); j < ExtendedRange.End(1); ++j) {
         for (int i = ExtendedRange.Begin(0); i < ExtendedRange.End(0); ++i) {
@@ -141,7 +141,7 @@ void assembler::InitializeAssembly_() {
         }
       }
     }
-    InternalBoundaryMask.Resize(ExtendedRange);
+    InternalBoundaryMask.Assign(Grid.PartitionShared());
     for (int k = ExtendedRange.Begin(2); k < ExtendedRange.End(2); ++k) {
       for (int j = ExtendedRange.Begin(1); j < ExtendedRange.End(1); ++j) {
         for (int i = ExtendedRange.Begin(0); i < ExtendedRange.End(0); ++i) {

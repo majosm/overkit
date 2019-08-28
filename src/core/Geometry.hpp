@@ -7,9 +7,9 @@
 #include <ovk/core/Array.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Context.hpp>
+#include <ovk/core/DistributedField.hpp>
 #include <ovk/core/Editor.hpp>
 #include <ovk/core/Event.hpp>
-#include <ovk/core/Field.hpp>
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/GeometryBase.hpp>
 #include <ovk/core/GeometryOps.hpp>
@@ -98,9 +98,9 @@ public:
   double PeriodicLength(int iDim) const { return PeriodicLength_[iDim]; }
   void SetPeriodicLength(const tuple<double> &PeriodicLength);
 
-  const array<field<double>> &Coords() const { return Coords_; }
+  const array<distributed_field<double>> &Coords() const { return Coords_; }
   bool EditingCoords() const;
-  edit_handle<array<field<double>>> EditCoords();
+  edit_handle<array<distributed_field<double>>> EditCoords();
   void RestoreCoords();
   template <typename F, OVK_FUNCTION_REQUIRES(core::IsCallableWith<F>())> event_listener_handle
     AddCoordsEventListener(F Listener) const {
@@ -120,7 +120,7 @@ private:
 
   tuple<double> PeriodicLength_;
 
-  array<field<double>> Coords_;
+  array<distributed_field<double>> Coords_;
   editor CoordsEditor_;
   mutable event<void()> CoordsEvent_;
 

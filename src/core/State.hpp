@@ -7,9 +7,9 @@
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Context.hpp>
 #include <ovk/core/DataType.hpp>
+#include <ovk/core/DistributedField.hpp>
 #include <ovk/core/Editor.hpp>
 #include <ovk/core/Event.hpp>
-#include <ovk/core/Field.hpp>
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Grid.hpp>
@@ -137,9 +137,9 @@ public:
 
   comm_view Comm() const { return Comm_; }
 
-  const field<state_flags> &Flags() const { return Flags_; }
+  const distributed_field<state_flags> &Flags() const { return Flags_; }
   bool EditingFlags() const;
-  edit_handle<field<state_flags>> EditFlags();
+  edit_handle<distributed_field<state_flags>> EditFlags();
   void RestoreFlags();
   template <typename F, OVK_FUNCTION_REQUIRES(core::IsCallableWith<F>())> event_listener_handle
     AddFlagsEventListener(F Listener) const {
@@ -153,7 +153,7 @@ private:
 
   floating_ref_generator FloatingRefGenerator_;
 
-  field<state_flags> Flags_;
+  distributed_field<state_flags> Flags_;
   editor FlagsEditor_;
   mutable event<void()> FlagsEvent_;
 

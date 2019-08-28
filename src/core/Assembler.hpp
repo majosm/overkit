@@ -10,11 +10,11 @@
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/ConnectivityComponent.hpp>
 #include <ovk/core/Context.hpp>
+#include <ovk/core/DistributedField.hpp>
 #include <ovk/core/Domain.hpp>
 #include <ovk/core/ElemMap.hpp>
 #include <ovk/core/ElemSet.hpp>
 #include <ovk/core/Event.hpp>
-#include <ovk/core/Field.hpp>
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/GeometryComponent.hpp>
 #include <ovk/core/Global.hpp>
@@ -232,10 +232,10 @@ private:
   assembly_manifest AssemblyManifest_;
 
   struct local_grid_aux_data {
-    field<bool> ActiveMask;
-    field<bool> CellActiveMask;
-    field<bool> DomainBoundaryMask;
-    field<bool> InternalBoundaryMask;
+    distributed_field<bool> ActiveMask;
+    distributed_field<bool> CellActiveMask;
+    distributed_field<bool> DomainBoundaryMask;
+    distributed_field<bool> InternalBoundaryMask;
   };
 
   struct assembly_data {

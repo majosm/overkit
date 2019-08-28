@@ -14,6 +14,7 @@
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
 #include "ovk/core/Logger.hpp"
+#include "ovk/core/Partition.hpp"
 #include "ovk/core/Request.hpp"
 
 #include <mpi.h>
@@ -77,7 +78,7 @@ geometry::geometry(std::shared_ptr<context> &&Context, const grid &Grid, params 
   const range &ExtendedRange = Grid_->ExtendedRange();
 
   for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Coords_(iDim).Resize(ExtendedRange);
+    Coords_(iDim).Assign(Grid_->PartitionShared());
   }
 
   for (int k = ExtendedRange.Begin(2); k < ExtendedRange.End(2); ++k) {
@@ -149,7 +150,7 @@ bool geometry::EditingCoords() const {
 
 }
 
-edit_handle<array<field<double>>> geometry::EditCoords() {
+edit_handle<array<distributed_field<double>>> geometry::EditCoords() {
 
   if (!CoordsEditor_.Active()) {
     MPI_Barrier(Comm_);

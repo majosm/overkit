@@ -13,6 +13,7 @@
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
 #include "ovk/core/Logger.hpp"
+#include "ovk/core/Partition.hpp"
 
 #include <mpi.h>
 
@@ -45,7 +46,7 @@ state_base::~state_base() noexcept {
 
 state::state(std::shared_ptr<context> &&Context, const grid &Grid, params &&Params):
   state_base(std::move(Context), Grid),
-  Flags_(Grid_->ExtendedRange(), state_flags::ACTIVE)
+  Flags_(Grid_->PartitionShared(), state_flags::ACTIVE)
 {
 
   MPI_Barrier(Comm_);
@@ -90,7 +91,7 @@ bool state::EditingFlags() const {
 
 }
 
-edit_handle<field<state_flags>> state::EditFlags() {
+edit_handle<distributed_field<state_flags>> state::EditFlags() {
 
   if (!FlagsEditor_.Active()) {
     MPI_Barrier(Comm_);

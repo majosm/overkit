@@ -8,6 +8,7 @@
 #include "ovk/core-c/Grid.h"
 #include "ovk/core/Context.hpp"
 #include "ovk/core/Debug.hpp"
+#include "ovk/core/DistributedField.hpp"
 #include "ovk/core/Editor.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
@@ -118,7 +119,7 @@ void ovkEditStateFlags(ovk_state *State, int Dimension, ovk_state_flags **Flags)
 
   auto &StateCPP = *reinterpret_cast<ovk::state *>(State);
 
-  ovk::edit_handle<ovk::field<ovk::state_flags>> EditHandle = StateCPP.EditFlags();
+  ovk::edit_handle<ovk::distributed_field<ovk::state_flags>> EditHandle = StateCPP.EditFlags();
   auto &FlagsCPP = *EditHandle.Release();
 
   *Flags = reinterpret_cast<ovk_state_flags *>(FlagsCPP.Data());

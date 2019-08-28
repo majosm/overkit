@@ -6,8 +6,10 @@
 #include "ovk/core-c/Context.h"
 #include "ovk/core-c/Global.h"
 #include "ovk/core-c/Grid.h"
+#include "ovk/core/Array.hpp"
 #include "ovk/core/Context.hpp"
 #include "ovk/core/Debug.hpp"
+#include "ovk/core/DistributedField.hpp"
 #include "ovk/core/Editor.hpp"
 #include "ovk/core/Geometry.hpp"
 #include "ovk/core/Global.hpp"
@@ -161,7 +163,7 @@ void ovkEditGeometryCoords(ovk_geometry *Geometry, int Dimension, double **Coord
 
   auto &GeometryCPP = *reinterpret_cast<ovk::geometry *>(Geometry);
 
-  ovk::edit_handle<ovk::array<ovk::field<double>>> EditHandle = GeometryCPP.EditCoords();
+  ovk::edit_handle<ovk::array<ovk::distributed_field<double>>> EditHandle = GeometryCPP.EditCoords();
   auto &CoordsCPP = *EditHandle.Release();
 
   *Coords = CoordsCPP(Dimension).Data();
