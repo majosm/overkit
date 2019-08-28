@@ -103,15 +103,15 @@ void assembler::InitializeAssembly_() {
     const range &CellLocalRange = Grid.CellLocalRange();
     auto &Flags = StateComponent.State(GridID).Flags();
     core::partition_pool PartitionPool(Context_, Grid.Comm(), Grid.Partition().NeighborRanks());
-    PartitionPool.Insert(Grid.PartitionShared());
-    PartitionPool.Insert(Grid.CellPartitionShared());
+    PartitionPool.Insert(Grid.SharedPartition());
+    PartitionPool.Insert(Grid.SharedCellPartition());
     local_grid_aux_data &LocalGridAuxData = AssemblyData.LocalGridAuxData.Insert(GridID,
       std::move(PartitionPool));
     distributed_field<bool> &ActiveMask = LocalGridAuxData.ActiveMask;
     distributed_field<bool> &CellActiveMask = LocalGridAuxData.CellActiveMask;
     distributed_field<bool> &DomainBoundaryMask = LocalGridAuxData.DomainBoundaryMask;
     distributed_field<bool> &InternalBoundaryMask = LocalGridAuxData.InternalBoundaryMask;
-    ActiveMask.Assign(Grid.PartitionShared());
+    ActiveMask.Assign(Grid.SharedPartition());
     for (int k = ExtendedRange.Begin(2); k < ExtendedRange.End(2); ++k) {
       for (int j = ExtendedRange.Begin(1); j < ExtendedRange.End(1); ++j) {
         for (int i = ExtendedRange.Begin(0); i < ExtendedRange.End(0); ++i) {
@@ -119,7 +119,7 @@ void assembler::InitializeAssembly_() {
         }
       }
     }
-    CellActiveMask.Assign(Grid.CellPartitionShared());
+    CellActiveMask.Assign(Grid.SharedCellPartition());
     for (int k = CellLocalRange.Begin(2); k < CellLocalRange.End(2); ++k) {
       for (int j = CellLocalRange.Begin(1); j < CellLocalRange.End(1); ++j) {
         for (int i = CellLocalRange.Begin(0); i < CellLocalRange.End(0); ++i) {
@@ -137,7 +137,7 @@ void assembler::InitializeAssembly_() {
       }
     }
     Requests.Append(CellActiveMask.Exchange());
-    DomainBoundaryMask.Assign(Grid.PartitionShared());
+    DomainBoundaryMask.Assign(Grid.SharedPartition());
     for (int k = ExtendedRange.Begin(2); k < ExtendedRange.End(2); ++k) {
       for (int j = ExtendedRange.Begin(1); j < ExtendedRange.End(1); ++j) {
         for (int i = ExtendedRange.Begin(0); i < ExtendedRange.End(0); ++i) {
@@ -146,7 +146,7 @@ void assembler::InitializeAssembly_() {
         }
       }
     }
-    InternalBoundaryMask.Assign(Grid.PartitionShared());
+    InternalBoundaryMask.Assign(Grid.SharedPartition());
     for (int k = ExtendedRange.Begin(2); k < ExtendedRange.End(2); ++k) {
       for (int j = ExtendedRange.Begin(1); j < ExtendedRange.End(1); ++j) {
         for (int i = ExtendedRange.Begin(0); i < ExtendedRange.End(0); ++i) {

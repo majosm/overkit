@@ -173,7 +173,7 @@ public:
   explicit operator bool() const { return static_cast<bool>(Partition_); }
 
   const partition &Partition() const { return *Partition_; }
-  const std::shared_ptr<const partition> &PartitionShared() const { return Partition_; }
+  const std::shared_ptr<const partition> &SharedPartition() const { return Partition_; }
 
   const cart &Cart() const { return Partition_->Cart(); }
 

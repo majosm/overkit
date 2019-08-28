@@ -46,7 +46,7 @@ state_base::~state_base() noexcept {
 
 state::state(std::shared_ptr<context> &&Context, const grid &Grid, params &&Params):
   state_base(std::move(Context), Grid),
-  Flags_(Grid_->PartitionShared(), state_flags::ACTIVE)
+  Flags_(Grid_->SharedPartition(), state_flags::ACTIVE)
 {
 
   MPI_Barrier(Comm_);

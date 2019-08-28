@@ -676,7 +676,7 @@ TEST_F(DistributedFieldTests, Partition) {
     ovk::distributed_field<int> Field(Partition);
 
     EXPECT_EQ(&Field.Partition(), Partition.get());
-    EXPECT_EQ(Field.PartitionShared(), Partition);
+    EXPECT_EQ(Field.SharedPartition(), Partition);
 
   }
 

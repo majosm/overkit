@@ -78,7 +78,7 @@ geometry::geometry(std::shared_ptr<context> &&Context, const grid &Grid, params 
   const range &ExtendedRange = Grid_->ExtendedRange();
 
   for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Coords_(iDim).Assign(Grid_->PartitionShared());
+    Coords_(iDim).Assign(Grid_->SharedPartition());
   }
 
   for (int k = ExtendedRange.Begin(2); k < ExtendedRange.End(2); ++k) {
