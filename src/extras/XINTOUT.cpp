@@ -16,13 +16,13 @@
 #include "ovk/core/ConnectivityN.hpp"
 #include "ovk/core/Context.hpp"
 #include "ovk/core/Domain.hpp"
+#include "ovk/core/Decomp.hpp"
 #include "ovk/core/Editor.hpp"
 #include "ovk/core/Error.hpp"
 #include "ovk/core/Logger.hpp"
 #include "ovk/core/Map.hpp"
 #include "ovk/core/Misc.hpp"
 #include "ovk/core/Optional.hpp"
-#include "ovk/core/Partition.hpp"
 #include "ovk/core/Profiler.hpp"
 #include "ovk/core/Range.hpp"
 #include "ovk/core/ScalarOps.hpp"
@@ -1916,11 +1916,11 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
 
   const cart &Cart = Grid.Cart();
 
-  core::partition_hash Hash = core::CreatePartitionHash(NumDims, Comm, Grid.LocalRange());
+  core::decomp_hash DecompHash = core::CreateDecompHash(NumDims, Comm, Grid.LocalRange());
 
   Profiler.StartSync(IMPORT_DISTRIBUTE_MAP_TO_BINS_TIME, Comm);
 
-  map<int,core::partition_hash_bin> Bins;
+  map<int,core::decomp_hash_bin> Bins;
 
   long long NumChunkDonors = 0;
   long long NumChunkDonorPoints = 0;
@@ -1979,8 +1979,8 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
         ChunkDonorPoints(1,iDonorPoint),
         ChunkDonorPoints(2,iDonorPoint)
       };
-      tuple<int> BinLoc = Hash.MapPointToBin(Point);
-      ChunkDonorPointBinIndices(iDonorPoint) = Hash.BinIndexer().ToIndex(BinLoc);
+      tuple<int> BinLoc = DecompHash.MapPointToBin(Point);
+      ChunkDonorPointBinIndices(iDonorPoint) = DecompHash.BinIndexer().ToIndex(BinLoc);
     }
     for (long long iDonorPoint = 0; iDonorPoint < NumChunkDonorPoints; ++iDonorPoint) {
       int BinIndex = ChunkDonorPointBinIndices(iDonorPoint);
@@ -2000,8 +2000,8 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
         ReceiverChunk.Data.Points(1,iReceiver),
         ReceiverChunk.Data.Points(2,iReceiver)
       };
-      tuple<int> BinLoc = Hash.MapPointToBin(Point);
-      ChunkReceiverBinIndices(iReceiver) = Hash.BinIndexer().ToIndex(BinLoc);
+      tuple<int> BinLoc = DecompHash.MapPointToBin(Point);
+      ChunkReceiverBinIndices(iReceiver) = DecompHash.BinIndexer().ToIndex(BinLoc);
     }
     for (long long iReceiver = 0; iReceiver < NumChunkReceivers; ++iReceiver) {
       int BinIndex = ChunkReceiverBinIndices(iReceiver);
@@ -2012,7 +2012,7 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
   Profiler.Stop(IMPORT_DISTRIBUTE_MAP_TO_BINS_TIME);
   Profiler.StartSync(IMPORT_DISTRIBUTE_RETRIEVE_BINS_TIME, Comm);
 
-  Hash.RetrieveBins(Bins);
+  DecompHash.RetrieveBins(Bins);
 
   Profiler.Stop(IMPORT_DISTRIBUTE_RETRIEVE_BINS_TIME);
   Profiler.StartSync(IMPORT_DISTRIBUTE_FIND_RANKS_TIME, Comm);
@@ -2031,9 +2031,9 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
         ChunkDonorPoints(1,iDonorPoint),
         ChunkDonorPoints(2,iDonorPoint)
       };
-      const core::partition_hash_bin &Bin = Bins(ChunkDonorPointBinIndices(iDonorPoint));
+      const core::decomp_hash_bin &Bin = Bins(ChunkDonorPointBinIndices(iDonorPoint));
       for (int iRegion = 0; iRegion < Bin.Regions().Count(); ++iRegion) {
-        const core::partition_hash_region_data &Region = Bin.Region(iRegion);
+        const core::decomp_hash_region_data &Region = Bin.Region(iRegion);
         if (Region.Extents.Contains(Point)) {
           ChunkDonorRanksData(iDonorPoint) = Region.Rank;
           break;
@@ -2079,9 +2079,9 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
         ReceiverChunk.Data.Points(1,iReceiver),
         ReceiverChunk.Data.Points(2,iReceiver)
       };
-      const core::partition_hash_bin &Bin = Bins(ChunkReceiverBinIndices(iReceiver));
+      const core::decomp_hash_bin &Bin = Bins(ChunkReceiverBinIndices(iReceiver));
       for (int iRegion = 0; iRegion < Bin.Regions().Count(); ++iRegion) {
-        const core::partition_hash_region_data &Region = Bin.Region(iRegion);
+        const core::decomp_hash_region_data &Region = Bin.Region(iRegion);
         if (Region.Extents.Contains(Point)) {
           ChunkReceiverRanks(iReceiver) = Region.Rank;
           break;

@@ -48,11 +48,13 @@ set(SOURCES
   CartTests.cpp
   CommTests.cpp
   ContextTests.cpp
+  DecompTests.cpp
   DistributedFieldTests.cpp
   ElemTests.cpp
   ExchangerTests.cpp
   ForEachTests.cpp
   GeometricPrimitiveOpsTests.cpp
+  HaloTests.cpp
   IDTests.cpp
   IndexerTests.cpp
   IntervalTests.cpp

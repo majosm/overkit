@@ -26,7 +26,6 @@
 #include "ovk/core/OverlapM.hpp"
 #include "ovk/core/OverlapN.hpp"
 #include "ovk/core/Partition.hpp"
-#include "ovk/core/PartitionPool.hpp"
 #include "ovk/core/Range.hpp"
 #include "ovk/core/Set.hpp"
 #include "ovk/core/State.hpp"

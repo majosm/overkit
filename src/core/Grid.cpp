@@ -8,6 +8,7 @@
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Context.hpp"
 #include "ovk/core/Debug.hpp"
+#include "ovk/core/Decomp.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Logger.hpp"
 #include "ovk/core/Misc.hpp"
@@ -51,7 +52,7 @@ grid::grid(std::shared_ptr<context> &&Context, params &&Params):
 grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
   range &LocalRange):
   grid(std::move(Context), std::move(Params), NumDims, Cart, LocalRange,
-    core::CartPointToCell(Cart), core::LocalRangePointToCell(Cart, LocalRange))
+    core::CartPointToCell(Cart), core::RangePointToCell(Cart, LocalRange))
 {}
 
 grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
@@ -66,7 +67,7 @@ grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, con
   const range &CellExtendedRange):
   grid(std::move(Context), std::move(Params), NumDims, Cart, LocalRange, ExtendedRange, CellCart,
     CellLocalRange, CellExtendedRange, core::DetectNeighbors(Cart, Params.Comm_, LocalRange,
-    core::CreatePartitionHash(NumDims, Params.Comm_, LocalRange)))
+    core::CreateDecompHash(NumDims, Params.Comm_, LocalRange)))
 {}
 
 grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const

@@ -59,10 +59,11 @@ std::shared_ptr<const ovk::partition> CreatePartition(ovk::comm_view CommOfSize4
   ovk::range LocalRange = CartesianDecomp(Cart.Dimension(), Cart.Range(), CartComm);
   ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 1);
 
-  ovk::core::partition_hash Hash = ovk::core::CreatePartitionHash(Cart.Dimension(), CartComm,
+  ovk::core::decomp_hash DecompHash = ovk::core::CreateDecompHash(Cart.Dimension(), CartComm,
     LocalRange);
 
-  ovk::array<int> NeighborRanks = ovk::core::DetectNeighbors(Cart, CartComm, LocalRange, Hash);
+  ovk::array<int> NeighborRanks = ovk::core::DetectNeighbors(Cart, CartComm, LocalRange,
+    DecompHash);
 
   return std::make_shared<ovk::partition>(std::move(Context), Cart, CartComm, LocalRange,
     ExtendedRange, 1, NeighborRanks);

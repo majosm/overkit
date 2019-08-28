@@ -28,6 +28,7 @@ set(SOURCES
   ConnectivityN.cpp
   Context.cpp
   Debug.cpp
+  Decomp.cpp
   Disperse.cpp
   DisperseBase.cpp
   DisperseMap.cpp
@@ -37,13 +38,13 @@ set(SOURCES
   Geometry.cpp
   GeometryComponent.cpp
   Grid.cpp
+  Halo.cpp
   Logger.cpp
   Misc.cpp
   OverlapComponent.cpp
   OverlapM.cpp
   OverlapN.cpp
   Partition.cpp
-  PartitionPool.cpp
   Profiler.cpp
   Recv.cpp
   RecvMap.cpp
@@ -125,6 +126,7 @@ set(INTERNAL_HEADERS
   DataType.h
   Debug.hpp
   Debug.h
+  Decomp.hpp
   Disperse.hpp
   DisperseAppend.hpp
   DisperseBase.hpp
@@ -152,6 +154,8 @@ set(INTERNAL_HEADERS
   GeometryOps.hpp
   GeometryOps.inl
   Global.h
+  Halo.hpp
+  Halo.inl
   IntegerSequence.hpp
   IteratorTraits.hpp
   Logger.hpp
@@ -162,8 +166,6 @@ set(INTERNAL_HEADERS
   Moveabool.hpp
   Optional.inl
   OverlapComponent.h
-  Partition.inl
-  PartitionPool.hpp
   PointerIterator.hpp
   Profiler.hpp
   Profiler.inl

@@ -8,6 +8,7 @@
 #include <ovk/core/ArrayView.hpp>
 #include <ovk/core/Box.hpp>
 #include <ovk/core/Comm.hpp>
+#include <ovk/core/DataType.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Indexer.hpp>
 #include <ovk/core/Map.hpp>

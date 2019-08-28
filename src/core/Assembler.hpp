@@ -22,7 +22,7 @@
 #include <ovk/core/Map.hpp>
 #include <ovk/core/Optional.hpp>
 #include <ovk/core/OverlapComponent.hpp>
-#include <ovk/core/PartitionPool.hpp>
+#include <ovk/core/Partition.hpp>
 #include <ovk/core/Set.hpp>
 #include <ovk/core/StateComponent.hpp>
 #include <ovk/core/StringWrapper.hpp>
