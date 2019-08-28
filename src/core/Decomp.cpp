@@ -164,6 +164,48 @@ range RangePointToCell(const cart &Cart, const range &Range) {
 
 }
 
+cart CartIncludeExteriorPoint(const cart &Cart) {
+
+  cart CartIncludingExteriorPoint(Cart.Dimension());
+
+  for (int iDim = 0; iDim < Cart.Dimension(); ++iDim) {
+    if (!Cart.Periodic(iDim)) {
+      CartIncludingExteriorPoint.Range().Begin(iDim) = Cart.Range().Begin(iDim)-1;
+      CartIncludingExteriorPoint.Range().End(iDim) = Cart.Range().End(iDim)+1;
+    } else {
+      CartIncludingExteriorPoint.Range().Begin(iDim) = Cart.Range().Begin(iDim);
+      CartIncludingExteriorPoint.Range().End(iDim) = Cart.Range().End(iDim);
+    }
+  }
+
+  CartIncludingExteriorPoint.Periodic() = Cart.Periodic();
+  CartIncludingExteriorPoint.PeriodicStorage() = Cart.PeriodicStorage();
+
+  return CartIncludingExteriorPoint;
+
+}
+
+range RangeIncludeExteriorPoint(const cart &Cart, const range &Range) {
+
+  range RangeIncludingExteriorPoint = MakeEmptyRange(Cart.Dimension());
+
+  for (int iDim = 0; iDim < Cart.Dimension(); ++iDim) {
+    if (!Cart.Periodic(iDim) && Range.Begin(iDim) == Cart.Range().Begin(iDim)) {
+      RangeIncludingExteriorPoint.Begin(iDim) = Range.Begin(iDim)-1;
+    } else {
+      RangeIncludingExteriorPoint.Begin(iDim) = Range.Begin(iDim);
+    }
+    if (!Cart.Periodic(iDim) && Range.End(iDim) == Cart.Range().End(iDim)) {
+      RangeIncludingExteriorPoint.End(iDim) = Range.End(iDim)+1;
+    } else {
+      RangeIncludingExteriorPoint.End(iDim) = Range.End(iDim);
+    }
+  }
+
+  return RangeIncludingExteriorPoint;
+
+}
+
 map<int,decomp_info> RetrieveDecompInfo(comm_view Comm, array_view<const int> Ranks, const range
   &LocalRange, const range &ExtendedRange) {
 

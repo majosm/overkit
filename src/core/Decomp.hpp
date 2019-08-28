@@ -32,6 +32,9 @@ range ExtendLocalRange(const cart &Cart, const range &LocalRange, int ExtendAmou
 cart CartPointToCell(const cart &Cart);
 range RangePointToCell(const cart &Cart, const range &LocalRange);
 
+cart CartIncludeExteriorPoint(const cart &Cart);
+range RangeIncludeExteriorPoint(const cart &Cart, const range &Range);
+
 struct decomp_info {
   range LocalRange;
   range ExtendedRange;
