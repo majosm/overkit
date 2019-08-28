@@ -2,21 +2,21 @@
 // License: MIT (http://opensource.org/licenses/MIT)
 
 namespace ovk {
-namespace core {
+namespace partition_internal {
 
-template <typename FieldType, OVK_FUNCDEF_REQUIRES(IsField<FieldType>())> request halo::Exchange(
-  FieldType &Field) const {
+template <typename FieldType, OVK_FUNCDEF_REQUIRES(core::IsField<FieldType>())> request
+  halo::Exchange(FieldType &Field) const {
 
-  using value_type = array_value_type<FieldType>;
+  using value_type = core::array_value_type<FieldType>;
 
-  OVK_DEBUG_ASSERT(IsSupportedDataType<value_type>(), "Unsupported data type.");
+  OVK_DEBUG_ASSERT(core::IsSupportedDataType<value_type>(), "Unsupported data type.");
 
   core::profiler &Profiler = Context_->core_Profiler();
 
   Profiler.StartSync(TOTAL_TIME, Comm_);
   Profiler.Start(EXCHANGE_TIME);
 
-  data_type DataType = GetDataType<value_type>();
+  data_type DataType = core::GetDataType<value_type>();
 
   array<halo_exchanger> &HaloExchangersForType = HaloExchangers_.Fetch(int(DataType));
 
@@ -35,12 +35,12 @@ template <typename FieldType, OVK_FUNCDEF_REQUIRES(IsField<FieldType>())> reques
   }
   halo_exchanger &HaloExchanger = HaloExchangersForType(iHaloExchanger);
 
-  auto EndProfiles = OnScopeExit([&] {
+  auto EndProfiles = core::OnScopeExit([&] {
     Profiler.Stop(EXCHANGE_TIME);
     Profiler.Stop(TOTAL_TIME);
   });
 
-  return HaloExchanger.Exchange(ArrayData(Field));
+  return HaloExchanger.Exchange(core::ArrayData(Field));
 
 }
 
@@ -77,7 +77,7 @@ template <typename T> request halo_exchanger_for_type<T>::Exchange(value_type *F
 
   int NumNeighbors = HaloMap.NeighborRanks().Count();
 
-  MPI_Datatype DataType = GetMPIDataType<mpi_value_type>();
+  MPI_Datatype DataType = core::GetMPIDataType<mpi_value_type>();
 
   MPIRequests_.Clear();
 
@@ -135,7 +135,7 @@ template <typename T> void halo_exchanger_for_type<T>::exchange_request::OnMPIRe
   halo_exchanger_for_type &HaloExchanger = *HaloExchanger_;
   const halo_map &HaloMap = *HaloExchanger.HaloMap_;
 
-  profiler &Profiler = HaloExchanger.Context_->core_Profiler();
+  core::profiler &Profiler = HaloExchanger.Context_->core_Profiler();
 
   if (iMPIRequest < HaloExchanger.RecvBuffers_.Count()) {
 

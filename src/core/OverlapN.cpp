@@ -172,7 +172,7 @@ void overlap_n::RestorePoints() {
 
 void overlap_n::UpdateMask_() {
 
-  const core::partition &Partition = Grid_->core_Partition();
+  const partition &Partition = Grid_->Partition();
 
   Mask_.Fill(false);
 
@@ -192,7 +192,7 @@ void overlap_n::UpdateMask_() {
     }
   }
 
-  Partition.Halo().Exchange(Mask_);
+  Partition.Exchange(Mask_);
 
 }
 

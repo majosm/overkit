@@ -37,7 +37,6 @@ set(SOURCES
   Geometry.cpp
   GeometryComponent.cpp
   Grid.cpp
-  Halo.cpp
   Logger.cpp
   Misc.cpp
   OverlapComponent.cpp
@@ -92,6 +91,7 @@ set(PUBLIC_HEADERS
   OverlapComponent.hpp
   OverlapM.hpp
   OverlapN.hpp
+  Partition.hpp
   Range.hpp
   Request.hpp
   ScalarOps.hpp
@@ -150,8 +150,6 @@ set(INTERNAL_HEADERS
   GeometryOps.hpp
   GeometryOps.inl
   Global.h
-  Halo.hpp
-  Halo.inl
   IntegerSequence.hpp
   IteratorTraits.hpp
   Logger.hpp
@@ -162,8 +160,7 @@ set(INTERNAL_HEADERS
   Moveabool.hpp
   Optional.inl
   OverlapComponent.h
-  Partition.hpp
-  PartitionBase.hpp
+  Partition.inl
   PointerIterator.hpp
   Profiler.hpp
   Profiler.inl

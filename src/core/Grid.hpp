@@ -100,11 +100,17 @@ public:
 
   const comm &Comm() const { return Comm_; }
 
+  const partition &Partition() const { return *Partition_; }
+  const std::shared_ptr<const partition> &PartitionShared() const { return Partition_; }
+
   const cart &Cart() const { return Cart_; }
 
   const range &GlobalRange() const { return Cart_.Range(); }
   const range &LocalRange() const { return Partition_->LocalRange(); }
   const range &ExtendedRange() const { return Partition_->ExtendedRange(); }
+
+  const partition &CellPartition() const { return *CellPartition_; }
+  const std::shared_ptr<const partition> &CellPartitionShared() const { return CellPartition_; }
 
   const cart &CellCart() const { return CellCart_; }
 
@@ -122,10 +128,6 @@ public:
   const array<int> &NeighborRanks() const { return NeighborRanks_; }
 
   const core::partition_hash &core_PartitionHash() const { return PartitionHash_; }
-  const core::partition &core_Partition() const { return *Partition_; }
-  const std::shared_ptr<core::partition> &core_PartitionShared() const { return Partition_; }
-  const core::partition &core_CellPartition() const { return *CellPartition_; }
-  const std::shared_ptr<core::partition> &core_CellPartitionShared() const { return CellPartition_; }
 
   static grid internal_Create(std::shared_ptr<context> &&Context, params &&Params);
 
@@ -141,8 +143,8 @@ private:
 
   array<int> NeighborRanks_;
 
-  std::shared_ptr<core::partition> Partition_;
-  std::shared_ptr<core::partition> CellPartition_;
+  std::shared_ptr<const partition> Partition_;
+  std::shared_ptr<const partition> CellPartition_;
 
   grid(std::shared_ptr<context> &&Context, params &&Params);
 

@@ -120,9 +120,8 @@ void state::RestoreFlags() {
 void state::OnFlagsEndEdit_() {
 
   const grid &Grid = *Grid_;
-  const core::halo &Halo = Grid.core_Partition().Halo();
 
-  Halo.Exchange(Flags_);
+  Grid.Partition().Exchange(Flags_);
 
 }
 

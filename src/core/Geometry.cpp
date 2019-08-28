@@ -179,14 +179,14 @@ void geometry::RestoreCoords() {
 void geometry::OnCoordsEndEdit_() {
 
   const grid &Grid = *Grid_;
+  const partition &Partition = Grid.Partition();
   const range &GlobalRange = Grid.GlobalRange();
   const range &ExtendedRange = Grid.ExtendedRange();
-  const core::halo &Halo = Grid.core_Partition().Halo();
 
   request Requests[MAX_DIMS];
 
   for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Requests[iDim] = Halo.Exchange(Coords_(iDim));
+    Requests[iDim] = Partition.Exchange(Coords_(iDim));
   }
 
   WaitAll(Requests);

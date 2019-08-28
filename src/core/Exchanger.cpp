@@ -790,7 +790,7 @@ void exchanger::ResetExchanges_() {
       const connectivity_m &ConnectivityM = *LocalM.Connectivity;
       LocalM.Collects.Clear();
       LocalM.Sends.Clear();
-      LocalM.CollectMap = core::collect_map(MGrid.Cart(), MGrid.core_Partition(),
+      LocalM.CollectMap = core::collect_map(MGrid.Cart(), MGrid.Partition(),
         ConnectivityM.Extents());
       array<long long> Order = GetSendRecvOrder(ConnectivityM.Destinations(),
         NGridInfo.Cart().Range());

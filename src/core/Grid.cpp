@@ -52,10 +52,11 @@ grid::grid(std::shared_ptr<context> &&Context, params &&Params):
   PartitionHash_(NumDims_, Comm_, 1, array<range>({1}, {Params.LocalRange_}), array<int>({1},
     {1})),
   NeighborRanks_(core::DetectNeighbors(Cart_, Comm_, Params.LocalRange_, PartitionHash_)),
-  Partition_(std::make_shared<core::partition>(Context_, Cart_, Comm_, Params.LocalRange_, 1,
-    1, NeighborRanks_)),
-  CellPartition_(std::make_shared<core::partition>(Context_, CellCart_, Comm_,
-    core::LocalRangePointToCell(Cart_, Params.LocalRange_), 1, 1, NeighborRanks_))
+  Partition_(std::make_shared<partition>(Context_, Cart_, Comm_, Params.LocalRange_,
+    core::ExtendLocalRange(Cart_, Params.LocalRange_, 1), 1, NeighborRanks_)),
+  CellPartition_(std::make_shared<partition>(Context_, CellCart_, Comm_,
+    core::LocalRangePointToCell(Cart_, Params.LocalRange_), core::ExtendLocalRange(CellCart_,
+    core::LocalRangePointToCell(Cart_, Params.LocalRange_), 1), 1, NeighborRanks_))
 {
 
   MPI_Barrier(Comm_);
@@ -82,7 +83,7 @@ grid::grid(std::shared_ptr<context> &&Context, params &&Params):
     }
 
     const range &LocalRange = Partition_->LocalRange();
-    const array<core::partition_info> &Neighbors = Partition_->Neighbors();
+    const array<partition_info> &Neighbors = Partition_->Neighbors();
 
     const char *DimNames[3] = {"i", "j", "k"};
     std::string LocalRangeString;

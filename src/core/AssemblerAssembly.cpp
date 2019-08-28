@@ -99,7 +99,7 @@ void assembler::InitializeAssembly_() {
     const range &ExtendedRange = Grid.ExtendedRange();
     const range &CellLocalRange = Grid.CellLocalRange();
     const range &CellExtendedRange = Grid.CellExtendedRange();
-    const core::halo &CellHalo = Grid.core_CellPartition().Halo();
+    const partition &CellPartition = Grid.CellPartition();
     auto &Flags = StateComponent.State(GridID).Flags();
     local_grid_aux_data &LocalGridAuxData = AssemblyData.LocalGridAuxData.Insert(GridID);
     field<bool> &ActiveMask = LocalGridAuxData.ActiveMask;
@@ -131,7 +131,7 @@ void assembler::InitializeAssembly_() {
         }
       }
     }
-    Requests.Append(CellHalo.Exchange(CellActiveMask));
+    Requests.Append(CellPartition.Exchange(CellActiveMask));
     DomainBoundaryMask.Resize(ExtendedRange);
     for (int k = ExtendedRange.Begin(2); k < ExtendedRange.End(2); ++k) {
       for (int j = ExtendedRange.Begin(1); j < ExtendedRange.End(1); ++j) {

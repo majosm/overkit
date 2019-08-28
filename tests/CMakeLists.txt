@@ -52,7 +52,6 @@ set(SOURCES
   ExchangerTests.cpp
   ForEachTests.cpp
   GeometricPrimitiveOpsTests.cpp
-  HaloTests.cpp
   IDTests.cpp
   IndexerTests.cpp
   IntervalTests.cpp

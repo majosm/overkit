@@ -50,7 +50,7 @@ void collect_map::CreateSendData_(const cart &Cart, const partition &Partition) 
     int NumDims = Cart.Dimension();
     const range &GlobalRange = Cart.Range();
     const range &LocalRange = Partition.LocalRange();
-    const array<core::partition_info> &Neighbors = Partition.Neighbors();
+    const array<partition_info> &Neighbors = Partition.Neighbors();
     int NumNeighbors = Neighbors.Count();
 
     array<range> SendToNeighborRanges({NumNeighbors});
@@ -225,7 +225,7 @@ void collect_map::CreateRecvData_(const cart &Cart, const partition &Partition) 
     int NumDims = Cart.Dimension();
     const range &GlobalRange = Cart.Range();
     const range &LocalRange = Partition.LocalRange();
-    const array<core::partition_info> &Neighbors = Partition.Neighbors();
+    const array<partition_info> &Neighbors = Partition.Neighbors();
     int NumNeighbors = Neighbors.Count();
 
     array<range> RecvFromNeighborRanges({NumNeighbors});
