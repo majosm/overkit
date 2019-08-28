@@ -4,6 +4,7 @@
 #include "ovk/core/Exchanger.hpp"
 
 #include "ovk/core/Array.hpp"
+#include "ovk/core/ArrayOps.hpp"
 #include "ovk/core/ArrayView.hpp"
 #include "ovk/core/Collect.hpp"
 #include "ovk/core/CollectMap.hpp"
@@ -1554,8 +1555,6 @@ array<long long> GetSendRecvOrder(const array<int,2> &ReceiverPoints, const rang
 
   long long NumReceivers = ReceiverPoints.Size(1);
 
-  array<long long> Order({NumReceivers});
-
   range_indexer_c<long long> ReceiverGridGlobalIndexer(ReceiverGridGlobalRange);
 
   array<long long> ReceiverIndices({NumReceivers});
@@ -1580,12 +1579,15 @@ array<long long> GetSendRecvOrder(const array<int,2> &ReceiverPoints, const rang
     PrevIndex = ReceiverIndices(iReceiver);
   }
 
+  array<long long> Order;
+
   if (Sorted) {
+    Order.Resize({NumReceivers});
     for (long long iReceiver = 0; iReceiver < NumReceivers; ++iReceiver) {
       Order(iReceiver) = iReceiver;
     }
   } else {
-    core::SortPermutation(ReceiverIndices, Order);
+    Order = ArrayOrder(ReceiverIndices);
   }
 
   return Order;

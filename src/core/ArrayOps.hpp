@@ -15,6 +15,7 @@
 #include <ovk/core/ScalarOps.hpp>
 #include <ovk/core/ScalarTraits.hpp>
 
+#include <algorithm>
 #include <type_traits>
 #include <utility>
 
@@ -708,6 +709,27 @@ template <typename T, int Rank, array_layout Layout> T ArraySum(const array_view
   return ArrayCollapse(View, [](value_type &Partial, const value_type &Value) {
     Partial += Value;
   });
+
+}
+
+template <typename ArrayType, OVK_FUNCTION_REQUIRES(core::IsArray<ArrayType>() &&
+  core::ArrayRank<ArrayType>() == 1)> array<long long> ArrayOrder(const ArrayType &Array) {
+
+  long long NumValues = core::ArrayCount(Array);
+
+  array<long long> Order({NumValues});
+
+  for (long long i = 0; i < NumValues; ++i) {
+    Order(i) = i;
+  }
+
+  auto Compare = [&Array](long long Left, long long Right) -> bool {
+    return Array[Left] < Array[Right];
+  };
+
+  std::sort(Order.Begin(), Order.End(), Compare);
+
+  return Order;
 
 }
 

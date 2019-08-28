@@ -15,8 +15,8 @@
 
 #include <mpi.h>
 
-#include <algorithm>
 #include <string>
+#include <utility>
 
 namespace ovk {
 namespace core {
@@ -56,10 +56,6 @@ private:
 
 // Given known list of ranks on one end of communication, generate list of ranks on other end
 array<int> DynamicHandshake(comm_view Comm, array_view<const int> Ranks);
-
-// Generate permutation corresponding to ascending-order sort
-template <typename ArrayType, OVK_FUNCDECL_REQUIRES(IsArray<ArrayType>() && ArrayRank<ArrayType>()
-  == 1)> void SortPermutation(const ArrayType &Array, array_view<long long> Permutation);
 
 template <typename F, OVK_FUNCDECL_REQUIRES(IsCallableWith<F &&>())> auto Serialize(comm_view Comm,
   F &&Func) -> decltype(std::forward<F>(Func)());
