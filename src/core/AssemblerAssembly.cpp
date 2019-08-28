@@ -26,6 +26,7 @@
 #include "ovk/core/OverlapM.hpp"
 #include "ovk/core/OverlapN.hpp"
 #include "ovk/core/Partition.hpp"
+#include "ovk/core/PartitionPool.hpp"
 #include "ovk/core/Range.hpp"
 #include "ovk/core/Set.hpp"
 #include "ovk/core/State.hpp"
@@ -101,7 +102,11 @@ void assembler::InitializeAssembly_() {
     const range &ExtendedRange = Grid.ExtendedRange();
     const range &CellLocalRange = Grid.CellLocalRange();
     auto &Flags = StateComponent.State(GridID).Flags();
-    local_grid_aux_data &LocalGridAuxData = AssemblyData.LocalGridAuxData.Insert(GridID);
+    core::partition_pool PartitionPool(Context_, Grid.Comm(), Grid.Partition().NeighborRanks());
+    PartitionPool.Insert(Grid.PartitionShared());
+    PartitionPool.Insert(Grid.CellPartitionShared());
+    local_grid_aux_data &LocalGridAuxData = AssemblyData.LocalGridAuxData.Insert(GridID,
+      std::move(PartitionPool));
     distributed_field<bool> &ActiveMask = LocalGridAuxData.ActiveMask;
     distributed_field<bool> &CellActiveMask = LocalGridAuxData.CellActiveMask;
     distributed_field<bool> &DomainBoundaryMask = LocalGridAuxData.DomainBoundaryMask;

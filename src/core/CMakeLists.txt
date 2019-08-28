@@ -43,6 +43,7 @@ set(SOURCES
   OverlapM.cpp
   OverlapN.cpp
   Partition.cpp
+  PartitionPool.cpp
   Profiler.cpp
   Recv.cpp
   RecvMap.cpp
@@ -162,6 +163,7 @@ set(INTERNAL_HEADERS
   Optional.inl
   OverlapComponent.h
   Partition.inl
+  PartitionPool.hpp
   PointerIterator.hpp
   Profiler.hpp
   Profiler.inl

@@ -22,6 +22,7 @@
 #include <ovk/core/Map.hpp>
 #include <ovk/core/Optional.hpp>
 #include <ovk/core/OverlapComponent.hpp>
+#include <ovk/core/PartitionPool.hpp>
 #include <ovk/core/Set.hpp>
 #include <ovk/core/StateComponent.hpp>
 #include <ovk/core/StringWrapper.hpp>
@@ -232,10 +233,14 @@ private:
   assembly_manifest AssemblyManifest_;
 
   struct local_grid_aux_data {
+    core::partition_pool PartitionPool;
     distributed_field<bool> ActiveMask;
     distributed_field<bool> CellActiveMask;
     distributed_field<bool> DomainBoundaryMask;
     distributed_field<bool> InternalBoundaryMask;
+    explicit local_grid_aux_data(core::partition_pool PartitionPool_):
+      PartitionPool(std::move(PartitionPool_))
+    {}
   };
 
   struct assembly_data {
