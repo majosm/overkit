@@ -7,11 +7,15 @@
 #include "ovk/core/ArrayOps.hpp"
 #include "ovk/core/ArrayView.hpp"
 #include "ovk/core/Comm.hpp"
+#include "ovk/core/Collect.hpp"
+#include "ovk/core/CollectMap.hpp"
 #include "ovk/core/ConnectivityComponent.hpp"
 #include "ovk/core/ConnectivityM.hpp"
 #include "ovk/core/ConnectivityN.hpp"
 #include "ovk/core/Context.hpp"
 #include "ovk/core/Debug.hpp"
+#include "ovk/core/Disperse.hpp"
+#include "ovk/core/DisperseMap.hpp"
 #include "ovk/core/DistributedField.hpp"
 #include "ovk/core/DistributedFieldOps.hpp"
 #include "ovk/core/DistributedRegionHash.hpp"
@@ -37,6 +41,10 @@
 #include "ovk/core/OverlapN.hpp"
 #include "ovk/core/Partition.hpp"
 #include "ovk/core/Range.hpp"
+#include "ovk/core/Recv.hpp"
+#include "ovk/core/RecvMap.hpp"
+#include "ovk/core/Send.hpp"
+#include "ovk/core/SendMap.hpp"
 #include "ovk/core/Set.hpp"
 #include "ovk/core/State.hpp"
 #include "ovk/core/StateComponent.hpp"
@@ -1420,6 +1428,34 @@ void assembler::DetectOverlap_() {
       OverlapMask(Point) = true;
     }
     OverlapMask.Exchange();
+  }
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
+    int MGridID = OverlapID(0);
+    const grid &MGrid = Domain.Grid(MGridID);
+    local_overlap_m_aux_data &OverlapMAuxData = AssemblyData.LocalOverlapMAuxData(OverlapID);
+    const overlap_m &OverlapM = OverlapComponent.OverlapM(OverlapID);
+    const array<int,2> &Cells = OverlapM.Cells();
+    array<int,3> CellExtents({{2,MAX_DIMS,OverlapM.Count()}});
+    for (long long iOverlapping = 0; iOverlapping < OverlapM.Count(); ++iOverlapping) {
+      for (int iDim = 0; iDim < NumDims; ++iDim) {
+        CellExtents(0,iDim,iOverlapping) = Cells(iDim,iOverlapping);
+        CellExtents(1,iDim,iOverlapping) = Cells(iDim,iOverlapping)+2;
+      }
+      for (int iDim = NumDims; iDim < MAX_DIMS; ++iDim) {
+        CellExtents(0,iDim,iOverlapping) = 0;
+        CellExtents(1,iDim,iOverlapping) = 1;
+      }
+    }
+    OverlapMAuxData.CollectMap = core::collect_map(MGrid.Partition(), std::move(CellExtents));
+    OverlapMAuxData.SendMap = core::send_map(OverlapM.DestinationRanks());
+  }
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    local_overlap_n_aux_data &OverlapNAuxData = AssemblyData.LocalOverlapNAuxData(OverlapID);
+    const overlap_n &OverlapN = OverlapComponent.OverlapN(OverlapID);
+    OverlapNAuxData.RecvMap = core::recv_map(OverlapN.SourceRanks());
+    OverlapNAuxData.DisperseMap = core::disperse_map(OverlapN.Points());
   }
 
   if (Logger.LoggingDebug()) {

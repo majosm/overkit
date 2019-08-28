@@ -7,9 +7,11 @@
 #include <ovk/core/Array.hpp>
 #include <ovk/core/ArrayView.hpp>
 #include <ovk/core/Assembler.h>
+#include <ovk/core/CollectMap.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/ConnectivityComponent.hpp>
 #include <ovk/core/Context.hpp>
+#include <ovk/core/DisperseMap.hpp>
 #include <ovk/core/DistributedField.hpp>
 #include <ovk/core/DistributedRegionHash.hpp>
 #include <ovk/core/Domain.hpp>
@@ -24,6 +26,8 @@
 #include <ovk/core/Optional.hpp>
 #include <ovk/core/OverlapComponent.hpp>
 #include <ovk/core/Partition.hpp>
+#include <ovk/core/RecvMap.hpp>
+#include <ovk/core/SendMap.hpp>
 #include <ovk/core/Set.hpp>
 #include <ovk/core/StateComponent.hpp>
 #include <ovk/core/StringWrapper.hpp>
@@ -249,10 +253,14 @@ private:
   using bounding_box_hash_region_data = core::distributed_region_data<double>;
 
   struct local_overlap_m_aux_data {
+    core::collect_map CollectMap;
+    core::send_map SendMap;
   };
 
   struct local_overlap_n_aux_data {
     distributed_field<bool> OverlapMask;
+    core::recv_map RecvMap;
+    core::disperse_map DisperseMap;
   };
 
   struct assembly_data {
