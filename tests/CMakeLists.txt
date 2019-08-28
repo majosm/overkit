@@ -49,6 +49,7 @@ set(SOURCES
   CommTests.cpp
   ContextTests.cpp
   DecompTests.cpp
+  DistributedFieldOpsTests.cpp
   DistributedFieldTests.cpp
   ElemTests.cpp
   ExchangerTests.cpp

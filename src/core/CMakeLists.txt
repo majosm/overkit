@@ -32,6 +32,7 @@ set(SOURCES
   Disperse.cpp
   DisperseBase.cpp
   DisperseMap.cpp
+  DistributedFieldOps.cpp
   Domain.cpp
   Error.cpp
   Exchanger.cpp
@@ -132,6 +133,7 @@ set(INTERNAL_HEADERS
   DisperseBase.hpp
   DisperseMap.hpp
   DisperseOverwrite.hpp
+  DistributedFieldOps.hpp
   DistributedRegionHash.hpp
   DistributedRegionHash.inl
   Domain.h
