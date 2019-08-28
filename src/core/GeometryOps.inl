@@ -311,6 +311,7 @@ inline tuple<double> CoordsInCellNonUniform(int NumDims, const array<field<doubl
     }
     double PointCoord = PointCoords(0);
     double LocalCoord = core::IsoLine4NodeInverse(NodeCoords, PointCoord);
+    LocalCoord += double(ShiftedCell - Cell(0));
     LocalCoords(0) = LocalCoord;
     LocalCoords(1) = 0.;
     LocalCoords(2) = 0.;
@@ -336,6 +337,8 @@ inline tuple<double> CoordsInCellNonUniform(int NumDims, const array<field<doubl
     }
     elem<double,2> PointCoords_ = {PointCoords(0), PointCoords(1)};
     elem<double,2> LocalCoords_ = core::IsoQuad16NodeInverse(NodeCoords, PointCoords_);
+    LocalCoords_(0) += ShiftedCell(0) - Cell(0);
+    LocalCoords_(1) += ShiftedCell(1) - Cell(1);
     LocalCoords(0) = LocalCoords_(0);
     LocalCoords(1) = LocalCoords_(1);
     LocalCoords(2) = 0.;
@@ -363,6 +366,7 @@ inline tuple<double> CoordsInCellNonUniform(int NumDims, const array<field<doubl
       }
     }
     LocalCoords = core::IsoHex64NodeInverse(NodeCoords, PointCoords);
+    LocalCoords += ShiftedCell - Cell;
     break;
   }}
 
