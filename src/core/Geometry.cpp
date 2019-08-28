@@ -4,6 +4,7 @@
 #include "ovk/core/Geometry.hpp"
 
 #include "ovk/core/Array.hpp"
+#include "ovk/core/Cart.hpp"
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Context.hpp"
 #include "ovk/core/Debug.hpp"
@@ -181,6 +182,7 @@ void geometry::OnCoordsEndEdit_() {
 
   const grid &Grid = *Grid_;
   const partition &Partition = Grid.Partition();
+  const cart &Cart = Grid.Cart();
   const range &GlobalRange = Grid.GlobalRange();
   const range &ExtendedRange = Grid.ExtendedRange();
 
@@ -196,11 +198,10 @@ void geometry::OnCoordsEndEdit_() {
     for (int j = ExtendedRange.Begin(1); j < ExtendedRange.End(1); ++j) {
       for (int i = ExtendedRange.Begin(0); i < ExtendedRange.End(0); ++i) {
         tuple<int> Point = {i,j,k};
-        for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-          if (Point(iDim) > GlobalRange.End(iDim)) {
-            Coords_(iDim)(Point) += PeriodicLength_(iDim);
-          } else if (Point(iDim) < GlobalRange.Begin(iDim)) {
-            Coords_(iDim)(Point) -= PeriodicLength_(iDim);
+        if (!GlobalRange.Contains(Point)) {
+          tuple<int> Period = Cart.GetPeriod(Point);
+          for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+            Coords_(iDim)(Point) += double(Period(iDim)) * PeriodicLength_(iDim);
           }
         }
       }
