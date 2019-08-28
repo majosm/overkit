@@ -45,6 +45,23 @@ TEST_F(HaloTests, Exchange) {
     return {NumDims, GlobalRange, Periodic, PeriodicStorage};
   };
 
+  auto AddHalo = [](const ovk::cart &Cart, const ovk::range &LocalRange) -> ovk::range {
+    ovk::range ExtendedRange = LocalRange;
+    if (LocalRange.Begin(0) > Cart.Range().Begin(0) || Cart.Periodic(0)) {
+      ExtendedRange.Begin(0) -= 1;
+    }
+    if (LocalRange.End(0) < Cart.Range().End(0)-1 || Cart.Periodic(0)) {
+      ExtendedRange.End(0) += 2;
+    }
+    if (LocalRange.Begin(1) > Cart.Range().Begin(1) || Cart.Periodic(1)) {
+      ExtendedRange.Begin(1) -= 3;
+    }
+    if (LocalRange.End(1) < Cart.Range().End(1)-1 || Cart.Periodic(1)) {
+      ExtendedRange.End(1) += 4;
+    }
+    return ExtendedRange;
+  };
+
   auto CreateNeighbors = [](const ovk::cart &Cart, ovk::comm_view Comm,
     const ovk::range &LocalRange, const ovk::range &ExtendedRange) -> ovk::map<int,
     ovk::core::decomp_info> {
@@ -150,7 +167,7 @@ TEST_F(HaloTests, Exchange) {
     ovk::comm_view Comm = CommOfSize1;
     ovk::cart Cart = CreateCart(2, false, false);
     ovk::range LocalRange = Cart.Range();
-    ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
+    ovk::range ExtendedRange = AddHalo(Cart, LocalRange);
     ovk::map<int,ovk::core::decomp_info> Neighbors = CreateNeighbors(Cart, Comm, LocalRange,
       ExtendedRange);
     ovk::core::halo Halo(Context, Cart, ovk::DuplicateComm(Comm), LocalRange, ExtendedRange,
@@ -166,7 +183,7 @@ TEST_F(HaloTests, Exchange) {
     ovk::comm_view Comm = CommOfSize1;
     ovk::cart Cart = CreateCart(2, true, false);
     ovk::range LocalRange = Cart.Range();
-    ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
+    ovk::range ExtendedRange = AddHalo(Cart, LocalRange);
     ovk::map<int,ovk::core::decomp_info> Neighbors = CreateNeighbors(Cart, Comm, LocalRange,
       ExtendedRange);
     ovk::core::halo Halo(Context, Cart, ovk::DuplicateComm(Comm), LocalRange, ExtendedRange,
@@ -182,7 +199,7 @@ TEST_F(HaloTests, Exchange) {
     ovk::comm_view Comm = CommOfSize1;
     ovk::cart Cart = CreateCart(2, true, true);
     ovk::range LocalRange = Cart.Range();
-    ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
+    ovk::range ExtendedRange = AddHalo(Cart, LocalRange);
     ovk::map<int,ovk::core::decomp_info> Neighbors = CreateNeighbors(Cart, Comm, LocalRange,
       ExtendedRange);
     ovk::core::halo Halo(Context, Cart, ovk::DuplicateComm(Comm), LocalRange, ExtendedRange,
@@ -198,7 +215,7 @@ TEST_F(HaloTests, Exchange) {
     ovk::cart Cart = CreateCart(2, false, false);
     ovk::comm Comm = ovk::CreateCartComm(CommOfSize4, 2, {2,2,1}, Cart.Periodic());
     ovk::range LocalRange = CartesianDecomp(Cart.Dimension(), Cart.Range(), Comm);
-    ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
+    ovk::range ExtendedRange = AddHalo(Cart, LocalRange);
     ovk::map<int,ovk::core::decomp_info> Neighbors = CreateNeighbors(Cart, Comm, LocalRange,
       ExtendedRange);
     ovk::core::halo Halo(Context, Cart, ovk::DuplicateComm(Comm), LocalRange, ExtendedRange,
@@ -214,7 +231,7 @@ TEST_F(HaloTests, Exchange) {
     ovk::cart Cart = CreateCart(2, true, false);
     ovk::comm Comm = ovk::CreateCartComm(CommOfSize4, 2, {2,2,1}, Cart.Periodic());
     ovk::range LocalRange = CartesianDecomp(Cart.Dimension(), Cart.Range(), Comm);
-    ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
+    ovk::range ExtendedRange = AddHalo(Cart, LocalRange);
     ovk::map<int,ovk::core::decomp_info> Neighbors = CreateNeighbors(Cart, Comm, LocalRange,
       ExtendedRange);
     ovk::core::halo Halo(Context, Cart, ovk::DuplicateComm(Comm), LocalRange, ExtendedRange,
@@ -230,7 +247,7 @@ TEST_F(HaloTests, Exchange) {
     ovk::cart Cart = CreateCart(2, true, true);
     ovk::comm Comm = ovk::CreateCartComm(CommOfSize4, 2, {2,2,1}, Cart.Periodic());
     ovk::range LocalRange = CartesianDecomp(Cart.Dimension(), Cart.Range(), Comm);
-    ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
+    ovk::range ExtendedRange = AddHalo(Cart, LocalRange);
     ovk::map<int,ovk::core::decomp_info> Neighbors = CreateNeighbors(Cart, Comm, LocalRange,
       ExtendedRange);
     ovk::core::halo Halo(Context, Cart, ovk::DuplicateComm(Comm), LocalRange, ExtendedRange,
@@ -246,7 +263,7 @@ TEST_F(HaloTests, Exchange) {
     ovk::comm_view Comm = CommOfSize1;
     ovk::cart Cart = CreateCart(2, false, false);
     ovk::range LocalRange = Cart.Range();
-    ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
+    ovk::range ExtendedRange = AddHalo(Cart, LocalRange);
     ovk::map<int,ovk::core::decomp_info> Neighbors = CreateNeighbors(Cart, Comm, LocalRange,
       ExtendedRange);
     ovk::core::halo Halo(Context, Cart, ovk::DuplicateComm(Comm), LocalRange, ExtendedRange,
@@ -268,7 +285,7 @@ TEST_F(HaloTests, Exchange) {
     ovk::cart Cart = CreateCart(2, false, false);
     ovk::comm Comm = ovk::CreateCartComm(CommOfSize4, 2, {2,2,1}, Cart.Periodic());
     ovk::range LocalRange = CartesianDecomp(Cart.Dimension(), Cart.Range(), Comm);
-    ovk::range ExtendedRange = ovk::core::ExtendLocalRange(Cart, LocalRange, 2);
+    ovk::range ExtendedRange = AddHalo(Cart, LocalRange);
     ovk::map<int,ovk::core::decomp_info> Neighbors = CreateNeighbors(Cart, Comm, LocalRange,
       ExtendedRange);
     ovk::core::halo Halo(Context, Cart, ovk::DuplicateComm(Comm), LocalRange, ExtendedRange,

@@ -114,14 +114,6 @@ range ExtendLocalRange(const cart &Cart, const range &LocalRange, int ExtendAmou
     }
   }
 
-  if (Cart.PeriodicStorage() == periodic_storage::UNIQUE) {
-    for (int iDim = 0; iDim < Cart.Dimension(); ++iDim) {
-      if (LocalRange.End(iDim) == Cart.Range().End(iDim) && Cart.Periodic(iDim)) {
-        ExtendedRange.End(iDim) += 1;
-      }
-    }
-  }
-
   return ExtendedRange;
 
 }

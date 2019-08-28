@@ -25,6 +25,32 @@
 
 namespace ovk {
 
+namespace {
+
+range AddHalo(const cart &Cart, const range &LocalRange, int HaloSize) {
+
+  range ExtendedRange = core::ExtendLocalRange(Cart, LocalRange, HaloSize);
+
+  // Extra point on upper end so that every local cell has a full neighbor cell in halo
+  for (int iDim = 0; iDim < Cart.Dimension(); ++iDim) {
+    if (LocalRange.End(iDim) != Cart.Range().End(iDim) || (Cart.Periodic(iDim) &&
+      Cart.PeriodicStorage() == periodic_storage::UNIQUE)) {
+      ExtendedRange.End(iDim) += 1;
+    }
+  }
+
+  return ExtendedRange;
+
+}
+
+range AddCellHalo(const cart &CellCart, const range &CellLocalRange, int HaloSize) {
+
+  return core::ExtendLocalRange(CellCart, CellLocalRange, HaloSize);
+
+}
+
+}
+
 namespace grid_internal {
 
 grid_base::grid_base(std::shared_ptr<context> &&Context, std::string &&Name, MPI_Comm Comm):
@@ -57,9 +83,8 @@ grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, con
 
 grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
   range &LocalRange, const cart &CellCart, const range &CellLocalRange):
-  grid(std::move(Context), std::move(Params), NumDims, Cart, LocalRange, core::ExtendLocalRange(
-    Cart, LocalRange, 1), CellCart, CellLocalRange, core::ExtendLocalRange(CellCart, CellLocalRange,
-    1))
+  grid(std::move(Context), std::move(Params), NumDims, Cart, LocalRange, AddHalo(Cart, LocalRange,
+  1), CellCart, CellLocalRange, AddCellHalo(CellCart, CellLocalRange, 1))
 {}
 
 grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
