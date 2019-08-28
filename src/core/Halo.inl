@@ -38,7 +38,7 @@ template <typename T, OVK_FUNCDEF_REQUIRES(!std::is_const<T>::value)> request
     Profiler.Stop(EXCHANGE_TIME);
     Profiler.Start(SETUP_TIME);
     HaloExchangersForType.Append(halo_internal::halo_exchanger_for_type<T>(*Context_, Comm_,
-      HaloMap_, iHaloExchanger));
+      HaloMap_));
     Profiler.Stop(SETUP_TIME);
     Profiler.Start(EXCHANGE_TIME);
   }
@@ -56,11 +56,10 @@ template <typename T, OVK_FUNCDEF_REQUIRES(!std::is_const<T>::value)> request
 namespace halo_internal {
 
 template <typename T> halo_exchanger_for_type<T>::halo_exchanger_for_type(context &Context,
-  comm_view Comm, const halo_map &HaloMap, int Tag):
+  comm_view Comm, const halo_map &HaloMap):
   Context_(Context.GetFloatingRef()),
   Comm_(Comm),
-  HaloMap_(HaloMap.GetFloatingRef()),
-  Tag_(Tag)
+  HaloMap_(HaloMap.GetFloatingRef())
 {
 
   int NumNeighbors = HaloMap.NeighborRanks().Count();
@@ -95,7 +94,7 @@ template <typename T> request halo_exchanger_for_type<T>::Exchange(value_type *F
     MPI_Request &Request = MPIRequests_.Append();
     Profiler.Start(MPI_TIME);
     MPI_Irecv(RecvBuffers_(iNeighbor).Data(), RecvBuffers_(iNeighbor).Count(), DataType,
-      NeighborRanks(iNeighbor), Tag_, Comm_, &Request);
+      NeighborRanks(iNeighbor), 0, Comm_, &Request);
     Profiler.Stop(MPI_TIME);
   }
 
@@ -110,7 +109,7 @@ template <typename T> request halo_exchanger_for_type<T>::Exchange(value_type *F
     MPI_Request &Request = MPIRequests_.Append();
     Profiler.Start(MPI_TIME);
     MPI_Isend(SendBuffers_(iNeighbor).Data(), SendBuffers_(iNeighbor).Count(), DataType,
-      NeighborRanks(iNeighbor), Tag_, Comm_, &Request);
+      NeighborRanks(iNeighbor), 0, Comm_, &Request);
     Profiler.Stop(MPI_TIME);
   }
 

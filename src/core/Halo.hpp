@@ -171,7 +171,7 @@ private:
 
 public:
 
-  halo_exchanger_for_type(context &Context, comm_view Comm, const halo_map &HaloMap, int Tag);
+  halo_exchanger_for_type(context &Context, comm_view Comm, const halo_map &HaloMap);
 
   halo_exchanger_for_type(const halo_exchanger_for_type &Other) = delete;
   halo_exchanger_for_type(halo_exchanger_for_type &&Other) noexcept = default;
@@ -220,8 +220,6 @@ private:
   comm_view Comm_;
 
   floating_ref<const halo_map> HaloMap_;
-
-  int Tag_;
 
   array<array<mpi_value_type>> SendBuffers_;
   array<array<mpi_value_type>> RecvBuffers_;
