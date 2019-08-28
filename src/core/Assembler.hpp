@@ -248,9 +248,18 @@ private:
   using bounding_box_hash_bin = core::distributed_region_hash_bin<double>;
   using bounding_box_hash_region_data = core::distributed_region_data<double>;
 
+  struct local_overlap_m_aux_data {
+  };
+
+  struct local_overlap_n_aux_data {
+    distributed_field<bool> OverlapMask;
+  };
+
   struct assembly_data {
     map<int,local_grid_aux_data> LocalGridAuxData;
     bounding_box_hash BoundingBoxHash;
+    elem_map<int,2,local_overlap_m_aux_data> LocalOverlapMAuxData;
+    elem_map<int,2,local_overlap_n_aux_data> LocalOverlapNAuxData;
     assembly_data(int NumDims, comm_view Comm);
   };
 
