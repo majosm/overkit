@@ -373,7 +373,7 @@ inline optional<tuple<double>> CoordsInCellNonUniform(int NumDims, const array<f
     for (int k = ShiftedCell(2)-1; k <= ShiftedCell(2)+2; ++k) {
       for (int j = ShiftedCell(1)-1; j <= ShiftedCell(1)+2; ++j) {
         for (int i = ShiftedCell(0)-1; i <= ShiftedCell(0)+2; ++i) {
-          long long iPoint = Coords(0).Indexer().ToIndex(i,j,0);
+          long long iPoint = Coords(0).Indexer().ToIndex(i,j,k);
           NodeCoords[iNode] = {
             Coords(0)[iPoint],
             Coords(1)[iPoint],
