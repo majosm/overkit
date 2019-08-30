@@ -34,8 +34,8 @@ inline double IsoLine4Node(const array_view<const double> &NodeCoords, double Lo
 
 }
 
-inline double IsoLine4NodeInverse(const array_view<const double> &NodeCoords, double Coord, bool
-  *MaybeSuccess, double Tolerance, int MaxSteps) {
+inline optional<double> IsoLine4NodeInverse(const array_view<const double> &NodeCoords, double
+  Coord, double Tolerance, int MaxSteps) {
 
   double LocalCoord = 0.5;
 
@@ -50,13 +50,12 @@ inline double IsoLine4NodeInverse(const array_view<const double> &NodeCoords, do
     LocalCoord = LocalCoord + Error/Deriv;
   }
 
-  if (MaybeSuccess) {
-    bool &Success = *MaybeSuccess;
-    double Error = Coord - IsoLine4Node(NodeCoords, LocalCoord);
-    Success = Error <= Tolerance && !std::isnan(Error);
+  double Error = Coord - IsoLine4Node(NodeCoords, LocalCoord);
+  if (Error <= Tolerance && !std::isnan(Error)) {
+    return LocalCoord;
+  } else {
+    return {};
   }
-
-  return LocalCoord;
 
 }
 

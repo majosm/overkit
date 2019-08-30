@@ -23,7 +23,7 @@ void GetCellNodeCoords(int NumDims, const array<field<double>> &Coords, const ra
 bool OverlapsCell(int NumDims, const array<field<double>> &Coords, geometry_type GeometryType,
   double Tolerance, const tuple<int> &Cell, const tuple<double> &PointCoords);
 
-tuple<double> CoordsInCell(int NumDims, const array<field<double>> &Coords, geometry_type
+optional<tuple<double>> CoordsInCell(int NumDims, const array<field<double>> &Coords, geometry_type
   GeometryType, const tuple<int> &Cell, const tuple<double> &PointCoords);
 
 }}

@@ -173,17 +173,17 @@ TEST_F(GeometricPrimitiveOpsTests, IsoLine4NodeInverse) {
   // At nodes
   int iNode = 0;
   for (int i = 0; i < 4; ++i) {
-    double LocalCoord = IsoLine4NodeInverse(NodeCoords, NodeCoords[iNode]);
-    EXPECT_NEAR(LocalCoord, double(i)-1., 1.e-12);
+    auto MaybeLocalCoord = IsoLine4NodeInverse(NodeCoords, NodeCoords[iNode]);
+    EXPECT_TRUE(MaybeLocalCoord.Present());
+    EXPECT_NEAR(*MaybeLocalCoord, double(i)-1., 1.e-12);
     ++iNode;
   }
 
   // Between nodes
   {
-    bool Success;
-    double LocalCoord = IsoLine4NodeInverse(NodeCoords, CoordFunc(0.5), &Success);
-    EXPECT_TRUE(Success);
-    EXPECT_NEAR(LocalCoord, 0.5, 1.e-12);
+    auto MaybeLocalCoord = IsoLine4NodeInverse(NodeCoords, CoordFunc(0.5));
+    EXPECT_TRUE(MaybeLocalCoord.Present());
+    EXPECT_NEAR(*MaybeLocalCoord, 0.5, 1.e-12);
   }
 
 }
@@ -473,22 +473,20 @@ TEST_F(GeometricPrimitiveOpsTests, IsoQuad4NodeNonUniformInverse) {
   int iNode = 0;
   for (int j = 0; j < 2; ++j) {
     for (int i = 0; i < 2; ++i) {
-      ovk::elem<double,2> LocalCoords = IsoQuad4NodeNonUniformInverse(NodeCoords,
-        NodeCoords[iNode]);
-      EXPECT_NEAR(LocalCoords(0), double(i), 1.e-12);
-      EXPECT_NEAR(LocalCoords(1), double(j), 1.e-12);
+      auto MaybeLocalCoords = IsoQuad4NodeNonUniformInverse(NodeCoords, NodeCoords[iNode]);
+      EXPECT_TRUE(MaybeLocalCoords.Present());
+      EXPECT_NEAR((*MaybeLocalCoords)(0), double(i), 1.e-12);
+      EXPECT_NEAR((*MaybeLocalCoords)(1), double(j), 1.e-12);
       ++iNode;
     }
   }
 
   // Between nodes
   {
-    bool Success;
-    ovk::elem<double,2> LocalCoords = IsoQuad4NodeNonUniformInverse(NodeCoords, CoordFunc(0.5,0.5),
-      &Success);
-    EXPECT_TRUE(Success);
-    EXPECT_NEAR(LocalCoords(0), 0.5, 1.e-12);
-    EXPECT_NEAR(LocalCoords(1), 0.5, 1.e-12);
+    auto MaybeLocalCoords = IsoQuad4NodeNonUniformInverse(NodeCoords, CoordFunc(0.5,0.5));
+    EXPECT_TRUE(MaybeLocalCoords.Present());
+    EXPECT_NEAR((*MaybeLocalCoords)(0), 0.5, 1.e-12);
+    EXPECT_NEAR((*MaybeLocalCoords)(1), 0.5, 1.e-12);
   }
 
 }
@@ -580,21 +578,20 @@ TEST_F(GeometricPrimitiveOpsTests, IsoQuad16NodeInverse) {
   iNode = 0;
   for (int j = 0; j < 4; ++j) {
     for (int i = 0; i < 4; ++i) {
-      ovk::elem<double,2> LocalCoords = IsoQuad16NodeInverse(NodeCoords, NodeCoords[iNode]);
-      EXPECT_NEAR(LocalCoords(0), double(i)-1., 1.e-12);
-      EXPECT_NEAR(LocalCoords(1), double(j)-1., 1.e-12);
+      auto MaybeLocalCoords = IsoQuad16NodeInverse(NodeCoords, NodeCoords[iNode]);
+      EXPECT_TRUE(MaybeLocalCoords.Present());
+      EXPECT_NEAR((*MaybeLocalCoords)(0), double(i)-1., 1.e-12);
+      EXPECT_NEAR((*MaybeLocalCoords)(1), double(j)-1., 1.e-12);
       ++iNode;
     }
   }
 
   // Between nodes
   {
-    bool Success;
-    ovk::elem<double,2> LocalCoords = IsoQuad16NodeInverse(NodeCoords, CoordFunc(0.5,0.5),
-      &Success);
-    EXPECT_TRUE(Success);
-    EXPECT_NEAR(LocalCoords(0), 0.5, 1.e-12);
-    EXPECT_NEAR(LocalCoords(1), 0.5, 1.e-12);
+    auto MaybeLocalCoords = IsoQuad16NodeInverse(NodeCoords, CoordFunc(0.5,0.5));
+    EXPECT_TRUE(MaybeLocalCoords.Present());
+    EXPECT_NEAR((*MaybeLocalCoords)(0), 0.5, 1.e-12);
+    EXPECT_NEAR((*MaybeLocalCoords)(1), 0.5, 1.e-12);
   }
 
 }
@@ -953,11 +950,11 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeNonUniformInverse) {
   for (int k = 0; k < 2; ++k) {
     for (int j = 0; j < 2; ++j) {
       for (int i = 0; i < 2; ++i) {
-        ovk::elem<double,3> LocalCoords = IsoHex8NodeNonUniformInverse(NodeCoords,
-          NodeCoords[iNode]);
-        EXPECT_NEAR(LocalCoords(0), double(i), 1.e-12);
-        EXPECT_NEAR(LocalCoords(1), double(j), 1.e-12);
-        EXPECT_NEAR(LocalCoords(2), double(k), 1.e-12);
+        auto MaybeLocalCoords = IsoHex8NodeNonUniformInverse(NodeCoords, NodeCoords[iNode]);
+        EXPECT_TRUE(MaybeLocalCoords.Present());
+        EXPECT_NEAR((*MaybeLocalCoords)(0), double(i), 1.e-12);
+        EXPECT_NEAR((*MaybeLocalCoords)(1), double(j), 1.e-12);
+        EXPECT_NEAR((*MaybeLocalCoords)(2), double(k), 1.e-12);
         ++iNode;
       }
     }
@@ -965,13 +962,11 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex8NodeNonUniformInverse) {
 
   // Between nodes
   {
-    bool Success;
-    ovk::elem<double,3> LocalCoords = IsoHex8NodeNonUniformInverse(NodeCoords,
-      CoordFunc(0.5,0.5,0.5), &Success);
-    EXPECT_TRUE(Success);
-    EXPECT_NEAR(LocalCoords(0), 0.5, 1.e-12);
-    EXPECT_NEAR(LocalCoords(1), 0.5, 1.e-12);
-    EXPECT_NEAR(LocalCoords(2), 0.5, 1.e-12);
+    auto MaybeLocalCoords = IsoHex8NodeNonUniformInverse(NodeCoords, CoordFunc(0.5,0.5,0.5));
+    EXPECT_TRUE(MaybeLocalCoords.Present());
+    EXPECT_NEAR((*MaybeLocalCoords)(0), 0.5, 1.e-12);
+    EXPECT_NEAR((*MaybeLocalCoords)(1), 0.5, 1.e-12);
+    EXPECT_NEAR((*MaybeLocalCoords)(2), 0.5, 1.e-12);
   }
 
 }
@@ -1080,10 +1075,11 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex64NodeInverse) {
   for (int k = 0; k < 4; ++k) {
     for (int j = 0; j < 4; ++j) {
       for (int i = 0; i < 4; ++i) {
-        ovk::elem<double,3> LocalCoords = IsoHex64NodeInverse(NodeCoords, NodeCoords[iNode]);
-        EXPECT_NEAR(LocalCoords(0), double(i)-1., 1.e-12);
-        EXPECT_NEAR(LocalCoords(1), double(j)-1., 1.e-12);
-        EXPECT_NEAR(LocalCoords(2), double(k)-1., 1.e-12);
+        auto MaybeLocalCoords = IsoHex64NodeInverse(NodeCoords, NodeCoords[iNode]);
+        EXPECT_TRUE(MaybeLocalCoords.Present());
+        EXPECT_NEAR((*MaybeLocalCoords)(0), double(i)-1., 1.e-12);
+        EXPECT_NEAR((*MaybeLocalCoords)(1), double(j)-1., 1.e-12);
+        EXPECT_NEAR((*MaybeLocalCoords)(2), double(k)-1., 1.e-12);
         ++iNode;
       }
     }
@@ -1091,13 +1087,11 @@ TEST_F(GeometricPrimitiveOpsTests, IsoHex64NodeInverse) {
 
   // Between nodes
   {
-    bool Success;
-    ovk::elem<double,3> LocalCoords = IsoHex64NodeInverse(NodeCoords, CoordFunc(0.5,0.5,0.5),
-      &Success);
-    EXPECT_TRUE(Success);
-    EXPECT_NEAR(LocalCoords(0), 0.5, 1.e-12);
-    EXPECT_NEAR(LocalCoords(1), 0.5, 1.e-12);
-    EXPECT_NEAR(LocalCoords(2), 0.5, 1.e-12);
+    auto MaybeLocalCoords = IsoHex64NodeInverse(NodeCoords, CoordFunc(0.5,0.5,0.5));
+    EXPECT_TRUE(MaybeLocalCoords.Present());
+    EXPECT_NEAR((*MaybeLocalCoords)(0), 0.5, 1.e-12);
+    EXPECT_NEAR((*MaybeLocalCoords)(1), 0.5, 1.e-12);
+    EXPECT_NEAR((*MaybeLocalCoords)(2), 0.5, 1.e-12);
   }
 
 }

@@ -119,8 +119,8 @@ inline elem<double,3> IsoHex8NodeNonUniform(const array_view<const elem<double,3
 
 }
 
-inline elem<double,3> IsoHex8NodeNonUniformInverse(const array_view<const elem<double,3>>
-  &NodeCoords, const elem<double,3> &Coords, bool *MaybeSuccess, double Tolerance, int MaxSteps) {
+inline optional<elem<double,3>> IsoHex8NodeNonUniformInverse(const array_view<const elem<double,3>>
+  &NodeCoords, const elem<double,3> &Coords, double Tolerance, int MaxSteps) {
 
   auto SmallEnough = [Tolerance](const elem<double,3> &Tuple) -> bool {
     return
@@ -167,16 +167,15 @@ inline elem<double,3> IsoHex8NodeNonUniformInverse(const array_view<const elem<d
     LocalCoords = LocalCoords + ColumnSolve3D(JacobianI, JacobianJ, JacobianK, Error);
   }
 
-  if (MaybeSuccess) {
-    bool &Success = *MaybeSuccess;
-    elem<double,2> ShapeI = LagrangeInterpLinear(LocalCoords(0));
-    elem<double,2> ShapeJ = LagrangeInterpLinear(LocalCoords(1));
-    elem<double,2> ShapeK = LagrangeInterpLinear(LocalCoords(2));
-    elem<double,3> Error = Coords - IsoHex8NodeNonUniform(NodeCoords, ShapeI, ShapeJ, ShapeK);
-    Success = SmallEnough(Error) && !IsNaN(Error);
+  elem<double,2> ShapeI = LagrangeInterpLinear(LocalCoords(0));
+  elem<double,2> ShapeJ = LagrangeInterpLinear(LocalCoords(1));
+  elem<double,2> ShapeK = LagrangeInterpLinear(LocalCoords(2));
+  elem<double,3> Error = Coords - IsoHex8NodeNonUniform(NodeCoords, ShapeI, ShapeJ, ShapeK);
+  if (SmallEnough(Error) && !IsNaN(Error)) {
+    return LocalCoords;
+  } else {
+    return {};
   }
-
-  return LocalCoords;
 
 }
 
@@ -212,8 +211,8 @@ inline elem<double,3> IsoHex64Node(const array_view<const elem<double,3>> &NodeC
 
 }
 
-inline elem<double,3> IsoHex64NodeInverse(const array_view<const elem<double,3>> &NodeCoords, const
-  elem<double,3> &Coords, bool *MaybeSuccess, double Tolerance, int MaxSteps) {
+inline optional<elem<double,3>> IsoHex64NodeInverse(const array_view<const elem<double,3>>
+  &NodeCoords, const elem<double,3> &Coords, double Tolerance, int MaxSteps) {
 
   auto SmallEnough = [Tolerance](const elem<double,3> &Tuple) -> bool {
     return
@@ -260,16 +259,15 @@ inline elem<double,3> IsoHex64NodeInverse(const array_view<const elem<double,3>>
     LocalCoords = LocalCoords + ColumnSolve3D(JacobianI, JacobianJ, JacobianK, Error);
   }
 
-  if (MaybeSuccess) {
-    bool &Success = *MaybeSuccess;
-    elem<double,4> ShapeI = LagrangeInterpCubic(LocalCoords(0));
-    elem<double,4> ShapeJ = LagrangeInterpCubic(LocalCoords(1));
-    elem<double,4> ShapeK = LagrangeInterpCubic(LocalCoords(2));
-    elem<double,3> Error = Coords - IsoHex64Node(NodeCoords, ShapeI, ShapeJ, ShapeK);
-    Success = SmallEnough(Error) && !IsNaN(Error);
+  elem<double,4> ShapeI = LagrangeInterpCubic(LocalCoords(0));
+  elem<double,4> ShapeJ = LagrangeInterpCubic(LocalCoords(1));
+  elem<double,4> ShapeK = LagrangeInterpCubic(LocalCoords(2));
+  elem<double,3> Error = Coords - IsoHex64Node(NodeCoords, ShapeI, ShapeJ, ShapeK);
+  if (SmallEnough(Error) && !IsNaN(Error)) {
+    return LocalCoords;
+  } else {
+    return {};
   }
-
-  return LocalCoords;
 
 }
 

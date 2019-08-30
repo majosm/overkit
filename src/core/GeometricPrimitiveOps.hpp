@@ -8,6 +8,7 @@
 #include <ovk/core/Elem.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Math.hpp>
+#include <ovk/core/Optional.hpp>
 
 #include <cmath>
 #include <cstdlib>
@@ -19,8 +20,8 @@ double IsoLine2Node(double LowerNodeCoord, double UpperNodeCoord, double LocalCo
 double IsoLine2NodeInverse(double LowerNodeCoord, double UpperNodeCoord, double Coord);
 
 double IsoLine4Node(const array_view<const double> &NodeCoords, double LocalCoord);
-double IsoLine4NodeInverse(const array_view<const double> &NodeCoords, double Coord, bool
-  *MaybeSuccess=nullptr, double Tolerance=1.e-12, int MaxSteps=100);
+optional<double> IsoLine4NodeInverse(const array_view<const double> &NodeCoords, double Coord,
+  double Tolerance=1.e-12, int MaxSteps=100);
 
 elem<double,2> IsoQuad4NodeUniform(const elem<double,2> &LowerNodeCoords, const elem<double,2>
   &UpperNodeCoords, const elem<double,2> &LocalCoords);
@@ -36,16 +37,15 @@ elem<double,2> IsoQuad4NodeNonUniform(const array_view<const elem<double,2>> &No
   elem<double,2> &LocalCoords);
 elem<double,2> IsoQuad4NodeNonUniform(const array_view<const elem<double,2>> &NodeCoords, const
   elem<double,2> &ShapeI, const elem<double,2> &ShapeJ);
-elem<double,2> IsoQuad4NodeNonUniformInverse(const array_view<const elem<double,2>> &NodeCoords,
-  const elem<double,2> &Coords, bool *MaybeSuccess=nullptr, double Tolerance=1.e-12, int
-  MaxSteps=100);
+optional<elem<double,2>> IsoQuad4NodeNonUniformInverse(const array_view<const elem<double,2>>
+  &NodeCoords, const elem<double,2> &Coords, double Tolerance=1.e-12, int MaxSteps=100);
 
 elem<double,2> IsoQuad16Node(const array_view<const elem<double,2>> &NodeCoords, const
   elem<double,2> &LocalCoords);
 elem<double,2> IsoQuad16Node(const array_view<const elem<double,2>> &NodeCoords, const
   elem<double,4> &ShapeI, const elem<double,4> &ShapeJ);
-elem<double,2> IsoQuad16NodeInverse(const array_view<const elem<double,2>> &NodeCoords, const
-  elem<double,2> &Coords, bool *MaybeSuccess=nullptr, double Tolerance=1.e-12, int MaxSteps=100);
+optional<elem<double,2>> IsoQuad16NodeInverse(const array_view<const elem<double,2>> &NodeCoords,
+  const elem<double,2> &Coords, double Tolerance=1.e-12, int MaxSteps=100);
 
 elem<double,3> IsoHex8NodeUniform(const elem<double,3> &LowerNodeCoords, const elem<double,3>
   &UpperNodeCoords, const elem<double,3> &LocalCoords);
@@ -61,16 +61,15 @@ elem<double,3> IsoHex8NodeNonUniform(const array_view<const elem<double,3>> &Nod
   elem<double,3> &LocalCoords);
 elem<double,3> IsoHex8NodeNonUniform(const array_view<const elem<double,3>> &NodeCoords, const
   elem<double,2> &ShapeI, const elem<double,2> &ShapeJ, const elem<double,2> &ShapeK);
-elem<double,3> IsoHex8NodeNonUniformInverse(const array_view<const elem<double,3>> &NodeCoords,
-  const elem<double,3> &Coords, bool *MaybeSuccess=nullptr, double Tolerance=1.e-12, int
-  MaxSteps=100);
+optional<elem<double,3>> IsoHex8NodeNonUniformInverse(const array_view<const elem<double,3>>
+  &NodeCoords, const elem<double,3> &Coords, double Tolerance=1.e-12, int MaxSteps=100);
 
 elem<double,3> IsoHex64Node(const array_view<const elem<double,3>> &NodeCoords, const elem<double,3>
   &LocalCoords);
 elem<double,3> IsoHex64Node(const array_view<const elem<double,3>> &NodeCoords, const elem<double,4>
   &ShapeI, const elem<double,4> &ShapeJ, const elem<double,4> &ShapeK);
-elem<double,3> IsoHex64NodeInverse(const array_view<const elem<double,3>> &NodeCoords, const
-  elem<double,3> &Coords, bool *MaybeSuccess=nullptr, double Tolerance=1.e-12, int MaxSteps=100);
+optional<elem<double,3>> IsoHex64NodeInverse(const array_view<const elem<double,3>> &NodeCoords,
+  const elem<double,3> &Coords, double Tolerance=1.e-12, int MaxSteps=100);
 
 bool OverlapsLine(double LowerNodeCoord, double UpperNodeCoord, double Coords, double
   Tolerance=1.e-12);

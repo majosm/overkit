@@ -104,8 +104,8 @@ inline elem<double,2> IsoQuad4NodeNonUniform(const array_view<const elem<double,
 
 }
 
-inline elem<double,2> IsoQuad4NodeNonUniformInverse(const array_view<const elem<double,2>>
-  &NodeCoords, const elem<double,2> &Coords, bool *MaybeSuccess, double Tolerance, int MaxSteps) {
+inline optional<elem<double,2>> IsoQuad4NodeNonUniformInverse(const array_view<const elem<double,2>>
+  &NodeCoords, const elem<double,2> &Coords, double Tolerance, int MaxSteps) {
 
   auto SmallEnough = [Tolerance](const elem<double,2> &Tuple) -> bool {
     return
@@ -144,15 +144,14 @@ inline elem<double,2> IsoQuad4NodeNonUniformInverse(const array_view<const elem<
     LocalCoords = LocalCoords + ColumnSolve2D(JacobianI, JacobianJ, Error);
   }
 
-  if (MaybeSuccess) {
-    bool &Success = *MaybeSuccess;
-    elem<double,2> ShapeI = LagrangeInterpLinear(LocalCoords(0));
-    elem<double,2> ShapeJ = LagrangeInterpLinear(LocalCoords(1));
-    elem<double,2> Error = Coords - IsoQuad4NodeNonUniform(NodeCoords, ShapeI, ShapeJ);
-    Success = SmallEnough(Error) && !IsNaN(Error);
+  elem<double,2> ShapeI = LagrangeInterpLinear(LocalCoords(0));
+  elem<double,2> ShapeJ = LagrangeInterpLinear(LocalCoords(1));
+  elem<double,2> Error = Coords - IsoQuad4NodeNonUniform(NodeCoords, ShapeI, ShapeJ);
+  if (SmallEnough(Error) && !IsNaN(Error)) {
+    return LocalCoords;
+  } else {
+    return {};
   }
-
-  return LocalCoords;
 
 }
 
@@ -185,8 +184,8 @@ inline elem<double,2> IsoQuad16Node(const array_view<const elem<double,2>> &Node
 
 }
 
-inline elem<double,2> IsoQuad16NodeInverse(const array_view<const elem<double,2>> &NodeCoords, const
-  elem<double,2> &Coords, bool *MaybeSuccess, double Tolerance, int MaxSteps) {
+inline optional<elem<double,2>> IsoQuad16NodeInverse(const array_view<const elem<double,2>>
+  &NodeCoords, const elem<double,2> &Coords, double Tolerance, int MaxSteps) {
 
   auto SmallEnough = [Tolerance](const elem<double,2> &Tuple) -> bool {
     return
@@ -225,15 +224,14 @@ inline elem<double,2> IsoQuad16NodeInverse(const array_view<const elem<double,2>
     LocalCoords = LocalCoords + ColumnSolve2D(JacobianI, JacobianJ, Error);
   }
 
-  if (MaybeSuccess) {
-    bool &Success = *MaybeSuccess;
-    elem<double,4> ShapeI = LagrangeInterpCubic(LocalCoords(0));
-    elem<double,4> ShapeJ = LagrangeInterpCubic(LocalCoords(1));
-    elem<double,2> Error = Coords - IsoQuad16Node(NodeCoords, ShapeI, ShapeJ);
-    Success = SmallEnough(Error) && !IsNaN(Error);
+  elem<double,4> ShapeI = LagrangeInterpCubic(LocalCoords(0));
+  elem<double,4> ShapeJ = LagrangeInterpCubic(LocalCoords(1));
+  elem<double,2> Error = Coords - IsoQuad16Node(NodeCoords, ShapeI, ShapeJ);
+  if (SmallEnough(Error) && !IsNaN(Error)) {
+    return LocalCoords;
+  } else {
+    return {};
   }
-
-  return LocalCoords;
 
 }
 

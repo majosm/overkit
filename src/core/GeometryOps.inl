@@ -293,10 +293,10 @@ inline tuple<double> CoordsInCellOrientedUniform(int NumDims, const array<field<
 
 }
 
-inline tuple<double> CoordsInCellNonUniform(int NumDims, const array<field<double>> &Coords, const
-  tuple<int> &Cell, const tuple<double> &PointCoords) {
+inline optional<tuple<double>> CoordsInCellNonUniform(int NumDims, const array<field<double>>
+  &Coords, const tuple<int> &Cell, const tuple<double> &PointCoords) {
 
-  tuple<double> LocalCoords;
+  optional<tuple<double>> MaybeLocalCoords;
 
   switch (NumDims) {
   case 1: {
@@ -310,11 +310,11 @@ inline tuple<double> CoordsInCellNonUniform(int NumDims, const array<field<doubl
       ++iNode;
     }
     double PointCoord = PointCoords(0);
-    double LocalCoord = core::IsoLine4NodeInverse(NodeCoords, PointCoord);
+    auto MaybeLocalCoord = core::IsoLine4NodeInverse(NodeCoords, PointCoord);
+    if (!MaybeLocalCoord) break;
+    double &LocalCoord = *MaybeLocalCoord;
     LocalCoord += double(ShiftedCell - Cell(0));
-    LocalCoords(0) = LocalCoord;
-    LocalCoords(1) = 0.;
-    LocalCoords(2) = 0.;
+    MaybeLocalCoords = tuple<double>(LocalCoord, 0., 0.);
     break;
   }
   case 2: {
@@ -365,41 +365,44 @@ inline tuple<double> CoordsInCellNonUniform(int NumDims, const array<field<doubl
         }
       }
     }
-    LocalCoords = core::IsoHex64NodeInverse(NodeCoords, PointCoords);
-    LocalCoords += ShiftedCell - Cell;
+    MaybeLocalCoords = core::IsoHex64NodeInverse(NodeCoords, PointCoords);
+    if (MaybeLocalCoords) {
+      tuple<double> &LocalCoords = *MaybeLocalCoords;
+      LocalCoords += ShiftedCell - Cell;
+    }
     break;
   }}
 
-  return LocalCoords;
+  return MaybeLocalCoords;
 
 }
 
 }
 
-inline tuple<double> CoordsInCell(int NumDims, const array<field<double>> &Coords, geometry_type
-  GeometryType, const tuple<int> &Cell, const tuple<double> &PointCoords) {
+inline optional<tuple<double>> CoordsInCell(int NumDims, const array<field<double>> &Coords,
+  geometry_type GeometryType, const tuple<int> &Cell, const tuple<double> &PointCoords) {
 
   using coords_in_cell_internal::CoordsInCellUniform;
   using coords_in_cell_internal::CoordsInCellOrientedUniform;
   using coords_in_cell_internal::CoordsInCellNonUniform;
 
-  tuple<double> LocalCoords;
+  optional<tuple<double>> MaybeLocalCoords;
 
   switch (GeometryType) {
   case geometry_type::UNIFORM:
-    LocalCoords = CoordsInCellUniform(NumDims, Coords, Cell, PointCoords);
+    MaybeLocalCoords = CoordsInCellUniform(NumDims, Coords, Cell, PointCoords);
     break;
   case geometry_type::ORIENTED_UNIFORM:
-    LocalCoords = CoordsInCellOrientedUniform(NumDims, Coords, Cell, PointCoords);
+    MaybeLocalCoords = CoordsInCellOrientedUniform(NumDims, Coords, Cell, PointCoords);
     break;
   case geometry_type::RECTILINEAR:
   case geometry_type::ORIENTED_RECTILINEAR:
   case geometry_type::CURVILINEAR:
-    LocalCoords = CoordsInCellNonUniform(NumDims, Coords, Cell, PointCoords);
+    MaybeLocalCoords = CoordsInCellNonUniform(NumDims, Coords, Cell, PointCoords);
     break;
   }
 
-  return LocalCoords;
+  return MaybeLocalCoords;
 
 }
 
