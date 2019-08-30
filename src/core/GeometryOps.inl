@@ -304,8 +304,11 @@ inline optional<tuple<double>> CoordsInCellNonUniform(int NumDims, const array<f
     int ShiftedCell = Cell(0);
     ShiftedCell = Max<int>(ShiftedCell, Coords(0).Extents().Begin(0)+1);
     ShiftedCell = Min<int>(ShiftedCell, Coords(0).Extents().End(0)-3);
+    bool StencilFits = ShiftedCell-1 < Coords(0).Extents().Begin(0) &&
+      ShiftedCell+2 >= Coords(0).Extents().End(0);
+    if (!StencilFits) break;
     int iNode = 0;
-    for (int iPoint = ShiftedCell-1; iPoint < ShiftedCell+3; ++iPoint) {
+    for (int iPoint = ShiftedCell-1; iPoint <= ShiftedCell+2; ++iPoint) {
       NodeCoords[iNode] = Coords(0)[iPoint];
       ++iNode;
     }
@@ -320,10 +323,17 @@ inline optional<tuple<double>> CoordsInCellNonUniform(int NumDims, const array<f
   case 2: {
     elem<double,2> NodeCoords[16];
     elem<int,2> ShiftedCell = {Cell(0),Cell(1)};
+    bool StencilFits = true;
     for (int iDim = 0; iDim < 2; ++iDim) {
       ShiftedCell(iDim) = Max<int>(ShiftedCell(iDim), Coords(0).Extents().Begin(iDim)+1);
       ShiftedCell(iDim) = Min<int>(ShiftedCell(iDim), Coords(0).Extents().End(iDim)-3);
+      if (ShiftedCell(iDim)-1 < Coords(0).Extents().Begin(iDim) || ShiftedCell(iDim)+2 >=
+        Coords(0).Extents().End(iDim)) {
+        StencilFits = false;
+        break;
+      }
     }
+    if (!StencilFits) break;
     int iNode = 0;
     for (int j = ShiftedCell(1)-1; j <= ShiftedCell(1)+2; ++j) {
       for (int i = ShiftedCell(0)-1; i <= ShiftedCell(0)+2; ++i) {
@@ -336,21 +346,29 @@ inline optional<tuple<double>> CoordsInCellNonUniform(int NumDims, const array<f
       }
     }
     elem<double,2> PointCoords_ = {PointCoords(0), PointCoords(1)};
-    elem<double,2> LocalCoords_ = core::IsoQuad16NodeInverse(NodeCoords, PointCoords_);
-    LocalCoords_(0) += ShiftedCell(0) - Cell(0);
-    LocalCoords_(1) += ShiftedCell(1) - Cell(1);
-    LocalCoords(0) = LocalCoords_(0);
-    LocalCoords(1) = LocalCoords_(1);
-    LocalCoords(2) = 0.;
+    auto MaybeLocalCoords_ = core::IsoQuad16NodeInverse(NodeCoords, PointCoords_);
+    if (MaybeLocalCoords_) {
+      elem<double,2> &LocalCoords = *MaybeLocalCoords_;
+      LocalCoords(0) += ShiftedCell(0) - Cell(0);
+      LocalCoords(1) += ShiftedCell(1) - Cell(1);
+      MaybeLocalCoords = tuple<double>(LocalCoords(0), LocalCoords(1), 0.);
+    }
     break;
   }
   default: {
     tuple<double> NodeCoords[64];
     tuple<int> ShiftedCell = Cell;
+    bool StencilFits = true;
     for (int iDim = 0; iDim < 3; ++iDim) {
       ShiftedCell(iDim) = Max<int>(ShiftedCell(iDim), Coords(0).Extents().Begin(iDim)+1);
       ShiftedCell(iDim) = Min<int>(ShiftedCell(iDim), Coords(0).Extents().End(iDim)-3);
+      if (ShiftedCell(iDim)-1 < Coords(0).Extents().Begin(iDim) || ShiftedCell(iDim)+2 >=
+        Coords(0).Extents().End(iDim)) {
+        StencilFits = false;
+        break;
+      }
     }
+    if (!StencilFits) break;
     int iNode = 0;
     for (int k = ShiftedCell(2)-1; k <= ShiftedCell(2)+2; ++k) {
       for (int j = ShiftedCell(1)-1; j <= ShiftedCell(1)+2; ++j) {
