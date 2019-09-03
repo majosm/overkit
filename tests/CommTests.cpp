@@ -8,11 +8,13 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include <ovk/core/Array.hpp>
 #include <ovk/core/Tuple.hpp>
 
 #include <mpi.h>
 
 using testing::ElementsAre;
+using testing::ElementsAreArray;
 
 namespace ovk {
 namespace core {
@@ -384,7 +386,79 @@ TEST(CommTests, Subset) {
 
 }
 
-TEST(CommTests, Cartesian) {
+TEST(CommTests, CreateCartesianDecompDims) {
+
+  int CommRank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &CommRank);
+  if (CommRank > 0) return;
+
+  struct case_data {
+    int Size;
+    ovk::tuple<int> InputDims;
+    ovk::tuple<int> ExpectedDims;
+    case_data(int Size_, const ovk::tuple<int> &InputDims_, const ovk::tuple<int> &ExpectedDims_):
+      Size(Size_),
+      InputDims(InputDims_),
+      ExpectedDims(ExpectedDims_)
+    {}
+  };
+
+  // 1D
+  {
+    ovk::array<case_data> Cases;
+    Cases.Append(case_data(1, {0,1,1}, {1,1,1}));
+    Cases.Append(case_data(2, {0,1,1}, {2,1,1}));
+    Cases.Append(case_data(4, {4,1,1}, {4,1,1}));
+    for (auto &Case : Cases) {
+      ovk::tuple<int> Dims = ovk::core::CreateCartesianDecompDims(Case.Size, 1, Case.InputDims);
+      EXPECT_THAT(Dims, ElementsAreArray(Case.ExpectedDims));
+    }
+  }
+
+  // 2D
+  {
+    ovk::array<case_data> Cases;
+    Cases.Append(case_data(1, {0,0,1}, {1,1,1}));
+    Cases.Append(case_data(2, {0,0,1}, {2,1,1}));
+    Cases.Append(case_data(3, {0,0,1}, {3,1,1}));
+    Cases.Append(case_data(4, {0,0,1}, {2,2,1}));
+    Cases.Append(case_data(8, {4,0,1}, {4,2,1}));
+    Cases.Append(case_data(8, {0,4,1}, {2,4,1}));
+    // OpenMPI's MPI_Dims_create gets this one wrong
+    Cases.Append(case_data(9, {0,0,1}, {3,3,1}));
+    // MVAPICH's MPI_Dims_create gets this one wrong
+    Cases.Append(case_data(28, {0,0,1}, {7,4,1}));
+    for (auto &Case : Cases) {
+      ovk::tuple<int> Dims = ovk::core::CreateCartesianDecompDims(Case.Size, 2, Case.InputDims);
+      EXPECT_THAT(Dims, ElementsAreArray(Case.ExpectedDims));
+    }
+  }
+
+  // 3D
+  {
+    ovk::array<case_data> Cases;
+    Cases.Append(case_data(1, {0,0,0}, {1,1,1}));
+    Cases.Append(case_data(2, {0,0,0}, {2,1,1}));
+    Cases.Append(case_data(3, {0,0,0}, {3,1,1}));
+    Cases.Append(case_data(4, {0,0,0}, {2,2,1}));
+    Cases.Append(case_data(6, {0,0,0}, {3,2,1}));
+    Cases.Append(case_data(8, {0,0,0}, {2,2,2}));
+    Cases.Append(case_data(16, {4,0,0}, {4,2,2}));
+    Cases.Append(case_data(16, {0,4,0}, {2,4,2}));
+    Cases.Append(case_data(16, {0,0,4}, {2,2,4}));
+    // OpenMPI's MPI_Dims_create gets this one wrong
+    Cases.Append(case_data(9, {0,0,0}, {3,3,1}));
+    // MVAPICH's MPI_Dims_create gets this one wrong
+    Cases.Append(case_data(104, {0,0,0}, {13,4,2}));
+    for (auto &Case : Cases) {
+      ovk::tuple<int> Dims = ovk::core::CreateCartesianDecompDims(Case.Size, 3, Case.InputDims);
+      EXPECT_THAT(Dims, ElementsAreArray(Case.ExpectedDims));
+    }
+  }
+
+}
+
+TEST(CommTests, CartComm) {
 
   MPI_Comm CommRaw;
   MPI_Comm_dup(MPI_COMM_WORLD, &CommRaw);

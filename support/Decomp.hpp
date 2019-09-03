@@ -15,6 +15,8 @@
 
 namespace support {
 
+using ovk::core::CreateCartesianDecompDims;
+
 void DecomposeDomain(ovk::array_view<const long long> NumPointsPerGrid, int NumProcs,
   ovk::array_view<int,2> GridProcRanges);
 

@@ -30,6 +30,15 @@ void DecomposeDomain(ovk::array_view<const long long> NumPointsPerGrid, int NumP
 
 }
 
+std::array<int,3> CreateCartesianDecompDims(int Size, int NumDims, const std::array<int,3>
+  &InputDims) {
+
+  ovk::tuple<int> DimsTuple = support::CreateCartesianDecompDims(Size, NumDims, InputDims);
+
+  return {{DimsTuple(0), DimsTuple(1), DimsTuple(2)}};
+
+}
+
 std::array<int,6> CartesianDecomp(int NumDims, const std::array<int,3> &Size, MPI_Comm CartComm) {
 
   ovk::range LocalRange = support::CartesianDecomp(NumDims, {Size}, CartComm);

@@ -17,6 +17,7 @@
 #include <vector>
 
 using examples::DecomposeDomain;
+using examples::CreateCartesianDecompDims;
 using examples::CartesianDecomp;
 using examples::PI;
 
@@ -113,9 +114,8 @@ void Blobs() {
     grid_data &Data = BackgroundData;
     int NumGridProcs;
     MPI_Comm_size(BackgroundComm, &NumGridProcs);
-    std::array<int,3> CartDims = {{0,0,1}};
+    std::array<int,3> CartDims = CreateCartesianDecompDims(NumGridProcs, 2, {{0,0,1}});
     std::array<int,3> CartPeriods = {{0,0,0}};
-    MPI_Dims_create(NumGridProcs, 2, CartDims.data());
     MPI_Cart_create(BackgroundComm, 2, CartDims.data(), CartPeriods.data(), 1, &Data.Comm);
     MPI_Comm_free(&BackgroundComm);
     Data.Size = BackgroundSize;
@@ -141,9 +141,8 @@ void Blobs() {
     grid_data &Data = Blob1Data;
     int NumGridProcs;
     MPI_Comm_size(Blob1Comm, &NumGridProcs);
-    std::array<int,3> CartDims = {{0,0,1}};
+    std::array<int,3> CartDims = CreateCartesianDecompDims(NumGridProcs, 2, {{0,0,1}});
     std::array<int,3> CartPeriods = {{0,1,0}};
-    MPI_Dims_create(NumGridProcs, 2, CartDims.data());
     MPI_Cart_create(Blob1Comm, 2, CartDims.data(), CartPeriods.data(), 1, &Data.Comm);
     MPI_Comm_free(&Blob1Comm);
     Data.Size = BlobSize;
@@ -169,9 +168,8 @@ void Blobs() {
     grid_data &Data = Blob2Data;
     int NumGridProcs;
     MPI_Comm_size(Blob2Comm, &NumGridProcs);
-    std::array<int,3> CartDims = {{0,0,1}};
+    std::array<int,3> CartDims = CreateCartesianDecompDims(NumGridProcs, 2, {{0,0,1}});
     std::array<int,3> CartPeriods = {{0,1,0}};
-    MPI_Dims_create(NumGridProcs, 2, CartDims.data());
     MPI_Cart_create(Blob2Comm, 2, CartDims.data(), CartPeriods.data(), 1, &Data.Comm);
     MPI_Comm_free(&Blob2Comm);
     Data.Size = BlobSize;
@@ -197,9 +195,8 @@ void Blobs() {
     grid_data &Data = Blob3Data;
     int NumGridProcs;
     MPI_Comm_size(Blob3Comm, &NumGridProcs);
-    std::array<int,3> CartDims = {{0,0,1}};
+    std::array<int,3> CartDims = CreateCartesianDecompDims(NumGridProcs, 2, {{0,0,1}});
     std::array<int,3> CartPeriods = {{0,1,0}};
-    MPI_Dims_create(NumGridProcs, 2, CartDims.data());
     MPI_Cart_create(Blob3Comm, 2, CartDims.data(), CartPeriods.data(), 1, &Data.Comm);
     MPI_Comm_free(&Blob3Comm);
     Data.Size = BlobSize;

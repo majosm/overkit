@@ -10,6 +10,8 @@
 extern "C" {
 #endif
 
+void support_CreateCartesianDecompDims(int Size, int NumDims, int *Dims);
+
 void support_DecomposeDomain(int NumGrids, const long long *NumPointsPerGrid, int NumProcs, int
   *GridProcRanges);
 

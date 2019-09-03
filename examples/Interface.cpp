@@ -15,6 +15,7 @@
 #include <utility>
 #include <vector>
 
+using examples::CreateCartesianDecompDims;
 using examples::CartesianDecomp;
 
 namespace {
@@ -89,9 +90,8 @@ void Interface() {
     MPI_Comm_split(MPI_COMM_WORLD, 0, WorldRank, &TempComm);
     int NumGridProcs;
     MPI_Comm_size(TempComm, &NumGridProcs);
-    std::array<int,3> CartDims = {{0,0,1}};
+    std::array<int,3> CartDims = CreateCartesianDecompDims(NumGridProcs, 2, {{0,0,1}});
     std::array<int,3> CartPeriods = {{0,0,0}};
-    MPI_Dims_create(NumGridProcs, 2, CartDims.data());
     MPI_Cart_create(TempComm, 2, CartDims.data(), CartPeriods.data(), 1, &Data.Comm);
     MPI_Comm_free(&TempComm);
     Data.Size = LeftSize;
@@ -121,9 +121,8 @@ void Interface() {
     MPI_Comm_split(MPI_COMM_WORLD, 0, WorldRank, &TempComm);
     int NumGridProcs;
     MPI_Comm_size(TempComm, &NumGridProcs);
-    std::array<int,3> CartDims = {{0,0,1}};
+    std::array<int,3> CartDims = CreateCartesianDecompDims(NumGridProcs, 2, {{0,0,1}});
     std::array<int,3> CartPeriods = {{0,0,0}};
-    MPI_Dims_create(NumGridProcs, 2, CartDims.data());
     MPI_Cart_create(TempComm, 2, CartDims.data(), CartPeriods.data(), 1, &Data.Comm);
     MPI_Comm_free(&TempComm);
     Data.Size = RightSize;

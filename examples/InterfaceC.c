@@ -14,6 +14,7 @@
 #define min(a, b) ovk_min(a, b)
 #define max(a, b) ovk_max(a, b)
 
+#define CreateCartesianDecompDims examples_CreateCartesianDecompDims
 #define CartesianDecomp examples_CartesianDecomp
 
 static int Interface();
@@ -117,8 +118,8 @@ static int Interface() {
     int NumGridProcs;
     MPI_Comm_size(TempComm, &NumGridProcs);
     int CartDims[] = {0,0,1};
+    CreateCartesianDecompDims(NumGridProcs, 2, CartDims);
     int CartPeriods[] = {0,0,0};
-    MPI_Dims_create(NumGridProcs, 2, CartDims);
     MPI_Cart_create(TempComm, 2, CartDims, CartPeriods, 1, &Data->Comm);
     MPI_Comm_free(&TempComm);
     Data->Size[0] = LeftSize[0];
@@ -152,8 +153,8 @@ static int Interface() {
     int NumGridProcs;
     MPI_Comm_size(TempComm, &NumGridProcs);
     int CartDims[] = {0,0,1};
+    CreateCartesianDecompDims(NumGridProcs, 2, CartDims);
     int CartPeriods[] = {0,0,0};
-    MPI_Dims_create(NumGridProcs, 2, CartDims);
     MPI_Cart_create(TempComm, 2, CartDims, CartPeriods, 1, &Data->Comm);
     MPI_Comm_free(&TempComm);
     Data->Size[0] = RightSize[0];

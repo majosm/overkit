@@ -94,6 +94,10 @@ comm DuplicateComm(comm_view Comm);
 
 comm CreateSubsetComm(comm_view Comm, bool InSubset);
 
+namespace core {
+tuple<int> CreateCartesianDecompDims(int Size, int NumDims, const tuple<int> &InputDims);
+}
+
 comm CreateCartComm(comm_view Comm, int NumDims, const tuple<int> &Dims, const tuple<bool>
   &Periodic, bool AllowReorder=true);
 bool IsCartComm(comm_view Comm);

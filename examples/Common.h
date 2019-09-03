@@ -22,6 +22,12 @@ void examples_DecomposeDomain(int NumGrids, const long long *NumPointsPerGrid, i
 
 }
 
+void examples_CreateCartesianDecompDims(int Size, int NumDims, int *Dims) {
+
+  support_CreateCartesianDecompDims(Size, NumDims, Dims);
+
+}
+
 void examples_CartesianDecomp(int NumDims, const int *Size, MPI_Comm CartComm, int *LocalRange) {
 
   int Zero[] = {0,0,0};

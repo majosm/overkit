@@ -16,6 +16,24 @@
 
 namespace support {
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void support_CreateCartesianDecompDims(int Size, int NumDims, int *Dims) {
+
+  ovk::tuple<int> DimsTuple = CreateCartesianDecompDims(Size, NumDims, Dims);
+
+  for (int iDim = 0; iDim < NumDims; ++iDim) {
+    Dims[iDim] = DimsTuple(iDim);
+  }
+
+}
+
+#ifdef __cplusplus
+}
+#endif
+
 void DecomposeDomain(ovk::array_view<const long long> NumPointsPerGrid, int NumProcs,
   ovk::array_view<int,2> GridProcRanges) {
 
