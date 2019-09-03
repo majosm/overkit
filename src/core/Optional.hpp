@@ -22,7 +22,7 @@ public:
 
   using value_type = T;
 
-  constexpr optional() = default;
+  optional() = default;
 
   optional(const value_type &Value);
   optional(value_type &&Value);

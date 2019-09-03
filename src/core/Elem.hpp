@@ -109,7 +109,7 @@ public:
   constexpr OVK_FORCE_INLINE elem_base_1(const elem_base_1 &Other) = default;
 
   template <typename U, OVK_FUNCTION_REQUIRES(!std::is_base_of<elem_base_1, U>::value &&
-    ImplicitlyConvertibleToElem<U, value_type, Rank>())> constexpr OVK_FORCE_INLINE elem_base_1
+    ImplicitlyConvertibleToElem<U, value_type, Rank>())> OVK_FORCE_INLINE elem_base_1
     &operator=(const U &Other) {
     Assign_(core::index_sequence_of_size<Rank>(), Other);
     return *this;
@@ -178,7 +178,7 @@ template <typename T, int N, typename... Ts> class elem_base_2<T, N, core::type_
 
 protected:
 
-  using parent_type = elem_base_1<T, N, core::repeated_type_sequence_of_size<T,N>>;
+  using parent_type = elem_base_1<T, N, core::type_sequence<Ts...>>;
   using parent_type::Values_;
 
 public:
@@ -245,7 +245,7 @@ template <typename T, int N, typename... Ts> class elem_base_2<T, N, core::type_
 
 protected:
 
-  using parent_type = elem_base_1<T, N, core::repeated_type_sequence_of_size<T,N>>;
+  using parent_type = elem_base_1<T, N, core::type_sequence<Ts...>>;
   using parent_type::Values_;
 
 public:
