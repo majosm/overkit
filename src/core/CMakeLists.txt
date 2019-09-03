@@ -23,6 +23,7 @@ set(SOURCES
   CollectCol.cpp
   CollectMap.cpp
   CollectRow.cpp
+  Comm.cpp
   ConnectivityComponent.cpp
   ConnectivityM.cpp
   ConnectivityN.cpp

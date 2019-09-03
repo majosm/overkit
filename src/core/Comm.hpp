@@ -90,17 +90,17 @@ private:
 inline bool operator==(const comm_view &Left, const comm_view &Right);
 inline bool operator!=(const comm_view &Left, const comm_view &Right);
 
-inline comm DuplicateComm(comm_view Comm);
+comm DuplicateComm(comm_view Comm);
 
-inline comm CreateSubsetComm(comm_view Comm, bool InSubset);
+comm CreateSubsetComm(comm_view Comm, bool InSubset);
 
-inline comm CreateCartComm(comm_view Comm, int NumDims, const tuple<int> &Dims, const tuple<bool>
+comm CreateCartComm(comm_view Comm, int NumDims, const tuple<int> &Dims, const tuple<bool>
   &Periodic, bool AllowReorder=true);
-inline bool IsCartComm(comm_view Comm);
-inline int GetCartCommDimension(comm_view Comm);
-inline tuple<int> GetCartCommDims(comm_view Comm);
-inline tuple<bool> GetCartCommPeriodic(comm_view Comm);
-inline tuple<int> GetCartCommCoords(comm_view Comm);
+bool IsCartComm(comm_view Comm);
+int GetCartCommDimension(comm_view Comm);
+tuple<int> GetCartCommDims(comm_view Comm);
+tuple<bool> GetCartCommPeriodic(comm_view Comm);
+tuple<int> GetCartCommCoords(comm_view Comm);
 
 }
 
