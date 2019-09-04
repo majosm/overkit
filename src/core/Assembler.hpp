@@ -261,6 +261,7 @@ private:
     core::recv_map RecvMap;
     core::disperse_map DisperseMap;
     distributed_field<bool> OverlapMask;
+    array<double> Volumes;
   };
 
   struct assembly_data {

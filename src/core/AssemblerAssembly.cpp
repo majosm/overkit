@@ -35,6 +35,7 @@
 #include "ovk/core/Indexer.hpp"
 #include "ovk/core/Logger.hpp"
 #include "ovk/core/Map.hpp"
+#include "ovk/core/Math.hpp"
 #include "ovk/core/Misc.hpp"
 #include "ovk/core/OverlapComponent.hpp"
 #include "ovk/core/OverlapM.hpp"
@@ -1471,6 +1472,90 @@ void assembler::DetectOverlap_() {
     }
     OverlapMask.Exchange();
   }
+
+  struct exchange_m {
+    floating_ref_generator FloatingRefGenerator;
+    array<double,3> InterpCoefs;
+    core::collect Collect;
+    core::send Send;
+    array<double> SendBuffer;
+  };
+
+  struct exchange_n {
+    core::recv Recv;
+  };
+
+  elem_map<int,2,exchange_m> ExchangeMs;
+  elem_map<int,2,exchange_n> ExchangeNs;
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
+    int MGridID = OverlapID(0);
+    const grid &MGrid = Domain.Grid(MGridID);
+    const overlap_m &OverlapM = OverlapComponent.OverlapM(OverlapID);
+    const local_overlap_m_aux_data &OverlapMAuxData = AssemblyData.LocalOverlapMAuxData(OverlapID);
+    exchange_m &ExchangeM = ExchangeMs.Insert(OverlapID);
+    array<double,3> &InterpCoefs = ExchangeM.InterpCoefs;
+    InterpCoefs.Resize({{MAX_DIMS,2,OverlapM.Count()}});
+    for (long long iOverlapping = 0; iOverlapping < OverlapM.Count(); ++iOverlapping) {
+      for (int iDim = 0; iDim < NumDims; ++iDim) {
+        elem<double,2> Coefs = core::LagrangeInterpLinear(OverlapM.Coords()(iDim,iOverlapping));
+        InterpCoefs(iDim,0,iOverlapping) = Coefs(0);
+        InterpCoefs(iDim,1,iOverlapping) = Coefs(1);
+      }
+      for (int iDim = NumDims; iDim < MAX_DIMS; ++iDim) {
+        InterpCoefs(iDim,0,iOverlapping) = 1.;
+        InterpCoefs(iDim,1,iOverlapping) = 0.;
+      }
+    }
+    auto InterpCoefsRef = ExchangeM.FloatingRefGenerator.Generate(InterpCoefs);
+    ExchangeM.Collect = core::CreateCollectInterp(Context_, MGrid.Comm(), MGrid.Cart(),
+      MGrid.LocalRange(), OverlapMAuxData.CollectMap, data_type::DOUBLE, 1, MGrid.ExtendedRange(),
+      array_layout::COLUMN_MAJOR, InterpCoefsRef);
+    ExchangeM.Send = core::CreateSend(Context_, Domain.Comm(), OverlapMAuxData.SendMap,
+      data_type::DOUBLE, 1, 0);
+    ExchangeM.SendBuffer.Resize({OverlapM.Count()});
+  }
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    const overlap_n &OverlapN = OverlapComponent.OverlapN(OverlapID);
+    local_overlap_n_aux_data &OverlapNAuxData = AssemblyData.LocalOverlapNAuxData(OverlapID);
+    exchange_n &ExchangeN = ExchangeNs.Insert(OverlapID);
+    ExchangeN.Recv = core::CreateRecv(Context_, Domain.Comm(), OverlapNAuxData.RecvMap,
+      data_type::DOUBLE, 1, 0);
+    OverlapNAuxData.Volumes.Resize({OverlapN.Count()});
+  }
+
+  array<request> Requests;
+  Requests.Reserve(OverlapComponent.LocalOverlapMCount() + OverlapComponent.LocalOverlapNCount());
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    local_overlap_n_aux_data &OverlapNAuxData = AssemblyData.LocalOverlapNAuxData(OverlapID);
+    exchange_n &ExchangeN = ExchangeNs(OverlapID);
+    core::recv &Recv = ExchangeN.Recv;
+    request &Request = Requests.Append();
+    double *VolumesData = OverlapNAuxData.Volumes.Data();
+    Request = Recv.Recv(&VolumesData);
+  }
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
+    int MGridID = OverlapID(0);
+    const geometry &Geometry = GeometryComponent.Geometry(MGridID);
+    const distributed_field<double> &Volumes = Geometry.Volumes();
+    exchange_m &ExchangeM = ExchangeMs(OverlapID);
+    core::collect &Collect = ExchangeM.Collect;
+    core::send &Send = ExchangeM.Send;
+    const double *VolumesData = Volumes.Data();
+    double *SendBufferData = ExchangeM.SendBuffer.Data();
+    Collect.Collect(&VolumesData, &SendBufferData);
+    request &Request = Requests.Append();
+    Request = Send.Send(&SendBufferData);
+  }
+
+  WaitAll(Requests);
+  Requests.Clear();
+
+  ExchangeMs.Clear();
+  ExchangeNs.Clear();
 
   if (Logger.LoggingDebug()) {
     MPI_Barrier(Domain.Comm());
