@@ -424,4 +424,175 @@ inline optional<tuple<double>> CoordsInCell(int NumDims, const array<field<doubl
 
 }
 
+namespace cell_volume_internal {
+
+inline double CellVolumeUniform(int NumDims, const array<field<double>> &Coords, const tuple<int>
+  &Cell) {
+
+  tuple<int> UpperCornerOffset = MakeUniformTuple<int>(NumDims, 1, 0);
+
+  long long iLowerCorner = Coords(0).Indexer().ToIndex(Cell);
+  long long iUpperCorner = Coords(0).Indexer().ToIndex(Cell+UpperCornerOffset);
+
+  double Volume;
+
+  switch (NumDims) {
+  case 1: {
+    double LowerCornerCoord = Coords(0)[iLowerCorner];
+    double UpperCornerCoord = Coords(0)[iUpperCorner];
+    Volume = core::VolumeLine(LowerCornerCoord, UpperCornerCoord);
+    break;
+  }
+  case 2: {
+    elem<double,2> LowerCornerCoords = {
+      Coords(0)[iLowerCorner],
+      Coords(1)[iLowerCorner]
+    };
+    elem<double,2> UpperCornerCoords = {
+      Coords(0)[iUpperCorner],
+      Coords(1)[iUpperCorner]
+    };
+    Volume = core::VolumeQuadUniform(LowerCornerCoords, UpperCornerCoords);
+    break;
+  }
+  default: {
+    tuple<double> LowerCornerCoords = {
+      Coords(0)[iLowerCorner],
+      Coords(1)[iLowerCorner],
+      Coords(2)[iLowerCorner]
+    };
+    tuple<double> UpperCornerCoords = {
+      Coords(0)[iUpperCorner],
+      Coords(1)[iUpperCorner],
+      Coords(2)[iUpperCorner]
+    };
+    Volume = core::VolumeHexUniform(LowerCornerCoords, UpperCornerCoords);
+    break;
+  }}
+
+  return Volume;
+
+}
+
+inline double CellVolumeOrientedUniform(int NumDims, const array<field<double>> &Coords, const
+  tuple<int> &Cell) {
+
+  double Volume;
+
+  switch (NumDims) {
+  case 2: {
+    elem<double,2> NodeCoords[4];
+    int iNode = 0;
+    for (int j = Cell(1); j <= Cell(1)+1; ++j) {
+      for (int i = Cell(0); i <= Cell(0)+1; ++i) {
+        long long iPoint = Coords(0).Indexer().ToIndex(i,j,0);
+        NodeCoords[iNode] = {
+          Coords(0)[iPoint],
+          Coords(1)[iPoint]
+        };
+        ++iNode;
+      }
+    }
+    Volume = core::VolumeQuadOrientedUniform(NodeCoords);
+    break;
+  }
+  default: {
+    tuple<double> NodeCoords[8];
+    int iNode = 0;
+    for (int k = Cell(2); k <= Cell(2)+1; ++k) {
+      for (int j = Cell(1); j <= Cell(1)+1; ++j) {
+        for (int i = Cell(0); i <= Cell(0)+1; ++i) {
+          long long iPoint = Coords(0).Indexer().ToIndex(i,j,k);
+          NodeCoords[iNode] = {
+            Coords(0)[iPoint],
+            Coords(1)[iPoint],
+            Coords(2)[iPoint]
+          };
+          ++iNode;
+        }
+      }
+    }
+    Volume = core::VolumeHexOrientedUniform(NodeCoords);
+    break;
+  }}
+
+  return Volume;
+
+}
+
+inline double CellVolumeNonUniform(int NumDims, const array<field<double>> &Coords, const tuple<int>
+  &Cell) {
+
+  double Volume;
+
+  switch (NumDims) {
+  case 2: {
+    elem<double,2> NodeCoords[4];
+    int iNode = 0;
+    for (int j = Cell(1); j <= Cell(1)+1; ++j) {
+      for (int i = Cell(0); i <= Cell(0)+1; ++i) {
+        long long iPoint = Coords(0).Indexer().ToIndex(i,j,0);
+        NodeCoords[iNode] = {
+          Coords(0)[iPoint],
+          Coords(1)[iPoint]
+        };
+        ++iNode;
+      }
+    }
+    Volume = core::VolumeQuadNonUniform(NodeCoords);
+    break;
+  }
+  default: {
+    tuple<double> NodeCoords[8];
+    int iNode = 0;
+    for (int k = Cell(2); k <= Cell(2)+1; ++k) {
+      for (int j = Cell(1); j <= Cell(1)+1; ++j) {
+        for (int i = Cell(0); i <= Cell(0)+1; ++i) {
+          long long iPoint = Coords(0).Indexer().ToIndex(i,j,k);
+          NodeCoords[iNode] = {
+            Coords(0)[iPoint],
+            Coords(1)[iPoint],
+            Coords(2)[iPoint]
+          };
+          ++iNode;
+        }
+      }
+    }
+    Volume = core::VolumeHexNonUniform(NodeCoords);
+    break;
+  }}
+
+  return Volume;
+
+}
+
+}
+
+inline double CellVolume(int NumDims, const array<field<double>> &Coords, geometry_type
+  GeometryType, const tuple<int> &Cell) {
+
+  using cell_volume_internal::CellVolumeUniform;
+  using cell_volume_internal::CellVolumeOrientedUniform;
+  using cell_volume_internal::CellVolumeNonUniform;
+
+  double Volume;
+
+  switch (GeometryType) {
+  case geometry_type::UNIFORM:
+  case geometry_type::RECTILINEAR:
+    Volume = CellVolumeUniform(NumDims, Coords, Cell);
+    break;
+  case geometry_type::ORIENTED_UNIFORM:
+  case geometry_type::ORIENTED_RECTILINEAR:
+    Volume = CellVolumeOrientedUniform(NumDims, Coords, Cell);
+    break;
+  case geometry_type::CURVILINEAR:
+    Volume = CellVolumeNonUniform(NumDims, Coords, Cell);
+    break;
+  }
+
+  return Volume;
+
+}
+
 }}

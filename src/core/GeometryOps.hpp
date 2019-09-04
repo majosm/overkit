@@ -26,6 +26,9 @@ bool OverlapsCell(int NumDims, const array<field<double>> &Coords, geometry_type
 optional<tuple<double>> CoordsInCell(int NumDims, const array<field<double>> &Coords, geometry_type
   GeometryType, const tuple<int> &Cell, const tuple<double> &PointCoords);
 
+double CellVolume(int NumDims, const array<field<double>> &Coords, geometry_type
+  GeometryType, const tuple<int> &Cell);
+
 }}
 
 #include <ovk/core/GeometryOps.inl>
