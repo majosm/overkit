@@ -30,7 +30,7 @@ namespace geometry_internal {
 geometry_base::geometry_base(std::shared_ptr<context> &&Context, const grid &Grid):
   Context_(std::move(Context)),
   Grid_(&Grid),
-  Comm_(Grid_->Comm())
+  Comm_(Grid.Comm())
 {
   MPI_Barrier(Comm_);
 }
@@ -49,7 +49,7 @@ geometry_base::~geometry_base() noexcept {
 
 geometry::geometry(std::shared_ptr<context> &&Context, const grid &Grid, params &&Params):
   geometry_base(std::move(Context), Grid),
-  NumDims_(Grid_->Dimension()),
+  NumDims_(Grid.Dimension()),
   Type_(Params.Type_),
   PeriodicLength_(Params.PeriodicLength_),
   Coords_({MAX_DIMS})
@@ -76,10 +76,10 @@ geometry::geometry(std::shared_ptr<context> &&Context, const grid &Grid, params 
     }
   }
 
-  const range &ExtendedRange = Grid_->ExtendedRange();
+  const range &ExtendedRange = Grid.ExtendedRange();
 
   for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    Coords_(iDim).Assign(Grid_->SharedPartition());
+    Coords_(iDim).Assign(Grid.SharedPartition());
   }
 
   for (int k = ExtendedRange.Begin(2); k < ExtendedRange.End(2); ++k) {
@@ -95,7 +95,7 @@ geometry::geometry(std::shared_ptr<context> &&Context, const grid &Grid, params 
   MPI_Barrier(Comm_);
 
   core::logger &Logger = Context_->core_Logger();
-  Logger.LogDebug(Comm_.Rank() == 0, 0, "Created geometry %s.", Grid_->Name());
+  Logger.LogDebug(Comm_.Rank() == 0, 0, "Created geometry %s.", Grid.Name());
 
 }
 
@@ -160,8 +160,6 @@ edit_handle<array<distributed_field<double>>> geometry::EditCoords() {
       geometry &Geometry = *FloatingRef;
       Geometry.OnCoordsEndEdit_();
       MPI_Barrier(Geometry.Comm_);
-      Geometry.CoordsEvent_.Trigger();
-      MPI_Barrier(Geometry.Comm_);
     };
     CoordsEditor_.Activate(std::move(DeactivateFunc));
   }
@@ -207,6 +205,10 @@ void geometry::OnCoordsEndEdit_() {
       }
     }
   }
+
+  MPI_Barrier(Comm_);
+
+  CoordsEvent_.Trigger();
 
 }
 

@@ -27,7 +27,7 @@ namespace state_internal {
 state_base::state_base(std::shared_ptr<context> &&Context, const grid &Grid):
   Context_(std::move(Context)),
   Grid_(&Grid),
-  Comm_(Grid_->Comm())
+  Comm_(Grid.Comm())
 {
   MPI_Barrier(Comm_);
 }
@@ -46,13 +46,13 @@ state_base::~state_base() noexcept {
 
 state::state(std::shared_ptr<context> &&Context, const grid &Grid, params &&Params):
   state_base(std::move(Context), Grid),
-  Flags_(Grid_->SharedPartition(), state_flags::ACTIVE)
+  Flags_(Grid.SharedPartition(), state_flags::ACTIVE)
 {
 
   MPI_Barrier(Comm_);
 
   core::logger &Logger = Context_->core_Logger();
-  Logger.LogDebug(Comm_.Rank() == 0, 0, "Created state %s.", Grid_->Name());
+  Logger.LogDebug(Comm_.Rank() == 0, 0, "Created state %s.", Grid.Name());
 
 }
 
@@ -100,8 +100,6 @@ edit_handle<distributed_field<state_flags>> state::EditFlags() {
       state &State = *FloatingRef;
       State.OnFlagsEndEdit_();
       MPI_Barrier(State.Comm_);
-      State.FlagsEvent_.Trigger();
-      MPI_Barrier(State.Comm_);
     };
     FlagsEditor_.Activate(std::move(DeactivateFunc));
   }
@@ -123,6 +121,10 @@ void state::OnFlagsEndEdit_() {
   const grid &Grid = *Grid_;
 
   Grid.Partition().Exchange(Flags_);
+
+  MPI_Barrier(Comm_);
+
+  FlagsEvent_.Trigger();
 
 }
 
