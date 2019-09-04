@@ -90,6 +90,7 @@ void assembler::Assemble() {
   DetectOverlap_();
   InferBoundaries_();
   CutBoundaryHoles_();
+  LocateOuterFringe_();
 
   AssemblyManifest_.DetectOverlap.Clear();
   AssemblyManifest_.InferBoundaries.Clear();
@@ -2184,6 +2185,114 @@ void assembler::CutBoundaryHoles_() {
     }
     Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Done cutting boundary holes.");
   }
+
+}
+
+void assembler::LocateOuterFringe_() {
+
+  domain &Domain = *Domain_;
+  core::logger &Logger = Context_->core_Logger();
+
+  MPI_Barrier(Domain.Comm());
+
+  Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Locating outer fringe points...");
+
+  assembly_data &AssemblyData = *AssemblyData_;
+
+  auto StateComponentEditHandle = Domain.EditComponent<state_component>(StateComponentID_);
+  state_component &StateComponent = *StateComponentEditHandle;
+
+  map<int,distributed_field<bool>> &OuterFringeMasks = AssemblyData.OuterFringeMasks;
+
+  for (int GridID : Domain.LocalGridIDs()) {
+    const grid &Grid = Domain.Grid(GridID);
+    OuterFringeMasks.Insert(GridID, Grid.SharedPartition(), false);
+  }
+
+  for (int GridID : Domain.LocalGridIDs()) {
+    if (Options_.FringeSize(GridID) == 0) continue;
+    const grid &Grid = Domain.Grid(GridID);
+    const range &ExtendedRange = Grid.ExtendedRange();
+    long long NumExtended = ExtendedRange.Count();
+    const local_grid_aux_data &GridAuxData = AssemblyData.LocalGridAuxData(GridID);
+    const core::partition_pool &PartitionPool = GridAuxData.PartitionPool;
+    const distributed_field<bool> &ActiveMask = GridAuxData.ActiveMask;
+    const distributed_field<bool> &DomainBoundaryMask = GridAuxData.DomainBoundaryMask;
+    const distributed_field<bool> &InternalBoundaryMask = GridAuxData.InternalBoundaryMask;
+    distributed_field<bool> BoundaryMask(Grid.SharedPartition());
+    for (long long l = 0; l < NumExtended; ++l) {
+      BoundaryMask[l] = DomainBoundaryMask[l] || InternalBoundaryMask[l];
+    }
+    distributed_field<bool> BoundaryEdgeMask;
+    core::DetectEdge(BoundaryMask, core::edge_type::OUTER, core::mask_bc::FALSE, true,
+      BoundaryEdgeMask, &PartitionPool);
+    distributed_field<bool> NonBoundaryMask(Grid.SharedPartition());
+    for (long long l = 0; l < NumExtended; ++l) {
+      NonBoundaryMask[l] = ActiveMask[l] && !BoundaryMask[l];
+    }
+    distributed_field<bool> NonBoundaryEdgeMask;
+    core::DetectEdge(NonBoundaryMask, core::edge_type::OUTER, core::mask_bc::FALSE, true,
+      NonBoundaryEdgeMask, &PartitionPool);
+    distributed_field<bool> CoverMask;
+    core::DetectEdge(ActiveMask, core::edge_type::OUTER, core::mask_bc::FALSE, true,
+      CoverMask, &PartitionPool);
+    for (long long l = 0; l < CoverMask.Extents().Count(); ++l) {
+      CoverMask[l] = CoverMask[l] && (NonBoundaryEdgeMask[l] || !BoundaryEdgeMask[l]);
+    }
+    core::DilateMask(CoverMask, Options_.FringeSize(GridID), core::mask_bc::FALSE);
+    distributed_field<bool> &OuterFringeMask = OuterFringeMasks(GridID);
+    for (int k = ExtendedRange.Begin(2); k < ExtendedRange.End(2); ++k) {
+      for (int j = ExtendedRange.Begin(1); j < ExtendedRange.End(1); ++j) {
+        for (int i = ExtendedRange.Begin(0); i < ExtendedRange.End(0); ++i) {
+          tuple<int> Point = {i,j,k};
+          OuterFringeMask(Point) = ActiveMask(Point) && CoverMask(Point);
+        }
+      }
+    }
+  }
+
+  map<int,long long> NumOuterFringeForGrid;
+
+  for (int GridID : Domain.LocalGridIDs()) {
+    long long &NumOuterFringe = NumOuterFringeForGrid.Insert(GridID);
+    NumOuterFringe = core::CountDistributedMask(OuterFringeMasks(GridID));
+  }
+
+  for (int GridID : Domain.LocalGridIDs()) {
+    if (Options_.FringeSize(GridID) == 0) continue;
+    if (NumOuterFringeForGrid(GridID) == 0) continue;
+    const grid &Grid = Domain.Grid(GridID);
+    long long NumExtended = Grid.ExtendedRange().Count();
+    const distributed_field<bool> &OuterFringeMask = OuterFringeMasks(GridID);
+    auto StateEditHandle = StateComponent.EditState(GridID);
+    auto FlagsEditHandle = StateEditHandle->EditFlags();
+    distributed_field<state_flags> &Flags = *FlagsEditHandle;
+    for (long long l = 0; l < NumExtended; ++l) {
+      if (OuterFringeMask[l]) {
+        Flags[l] = Flags[l] | (state_flags::FRINGE | state_flags::OUTER_FRINGE);
+      }
+    }
+  }
+
+  if (Logger.LoggingDebug()) {
+    for (int GridID : Domain.GridIDs()) {
+      if (Domain.GridIsLocal(GridID)) {
+        const grid &Grid = Domain.Grid(GridID);
+        long long NumOuterFringe = NumOuterFringeForGrid(GridID);
+        if (NumOuterFringe > 0) {
+          std::string NumOuterFringeString = core::FormatNumber(NumOuterFringe,
+            "outer fringe points", "outer fringe point");
+          Logger.LogDebug(Grid.Comm().Rank() == 0, 2, "%s on grid %s.", NumOuterFringeString,
+            Grid.Name());
+        }
+      }
+      MPI_Barrier(Domain.Comm());
+    }
+  }
+
+  MPI_Barrier(Domain.Comm());
+
+  Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Done locating outer fringe points.");
 
 }
 
