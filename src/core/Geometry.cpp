@@ -92,6 +92,9 @@ geometry::geometry(std::shared_ptr<context> &&Context, const grid &Grid, params 
     }
   }
 
+  Volumes_.Assign(Grid.SharedPartition(), 1.);
+  CellVolumes_.Assign(Grid.SharedCellPartition(), 1.);
+
   MPI_Barrier(Comm_);
 
   core::logger &Logger = Context_->core_Logger();
@@ -179,10 +182,14 @@ void geometry::RestoreCoords() {
 void geometry::OnCoordsEndEdit_() {
 
   const grid &Grid = *Grid_;
+  int NumDims = Grid.Dimension();
   const partition &Partition = Grid.Partition();
   const cart &Cart = Grid.Cart();
   const range &GlobalRange = Grid.GlobalRange();
+  const range &LocalRange = Grid.LocalRange();
   const range &ExtendedRange = Grid.ExtendedRange();
+  const range &CellLocalRange = Grid.CellLocalRange();
+  const range &CellExtendedRange = Grid.CellExtendedRange();
 
   request Requests[MAX_DIMS];
 
@@ -209,6 +216,53 @@ void geometry::OnCoordsEndEdit_() {
   MPI_Barrier(Comm_);
 
   CoordsEvent_.Trigger();
+
+  for (int k = CellLocalRange.Begin(2); k < CellLocalRange.End(2); ++k) {
+    for (int j = CellLocalRange.Begin(1); j < CellLocalRange.End(1); ++j) {
+      for (int i = CellLocalRange.Begin(0); i < CellLocalRange.End(0); ++i) {
+        tuple<int> Cell = {i,j,k};
+        CellVolumes_(Cell) = core::CellVolume(NumDims, Coords_, Type_, Cell);
+      }
+    }
+  }
+
+  CellVolumes_.Exchange();
+
+  // Compute the volume at each point by averaging the volumes of neighboring cells
+  for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
+    for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
+      for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
+        tuple<int> Point = {i,j,k};
+        range NeighborCellRange;
+        for (int iDim = 0; iDim < NumDims; ++iDim) {
+          NeighborCellRange.Begin(iDim) = Point(iDim)-1;
+          NeighborCellRange.End(iDim) = Point(iDim)+1;
+        }
+        for (int iDim = NumDims; iDim < MAX_DIMS; ++iDim) {
+          NeighborCellRange.Begin(iDim) = 0;
+          NeighborCellRange.End(iDim) = 1;
+        }
+        NeighborCellRange = IntersectRanges(CellExtendedRange, NeighborCellRange);
+        Volumes_(Point) = 0.;
+        for (int o = NeighborCellRange.Begin(2); o < NeighborCellRange.End(2); ++o) {
+          for (int n = NeighborCellRange.Begin(1); n < NeighborCellRange.End(1); ++n) {
+            for (int m = NeighborCellRange.Begin(0); m < NeighborCellRange.End(0); ++m) {
+              tuple<int> NeighborCell = {m,n,o};
+              Volumes_(Point) += CellVolumes_(NeighborCell);
+            }
+          }
+        }
+        Volumes_(Point) /= double(NeighborCellRange.Count());
+      }
+    }
+  }
+
+  Volumes_.Exchange();
+
+  MPI_Barrier(Comm_);
+
+  VolumesEvent_.Trigger();
+  CellVolumesEvent_.Trigger();
 
 }
 

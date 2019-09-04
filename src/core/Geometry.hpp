@@ -107,6 +107,18 @@ public:
     return CoordsEvent_.AddListener(std::move(Listener));
   }
 
+  const distributed_field<double> &Volumes() const { return Volumes_; }
+  template <typename F, OVK_FUNCTION_REQUIRES(core::IsCallableWith<F>())> event_listener_handle
+    AddVolumesEventListener(F Listener) const {
+    return VolumesEvent_.AddListener(std::move(Listener));
+  }
+
+  const distributed_field<double> &CellVolumes() const { return CellVolumes_; }
+  template <typename F, OVK_FUNCTION_REQUIRES(core::IsCallableWith<F>())> event_listener_handle
+    AddCellVolumesEventListener(F Listener) const {
+    return CellVolumesEvent_.AddListener(std::move(Listener));
+  }
+
   static geometry internal_Create(std::shared_ptr<context> &&Context, const grid &Grid, params
     &&Params);
 
@@ -123,6 +135,12 @@ private:
   array<distributed_field<double>> Coords_;
   editor CoordsEditor_;
   mutable event<void()> CoordsEvent_;
+
+  distributed_field<double> Volumes_;
+  mutable event<void()> VolumesEvent_;
+
+  distributed_field<double> CellVolumes_;
+  mutable event<void()> CellVolumesEvent_;
 
   geometry(std::shared_ptr<context> &&Context, const grid &Grid, params &&Params);
 
