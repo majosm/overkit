@@ -1404,31 +1404,19 @@ void assembler::DetectOverlap_() {
   OverlapMEdits.Clear();
   OverlapNEdits.Clear();
 
+  if (Logger.LoggingDebug()) {
+    MPI_Barrier(Domain.Comm());
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done creating and filling overlap data "
+      "structures.");
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Setting up overlap exchanges...");
+  }
+
   for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
     AssemblyData.LocalOverlapMAuxData.Insert(OverlapID);
   }
 
   for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
     AssemblyData.LocalOverlapNAuxData.Insert(OverlapID);
-  }
-
-  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
-    int NGridID = OverlapID(1);
-    const grid &NGrid = Domain.Grid(NGridID);
-    local_overlap_n_aux_data &OverlapNAuxData = AssemblyData.LocalOverlapNAuxData(OverlapID);
-    distributed_field<bool> &OverlapMask = OverlapNAuxData.OverlapMask;
-    const overlap_n &OverlapN = OverlapComponent.OverlapN(OverlapID);
-    const array<int,2> &Points = OverlapN.Points();
-    OverlapMask.Assign(NGrid.SharedPartition(), false);
-    for (long long iOverlapping = 0; iOverlapping < OverlapN.Count(); ++iOverlapping) {
-      tuple<int> Point = {
-        Points(0,iOverlapping),
-        Points(1,iOverlapping),
-        Points(2,iOverlapping)
-      };
-      OverlapMask(Point) = true;
-    }
-    OverlapMask.Exchange();
   }
 
   for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
@@ -1461,8 +1449,32 @@ void assembler::DetectOverlap_() {
 
   if (Logger.LoggingDebug()) {
     MPI_Barrier(Domain.Comm());
-    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done creating and filling overlap data "
-      "structures.");
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done setting up overlap exchanges.");
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Creating auxiliary overlap data...");
+  }
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    int NGridID = OverlapID(1);
+    const grid &NGrid = Domain.Grid(NGridID);
+    local_overlap_n_aux_data &OverlapNAuxData = AssemblyData.LocalOverlapNAuxData(OverlapID);
+    distributed_field<bool> &OverlapMask = OverlapNAuxData.OverlapMask;
+    const overlap_n &OverlapN = OverlapComponent.OverlapN(OverlapID);
+    const array<int,2> &Points = OverlapN.Points();
+    OverlapMask.Assign(NGrid.SharedPartition(), false);
+    for (long long iOverlapping = 0; iOverlapping < OverlapN.Count(); ++iOverlapping) {
+      tuple<int> Point = {
+        Points(0,iOverlapping),
+        Points(1,iOverlapping),
+        Points(2,iOverlapping)
+      };
+      OverlapMask(Point) = true;
+    }
+    OverlapMask.Exchange();
+  }
+
+  if (Logger.LoggingDebug()) {
+    MPI_Barrier(Domain.Comm());
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done creating auxiliary overlap data.");
   }
 
   MPI_Barrier(Domain.Comm());

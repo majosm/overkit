@@ -258,9 +258,9 @@ private:
   };
 
   struct local_overlap_n_aux_data {
-    distributed_field<bool> OverlapMask;
     core::recv_map RecvMap;
     core::disperse_map DisperseMap;
+    distributed_field<bool> OverlapMask;
   };
 
   struct assembly_data {
