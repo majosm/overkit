@@ -92,6 +92,7 @@ void assembler::Assemble() {
   CutBoundaryHoles_();
   LocateOuterFringe_();
   DetectOccluded_();
+  MinimizeOverlap_();
 
   AssemblyManifest_.DetectOverlap.Clear();
   AssemblyManifest_.InferBoundaries.Clear();
@@ -2741,7 +2742,237 @@ void assembler::DetectOccluded_() {
     Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Done detecting occluded points.");
   }
 
+}
 
+void assembler::MinimizeOverlap_() {
+
+  domain &Domain = *Domain_;
+  core::logger &Logger = Context_->core_Logger();
+
+  MPI_Barrier(Domain.Comm());
+
+  Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Minimizing overlap...");
+
+  assembly_data &AssemblyData = *AssemblyData_;
+
+  auto StateComponentEditHandle = Domain.EditComponent<state_component>(StateComponentID_);
+  state_component &StateComponent = *StateComponentEditHandle;
+
+  auto &OverlapComponent = Domain.Component<overlap_component>(OverlapComponentID_);
+
+  const elem_map<int,2,distributed_field<bool>> &PairwiseOcclusionMasks = AssemblyData
+    .PairwiseOcclusionMasks;
+  const map<int,distributed_field<bool>> &OcclusionMasks = AssemblyData.OcclusionMasks;
+
+  map<int,distributed_field<bool>> &OverlapMinimizationMasks = AssemblyData
+    .OverlapMinimizationMasks;
+  map<int,distributed_field<bool>> &InnerFringeMasks = AssemblyData.InnerFringeMasks;
+
+  for (int GridID : Domain.LocalGridIDs()) {
+    const grid &Grid = Domain.Grid(GridID);
+    OverlapMinimizationMasks.Insert(GridID, Grid.SharedPartition(), false);
+    InnerFringeMasks.Insert(GridID, Grid.SharedPartition(), false);
+  }
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    if (Options_.Occludes(OverlapID) == occludes::NONE) continue;
+    if (!Options_.MinimizeOverlap(OverlapID)) continue;
+    int NGridID = OverlapID(1);
+    const grid &NGrid = Domain.Grid(NGridID);
+    long long NumExtended = NGrid.ExtendedRange().Count();
+    const distributed_field<bool> &PairwiseOcclusionMask = PairwiseOcclusionMasks(OverlapID);
+    distributed_field<bool> &OverlapMinimizationMask = OverlapMinimizationMasks(NGridID);
+    for (long long l = 0; l < NumExtended; ++l) {
+      OverlapMinimizationMask[l] = OverlapMinimizationMask[l] || PairwiseOcclusionMask[l];
+    }
+  }
+
+  for (int GridID : Domain.LocalGridIDs()) {
+    const grid &Grid = Domain.Grid(GridID);
+    long long NumExtended = Grid.ExtendedRange().Count();
+    const local_grid_aux_data &GridAuxData = AssemblyData.LocalGridAuxData(GridID);
+    const distributed_field<bool> &ActiveMask = GridAuxData.ActiveMask;
+    distributed_field<bool> &OverlapMinimizationMask = OverlapMinimizationMasks(GridID);
+    distributed_field<bool> &InnerFringeMask = InnerFringeMasks(GridID);
+    if (Options_.FringeSize(GridID) > 0) {
+      const distributed_field<bool> &OcclusionMask = OcclusionMasks(GridID);
+      distributed_field<bool> RemovableMask(Grid.SharedPartition());
+      for (long long l = 0; l < NumExtended; ++l) {
+        RemovableMask[l] = OcclusionMask[l] || !ActiveMask[l];
+      }
+      core::ErodeMask(RemovableMask, Options_.FringeSize(GridID), core::mask_bc::TRUE);
+      for (long long l = 0; l < NumExtended; ++l) {
+        OverlapMinimizationMask[l] = OverlapMinimizationMask[l] && (RemovableMask[l] &&
+          ActiveMask[l]);
+      }
+      InnerFringeMask.Fill(OverlapMinimizationMask);
+      core::DilateMask(InnerFringeMask, Options_.FringeSize(GridID), core::mask_bc::FALSE);
+      for (long long l = 0; l < NumExtended; ++l) {
+        InnerFringeMask[l] = InnerFringeMask[l] && (ActiveMask[l] && !OverlapMinimizationMask[l]);
+      }
+    } else {
+      // Serial Overkit has this, but I'm not sure why...
+//       for (long long l = 0; l < NumExtended; ++l) {
+//         OverlapMinimizationMask[l] = OverlapMinimizationMask[l] && ActiveMask[l];
+//       }
+    }
+  }
+
+  map<int,long long> NumRemovedForGrid;
+  map<int,long long> NumInnerFringeForGrid;
+
+  for (int GridID : Domain.LocalGridIDs()) {
+    long long &NumRemoved = NumRemovedForGrid.Insert(GridID);
+    NumRemoved = core::CountDistributedMask(OverlapMinimizationMasks(GridID));
+    long long &NumInnerFringe = NumInnerFringeForGrid.Insert(GridID);
+    NumInnerFringe = core::CountDistributedMask(InnerFringeMasks(GridID));
+  }
+
+  for (int GridID : Domain.LocalGridIDs()) {
+    if (NumRemovedForGrid(GridID) == 0 && NumInnerFringeForGrid(GridID) == 0) continue;
+    const grid &Grid = Domain.Grid(GridID);
+    long long NumExtended = Grid.ExtendedRange().Count();
+    local_grid_aux_data &GridAuxData = AssemblyData.LocalGridAuxData(GridID);
+    {
+      auto StateEditHandle = StateComponent.EditState(GridID);
+      auto FlagsEditHandle = StateEditHandle->EditFlags();
+      distributed_field<state_flags> &Flags = *FlagsEditHandle;
+      const distributed_field<bool> &OverlapMinimizationMask = OverlapMinimizationMasks(GridID);
+      const distributed_field<bool> &InnerFringeMask = InnerFringeMasks(GridID);
+      for (long long l = 0; l < NumExtended; ++l) {
+        if (OverlapMinimizationMask[l]) {
+          Flags[l] = (Flags[l] & ~(state_flags::ACTIVE | state_flags::OUTER_FRINGE)) |
+            state_flags::OVERLAP_MINIMIZED;
+        } else if (InnerFringeMask[l]) {
+          Flags[l] = Flags[l] | (state_flags::FRINGE | state_flags::INNER_FRINGE);
+        }
+      }
+    }
+    if (NumRemovedForGrid(GridID) > 0) {
+      auto &Flags = StateComponent.State(GridID).Flags();
+      GenerateActiveMask(Grid, Flags, GridAuxData.ActiveMask);
+      GenerateCellActiveMask(Grid, Flags, GridAuxData.CellActiveMask);
+      GenerateDomainBoundaryMask(Grid, Flags, GridAuxData.DomainBoundaryMask);
+      GenerateInternalBoundaryMask(Grid, Flags, GridAuxData.InternalBoundaryMask);
+      distributed_field<bool> &OuterFringeMask = AssemblyData.OuterFringeMasks(GridID);
+      for (long long l = 0; l < NumExtended; ++l) {
+        OuterFringeMask[l] = OuterFringeMask[l] && (Flags[l] & state_flags::ACTIVE) !=
+          state_flags::NONE;
+      }
+    }
+  }
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    int NGridID = OverlapID(1);
+    const grid &NGrid = Domain.Grid(NGridID);
+    long long NumExtended = NGrid.ExtendedRange().Count();
+    local_grid_aux_data &GridAuxData = AssemblyData.LocalGridAuxData(NGridID);
+    const distributed_field<bool> &ActiveMask = GridAuxData.ActiveMask;
+    local_overlap_n_aux_data &OverlapNAuxData = AssemblyData.LocalOverlapNAuxData(OverlapID);
+    distributed_field<bool> &OverlapMask = OverlapNAuxData.OverlapMask;
+    for (long long l = 0; l < NumExtended; ++l) {
+      OverlapMask[l] = OverlapMask[l] && ActiveMask[l];
+    }
+  }
+
+  struct exchange_m {
+    core::collect Collect;
+    core::send Send;
+    array<bool> SendBuffer;
+  };
+
+  struct exchange_n {
+    core::recv Recv;
+    array<bool> RecvBuffer;
+    core::disperse Disperse;
+  };
+
+  elem_map<int,2,exchange_m> ExchangeMs;
+  elem_map<int,2,exchange_n> ExchangeNs;
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
+    int MGridID = OverlapID(0);
+    const grid &MGrid = Domain.Grid(MGridID);
+    const overlap_m &OverlapM = OverlapComponent.OverlapM(OverlapID);
+    const local_overlap_m_aux_data &OverlapMAuxData = AssemblyData.LocalOverlapMAuxData(OverlapID);
+    exchange_m &ExchangeM = ExchangeMs.Insert(OverlapID);
+    ExchangeM.Collect = core::CreateCollectAll(Context_, MGrid.Comm(), MGrid.Cart(),
+      MGrid.LocalRange(), OverlapMAuxData.CollectMap, data_type::BOOL, 1, MGrid.ExtendedRange(),
+      array_layout::COLUMN_MAJOR);
+    ExchangeM.Send = core::CreateSend(Context_, Domain.Comm(), OverlapMAuxData.SendMap,
+      data_type::BOOL, 1, 0);
+    ExchangeM.SendBuffer.Resize({OverlapM.Count()});
+  }
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    int NGridID = OverlapID(1);
+    const grid &NGrid = Domain.Grid(NGridID);
+    const overlap_n &OverlapN = OverlapComponent.OverlapN(OverlapID);
+    const local_overlap_n_aux_data &OverlapNAuxData = AssemblyData.LocalOverlapNAuxData(OverlapID);
+    exchange_n &ExchangeN = ExchangeNs.Insert(OverlapID);
+    ExchangeN.Recv = core::CreateRecv(Context_, Domain.Comm(), OverlapNAuxData.RecvMap,
+      data_type::BOOL, 1, 0);
+    ExchangeN.RecvBuffer.Resize({OverlapN.Count()});
+    ExchangeN.Disperse = core::CreateDisperseOverwrite(Context_, OverlapNAuxData.DisperseMap,
+      data_type::BOOL, 1, NGrid.ExtendedRange(), array_layout::COLUMN_MAJOR);
+  }
+
+  array<request> Requests;
+  Requests.Reserve(OverlapComponent.LocalOverlapMCount() + OverlapComponent.LocalOverlapNCount());
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    exchange_n &ExchangeN = ExchangeNs(OverlapID);
+    core::recv &Recv = ExchangeN.Recv;
+    request &Request = Requests.Append();
+    bool *RecvBufferData = ExchangeN.RecvBuffer.Data();
+    Request = Recv.Recv(&RecvBufferData);
+  }
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
+    int MGridID = OverlapID(0);
+    const local_grid_aux_data &GridAuxData = AssemblyData.LocalGridAuxData(MGridID);
+    const distributed_field<bool> &ActiveMask = GridAuxData.ActiveMask;
+    exchange_m &ExchangeM = ExchangeMs(OverlapID);
+    core::collect &Collect = ExchangeM.Collect;
+    core::send &Send = ExchangeM.Send;
+    const bool *ActiveMaskData = ActiveMask.Data();
+    bool *SendBufferData = ExchangeM.SendBuffer.Data();
+    Collect.Collect(&ActiveMaskData, &SendBufferData);
+    request &Request = Requests.Append();
+    Request = Send.Send(&SendBufferData);
+  }
+
+  WaitAll(Requests);
+  Requests.Clear();
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    local_overlap_n_aux_data &OverlapNAuxData = AssemblyData.LocalOverlapNAuxData(OverlapID);
+    distributed_field<bool> &OverlapMask = OverlapNAuxData.OverlapMask;
+    exchange_n &ExchangeN = ExchangeNs(OverlapID);
+    core::disperse &Disperse = ExchangeN.Disperse;
+    const bool *RecvBufferData = ExchangeN.RecvBuffer.Data();
+    bool *OverlapMaskData = OverlapMask.Data();
+    Disperse.Disperse(&RecvBufferData, &OverlapMaskData);
+    OverlapMask.Exchange();
+  }
+
+  MPI_Barrier(Domain.Comm());
+
+  if (Logger.LoggingDebug()) {
+    for (int GridID : Domain.GridIDs()) {
+      if (Domain.GridIsLocal(GridID)) {
+        const grid &Grid = Domain.Grid(GridID);
+        long long NumRemoved = NumRemovedForGrid(GridID);
+        if (NumRemoved > 0) {
+          std::string NumRemovedString = core::FormatNumber(NumRemoved, "points", "point");
+          Logger.LogDebug(Grid.Comm().Rank() == 0, 3, "%s removed from grid %s.", NumRemovedString,
+            Grid.Name());
+        }
+      }
+      MPI_Barrier(Domain.Comm());
+    }
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Done minimizing overlap.");
+  }
 
 }
 

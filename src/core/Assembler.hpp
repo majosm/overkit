@@ -273,6 +273,8 @@ private:
     map<int,distributed_field<bool>> OuterFringeMasks;
     elem_map<int,2,distributed_field<bool>> PairwiseOcclusionMasks;
     map<int,distributed_field<bool>> OcclusionMasks;
+    map<int,distributed_field<bool>> OverlapMinimizationMasks;
+    map<int,distributed_field<bool>> InnerFringeMasks;
     assembly_data(int NumDims, comm_view Comm);
   };
 
@@ -305,6 +307,7 @@ private:
   void CutBoundaryHoles_();
   void LocateOuterFringe_();
   void DetectOccluded_();
+  void MinimizeOverlap_();
 
 };
 
