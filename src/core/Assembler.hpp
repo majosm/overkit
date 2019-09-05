@@ -271,6 +271,8 @@ private:
     elem_map<int,2,local_overlap_n_aux_data> LocalOverlapNAuxData;
     elem_map<int,2,distributed_field<bool>> ProjectedBoundaryMasks;
     map<int,distributed_field<bool>> OuterFringeMasks;
+    elem_map<int,2,distributed_field<bool>> PairwiseOcclusionMasks;
+    map<int,distributed_field<bool>> OcclusionMasks;
     assembly_data(int NumDims, comm_view Comm);
   };
 
@@ -302,6 +304,7 @@ private:
   void InferBoundaries_();
   void CutBoundaryHoles_();
   void LocateOuterFringe_();
+  void DetectOccluded_();
 
 };
 

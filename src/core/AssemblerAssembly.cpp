@@ -91,6 +91,7 @@ void assembler::Assemble() {
   InferBoundaries_();
   CutBoundaryHoles_();
   LocateOuterFringe_();
+  DetectOccluded_();
 
   AssemblyManifest_.DetectOverlap.Clear();
   AssemblyManifest_.InferBoundaries.Clear();
@@ -2293,6 +2294,454 @@ void assembler::LocateOuterFringe_() {
   MPI_Barrier(Domain.Comm());
 
   Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Done locating outer fringe points.");
+
+}
+
+void assembler::DetectOccluded_() {
+
+  domain &Domain = *Domain_;
+  core::logger &Logger = Context_->core_Logger();
+
+  MPI_Barrier(Domain.Comm());
+
+  Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Detecting occluded points...");
+
+  assembly_data &AssemblyData = *AssemblyData_;
+
+  auto &GeometryComponent = Domain.Component<geometry_component>(GeometryComponentID_);
+
+  auto StateComponentEditHandle = Domain.EditComponent<state_component>(StateComponentID_);
+  state_component &StateComponent = *StateComponentEditHandle;
+
+  auto &OverlapComponent = Domain.Component<overlap_component>(OverlapComponentID_);
+
+  Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Computing pairwise occlusion...");
+
+  elem_map<int,2,distributed_field<bool>> &PairwiseOcclusionMasks = AssemblyData
+    .PairwiseOcclusionMasks;
+
+  constexpr double TOLERANCE = 1.e-10;
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    int NGridID = OverlapID(1);
+    const grid &NGrid = Domain.Grid(NGridID);
+    const range &LocalRange = NGrid.LocalRange();
+    const geometry &Geometry = GeometryComponent.Geometry(NGridID);
+    const distributed_field<double> &Volumes = Geometry.Volumes();
+    const overlap_n &OverlapN = OverlapComponent.OverlapN(OverlapID);
+    const field<bool> &BaseOverlapMask = OverlapN.Mask();
+    const local_overlap_n_aux_data &OverlapNAuxData = AssemblyData.LocalOverlapNAuxData(OverlapID);
+    const distributed_field<bool> &OverlapMask = OverlapNAuxData.OverlapMask;
+    const array<double> &OverlapVolumes = OverlapNAuxData.Volumes;
+    distributed_field<bool> &PairwiseOcclusionMask = PairwiseOcclusionMasks.Insert(OverlapID);
+    switch (Options_.Occludes(OverlapID)) {
+    case occludes::COARSE: {
+      PairwiseOcclusionMask.Assign(NGrid.SharedPartition(), false);
+      long long iOverlapping = 0;
+      for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
+        for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
+          for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
+            tuple<int> Point = {i,j,k};
+            if (BaseOverlapMask(Point)) {
+              PairwiseOcclusionMask(Point) = OverlapMask(Point) && Volumes(Point) > (1.+TOLERANCE) *
+                OverlapVolumes(iOverlapping);
+              ++iOverlapping;
+            }
+          }
+        }
+      }
+      PairwiseOcclusionMask.Exchange();
+      break;
+    }
+    case occludes::ALL:
+      PairwiseOcclusionMask.Assign(OverlapMask);
+      break;
+    case occludes::NONE:
+      break;
+    }
+  }
+
+  // Exclude points that are overlapped by occluded points
+
+  struct exchange_m {
+    core::collect Collect;
+    core::send Send;
+    array<bool> SendBuffer;
+  };
+
+  struct exchange_n {
+    core::recv Recv;
+    array<bool> RecvBuffer;
+    core::disperse Disperse;
+  };
+
+  elem_map<int,2,exchange_m> ExchangeMs;
+  elem_map<int,2,exchange_n> ExchangeNs;
+
+  auto MutuallyOccludes = [&](int MGridID, int NGridID) -> bool {
+    return Options_.Occludes({MGridID,NGridID}) == occludes::COARSE &&
+      Options_.Occludes({NGridID,MGridID}) == occludes::COARSE;
+  };
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
+    int MGridID = OverlapID(0);
+    const grid &MGrid = Domain.Grid(MGridID);
+    const overlap_m &OverlapM = OverlapComponent.OverlapM(OverlapID);
+    const local_overlap_m_aux_data &OverlapMAuxData = AssemblyData.LocalOverlapMAuxData(OverlapID);
+    exchange_m &ExchangeM = ExchangeMs.Insert(OverlapID);
+    ExchangeM.Collect = core::CreateCollectNone(Context_, MGrid.Comm(), MGrid.Cart(),
+      MGrid.LocalRange(), OverlapMAuxData.CollectMap, data_type::BOOL, 1, MGrid.ExtendedRange(),
+      array_layout::COLUMN_MAJOR);
+    ExchangeM.Send = core::CreateSend(Context_, Domain.Comm(), OverlapMAuxData.SendMap,
+      data_type::BOOL, 1, 0);
+    ExchangeM.SendBuffer.Resize({OverlapM.Count()});
+  }
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    int NGridID = OverlapID(1);
+    const grid &NGrid = Domain.Grid(NGridID);
+    const overlap_n &OverlapN = OverlapComponent.OverlapN(OverlapID);
+    const local_overlap_n_aux_data &OverlapNAuxData = AssemblyData.LocalOverlapNAuxData(OverlapID);
+    exchange_n &ExchangeN = ExchangeNs.Insert(OverlapID);
+    ExchangeN.Recv = core::CreateRecv(Context_, Domain.Comm(), OverlapNAuxData.RecvMap,
+      data_type::BOOL, 1, 0);
+    ExchangeN.RecvBuffer.Resize({OverlapN.Count()});
+    ExchangeN.Disperse = core::CreateDisperseOverwrite(Context_, OverlapNAuxData.DisperseMap,
+      data_type::BOOL, 1, NGrid.ExtendedRange(), array_layout::COLUMN_MAJOR);
+  }
+
+  array<request> Requests;
+  Requests.Reserve(OverlapComponent.LocalOverlapMCount() + OverlapComponent.LocalOverlapNCount());
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    int MGridID = OverlapID(0);
+    int NGridID = OverlapID(1);
+    if (!MutuallyOccludes(MGridID, NGridID)) continue;
+    if (NGridID < MGridID) continue;
+    exchange_n &ExchangeN = ExchangeNs(OverlapID);
+    core::recv &Recv = ExchangeN.Recv;
+    request &Request = Requests.Append();
+    bool *RecvBufferData = ExchangeN.RecvBuffer.Data();
+    Request = Recv.Recv(&RecvBufferData);
+  }
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
+    int MGridID = OverlapID(0);
+    int NGridID = OverlapID(1);
+    if (!MutuallyOccludes(MGridID, NGridID)) continue;
+    if (NGridID < MGridID) continue;
+    exchange_m &ExchangeM = ExchangeMs(OverlapID);
+    core::collect &Collect = ExchangeM.Collect;
+    core::send &Send = ExchangeM.Send;
+    const bool *PairwiseOcclusionMaskData = PairwiseOcclusionMasks({NGridID,MGridID}).Data();
+    bool *SendBufferData = ExchangeM.SendBuffer.Data();
+    Collect.Collect(&PairwiseOcclusionMaskData, &SendBufferData);
+    request &Request = Requests.Append();
+    Request = Send.Send(&SendBufferData);
+  }
+
+  WaitAll(Requests);
+  Requests.Clear();
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    int MGridID = OverlapID(0);
+    int NGridID = OverlapID(1);
+    if (!MutuallyOccludes(MGridID, NGridID)) continue;
+    if (NGridID < MGridID) continue;
+    exchange_n &ExchangeN = ExchangeNs(OverlapID);
+    core::disperse &Disperse = ExchangeN.Disperse;
+    distributed_field<bool> &PairwiseOcclusionMask = PairwiseOcclusionMasks(OverlapID);
+    const bool *RecvBufferData = ExchangeN.RecvBuffer.Data();
+    bool *PairwiseOcclusionMaskData = PairwiseOcclusionMask.Data();
+    Disperse.Disperse(&RecvBufferData, &PairwiseOcclusionMaskData);
+    PairwiseOcclusionMask.Exchange();
+  }
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    int MGridID = OverlapID(0);
+    int NGridID = OverlapID(1);
+    if (!MutuallyOccludes(MGridID, NGridID)) continue;
+    if (NGridID > MGridID) continue;
+    exchange_n &ExchangeN = ExchangeNs(OverlapID);
+    core::recv &Recv = ExchangeN.Recv;
+    request &Request = Requests.Append();
+    bool *RecvBufferData = ExchangeN.RecvBuffer.Data();
+    Request = Recv.Recv(&RecvBufferData);
+  }
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
+    int MGridID = OverlapID(0);
+    int NGridID = OverlapID(1);
+    if (!MutuallyOccludes(MGridID, NGridID)) continue;
+    if (NGridID > MGridID) continue;
+    exchange_m &ExchangeM = ExchangeMs(OverlapID);
+    core::collect &Collect = ExchangeM.Collect;
+    core::send &Send = ExchangeM.Send;
+    const bool *PairwiseOcclusionMaskData = PairwiseOcclusionMasks({NGridID,MGridID}).Data();
+    bool *SendBufferData = ExchangeM.SendBuffer.Data();
+    Collect.Collect(&PairwiseOcclusionMaskData, &SendBufferData);
+    request &Request = Requests.Append();
+    Request = Send.Send(&SendBufferData);
+  }
+
+  WaitAll(Requests);
+  Requests.Clear();
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    int MGridID = OverlapID(0);
+    int NGridID = OverlapID(1);
+    if (!MutuallyOccludes(MGridID, NGridID)) continue;
+    if (NGridID > MGridID) continue;
+    exchange_n &ExchangeN = ExchangeNs(OverlapID);
+    core::disperse &Disperse = ExchangeN.Disperse;
+    distributed_field<bool> &PairwiseOcclusionMask = PairwiseOcclusionMasks(OverlapID);
+    const bool *RecvBufferData = ExchangeN.RecvBuffer.Data();
+    bool *PairwiseOcclusionMaskData = PairwiseOcclusionMask.Data();
+    Disperse.Disperse(&RecvBufferData, &PairwiseOcclusionMaskData);
+    PairwiseOcclusionMask.Exchange();
+  }
+
+  if (Logger.LoggingDebug()) {
+    elem_map<int,2,long long> NumOccludedForGridPair;
+    for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+      if (Options_.Occludes(OverlapID) == occludes::NONE) continue;
+      long long &NumOccluded = NumOccludedForGridPair.Insert(OverlapID);
+      NumOccluded = core::CountDistributedMask(PairwiseOcclusionMasks(OverlapID));
+    }
+    MPI_Barrier(Domain.Comm());
+    for (auto &OverlapID : OverlapComponent.OverlapIDs()) {
+      int MGridID = OverlapID(0);
+      int NGridID = OverlapID(1);
+      if (Options_.Occludes(OverlapID) != occludes::NONE && Domain.GridIsLocal(NGridID)) {
+        const grid &NGrid = Domain.Grid(NGridID);
+        long long NumOccluded = NumOccludedForGridPair(OverlapID);
+        if (NumOccluded > 0) {
+          const grid_info &MGridInfo = Domain.GridInfo(MGridID);
+          std::string NumOccludedString = core::FormatNumber(NumOccluded, "points", "point");
+          Logger.LogDebug(NGrid.Comm().Rank() == 0, 3, "%s occluded by grid %s on grid %s.",
+            NumOccludedString, MGridInfo.Name(), NGrid.Name());
+        }
+      }
+      MPI_Barrier(Domain.Comm());
+    }
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done computing pairwise occlusion.");
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Applying edge padding and smoothing...");
+  }
+
+  elem_map<int,2,distributed_field<bool>> DisallowMasks;
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
+    if (Options_.Occludes(OverlapID) == occludes::NONE) continue;
+    int MGridID = OverlapID(0);
+    int NGridID = OverlapID(1);
+    const grid &MGrid = Domain.Grid(MGridID);
+    long long NumExtended = MGrid.ExtendedRange().Count();
+    const distributed_field<state_flags> &Flags = StateComponent.State(MGridID).Flags();
+    const local_grid_aux_data &GridAuxData = AssemblyData.LocalGridAuxData(MGridID);
+    const distributed_field<bool> &ActiveMask = GridAuxData.ActiveMask;
+    distributed_field<bool> &DisallowMask = DisallowMasks.Insert(OverlapID,
+      MGrid.SharedPartition());
+    for (long long l = 0; l < NumExtended; ++l) {
+      DisallowMask[l] = (Flags[l] & state_flags::OUTER_FRINGE) != state_flags::NONE;
+    }
+    if (Options_.Occludes({NGridID,MGridID}) != occludes::NONE) {
+      const distributed_field<bool> &PairwiseOcclusionMask = PairwiseOcclusionMasks({NGridID,
+        MGridID});
+      // Not sure if the "|| !ActiveMask[l]" should be applied unconditionally? Below is how it is
+      // in serial Overkit
+      for (long long l = 0; l < NumExtended; ++l) {
+        DisallowMask[l] = DisallowMask[l] || PairwiseOcclusionMask[l] || !ActiveMask[l];
+      }
+    }
+    core::DilateMask(DisallowMask, Options_.EdgePadding(OverlapID), core::mask_bc::MIRROR);
+  }
+
+  Requests.Reserve(OverlapComponent.LocalOverlapMCount() + OverlapComponent.LocalOverlapNCount());
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    if (Options_.Occludes(OverlapID) == occludes::NONE) continue;
+    exchange_n &ExchangeN = ExchangeNs(OverlapID);
+    core::recv &Recv = ExchangeN.Recv;
+    request &Request = Requests.Append();
+    bool *RecvBufferData = ExchangeN.RecvBuffer.Data();
+    Request = Recv.Recv(&RecvBufferData);
+  }
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
+    if (Options_.Occludes(OverlapID) == occludes::NONE) continue;
+    exchange_m &ExchangeM = ExchangeMs(OverlapID);
+    core::collect &Collect = ExchangeM.Collect;
+    core::send &Send = ExchangeM.Send;
+    const bool *DisallowMaskData = DisallowMasks(OverlapID).Data();
+    bool *SendBufferData = ExchangeM.SendBuffer.Data();
+    Collect.Collect(&DisallowMaskData, &SendBufferData);
+    request &Request = Requests.Append();
+    Request = Send.Send(&SendBufferData);
+  }
+
+  WaitAll(Requests);
+  Requests.Clear();
+
+  DisallowMasks.Clear();
+
+  elem_map<int,2,distributed_field<bool>> PaddingMasks;
+  map<int,distributed_field<bool>> BaseOcclusionMasks;
+  map<int,distributed_field<bool>> &OcclusionMasks = AssemblyData.OcclusionMasks;
+
+  for (int GridID : Domain.LocalGridIDs()) {
+    const grid &Grid = Domain.Grid(GridID);
+    BaseOcclusionMasks.Insert(GridID, Grid.SharedPartition(), false);
+    OcclusionMasks.Insert(GridID, Grid.SharedPartition(), false);
+  }
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    if (Options_.Occludes(OverlapID) == occludes::NONE) continue;
+    int NGridID = OverlapID(1);
+    const grid &NGrid = Domain.Grid(NGridID);
+    long long NumExtended = NGrid.ExtendedRange().Count();
+    exchange_n &ExchangeN = ExchangeNs(OverlapID);
+    core::disperse &Disperse = ExchangeN.Disperse;
+    distributed_field<bool> &PairwiseOcclusionMask = PairwiseOcclusionMasks(OverlapID);
+    const bool *RecvBufferData = ExchangeN.RecvBuffer.Data();
+    distributed_field<bool> AllowMask(NGrid.SharedPartition());
+    bool *AllowMaskData = AllowMask.Data();
+    Disperse.Disperse(&RecvBufferData, &AllowMaskData);
+    AllowMask.Exchange();
+    distributed_field<bool> &PaddingMask = PaddingMasks.Insert(OverlapID, NGrid.SharedPartition());
+    for (long long l = 0; l < NumExtended; ++l) {
+      PaddingMask[l] = !AllowMask[l] && PairwiseOcclusionMask[l];
+    }
+    distributed_field<bool> &BaseOcclusionMask = BaseOcclusionMasks(NGridID);
+    distributed_field<bool> &OcclusionMask = OcclusionMasks(NGridID);
+    for (long long l = 0; l < NumExtended; ++l) {
+      BaseOcclusionMask[l] = BaseOcclusionMask[l] || PairwiseOcclusionMask[l];
+    }
+    for (long long l = 0; l < NumExtended; ++l) {
+      OcclusionMask[l] = OcclusionMask[l] || (PairwiseOcclusionMask[l] && !PaddingMask[l]);
+    }
+  }
+
+  for (int GridID : Domain.LocalGridIDs()) {
+    if (Options_.EdgeSmoothing(GridID) == 0) continue;
+    const grid &Grid = Domain.Grid(GridID);
+    long long NumExtended = Grid.ExtendedRange().Count();
+    const distributed_field<bool> &BaseOcclusionMask = BaseOcclusionMasks(GridID);
+    distributed_field<bool> &OcclusionMask = OcclusionMasks(GridID);
+    core::DilateMask(OcclusionMask, Options_.EdgeSmoothing(GridID), core::mask_bc::MIRROR);
+    core::ErodeMask(OcclusionMask, Options_.EdgeSmoothing(GridID), core::mask_bc::MIRROR);
+    for (long long l = 0; l < NumExtended; ++l) {
+      OcclusionMask[l] = OcclusionMask[l] && BaseOcclusionMask[l];
+    }
+  }
+
+  BaseOcclusionMasks.Clear();
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    if (Options_.Occludes(OverlapID) == occludes::NONE) continue;
+    int NGridID = OverlapID(1);
+    const grid &NGrid = Domain.Grid(NGridID);
+    long long NumExtended = NGrid.ExtendedRange().Count();
+    distributed_field<bool> &PaddingMask = PaddingMasks(OverlapID);
+    distributed_field<bool> &PairwiseOcclusionMask = PairwiseOcclusionMasks(OverlapID);
+    const distributed_field<bool> &OcclusionMask = OcclusionMasks(NGridID);
+    for (long long l = 0; l < NumExtended; ++l) {
+      PaddingMask[l] = PaddingMask[l] && !OcclusionMask[l];
+    }
+    for (long long l = 0; l < NumExtended; ++l) {
+      PairwiseOcclusionMask[l] = PairwiseOcclusionMask[l] && !PaddingMask[l];
+    }
+  }
+
+  if (Logger.LoggingDebug()) {
+    elem_map<int,2,long long> NumPaddedForGridPair;
+    for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+      if (Options_.Occludes(OverlapID) == occludes::NONE) continue;
+      long long &NumPadded = NumPaddedForGridPair.Insert(OverlapID);
+      NumPadded = core::CountDistributedMask(PaddingMasks(OverlapID));
+    }
+    MPI_Barrier(Domain.Comm());
+    for (auto &OverlapID : OverlapComponent.OverlapIDs()) {
+      if (Options_.Occludes(OverlapID) == occludes::NONE) continue;
+      int MGridID = OverlapID(0);
+      int NGridID = OverlapID(1);
+      if (Domain.GridIsLocal(NGridID)) {
+        const grid &NGrid = Domain.Grid(NGridID);
+        long long NumPadded = NumPaddedForGridPair(OverlapID);
+        if (NumPadded > 0) {
+          const grid_info &MGridInfo = Domain.GridInfo(MGridID);
+          std::string NumPaddedString = core::FormatNumber(NumPadded, "points", "point");
+          Logger.LogDebug(NGrid.Comm().Rank() == 0, 3, "%s marked as not occluded by grid "
+            "%s on grid %s.", NumPaddedString, MGridInfo.Name(), NGrid.Name());
+        }
+      }
+      MPI_Barrier(Domain.Comm());
+    }
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done applying edge padding and smoothing.");
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Accumulating occlusion...");
+  }
+
+  PaddingMasks.Clear();
+
+  for (int GridID : Domain.LocalGridIDs()) {
+    distributed_field<bool> &OcclusionMask = OcclusionMasks(GridID);
+    OcclusionMask.Fill(false);
+  }
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    if (Options_.Occludes(OverlapID) == occludes::NONE) continue;
+    int NGridID = OverlapID(1);
+    const grid &NGrid = Domain.Grid(NGridID);
+    long long NumExtended = NGrid.ExtendedRange().Count();
+    distributed_field<bool> &PairwiseOcclusionMask = PairwiseOcclusionMasks(OverlapID);
+    distributed_field<bool> &OcclusionMask = OcclusionMasks(NGridID);
+    for (long long l = 0; l < NumExtended; ++l) {
+      OcclusionMask[l] = OcclusionMask[l] || PairwiseOcclusionMask[l];
+    }
+  }
+
+  map<int,long long> NumOccludedForGrid;
+
+  for (int GridID : Domain.LocalGridIDs()) {
+    long long &NumOccluded = NumOccludedForGrid.Insert(GridID);
+    NumOccluded = core::CountDistributedMask(OcclusionMasks(GridID));
+  }
+
+  for (int GridID : Domain.LocalGridIDs()) {
+    if (NumOccludedForGrid(GridID) == 0) continue;
+    const grid &Grid = Domain.Grid(GridID);
+    long long NumExtended = Grid.ExtendedRange().Count();
+    auto StateEditHandle = StateComponent.EditState(GridID);
+    auto FlagsEditHandle = StateEditHandle->EditFlags();
+    distributed_field<state_flags> &Flags = *FlagsEditHandle;
+    const distributed_field<bool> &OcclusionMask = OcclusionMasks(GridID);
+    for (long long l = 0; l < NumExtended; ++l) {
+      if (OcclusionMask[l]) {
+        Flags[l] |= state_flags::OCCLUDED;
+      }
+    }
+  }
+
+  MPI_Barrier(Domain.Comm());
+
+  if (Logger.LoggingDebug()) {
+    for (int GridID : Domain.GridIDs()) {
+      if (Domain.GridIsLocal(GridID)) {
+        const grid &Grid = Domain.Grid(GridID);
+        long long NumOccluded = NumOccludedForGrid(GridID);
+        if (NumOccluded > 0) {
+          std::string NumOccludedString = core::FormatNumber(NumOccluded, "occluded points",
+            "occluded point");
+          Logger.LogDebug(Grid.Comm().Rank() == 0, 3, "%s on grid %s.", NumOccludedString,
+            Grid.Name());
+        }
+      }
+      MPI_Barrier(Domain.Comm());
+    }
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done accumulating occlusion.");
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Done detecting occluded points.");
+  }
+
+
 
 }
 
