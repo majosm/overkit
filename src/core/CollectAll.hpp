@@ -79,7 +79,7 @@ public:
       for (int iCount = 0; iCount < Count_; ++iCount) {
         PackedValues_(iCount)(iCell) = value_type(true);
         for (int iVertex = 0; iVertex < NumVertices; ++iVertex) {
-          PackedValues_(iCount)(iCell) = PackedValues_(iCount)(iVertex) && VertexValues_(iCount,
+          PackedValues_(iCount)(iCell) = PackedValues_(iCount)(iCell) && VertexValues_(iCount,
             iVertex);
         }
       }
