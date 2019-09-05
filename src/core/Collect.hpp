@@ -173,6 +173,52 @@ inline collect CreateCollectAll(std::shared_ptr<context> Context, comm_view Comm
 }
 
 namespace collect_internal {
+collect CreateCollectMinRow(std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart,
+  const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
+  range &FieldValuesRange);
+collect CreateCollectMinCol(std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart,
+  const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
+  range &FieldValuesRange);
+}
+inline collect CreateCollectMin(std::shared_ptr<context> Context, comm_view Comm, const cart &Cart,
+  const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
+  range &FieldValuesRange, array_layout FieldValuesLayout) {
+  collect Collect;
+  switch (FieldValuesLayout) {
+  case array_layout::ROW_MAJOR:
+    Collect = collect_internal::CreateCollectMinRow(std::move(Context), Comm, Cart, LocalRange,
+      CollectMap, ValueType, Count, FieldValuesRange);
+  case array_layout::COLUMN_MAJOR:
+    Collect = collect_internal::CreateCollectMinCol(std::move(Context), Comm, Cart, LocalRange,
+      CollectMap, ValueType, Count, FieldValuesRange);
+  }
+  return Collect;
+}
+
+namespace collect_internal {
+collect CreateCollectMaxRow(std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart,
+  const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
+  range &FieldValuesRange);
+collect CreateCollectMaxCol(std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart,
+  const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
+  range &FieldValuesRange);
+}
+inline collect CreateCollectMax(std::shared_ptr<context> Context, comm_view Comm, const cart &Cart,
+  const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
+  range &FieldValuesRange, array_layout FieldValuesLayout) {
+  collect Collect;
+  switch (FieldValuesLayout) {
+  case array_layout::ROW_MAJOR:
+    Collect = collect_internal::CreateCollectMaxRow(std::move(Context), Comm, Cart, LocalRange,
+      CollectMap, ValueType, Count, FieldValuesRange);
+  case array_layout::COLUMN_MAJOR:
+    Collect = collect_internal::CreateCollectMaxCol(std::move(Context), Comm, Cart, LocalRange,
+      CollectMap, ValueType, Count, FieldValuesRange);
+  }
+  return Collect;
+}
+
+namespace collect_internal {
 collect CreateCollectInterpRow(std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart,
   const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
   range &FieldValuesRange, floating_ref<const array<double,3>> InterpCoefs);

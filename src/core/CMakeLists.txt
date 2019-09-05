@@ -118,6 +118,8 @@ set(INTERNAL_HEADERS
   CollectBase.hpp
   CollectInterp.hpp
   CollectMap.hpp
+  CollectMax.hpp
+  CollectMin.hpp
   CollectNone.hpp
   CollectNotAll.hpp
   Comm.inl

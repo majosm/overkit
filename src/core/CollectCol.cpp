@@ -6,6 +6,8 @@
 #include "ovk/core/CollectAll.hpp"
 #include "ovk/core/CollectAny.hpp"
 #include "ovk/core/CollectInterp.hpp"
+#include "ovk/core/CollectMax.hpp"
+#include "ovk/core/CollectMin.hpp"
 #include "ovk/core/CollectNone.hpp"
 #include "ovk/core/CollectNotAll.hpp"
 
@@ -239,6 +241,116 @@ collect CreateCollectAllCol(std::shared_ptr<context> &&Context, comm_view Comm, 
     break;
   case data_type::DOUBLE:
     Collect = collect_all_col<double>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+      FieldValuesRange);
+    break;
+  }
+
+  return Collect;
+
+}
+
+template <typename T> using collect_min_col = collect_min<T, array_layout::COLUMN_MAJOR>;
+
+collect CreateCollectMinCol(std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart,
+  const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
+  range &FieldValuesRange) {
+
+  collect Collect;
+
+  switch (ValueType) {
+  case data_type::BOOL:
+    Collect = collect_min_col<bool>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+      FieldValuesRange);
+    break;
+  case data_type::BYTE:
+    Collect = collect_min_col<unsigned char>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+      Count, FieldValuesRange);
+    break;
+  case data_type::INT:
+    Collect = collect_min_col<int>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+      FieldValuesRange);
+    break;
+  case data_type::LONG:
+    Collect = collect_min_col<long>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+      FieldValuesRange);
+    break;
+  case data_type::LONG_LONG:
+    Collect = collect_min_col<long long>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+      Count, FieldValuesRange);
+    break;
+  case data_type::UNSIGNED_INT:
+    Collect = collect_min_col<unsigned int>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+      Count, FieldValuesRange);
+    break;
+  case data_type::UNSIGNED_LONG:
+    Collect = collect_min_col<unsigned long>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+      Count, FieldValuesRange);
+    break;
+  case data_type::UNSIGNED_LONG_LONG:
+    Collect = collect_min_col<unsigned long long>(std::move(Context), Comm, Cart, LocalRange,
+      CollectMap, Count, FieldValuesRange);
+    break;
+  case data_type::FLOAT:
+    Collect = collect_min_col<float>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+      FieldValuesRange);
+    break;
+  case data_type::DOUBLE:
+    Collect = collect_min_col<double>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+      FieldValuesRange);
+    break;
+  }
+
+  return Collect;
+
+}
+
+template <typename T> using collect_max_col = collect_max<T, array_layout::COLUMN_MAJOR>;
+
+collect CreateCollectMaxCol(std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart,
+  const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int Count, const
+  range &FieldValuesRange) {
+
+  collect Collect;
+
+  switch (ValueType) {
+  case data_type::BOOL:
+    Collect = collect_max_col<bool>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+      FieldValuesRange);
+    break;
+  case data_type::BYTE:
+    Collect = collect_max_col<unsigned char>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+      Count, FieldValuesRange);
+    break;
+  case data_type::INT:
+    Collect = collect_max_col<int>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+      FieldValuesRange);
+    break;
+  case data_type::LONG:
+    Collect = collect_max_col<long>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+      FieldValuesRange);
+    break;
+  case data_type::LONG_LONG:
+    Collect = collect_max_col<long long>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+      Count, FieldValuesRange);
+    break;
+  case data_type::UNSIGNED_INT:
+    Collect = collect_max_col<unsigned int>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+      Count, FieldValuesRange);
+    break;
+  case data_type::UNSIGNED_LONG:
+    Collect = collect_max_col<unsigned long>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+      Count, FieldValuesRange);
+    break;
+  case data_type::UNSIGNED_LONG_LONG:
+    Collect = collect_max_col<unsigned long long>(std::move(Context), Comm, Cart, LocalRange,
+      CollectMap, Count, FieldValuesRange);
+    break;
+  case data_type::FLOAT:
+    Collect = collect_max_col<float>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+      FieldValuesRange);
+    break;
+  case data_type::DOUBLE:
+    Collect = collect_max_col<double>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
       FieldValuesRange);
     break;
   }
