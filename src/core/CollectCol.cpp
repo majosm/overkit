@@ -378,6 +378,7 @@ collect CreateCollectInterpCol(std::shared_ptr<context> &&Context, comm_view Com
     break;
   default:
     OVK_DEBUG_ASSERT(false, "Invalid data type for interpolation collect operation.");
+    break;
   }
 
   return Collect;

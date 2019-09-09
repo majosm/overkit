@@ -142,9 +142,11 @@ inline collect CreateCollectNotAll(std::shared_ptr<context> Context, comm_view C
   case array_layout::ROW_MAJOR:
     Collect = collect_internal::CreateCollectNotAllRow(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, ValueType, Count, FieldValuesRange);
+    break;
   case array_layout::COLUMN_MAJOR:
     Collect = collect_internal::CreateCollectNotAllCol(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, ValueType, Count, FieldValuesRange);
+    break;
   }
   return Collect;
 }
@@ -165,9 +167,11 @@ inline collect CreateCollectAll(std::shared_ptr<context> Context, comm_view Comm
   case array_layout::ROW_MAJOR:
     Collect = collect_internal::CreateCollectAllRow(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, ValueType, Count, FieldValuesRange);
+    break;
   case array_layout::COLUMN_MAJOR:
     Collect = collect_internal::CreateCollectAllCol(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, ValueType, Count, FieldValuesRange);
+    break;
   }
   return Collect;
 }
@@ -188,9 +192,11 @@ inline collect CreateCollectMin(std::shared_ptr<context> Context, comm_view Comm
   case array_layout::ROW_MAJOR:
     Collect = collect_internal::CreateCollectMinRow(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, ValueType, Count, FieldValuesRange);
+    break;
   case array_layout::COLUMN_MAJOR:
     Collect = collect_internal::CreateCollectMinCol(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, ValueType, Count, FieldValuesRange);
+    break;
   }
   return Collect;
 }
@@ -211,9 +217,11 @@ inline collect CreateCollectMax(std::shared_ptr<context> Context, comm_view Comm
   case array_layout::ROW_MAJOR:
     Collect = collect_internal::CreateCollectMaxRow(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, ValueType, Count, FieldValuesRange);
+    break;
   case array_layout::COLUMN_MAJOR:
     Collect = collect_internal::CreateCollectMaxCol(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, ValueType, Count, FieldValuesRange);
+    break;
   }
   return Collect;
 }
@@ -234,9 +242,11 @@ inline collect CreateCollectInterp(std::shared_ptr<context> Context, comm_view C
   case array_layout::ROW_MAJOR:
     return collect_internal::CreateCollectInterpRow(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, ValueType, Count, FieldValuesRange, InterpCoefs);
+    break;
   case array_layout::COLUMN_MAJOR:
     return collect_internal::CreateCollectInterpCol(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, ValueType, Count, FieldValuesRange, InterpCoefs);
+    break;
   }
   return {};
 }

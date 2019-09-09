@@ -75,6 +75,7 @@ disperse CreateDisperseOverwrite(std::shared_ptr<context> Context, const dispers
         FieldValuesRange);
       break;
     }
+    break;
   case array_layout::COLUMN_MAJOR:
     switch (ValueType) {
     case data_type::BOOL:
@@ -118,6 +119,7 @@ disperse CreateDisperseOverwrite(std::shared_ptr<context> Context, const dispers
         FieldValuesRange);
       break;
     }
+    break;
   }
 
   return Disperse;
@@ -179,6 +181,7 @@ disperse CreateDisperseAppend(std::shared_ptr<context> Context, const disperse_m
         FieldValuesRange);
       break;
     }
+    break;
   case array_layout::COLUMN_MAJOR:
     switch (ValueType) {
     case data_type::BOOL:
@@ -221,6 +224,7 @@ disperse CreateDisperseAppend(std::shared_ptr<context> Context, const disperse_m
         FieldValuesRange);
       break;
     }
+    break;
   }
 
   return Disperse;
