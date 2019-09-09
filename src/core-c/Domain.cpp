@@ -8,6 +8,7 @@
 #include "ovk/core-c/GeometryComponent.h"
 #include "ovk/core-c/Global.h"
 #include "ovk/core-c/Grid.h"
+#include "ovk/core-c/StateComponent.h"
 #include "ovk/core/Array.hpp"
 #include "ovk/core/ArrayView.hpp"
 #include "ovk/core/ConnectivityComponent.hpp"
@@ -19,6 +20,7 @@
 #include "ovk/core/Grid.hpp"
 #include "ovk/core/ID.hpp"
 #include "ovk/core/Optional.hpp"
+#include "ovk/core/StateComponent.hpp"
 
 #include <mpi.h>
 
@@ -385,6 +387,10 @@ void ovkCreateComponent(ovk_domain *Domain, int ComponentID, ovk_component_type 
     CreateComponent<ovk_geometry_component, ovk::geometry_component, ovk_geometry_component_params,
       ovk::geometry_component::params>(Domain, ComponentID, Params);
     break;
+  case OVK_COMPONENT_TYPE_STATE:
+    CreateComponent<ovk_state_component, ovk::state_component, ovk_state_component_params,
+      ovk::state_component::params>(Domain, ComponentID, Params);
+    break;
   case OVK_COMPONENT_TYPE_CONNECTIVITY:
     CreateComponent<ovk_connectivity_component, ovk::connectivity_component,
       ovk_connectivity_component_params, ovk::connectivity_component::params>(Domain, ComponentID,
@@ -435,6 +441,9 @@ void ovkGetComponent(const ovk_domain *Domain, int ComponentID, ovk_component_ty
   case OVK_COMPONENT_TYPE_GEOMETRY:
     GetComponent<ovk_geometry_component, ovk::geometry_component>(Domain, ComponentID, Component);
     break;
+  case OVK_COMPONENT_TYPE_STATE:
+    GetComponent<ovk_state_component, ovk::state_component>(Domain, ComponentID, Component);
+    break;
   case OVK_COMPONENT_TYPE_CONNECTIVITY:
     GetComponent<ovk_connectivity_component, ovk::connectivity_component>(Domain, ComponentID,
       Component);
@@ -478,6 +487,9 @@ void ovkEditComponent(ovk_domain *Domain, int ComponentID, ovk_component_type Co
   case OVK_COMPONENT_TYPE_GEOMETRY:
     EditComponent<ovk_geometry_component, ovk::geometry_component>(Domain, ComponentID, Component);
     break;
+  case OVK_COMPONENT_TYPE_STATE:
+    EditComponent<ovk_state_component, ovk::state_component>(Domain, ComponentID, Component);
+    break;
   case OVK_COMPONENT_TYPE_CONNECTIVITY:
     EditComponent<ovk_connectivity_component, ovk::connectivity_component>(Domain, ComponentID,
       Component);
@@ -519,6 +531,9 @@ void ovkRestoreComponent(ovk_domain *Domain, int ComponentID, ovk_component_type
   case OVK_COMPONENT_TYPE_GEOMETRY:
     RestoreComponent<ovk_geometry_component, ovk::geometry_component>(Domain, ComponentID,
       Component);
+    break;
+  case OVK_COMPONENT_TYPE_STATE:
+    RestoreComponent<ovk_state_component, ovk::state_component>(Domain, ComponentID, Component);
     break;
   case OVK_COMPONENT_TYPE_CONNECTIVITY:
     RestoreComponent<ovk_connectivity_component, ovk::connectivity_component>(Domain, ComponentID,

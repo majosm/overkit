@@ -18,6 +18,7 @@ extern "C" {
 
 typedef enum {
   OVK_COMPONENT_TYPE_GEOMETRY = 0,
+  OVK_COMPONENT_TYPE_STATE,
   OVK_COMPONENT_TYPE_CONNECTIVITY
 } ovk_component_type;
 
@@ -25,6 +26,7 @@ static inline bool ovkValidComponentType(ovk_component_type ComponentType) {
 
   switch (ComponentType) {
   case OVK_COMPONENT_TYPE_GEOMETRY:
+  case OVK_COMPONENT_TYPE_STATE:
   case OVK_COMPONENT_TYPE_CONNECTIVITY:
     return true;
   default:
