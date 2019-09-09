@@ -8,6 +8,7 @@
 #include "ovk/core-c/GeometryComponent.h"
 #include "ovk/core-c/Global.h"
 #include "ovk/core-c/Grid.h"
+#include "ovk/core-c/OverlapComponent.h"
 #include "ovk/core-c/StateComponent.h"
 #include "ovk/core/Array.hpp"
 #include "ovk/core/ArrayView.hpp"
@@ -20,6 +21,7 @@
 #include "ovk/core/Grid.hpp"
 #include "ovk/core/ID.hpp"
 #include "ovk/core/Optional.hpp"
+#include "ovk/core/OverlapComponent.hpp"
 #include "ovk/core/StateComponent.hpp"
 
 #include <mpi.h>
@@ -391,6 +393,10 @@ void ovkCreateComponent(ovk_domain *Domain, int ComponentID, ovk_component_type 
     CreateComponent<ovk_state_component, ovk::state_component, ovk_state_component_params,
       ovk::state_component::params>(Domain, ComponentID, Params);
     break;
+  case OVK_COMPONENT_TYPE_OVERLAP:
+    CreateComponent<ovk_overlap_component, ovk::overlap_component, ovk_overlap_component_params,
+      ovk::overlap_component::params>(Domain, ComponentID, Params);
+    break;
   case OVK_COMPONENT_TYPE_CONNECTIVITY:
     CreateComponent<ovk_connectivity_component, ovk::connectivity_component,
       ovk_connectivity_component_params, ovk::connectivity_component::params>(Domain, ComponentID,
@@ -444,6 +450,9 @@ void ovkGetComponent(const ovk_domain *Domain, int ComponentID, ovk_component_ty
   case OVK_COMPONENT_TYPE_STATE:
     GetComponent<ovk_state_component, ovk::state_component>(Domain, ComponentID, Component);
     break;
+  case OVK_COMPONENT_TYPE_OVERLAP:
+    GetComponent<ovk_overlap_component, ovk::overlap_component>(Domain, ComponentID, Component);
+    break;
   case OVK_COMPONENT_TYPE_CONNECTIVITY:
     GetComponent<ovk_connectivity_component, ovk::connectivity_component>(Domain, ComponentID,
       Component);
@@ -490,6 +499,9 @@ void ovkEditComponent(ovk_domain *Domain, int ComponentID, ovk_component_type Co
   case OVK_COMPONENT_TYPE_STATE:
     EditComponent<ovk_state_component, ovk::state_component>(Domain, ComponentID, Component);
     break;
+  case OVK_COMPONENT_TYPE_OVERLAP:
+    EditComponent<ovk_overlap_component, ovk::overlap_component>(Domain, ComponentID, Component);
+    break;
   case OVK_COMPONENT_TYPE_CONNECTIVITY:
     EditComponent<ovk_connectivity_component, ovk::connectivity_component>(Domain, ComponentID,
       Component);
@@ -534,6 +546,9 @@ void ovkRestoreComponent(ovk_domain *Domain, int ComponentID, ovk_component_type
     break;
   case OVK_COMPONENT_TYPE_STATE:
     RestoreComponent<ovk_state_component, ovk::state_component>(Domain, ComponentID, Component);
+    break;
+  case OVK_COMPONENT_TYPE_OVERLAP:
+    RestoreComponent<ovk_overlap_component, ovk::overlap_component>(Domain, ComponentID, Component);
     break;
   case OVK_COMPONENT_TYPE_CONNECTIVITY:
     RestoreComponent<ovk_connectivity_component, ovk::connectivity_component>(Domain, ComponentID,
