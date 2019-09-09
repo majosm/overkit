@@ -128,7 +128,7 @@ TEST_F(AssemblerTests, Overlap2D) {
   int NumProc = TestComm().Size();
   // Avoid sizes that make decomposition too small
   int AllowedSubsetSizes[] = {1, 2, 4, 6, 8, 12, 16, 18};
-  int SubsetSize;
+  int SubsetSize = 1;
   for (int Size : AllowedSubsetSizes) {
     if (Size > NumProc) break;
     SubsetSize = Size;
@@ -399,7 +399,7 @@ TEST_F(AssemblerTests, Overlap3D) {
   int NumProc = TestComm().Size();
   // Avoid sizes that make decomposition too small
   int AllowedSubsetSizes[] = {1, 2, 4, 6, 8, 12, 16, 18, 32, 36, 48, 54};
-  int SubsetSize;
+  int SubsetSize = 1;
   for (int Size : AllowedSubsetSizes) {
     if (Size > NumProc) break;
     SubsetSize = Size;
