@@ -78,6 +78,9 @@ collect CreateCollectNoneRow(std::shared_ptr<context> &&Context, comm_view Comm,
     Collect = collect_none_row<double>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
       Count, FieldValuesRange);
     break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+    break;
   }
 
   return Collect;
@@ -132,6 +135,9 @@ collect CreateCollectAnyRow(std::shared_ptr<context> &&Context, comm_view Comm, 
   case data_type::DOUBLE:
     Collect = collect_any_row<double>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
       FieldValuesRange);
+    break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
     break;
   }
 
@@ -188,6 +194,9 @@ collect CreateCollectNotAllRow(std::shared_ptr<context> &&Context, comm_view Com
     Collect = collect_not_all_row<double>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
       Count, FieldValuesRange);
     break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+    break;
   }
 
   return Collect;
@@ -242,6 +251,9 @@ collect CreateCollectAllRow(std::shared_ptr<context> &&Context, comm_view Comm, 
   case data_type::DOUBLE:
     Collect = collect_all_row<double>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
       FieldValuesRange);
+    break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
     break;
   }
 
@@ -298,6 +310,9 @@ collect CreateCollectMinRow(std::shared_ptr<context> &&Context, comm_view Comm, 
     Collect = collect_min_row<double>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
       FieldValuesRange);
     break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+    break;
   }
 
   return Collect;
@@ -352,6 +367,9 @@ collect CreateCollectMaxRow(std::shared_ptr<context> &&Context, comm_view Comm, 
   case data_type::DOUBLE:
     Collect = collect_max_row<double>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
       FieldValuesRange);
+    break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
     break;
   }
 

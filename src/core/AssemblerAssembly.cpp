@@ -2359,6 +2359,9 @@ void assembler::DetectOccluded_() {
       break;
     case occludes::NONE:
       break;
+    default:
+      OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+      break;
     }
   }
 

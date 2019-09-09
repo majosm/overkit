@@ -4,6 +4,7 @@
 #ifndef OVK_CORE_CART_HPP_INCLUDED
 #define OVK_CORE_CART_HPP_INCLUDED
 
+#include <ovk/core/Debug.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Optional.hpp>
 #include <ovk/core/Range.hpp>

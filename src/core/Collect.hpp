@@ -10,6 +10,7 @@
 #include <ovk/core/CollectMap.hpp>
 #include <ovk/core/Context.hpp>
 #include <ovk/core/DataType.hpp>
+#include <ovk/core/Debug.hpp>
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Profiler.hpp>
@@ -97,6 +98,9 @@ inline collect CreateCollectNone(std::shared_ptr<context> Context, comm_view Com
     Collect = collect_internal::CreateCollectNoneCol(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, ValueType, Count, FieldValuesRange);
     break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+    break;
   }
   return Collect;
 }
@@ -121,6 +125,9 @@ inline collect CreateCollectAny(std::shared_ptr<context> Context, comm_view Comm
   case array_layout::COLUMN_MAJOR:
     Collect = collect_internal::CreateCollectAnyCol(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, ValueType, Count, FieldValuesRange);
+    break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
     break;
   }
   return Collect;
@@ -147,6 +154,9 @@ inline collect CreateCollectNotAll(std::shared_ptr<context> Context, comm_view C
     Collect = collect_internal::CreateCollectNotAllCol(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, ValueType, Count, FieldValuesRange);
     break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+    break;
   }
   return Collect;
 }
@@ -171,6 +181,9 @@ inline collect CreateCollectAll(std::shared_ptr<context> Context, comm_view Comm
   case array_layout::COLUMN_MAJOR:
     Collect = collect_internal::CreateCollectAllCol(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, ValueType, Count, FieldValuesRange);
+    break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
     break;
   }
   return Collect;
@@ -197,6 +210,9 @@ inline collect CreateCollectMin(std::shared_ptr<context> Context, comm_view Comm
     Collect = collect_internal::CreateCollectMinCol(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, ValueType, Count, FieldValuesRange);
     break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+    break;
   }
   return Collect;
 }
@@ -222,6 +238,9 @@ inline collect CreateCollectMax(std::shared_ptr<context> Context, comm_view Comm
     Collect = collect_internal::CreateCollectMaxCol(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, ValueType, Count, FieldValuesRange);
     break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+    break;
   }
   return Collect;
 }
@@ -246,6 +265,9 @@ inline collect CreateCollectInterp(std::shared_ptr<context> Context, comm_view C
   case array_layout::COLUMN_MAJOR:
     return collect_internal::CreateCollectInterpCol(std::move(Context), Comm, Cart, LocalRange,
       CollectMap, ValueType, Count, FieldValuesRange, InterpCoefs);
+    break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
     break;
   }
   return {};

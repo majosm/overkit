@@ -73,6 +73,9 @@ geometry::geometry(std::shared_ptr<context> &&Context, const grid &Grid, params 
     case geometry_type::CURVILINEAR:
       Type_ = geometry_type::RECTILINEAR;
       break;
+    default:
+      OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+      break;
     }
   }
 

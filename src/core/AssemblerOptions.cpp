@@ -379,6 +379,9 @@ void assembler::options::PrintOptions_() {
     case occludes::COARSE:
       OccludesString = "COARSE";
       break;
+    default:
+      OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+      break;
     }
     std::printf("Occludes(%i,%i) = %s\n", Entry.Key()(0), Entry.Key()(1), OccludesString.c_str());
   }
@@ -405,6 +408,9 @@ void assembler::options::PrintOptions_() {
       break;
     case connection_type::CUBIC:
       ConnectionTypeString = "CUBIC";
+      break;
+    default:
+      OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
       break;
     }
     std::printf("ConnectionType(%i,%i) = %s\n", Entry.Key()(0), Entry.Key()(1),

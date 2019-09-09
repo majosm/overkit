@@ -74,6 +74,9 @@ disperse CreateDisperseOverwrite(std::shared_ptr<context> Context, const dispers
       Disperse = disperse_overwrite_row<double>(std::move(Context), DisperseMap, Count,
         FieldValuesRange);
       break;
+    default:
+      OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+      break;
     }
     break;
   case array_layout::COLUMN_MAJOR:
@@ -118,7 +121,13 @@ disperse CreateDisperseOverwrite(std::shared_ptr<context> Context, const dispers
       Disperse = disperse_overwrite_col<double>(std::move(Context), DisperseMap, Count,
         FieldValuesRange);
       break;
+    default:
+      OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+      break;
     }
+    break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
     break;
   }
 
@@ -180,6 +189,9 @@ disperse CreateDisperseAppend(std::shared_ptr<context> Context, const disperse_m
       Disperse = disperse_append_row<double>(std::move(Context), DisperseMap, Count,
         FieldValuesRange);
       break;
+    default:
+      OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+      break;
     }
     break;
   case array_layout::COLUMN_MAJOR:
@@ -223,7 +235,13 @@ disperse CreateDisperseAppend(std::shared_ptr<context> Context, const disperse_m
       Disperse = disperse_append_col<double>(std::move(Context), DisperseMap, Count,
         FieldValuesRange);
       break;
+    default:
+      OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+      break;
     }
+    break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
     break;
   }
 

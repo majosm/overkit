@@ -6,6 +6,7 @@
 
 #include <ovk/core/Array.hpp>
 #include <ovk/core/ArrayView.hpp>
+#include <ovk/core/Debug.hpp>
 #include <ovk/core/Field.hpp>
 #include <ovk/core/GeometricPrimitiveOps.hpp>
 #include <ovk/core/GeometryBase.hpp>

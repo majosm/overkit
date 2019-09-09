@@ -175,6 +175,10 @@ inline bool OverlapsCell(int NumDims, const array<field<double>> &Coords, geomet
   case geometry_type::CURVILINEAR:
     Overlaps = OverlapsCellNonUniform(NumDims, Coords, Tolerance, Cell, PointCoords);
     break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+    Overlaps = false;
+    break;
   }
 
   return Overlaps;
@@ -418,6 +422,9 @@ inline optional<tuple<double>> CoordsInCell(int NumDims, const array<field<doubl
   case geometry_type::CURVILINEAR:
     MaybeLocalCoords = CoordsInCellNonUniform(NumDims, Coords, Cell, PointCoords);
     break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+    break;
   }
 
   return MaybeLocalCoords;
@@ -588,6 +595,10 @@ inline double CellVolume(int NumDims, const array<field<double>> &Coords, geomet
     break;
   case geometry_type::CURVILINEAR:
     Volume = CellVolumeNonUniform(NumDims, Coords, Cell);
+    break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+    Volume = 0.;
     break;
   }
 

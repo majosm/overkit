@@ -7,6 +7,7 @@
 #include "ovk/core/ArrayOps.hpp"
 #include "ovk/core/Cart.hpp"
 #include "ovk/core/Comm.hpp"
+#include "ovk/core/Debug.hpp"
 #include "ovk/core/DistributedField.hpp"
 #include "ovk/core/ElemSet.hpp"
 #include "ovk/core/Global.hpp"
@@ -110,7 +111,12 @@ void DetectEdge(const distributed_field<bool> &Mask, edge_type EdgeType, mask_bc
           Min(GlobalUpperCorner-Point, Zero);
         Value = Mask(MirrorPoint);
         break;
-      }}
+      }
+      default:
+        OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+        Value = false;
+        break;
+      }
     }
     return Value;
   };

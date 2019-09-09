@@ -45,6 +45,10 @@ inline tuple<int> cart::GetPeriod(const tuple<int> &Tuple) const {
       }
     }
     break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+    Period = {0,0,0};
+    break;
   }
 
   return Period;
@@ -74,6 +78,9 @@ inline tuple<int> cart::PeriodicAdjust(const tuple<int> &Tuple) const {
       }
     }
     break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+    break;
   }
 
   return AdjustedTuple;
@@ -101,6 +108,10 @@ inline optional<tuple<int>> cart::MapToRange(const range &Range, const tuple<int
       MappedTuple(iDim) = Tuple(iDim) + PeriodSize * (BeginPeriod(iDim) - TuplePeriod(iDim));
       if (MappedTuple(iDim) < Range.Begin(iDim)) MappedTuple(iDim) += PeriodSize;
     }
+    break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+    MappedTuple = {0,0,0};
     break;
   }
 

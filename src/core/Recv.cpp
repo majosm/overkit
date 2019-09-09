@@ -217,6 +217,9 @@ recv CreateRecv(std::shared_ptr<context> Context, comm_view Comm, const recv_map
   case data_type::DOUBLE:
     Recv = recv_impl<double>(std::move(Context), Comm, RecvMap, Count, Tag);
     break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+    break;
   }
 
   return Recv;

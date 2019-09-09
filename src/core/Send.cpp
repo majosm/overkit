@@ -211,6 +211,9 @@ send CreateSend(std::shared_ptr<context> Context, comm_view Comm, const send_map
   case data_type::DOUBLE:
     Send = send_impl<double>(std::move(Context), Comm, SendMap, Count, Tag);
     break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+    break;
   }
 
   return Send;

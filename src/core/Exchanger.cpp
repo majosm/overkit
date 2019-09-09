@@ -932,6 +932,9 @@ void exchanger::CreateCollect(const elem<int,2> &ConnectivityID, int CollectID, 
       CollectMap, ValueType, Count, GridValuesRange, GridValuesLayout, InterpCoefs);
     }
     break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+    break;
   }
 
   Collects.Insert(CollectID, std::move(Collect));
@@ -1445,6 +1448,9 @@ void exchanger::CreateDisperse(const elem<int,2> &ConnectivityID, int DisperseID
   case disperse_op::APPEND:
     Disperse = core::CreateDisperseAppend(Context_, DisperseMap, ValueType, Count,
       GridValuesRange, GridValuesLayout);
+    break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
     break;
   }
 
