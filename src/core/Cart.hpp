@@ -33,10 +33,12 @@ public:
   const periodic_storage &PeriodicStorage() const { return PeriodicStorage_; }
   periodic_storage &PeriodicStorage() { return PeriodicStorage_; }
 
+  tuple<int> GetPeriodSize() const;
   tuple<int> GetPeriod(const tuple<int> &Point) const;
   tuple<int> PeriodicAdjust(const tuple<int> &Point) const;
 
   optional<tuple<int>> MapToRange(const range &Range, const tuple<int> &Tuple) const;
+  optional<range> MapToRange(const range &Range, const range &OtherRange) const;
 
 private:
 
