@@ -1,6 +1,29 @@
 // Copyright (c) 2019 Matthew J. Smith and Overkit contributors
 // License: MIT (http://opensource.org/licenses/MIT)
 
+#include "ovk/core/DistributedRegionHash.hpp"
+
+#include "ovk/core/Array.hpp"
+#include "ovk/core/ArrayView.hpp"
+#include "ovk/core/Box.hpp"
+#include "ovk/core/Comm.hpp"
+#include "ovk/core/DataType.hpp"
+#include "ovk/core/Global.hpp"
+#include "ovk/core/Indexer.hpp"
+#include "ovk/core/Map.hpp"
+#include "ovk/core/Misc.hpp"
+#include "ovk/core/Range.hpp"
+#include "ovk/core/ScalarOps.hpp"
+#include "ovk/core/Set.hpp"
+#include "ovk/core/Tuple.hpp"
+
+#include <mpi.h>
+
+#include <cmath>
+#include <memory>
+#include <numeric>
+#include <type_traits>
+
 namespace ovk {
 namespace core {
 
@@ -423,5 +446,8 @@ template <typename CoordType> tuple<int> distributed_region_hash<CoordType>::Map
   return Cell;
 
 }
+
+template class distributed_region_hash<int>;
+template class distributed_region_hash<double>;
 
 }}

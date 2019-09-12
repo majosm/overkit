@@ -8,21 +8,13 @@
 #include <ovk/core/ArrayView.hpp>
 #include <ovk/core/Box.hpp>
 #include <ovk/core/Comm.hpp>
-#include <ovk/core/DataType.hpp>
 #include <ovk/core/Global.hpp>
-#include <ovk/core/Indexer.hpp>
 #include <ovk/core/Map.hpp>
-#include <ovk/core/Misc.hpp>
 #include <ovk/core/Range.hpp>
-#include <ovk/core/ScalarOps.hpp>
-#include <ovk/core/Set.hpp>
 #include <ovk/core/Tuple.hpp>
 
 #include <mpi.h>
 
-#include <cmath>
-#include <memory>
-#include <numeric>
 #include <type_traits>
 
 namespace ovk {
@@ -146,11 +138,12 @@ public:
   distributed_region_hash(int NumDims, comm_view Comm, int NumLocalRegions, array_view<const
     extents_type> LocalRegionExtents, array_view<const int> LocalRegionTags);
 
-  distributed_region_hash(const distributed_region_hash &Other) = delete;
-  distributed_region_hash(distributed_region_hash &&Other) noexcept = default;
+  // Can't define these here due to issues with GCC < 6.3 and Intel < 17
+//   distributed_region_hash(const distributed_region_hash &Other) = delete;
+//   distributed_region_hash(distributed_region_hash &&Other) noexcept = default;
 
-  distributed_region_hash &operator=(const distributed_region_hash &Other) = delete;
-  distributed_region_hash &operator=(distributed_region_hash &&Other) noexcept = default;
+//   distributed_region_hash &operator=(const distributed_region_hash &Other) = delete;
+//   distributed_region_hash &operator=(distributed_region_hash &&Other) noexcept = default;
 
   tuple<int> MapPointToBin(const tuple<coord_type> &Point) const;
   range MapExtentsToBinRange(const extents_type &Extents) const;
@@ -190,8 +183,9 @@ private:
 
 };
 
-}}
+extern template class distributed_region_hash<int>;
+extern template class distributed_region_hash<double>;
 
-#include <ovk/core/DistributedRegionHash.inl>
+}}
 
 #endif
