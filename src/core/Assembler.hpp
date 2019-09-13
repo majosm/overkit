@@ -308,6 +308,7 @@ private:
   void LocateOuterFringe_();
   void DetectOccluded_();
   void MinimizeOverlap_();
+  void GenerateConnectivityData_();
 
 };
 

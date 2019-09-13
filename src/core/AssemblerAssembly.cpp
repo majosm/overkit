@@ -44,6 +44,7 @@
 #include "ovk/core/Range.hpp"
 #include "ovk/core/Recv.hpp"
 #include "ovk/core/RecvMap.hpp"
+#include "ovk/core/ScalarOps.hpp"
 #include "ovk/core/Send.hpp"
 #include "ovk/core/SendMap.hpp"
 #include "ovk/core/Set.hpp"
@@ -54,6 +55,7 @@
 
 #include <mpi.h>
 
+#include <cmath>
 #include <limits>
 #include <memory>
 #include <string>
@@ -93,6 +95,7 @@ void assembler::Assemble() {
   LocateOuterFringe_();
   DetectOccluded_();
   MinimizeOverlap_();
+  GenerateConnectivityData_();
 
   AssemblyManifest_.DetectOverlap.Clear();
   AssemblyManifest_.InferBoundaries.Clear();
@@ -2999,6 +3002,890 @@ void assembler::MinimizeOverlap_() {
     }
     Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Done minimizing overlap.");
   }
+
+}
+
+void assembler::GenerateConnectivityData_() {
+
+  domain &Domain = *Domain_;
+  core::logger &Logger = Context_->core_Logger();
+
+  MPI_Barrier(Domain.Comm());
+
+  Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Generating connectivity data...");
+
+  int NumDims = Domain.Dimension();
+  const assembly_data &AssemblyData = *AssemblyData_;
+
+  const map<int,local_grid_aux_data> &LocalGridAuxData = AssemblyData.LocalGridAuxData;
+  const elem_map<int,2,local_overlap_m_aux_data> &LocalOverlapMAuxData = AssemblyData
+    .LocalOverlapMAuxData;
+  const elem_map<int,2,local_overlap_n_aux_data> &LocalOverlapNAuxData = AssemblyData
+    .LocalOverlapNAuxData;
+
+  auto StateComponentEditHandle = Domain.EditComponent<state_component>(StateComponentID_);
+  state_component &StateComponent = *StateComponentEditHandle;
+
+  auto &OverlapComponent = Domain.Component<overlap_component>(OverlapComponentID_);
+
+  Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Locating receiver points...");
+
+  const map<int,distributed_field<bool>> &OcclusionMasks = AssemblyData.OcclusionMasks;
+  const map<int,distributed_field<bool>> &OuterFringeMasks = AssemblyData.OuterFringeMasks;
+  const map<int,distributed_field<bool>> &InnerFringeMasks = AssemblyData.InnerFringeMasks;
+
+  map<int,distributed_field<bool>> ReceiverMasks;
+
+  for (int GridID : Domain.LocalGridIDs()) {
+    const grid &Grid = Domain.Grid(GridID);
+    long long NumExtended = Grid.ExtendedRange().Count();
+    const distributed_field<bool> &ActiveMask = LocalGridAuxData(GridID).ActiveMask;
+    const distributed_field<bool> &OcclusionMask = OcclusionMasks(GridID);
+    const distributed_field<bool> &OuterFringeMask = OuterFringeMasks(GridID);
+    const distributed_field<bool> &InnerFringeMask = InnerFringeMasks(GridID);
+    distributed_field<bool> &ReceiverMask = ReceiverMasks.Insert(GridID, Grid.SharedPartition());
+    for (long long l = 0; l < NumExtended; ++l) {
+      ReceiverMask[l] = OuterFringeMask[l] || InnerFringeMask[l] || (OcclusionMask[l] &&
+        ActiveMask[l]);
+    }
+  }
+
+  map<int,long long> NumReceiversForGrid;
+
+  for (int GridID : Domain.LocalGridIDs()) {
+    long long &NumReceivers = NumReceiversForGrid.Insert(GridID);
+    NumReceivers = core::CountDistributedMask(ReceiverMasks(GridID));
+  }
+
+  if (Logger.LoggingDebug()) {
+    MPI_Barrier(Domain.Comm());
+    for (int GridID : Domain.GridIDs()) {
+      if (Domain.GridIsLocal(GridID)) {
+        const grid &Grid = Domain.Grid(GridID);
+        long long NumReceivers = NumReceiversForGrid(GridID);
+        if (NumReceivers > 0) {
+          std::string NumReceiversString = core::FormatNumber(NumReceivers, "receiver points",
+            "receiver point");
+          Logger.LogDebug(Grid.Comm().Rank() == 0, 3, "%s on grid %s.", NumReceiversString,
+            Grid.Name());
+        }
+      }
+      MPI_Barrier(Domain.Comm());
+    }
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done locating receiver points.");
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Choosing donors...");
+  }
+
+  map<int,int> MaxReceiverDistances;
+
+  for (int GridID : Domain.LocalGridIDs()) {
+    MaxReceiverDistances.Insert(GridID, 0);
+  }
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
+    int MGridID = OverlapID(0);
+    int &MaxDistance = MaxReceiverDistances(MGridID);
+    MaxDistance = Max(MaxDistance, Options_.EdgePadding(OverlapID));
+  }
+
+  map<int,distributed_field<int>> ReceiverDistancesForGrid;
+
+  for (int GridID : Domain.LocalGridIDs()) {
+    const grid &Grid = Domain.Grid(GridID);
+    long long NumExtended = Grid.ExtendedRange().Count();
+    const distributed_field<bool> &ReceiverMask = ReceiverMasks(GridID);
+    int MaxDistance = MaxReceiverDistances(GridID);
+    distributed_field<int> &ReceiverDistances = ReceiverDistancesForGrid.Insert(GridID,
+      Grid.SharedPartition(), MaxDistance);
+    distributed_field<bool> CoverMask;
+    core::DetectEdge(ReceiverMask, core::edge_type::INNER, core::mask_bc::MIRROR, false,
+      CoverMask);
+    for (int Distance = 0; Distance < MaxDistance; ++Distance) {
+      for (long long l = 0; l < NumExtended; ++l) {
+        if (ReceiverDistances[l] == MaxDistance && CoverMask[l]) {
+          ReceiverDistances[l] = ReceiverMask[l] ? -Distance : Distance;
+        }
+      }
+      core::DilateMask(CoverMask, 1, core::mask_bc::MIRROR);
+    }
+  }
+
+  struct exchange_m {
+    core::collect Collect;
+    core::send Send;
+    array<int> SendBuffer;
+  };
+
+  struct exchange_n {
+    core::recv Recv;
+  };
+
+  elem_map<int,2,exchange_m> ExchangeMs;
+  elem_map<int,2,exchange_n> ExchangeNs;
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
+    int MGridID = OverlapID(0);
+    const grid &MGrid = Domain.Grid(MGridID);
+    const overlap_m &OverlapM = OverlapComponent.OverlapM(OverlapID);
+    const local_overlap_m_aux_data &OverlapMAuxData = LocalOverlapMAuxData(OverlapID);
+    exchange_m &ExchangeM = ExchangeMs.Insert(OverlapID);
+    ExchangeM.Collect = core::CreateCollectMin(Context_, MGrid.Comm(), MGrid.Cart(),
+      MGrid.LocalRange(), OverlapMAuxData.CollectMap, data_type::INT, 1, MGrid.ExtendedRange(),
+      array_layout::COLUMN_MAJOR);
+    ExchangeM.Send = core::CreateSend(Context_, Domain.Comm(), OverlapMAuxData.SendMap,
+      data_type::INT, 1, 0);
+    ExchangeM.SendBuffer.Resize({OverlapM.Count()});
+  }
+
+  elem_map<int,2,array<int>> OverlapReceiverDistances;
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    const overlap_n &OverlapN = OverlapComponent.OverlapN(OverlapID);
+    const local_overlap_n_aux_data &OverlapNAuxData = LocalOverlapNAuxData(OverlapID);
+    exchange_n &ExchangeN = ExchangeNs.Insert(OverlapID);
+    ExchangeN.Recv = core::CreateRecv(Context_, Domain.Comm(), OverlapNAuxData.RecvMap,
+      data_type::INT, 1, 0);
+    array<int> &ReceiverDistances = OverlapReceiverDistances.Insert(OverlapID);
+    ReceiverDistances.Resize({OverlapN.Count()});
+  }
+
+  array<request> Requests;
+  Requests.Reserve(OverlapComponent.LocalOverlapMCount() + OverlapComponent.LocalOverlapNCount());
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    exchange_n &ExchangeN = ExchangeNs(OverlapID);
+    core::recv &Recv = ExchangeN.Recv;
+    request &Request = Requests.Append();
+    array<int> &ReceiverDistances = OverlapReceiverDistances(OverlapID);
+    int *ReceiverDistancesData = ReceiverDistances.Data();
+    Request = Recv.Recv(&ReceiverDistancesData);
+  }
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
+    int MGridID = OverlapID(0);
+    const distributed_field<int> &ReceiverDistances = ReceiverDistancesForGrid(MGridID);
+    exchange_m &ExchangeM = ExchangeMs(OverlapID);
+    core::collect &Collect = ExchangeM.Collect;
+    core::send &Send = ExchangeM.Send;
+    const int *ReceiverDistancesData = ReceiverDistances.Data();
+    int *SendBufferData = ExchangeM.SendBuffer.Data();
+    Collect.Collect(&ReceiverDistancesData, &SendBufferData);
+    request &Request = Requests.Append();
+    Request = Send.Send(&SendBufferData);
+  }
+
+  WaitAll(Requests);
+  Requests.Clear();
+
+  ExchangeMs.Clear();
+  ExchangeNs.Clear();
+
+  map<int,field<int>> DonorGridIDsForLocalGrid;
+  map<int,field<double>> DonorNormalizedDistancesForLocalGrid;
+  map<int,field<double>> DonorVolumesForLocalGrid;
+
+  for (int GridID : Domain.LocalGridIDs()) {
+    const grid &Grid = Domain.Grid(GridID);
+    DonorGridIDsForLocalGrid.Insert(GridID, Grid.LocalRange(), -1);
+    DonorNormalizedDistancesForLocalGrid.Insert(GridID, Grid.LocalRange());
+    DonorVolumesForLocalGrid.Insert(GridID, Grid.LocalRange());
+  }
+
+  constexpr double TOLERANCE = 1.e-12;
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    if (Options_.ConnectionType(OverlapID) == connection_type::NONE) continue;
+    int MGridID = OverlapID(0);
+    int NGridID = OverlapID(1);
+    const grid &NGrid = Domain.Grid(NGridID);
+    const range &LocalRange = NGrid.LocalRange();
+    const overlap_n &OverlapN = OverlapComponent.OverlapN(OverlapID);
+    const field<bool> &BaseOverlapMask = OverlapN.Mask();
+    const local_overlap_n_aux_data &OverlapNAuxData = LocalOverlapNAuxData(OverlapID);
+    const distributed_field<bool> &OverlapMask = OverlapNAuxData.OverlapMask;
+    const array<double> &OverlapVolumes = OverlapNAuxData.Volumes;
+    const distributed_field<bool> &ReceiverMask = ReceiverMasks(NGridID);
+    const array<int> &ReceiverDistances = OverlapReceiverDistances(OverlapID);
+    field<int> &DonorGridIDs = DonorGridIDsForLocalGrid(NGridID);
+    field<double> &DonorNormalizedDistances = DonorNormalizedDistancesForLocalGrid(NGridID);
+    field<double> &DonorVolumes = DonorVolumesForLocalGrid(NGridID);
+    long long iOverlapping = 0;
+    for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
+      for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
+        for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
+          tuple<int> Point = {i,j,k};
+          if (BaseOverlapMask(Point)) {
+            if (ReceiverMask(Point) && OverlapMask(Point)) {
+              double ReceiverDistance = double(ReceiverDistances(iOverlapping));
+              double MaxDistance = double(Max(Options_.EdgePadding(OverlapID),1));
+              double NormalizedDistance = Min(ReceiverDistance/MaxDistance, 1.);
+              double Volume = OverlapVolumes(iOverlapping);
+              if (DonorGridIDs(Point) < 0) {
+                DonorGridIDs(Point) = MGridID;
+                DonorNormalizedDistances(Point) = NormalizedDistance;
+                DonorVolumes(Point) = Volume;
+              } else {
+                bool BetterDonor;
+                if (std::abs(NormalizedDistance-DonorNormalizedDistances(Point)) > TOLERANCE) {
+                  BetterDonor = NormalizedDistance > DonorNormalizedDistances(Point);
+                } else {
+                  BetterDonor = Volume < DonorVolumes(Point);
+                }
+                if (BetterDonor) {
+                  DonorGridIDs(Point) = MGridID;
+                  DonorNormalizedDistances(Point) = NormalizedDistance;
+                  DonorVolumes(Point) = Volume;
+                }
+              }
+            }
+            ++iOverlapping;
+          }
+        }
+      }
+    }
+  }
+
+  map<int,distributed_field<bool>> OrphanMasks;
+  map<int,long long> NumOrphansForGrid;
+
+  for (int GridID : Domain.LocalGridIDs()) {
+    const grid &Grid = Domain.Grid(GridID);
+    const range &LocalRange = Grid.LocalRange();
+    const distributed_field<bool> &ReceiverMask = ReceiverMasks(GridID);
+    const field<int> &DonorGridIDs = DonorGridIDsForLocalGrid(GridID);
+    distributed_field<bool> &OrphanMask = OrphanMasks.Insert(GridID, Grid.SharedPartition());
+    for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
+      for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
+        for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
+          tuple<int> Point = {i,j,k};
+          OrphanMask(Point) = ReceiverMask(Point) && DonorGridIDs(Point) < 0;
+          if (OrphanMask(Point)) {
+            Logger.LogWarning(true, "Could not find suitable donor for point (%i,%i,%i) of grid "
+              "%s.", Point(0), Point(1), Point(2), Grid.Name());
+          }
+        }
+      }
+    }
+    OrphanMask.Exchange();
+    long long &NumOrphans = NumOrphansForGrid.Insert(GridID);
+    NumOrphans = core::CountDistributedMask(OrphanMask);
+  }
+
+  for (int GridID : Domain.LocalGridIDs()) {
+    if (NumReceiversForGrid(GridID) == 0 && NumOrphansForGrid(GridID) == 0) continue;
+    const grid &Grid = Domain.Grid(GridID);
+    long long NumExtended = Grid.ExtendedRange().Count();
+    const distributed_field<bool> &ReceiverMask = ReceiverMasks(GridID);
+    const distributed_field<bool> &OrphanMask = OrphanMasks(GridID);
+    auto StateEditHandle = StateComponent.EditState(GridID);
+    auto FlagsEditHandle = StateEditHandle->EditFlags();
+    distributed_field<state_flags> &Flags = *FlagsEditHandle;
+    for (long long l = 0; l < NumExtended; ++l) {
+      if (ReceiverMask[l]) {
+        Flags[l] = Flags[l] | state_flags::RECEIVER;
+      }
+      if (OrphanMask[l]) {
+        Flags[l] = Flags[l] | state_flags::ORPHAN;
+      }
+    }
+  }
+
+  // Exchanging in reverse, from points to cells
+
+  struct reverse_exchange_m {
+    core::recv_map RecvMap;
+    core::recv Recv;
+  };
+
+  struct reverse_exchange_n {
+    core::send_map SendMap;
+    core::send Send;
+    array<bool> SendBuffer;
+  };
+
+  elem_map<int,2,reverse_exchange_m> ReverseExchangeMs;
+  elem_map<int,2,reverse_exchange_n> ReverseExchangeNs;
+
+  elem_map<int,2,array<bool>> OverlappingCellDonates;
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
+    if (Options_.ConnectionType(OverlapID) == connection_type::NONE) continue;
+    const overlap_m &OverlapM = OverlapComponent.OverlapM(OverlapID);
+    reverse_exchange_m &ExchangeM = ReverseExchangeMs.Insert(OverlapID);
+    ExchangeM.RecvMap = core::recv_map(OverlapM.DestinationRanks());
+    ExchangeM.Recv = core::CreateRecv(Context_, Domain.Comm(), ExchangeM.RecvMap, data_type::BOOL,
+      1, 0);
+    array<bool> &Donates = OverlappingCellDonates.Insert(OverlapID);
+    Donates.Resize({OverlapM.Count()});
+  }
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    if (Options_.ConnectionType(OverlapID) == connection_type::NONE) continue;
+    const overlap_n &OverlapN = OverlapComponent.OverlapN(OverlapID);
+    reverse_exchange_n &ExchangeN = ReverseExchangeNs.Insert(OverlapID);
+    ExchangeN.SendMap = core::send_map(OverlapN.SourceRanks());
+    ExchangeN.Send = core::CreateSend(Context_, Domain.Comm(), ExchangeN.SendMap, data_type::BOOL,
+      1, 0);
+    ExchangeN.SendBuffer.Resize({OverlapN.Count()});
+  }
+
+  Requests.Reserve(OverlapComponent.LocalOverlapMCount() + OverlapComponent.LocalOverlapNCount());
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
+    if (Options_.ConnectionType(OverlapID) == connection_type::NONE) continue;
+    reverse_exchange_m &ExchangeM = ReverseExchangeMs(OverlapID);
+    core::recv &Recv = ExchangeM.Recv;
+    array<bool> &Donates = OverlappingCellDonates(OverlapID);
+    request &Request = Requests.Append();
+    bool *DonatesData = Donates.Data();
+    Request = Recv.Recv(&DonatesData);
+  }
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    if (Options_.ConnectionType(OverlapID) == connection_type::NONE) continue;
+    int MGridID = OverlapID(0);
+    int NGridID = OverlapID(1);
+    const field<int> &DonorGridIDs = DonorGridIDsForLocalGrid(NGridID);
+    const overlap_n &OverlapN = OverlapComponent.OverlapN(OverlapID);
+    const array<int,2> &Points = OverlapN.Points();
+    reverse_exchange_n &ExchangeN = ReverseExchangeNs(OverlapID);
+    core::send &Send = ExchangeN.Send;
+    array<bool> &SendBuffer = ExchangeN.SendBuffer;
+    for (long long iOverlapped = 0; iOverlapped < OverlapN.Count(); ++iOverlapped) {
+      tuple<int> Point = {
+        Points(0,iOverlapped),
+        Points(1,iOverlapped),
+        Points(2,iOverlapped)
+      };
+      SendBuffer(iOverlapped) = DonorGridIDs(Point) == MGridID;
+    }
+    request &Request = Requests.Append();
+    bool *SendBufferData = SendBuffer.Data();
+    Request = Send.Send(&SendBufferData);
+  }
+
+  WaitAll(Requests);
+  Requests.Clear();
+
+  ReverseExchangeMs.Clear();
+  ReverseExchangeNs.Clear();
+
+  if (Logger.LoggingDebug()) {
+    MPI_Barrier(Domain.Comm());
+    for (int GridID : Domain.GridIDs()) {
+      if (Domain.GridIsLocal(GridID)) {
+        const grid &Grid = Domain.Grid(GridID);
+        long long NumReceivers = NumReceiversForGrid(GridID);
+        long long NumOrphans = NumOrphansForGrid(GridID);
+        if (NumReceivers > 0) {
+          std::string NumOrphansString = core::FormatNumber(NumOrphans, "orphans", "orphan");
+          Logger.LogDebug(Grid.Comm().Rank() == 0, 3, "%s on grid %s.", NumOrphansString,
+            Grid.Name());
+        }
+      }
+      MPI_Barrier(Domain.Comm());
+    }
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done choosing donors.");
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Creating and filling connectivity data "
+      "structures...");
+  }
+
+  elem_map<int,2,long long> NumLocalDonorsForGridPair;
+
+  elem_set<int,2> ConnectedGridIDs;
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
+    if (Options_.ConnectionType(OverlapID) == connection_type::NONE) continue;
+    int MGridID = OverlapID(0);
+    const grid &MGrid = Domain.Grid(MGridID);
+    const overlap_m &OverlapM = OverlapComponent.OverlapM(OverlapID);
+    const array<bool> &Donates = OverlappingCellDonates(OverlapID);
+    long long &NumLocalDonors = NumLocalDonorsForGridPair.Insert(OverlapID, 0);
+    for (long long iOverlapping = 0; iOverlapping < OverlapM.Count(); ++iOverlapping) {
+      if (Donates(iOverlapping)) {
+        ++NumLocalDonors;
+      }
+    }
+    if (MGrid.Comm().Rank() > 0) {
+      MPI_Reduce(&NumLocalDonors, nullptr, 1, MPI_LONG_LONG, MPI_MAX, 0, MGrid.Comm());
+    } else {
+      long long MaxLocalDonors = NumLocalDonors;
+      MPI_Reduce(MPI_IN_PLACE, &MaxLocalDonors, 1, MPI_LONG_LONG, MPI_MAX, 0, MGrid.Comm());
+      if (MaxLocalDonors > 0) {
+        ConnectedGridIDs.Insert(OverlapID);
+      }
+    }
+  }
+
+  for (int MGridID : Domain.GridIDs()) {
+    bool IsMGridRoot = false;
+    int MGridRootRank;
+    if (Domain.GridIsLocal(MGridID)) {
+      const grid &MGrid = Domain.Grid(MGridID);
+      IsMGridRoot = MGrid.Comm().Rank() == 0;
+      if (IsMGridRoot) {
+        MGridRootRank = Domain.Comm().Rank();
+      }
+    }
+    core::BroadcastAnySource(&MGridRootRank, 1, MPI_INT, IsMGridRoot, Domain.Comm());
+    for (int NGridID : Domain.GridIDs()) {
+      elem<int,2> OverlapID = {MGridID,NGridID};
+      if (Options_.ConnectionType(OverlapID) != connection_type::NONE) {
+        int Connected;
+        if (IsMGridRoot) Connected = ConnectedGridIDs.Contains(OverlapID);
+        MPI_Bcast(&Connected, 1, MPI_INT, MGridRootRank, Domain.Comm());
+        if (Connected) {
+          ConnectedGridIDs.Insert(OverlapID);
+        }
+      }
+    }
+  }
+
+  auto ConnectivityComponentEditHandle = Domain.EditComponent<connectivity_component>(
+    ConnectivityComponentID_);
+  connectivity_component &ConnectivityComponent = *ConnectivityComponentEditHandle;
+
+  ConnectivityComponent.ClearConnectivities();
+  ConnectivityComponent.CreateConnectivities(ConnectedGridIDs);
+
+  struct connectivity_m_data {
+    long long NumDonors = 0;
+    array<int,3> Extents;
+    array<double,2> Coords;
+    array<int,2> Destinations;
+    array<int> DestinationRanks;
+    array<long long> Order;
+  };
+
+  elem_map<int,2,connectivity_m_data> ConnectivityMDataForLocalDonors;
+
+  for (auto &ConnectivityID : ConnectivityComponent.LocalConnectivityMIDs()) {
+    const overlap_m &OverlapM = OverlapComponent.OverlapM(ConnectivityID);
+    const array<int,2> &OverlapCells = OverlapM.Cells();
+    const array<double,2> &OverlapCoords = OverlapM.Coords();
+    const array<int,2> &OverlapDestinations = OverlapM.Destinations();
+    const array<int> &OverlapDestinationRanks = OverlapM.DestinationRanks();
+    const array<bool> &Donates = OverlappingCellDonates(ConnectivityID);
+    long long NumLocalDonors = NumLocalDonorsForGridPair(ConnectivityID);
+    connectivity_m_data &ConnectivityMData = ConnectivityMDataForLocalDonors.Insert(ConnectivityID);
+    ConnectivityMData.NumDonors = NumLocalDonors;
+    ConnectivityMData.Extents.Resize({{2,MAX_DIMS,NumLocalDonors}});
+    ConnectivityMData.Coords.Resize({{MAX_DIMS,NumLocalDonors}});
+    ConnectivityMData.Destinations.Resize({{MAX_DIMS,NumLocalDonors}});
+    ConnectivityMData.DestinationRanks.Resize({NumLocalDonors});
+    switch (Options_.ConnectionType(ConnectivityID)) {
+    case connection_type::NEAREST:
+    case connection_type::LINEAR: {
+      long long iDonor = 0;
+      for (long long iOverlapping = 0; iOverlapping < OverlapM.Count(); ++iOverlapping) {
+        if (!Donates(iOverlapping)) continue;
+        for (int iDim = 0; iDim < NumDims; ++iDim) {
+          ConnectivityMData.Extents(0,iDim,iDonor) = OverlapCells(iDim,iOverlapping);
+          ConnectivityMData.Extents(1,iDim,iDonor) = OverlapCells(iDim,iOverlapping)+2;
+        }
+        for (int iDim = NumDims; iDim < MAX_DIMS; ++iDim) {
+          ConnectivityMData.Extents(0,iDim,iDonor) = 0;
+          ConnectivityMData.Extents(1,iDim,iDonor) = 1;
+        }
+        for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+          ConnectivityMData.Coords(iDim,iDonor) = OverlapCoords(iDim,iOverlapping);
+          ConnectivityMData.Destinations(iDim,iDonor) = OverlapDestinations(iDim,iOverlapping);
+        }
+        ConnectivityMData.DestinationRanks(iDonor) = OverlapDestinationRanks(iOverlapping);
+        ++iDonor;
+      }
+      break;
+    }
+    case connection_type::CUBIC:
+      OVK_DEBUG_ASSERT(false, "Cubic interpolation not yet implemented.");
+      break;
+    default:
+      OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+      break;
+    }
+  }
+
+  elem_map<int,2,array<connectivity_m_data>> ConnectivityMSends;
+  elem_map<int,2,array<connectivity_m_data>> ConnectivityMRecvs;
+
+  int NumSends = 0;
+  int NumRecvs = 0;
+
+  for (auto &ConnectivityID : ConnectivityComponent.LocalConnectivityMIDs()) {
+    int MGridID = ConnectivityID(0);
+    const grid &MGrid = Domain.Grid(MGridID);
+    const map<int,partition::neighbor_info> &Neighbors = MGrid.Partition().Neighbors();
+    array<connectivity_m_data> &Sends = ConnectivityMSends.Insert(ConnectivityID);
+    array<connectivity_m_data> &Recvs = ConnectivityMRecvs.Insert(ConnectivityID);
+    Sends.Resize({Neighbors.Count()});
+    Recvs.Resize({Neighbors.Count()});
+    NumSends += Sends.Count();
+    NumRecvs += Recvs.Count();
+  }
+
+  array<MPI_Request> MPIRequests;
+  MPIRequests.Reserve(NumSends + NumRecvs);
+
+  for (auto &ConnectivityID : ConnectivityComponent.LocalConnectivityMIDs()) {
+    int MGridID = ConnectivityID(0);
+    const grid &MGrid = Domain.Grid(MGridID);
+    const map<int,partition::neighbor_info> &Neighbors = MGrid.Partition().Neighbors();
+    array<connectivity_m_data> &Recvs = ConnectivityMRecvs(ConnectivityID);
+    for (int iNeighbor = 0; iNeighbor < Neighbors.Count(); ++iNeighbor) {
+      connectivity_m_data &Recv = Recvs(iNeighbor);
+      MPI_Irecv(&Recv.NumDonors, 1, MPI_LONG_LONG, Neighbors[iNeighbor].Key(), 0, MGrid.Comm(),
+        &MPIRequests.Append());
+    }
+  }
+
+  for (auto &ConnectivityID : ConnectivityComponent.LocalConnectivityMIDs()) {
+    int MGridID = ConnectivityID(0);
+    const grid &MGrid = Domain.Grid(MGridID);
+    const cart &Cart = MGrid.Cart();
+    const map<int,partition::neighbor_info> &Neighbors = MGrid.Partition().Neighbors();
+    const connectivity_m_data &ConnectivityMData = ConnectivityMDataForLocalDonors(ConnectivityID);
+    array<connectivity_m_data> &Sends = ConnectivityMSends(ConnectivityID);
+    for (long long iDonor = 0; iDonor < ConnectivityMData.NumDonors; ++iDonor) {
+      range DonorRange;
+      for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+        DonorRange.Begin(iDim) = ConnectivityMData.Extents(0,iDim,iDonor);
+        DonorRange.End(iDim) = ConnectivityMData.Extents(1,iDim,iDonor);
+      }
+      for (int iNeighbor = 0; iNeighbor < Neighbors.Count(); ++iNeighbor) {
+        const partition::neighbor_info &Neighbor = Neighbors[iNeighbor].Value();
+        auto MaybeMappedDonorRange = Cart.MapToRange(Neighbor.LocalRange, DonorRange);
+        if (MaybeMappedDonorRange) {
+          ++Sends(iNeighbor).NumDonors;
+        }
+      }
+    }
+    for (int iNeighbor = 0; iNeighbor < Neighbors.Count(); ++iNeighbor) {
+      connectivity_m_data &Send = Sends(iNeighbor);
+      MPI_Isend(&Send.NumDonors, 1, MPI_LONG_LONG, Neighbors[iNeighbor].Key(), 0, MGrid.Comm(),
+        &MPIRequests.Append());
+    }
+  }
+
+  MPI_Waitall(MPIRequests.Count(), MPIRequests.Data(), MPI_STATUSES_IGNORE);
+  MPIRequests.Clear();
+
+  MPIRequests.Reserve(4*(NumSends + NumRecvs));
+
+  for (auto &ConnectivityID : ConnectivityComponent.LocalConnectivityMIDs()) {
+    int MGridID = ConnectivityID(0);
+    const grid &MGrid = Domain.Grid(MGridID);
+    const map<int,partition::neighbor_info> &Neighbors = MGrid.Partition().Neighbors();
+    array<connectivity_m_data> &Recvs = ConnectivityMRecvs(ConnectivityID);
+    for (int iNeighbor = 0; iNeighbor < Neighbors.Count(); ++iNeighbor) {
+      connectivity_m_data &Recv = Recvs(iNeighbor);
+      long long NumDonors = Recv.NumDonors;
+      Recv.Extents.Resize({{2,MAX_DIMS,NumDonors}});
+      Recv.Coords.Resize({{MAX_DIMS,NumDonors}});
+      Recv.Destinations.Resize({{MAX_DIMS,NumDonors}});
+      Recv.DestinationRanks.Resize({NumDonors});
+      MPI_Irecv(Recv.Extents.Data(), 2*MAX_DIMS*NumDonors, MPI_INT, Neighbors[iNeighbor].Key(), 0,
+        MGrid.Comm(), &MPIRequests.Append());
+      MPI_Irecv(Recv.Coords.Data(), MAX_DIMS*NumDonors, MPI_DOUBLE, Neighbors[iNeighbor].Key(), 0,
+        MGrid.Comm(), &MPIRequests.Append());
+      MPI_Irecv(Recv.Destinations.Data(), MAX_DIMS*NumDonors, MPI_INT, Neighbors[iNeighbor].Key(),
+        0, MGrid.Comm(), &MPIRequests.Append());
+      MPI_Irecv(Recv.DestinationRanks.Data(), NumDonors, MPI_INT, Neighbors[iNeighbor].Key(), 0,
+        MGrid.Comm(), &MPIRequests.Append());
+    }
+  }
+
+  for (auto &ConnectivityID : ConnectivityComponent.LocalConnectivityMIDs()) {
+    int MGridID = ConnectivityID(0);
+    const grid &MGrid = Domain.Grid(MGridID);
+    const cart &Cart = MGrid.Cart();
+    const map<int,partition::neighbor_info> &Neighbors = MGrid.Partition().Neighbors();
+    const connectivity_m_data &ConnectivityMData = ConnectivityMDataForLocalDonors(
+      ConnectivityID);
+    array<connectivity_m_data> &Sends = ConnectivityMSends(ConnectivityID);
+    for (int iNeighbor = 0; iNeighbor < Neighbors.Count(); ++iNeighbor) {
+      connectivity_m_data &Send = Sends(iNeighbor);
+      long long NumDonors = Send.NumDonors;
+      Send.Extents.Resize({{2,MAX_DIMS,NumDonors}});
+      Send.Coords.Resize({{MAX_DIMS,NumDonors}});
+      Send.Destinations.Resize({{MAX_DIMS,NumDonors}});
+      Send.DestinationRanks.Resize({NumDonors});
+      Send.NumDonors = 0;
+    }
+    for (long long iDonor = 0; iDonor < ConnectivityMData.NumDonors; ++iDonor) {
+      range DonorRange;
+      for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+        DonorRange.Begin(iDim) = ConnectivityMData.Extents(0,iDim,iDonor);
+        DonorRange.End(iDim) = ConnectivityMData.Extents(1,iDim,iDonor);
+      }
+      for (int iNeighbor = 0; iNeighbor < Neighbors.Count(); ++iNeighbor) {
+        const partition::neighbor_info &Neighbor = Neighbors[iNeighbor].Value();
+        auto MaybeMappedDonorRange = Cart.MapToRange(Neighbor.LocalRange, DonorRange);
+        if (MaybeMappedDonorRange) {
+          const range &MappedDonorRange = *MaybeMappedDonorRange;
+          connectivity_m_data &Send = Sends(iNeighbor);
+          long long &iSendEntry = Send.NumDonors;
+          for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+            Send.Extents(0,iDim,iSendEntry) = MappedDonorRange.Begin(iDim);
+            Send.Extents(1,iDim,iSendEntry) = MappedDonorRange.End(iDim);
+            Send.Coords(iDim,iSendEntry) = ConnectivityMData.Coords(iDim,iDonor);
+            Send.Destinations(iDim,iSendEntry) = ConnectivityMData.Destinations(iDim,iDonor);
+          }
+          Send.DestinationRanks(iSendEntry) = ConnectivityMData.DestinationRanks(iDonor);
+          ++iSendEntry;
+        }
+      }
+    }
+    for (int iNeighbor = 0; iNeighbor < Neighbors.Count(); ++iNeighbor) {
+      connectivity_m_data &Send = Sends(iNeighbor);
+      long long NumDonors = Send.NumDonors;
+      MPI_Isend(Send.Extents.Data(), 2*MAX_DIMS*NumDonors, MPI_INT, Neighbors[iNeighbor].Key(), 0,
+        MGrid.Comm(), &MPIRequests.Append());
+      MPI_Isend(Send.Coords.Data(), MAX_DIMS*NumDonors, MPI_DOUBLE, Neighbors[iNeighbor].Key(), 0,
+        MGrid.Comm(), &MPIRequests.Append());
+      MPI_Isend(Send.Destinations.Data(), MAX_DIMS*NumDonors, MPI_INT, Neighbors[iNeighbor].Key(),
+        0, MGrid.Comm(), &MPIRequests.Append());
+      MPI_Isend(Send.DestinationRanks.Data(), NumDonors, MPI_INT, Neighbors[iNeighbor].Key(), 0,
+        MGrid.Comm(), &MPIRequests.Append());
+    }
+  }
+
+  MPI_Waitall(MPIRequests.Count(), MPIRequests.Data(), MPI_STATUSES_IGNORE);
+  MPIRequests.Clear();
+
+  // Not sure if initiating all of the edits up front is necessary anymore...
+
+  struct connectivity_m_edit {
+    edit_handle<connectivity_m> Connectivity;
+    long long NumConnections = 0;
+    edit_handle<array<int,3>> Extents;
+    edit_handle<array<double,2>> Coords;
+    edit_handle<array<double,3>> InterpCoefs;
+    edit_handle<array<int,2>> Destinations;
+    edit_handle<array<int>> DestinationRanks;
+  };
+
+  struct connectivity_n_edit {
+    edit_handle<connectivity_n> Connectivity;
+    long long NumConnections = 0;
+    edit_handle<array<int,2>> Points;
+    edit_handle<array<int,2>> Sources;
+    edit_handle<array<int>> SourceRanks;
+  };
+
+  elem_map<int,2,connectivity_m_edit> ConnectivityMEdits;
+  elem_map<int,2,connectivity_n_edit> ConnectivityNEdits;
+
+  for (auto &ConnectivityID : ConnectivityComponent.LocalConnectivityMIDs()) {
+    int MGridID = ConnectivityID(0);
+    const grid &MGrid = Domain.Grid(MGridID);
+    const map<int,partition::neighbor_info> &Neighbors = MGrid.Partition().Neighbors();
+    connectivity_m_data &LocalDonors = ConnectivityMDataForLocalDonors(ConnectivityID);
+    array<connectivity_m_data> &Recvs = ConnectivityMRecvs(ConnectivityID);
+    long long NumDonors = LocalDonors.NumDonors;
+    for (int iNeighbor = 0; iNeighbor < Neighbors.Count(); ++iNeighbor) {
+      connectivity_m_data &Recv = Recvs(iNeighbor);
+      NumDonors += Recv.NumDonors;
+    }
+    int MaxSize;
+    switch (Options_.ConnectionType(ConnectivityID)) {
+    case connection_type::NEAREST:
+    case connection_type::LINEAR:
+      MaxSize = 2;
+      break;
+    case connection_type::CUBIC:
+      MaxSize = 4;
+      break;
+    default:
+      OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+      MaxSize = 2;
+      break;
+    }
+    connectivity_m_edit &Edit = ConnectivityMEdits.Insert(ConnectivityID);
+    Edit.Connectivity = ConnectivityComponent.EditConnectivityM(ConnectivityID);
+    Edit.NumConnections = NumDonors;
+    Edit.Connectivity->Resize(Edit.NumConnections, MaxSize);
+    Edit.Extents = Edit.Connectivity->EditExtents();
+    Edit.Coords = Edit.Connectivity->EditCoords();
+    Edit.InterpCoefs = Edit.Connectivity->EditInterpCoefs();
+    Edit.Destinations = Edit.Connectivity->EditDestinations();
+    Edit.DestinationRanks = Edit.Connectivity->EditDestinationRanks();
+  }
+
+  for (auto &ConnectivityID : ConnectivityComponent.LocalConnectivityNIDs()) {
+    int MGridID = ConnectivityID(0);
+    int NGridID = ConnectivityID(1);
+    const grid &NGrid = Domain.Grid(NGridID);
+    const range &LocalRange = NGrid.LocalRange();
+    const distributed_field<bool> &ReceiverMask = ReceiverMasks(NGridID);
+    const field<int> &DonorGridIDs = DonorGridIDsForLocalGrid(NGridID);
+    long long NumReceivers = 0;
+    for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
+      for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
+        for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
+          tuple<int> Point = {i,j,k};
+          if (ReceiverMask(Point) && DonorGridIDs(Point) == MGridID) {
+            ++NumReceivers;
+          }
+        }
+      }
+    }
+    connectivity_n_edit &Edit = ConnectivityNEdits.Insert(ConnectivityID);
+    Edit.Connectivity = ConnectivityComponent.EditConnectivityN(ConnectivityID);
+    Edit.NumConnections = NumReceivers;
+    Edit.Connectivity->Resize(Edit.NumConnections);
+    Edit.Points = Edit.Connectivity->EditPoints();
+    Edit.Sources = Edit.Connectivity->EditSources();
+    Edit.SourceRanks = Edit.Connectivity->EditSourceRanks();
+  }
+
+  for (auto &ConnectivityID : ConnectivityComponent.LocalConnectivityMIDs()) {
+    int MGridID = ConnectivityID(0);
+    int NGridID = ConnectivityID(1);
+    const grid &MGrid = Domain.Grid(MGridID);
+    const map<int,partition::neighbor_info> &Neighbors = MGrid.Partition().Neighbors();
+    field_indexer NGridGlobalIndexer(Domain.GridInfo(NGridID).GlobalRange());
+    connectivity_m_data &LocalDonors = ConnectivityMDataForLocalDonors(ConnectivityID);
+    array<connectivity_m_data> &Recvs = ConnectivityMRecvs(ConnectivityID);
+    connectivity_m_edit &Edit = ConnectivityMEdits(ConnectivityID);
+    array<long long> DestinationPointIndices({Edit.NumConnections});
+    LocalDonors.Order.Resize({LocalDonors.NumDonors});
+    long long iDonor = 0;
+    for (long long iLocalDonor = 0; iLocalDonor < LocalDonors.NumDonors; ++iLocalDonor) {
+      tuple<int> DestinationPoint = {
+        LocalDonors.Destinations(0,iLocalDonor),
+        LocalDonors.Destinations(1,iLocalDonor),
+        LocalDonors.Destinations(2,iLocalDonor)
+      };
+      DestinationPointIndices(iDonor) = NGridGlobalIndexer.ToIndex(DestinationPoint);
+      LocalDonors.Order(iLocalDonor) = iDonor;
+      ++iDonor;
+    }
+    for (int iNeighbor = 0; iNeighbor < Neighbors.Count(); ++iNeighbor) {
+      connectivity_m_data &Recv = Recvs(iNeighbor);
+      Recv.Order.Resize({Recv.NumDonors});
+      for (long long iRecvDonor = 0; iRecvDonor < Recv.NumDonors; ++iRecvDonor) {
+        tuple<int> DestinationPoint = {
+          Recv.Destinations(0,iRecvDonor),
+          Recv.Destinations(1,iRecvDonor),
+          Recv.Destinations(2,iRecvDonor)
+        };
+        DestinationPointIndices(iDonor) = NGridGlobalIndexer.ToIndex(DestinationPoint);
+        Recv.Order(iRecvDonor) = iDonor;
+        ++iDonor;
+      }
+    }
+    array<long long> ROrder = ArrayOrder(DestinationPointIndices);
+    // Need to use order on LHS since RHS is not one contiguous array
+    array<long long> LOrder({Edit.NumConnections});
+    for (long long iDonor = 0; iDonor < Edit.NumConnections; ++iDonor) {
+      LOrder(ROrder(iDonor)) = iDonor;
+    }
+    iDonor = 0;
+    for (long long iLocalDonor = 0; iLocalDonor < LocalDonors.NumDonors; ++iLocalDonor) {
+      long long iOrder = LOrder(iDonor);
+      for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+        (*Edit.Extents)(0,iDim,iOrder) = LocalDonors.Extents(0,iDim,iLocalDonor);
+        (*Edit.Extents)(1,iDim,iOrder) = LocalDonors.Extents(1,iDim,iLocalDonor);
+        (*Edit.Coords)(iDim,iOrder) = LocalDonors.Coords(iDim,iLocalDonor);
+        (*Edit.Destinations)(iDim,iOrder) = LocalDonors.Destinations(iDim,iLocalDonor);
+      }
+      // Let exchanger detect source/destination ranks for now -- revisit later (rank containing
+      // lower corner may not be the same as overlap source rank; receiver grid needs to be made
+      // aware of this)
+//       (*Edit.DestinationRanks)(iOrder) = LocalDonors.DestinationRanks(iLocalDonor);
+      ++iDonor;
+    }
+    for (int iNeighbor = 0; iNeighbor < Neighbors.Count(); ++iNeighbor) {
+      connectivity_m_data &Recv = Recvs(iNeighbor);
+      for (long long iRecvDonor = 0; iRecvDonor < Recv.NumDonors; ++iRecvDonor) {
+        long long iOrder = LOrder(iDonor);
+        for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+          (*Edit.Extents)(0,iDim,iOrder) = Recv.Extents(0,iDim,iRecvDonor);
+          (*Edit.Extents)(1,iDim,iOrder) = Recv.Extents(1,iDim,iRecvDonor);
+          (*Edit.Coords)(iDim,iOrder) = Recv.Coords(iDim,iRecvDonor);
+          (*Edit.Destinations)(iDim,iOrder) = Recv.Destinations(iDim,iRecvDonor);
+        }
+//         (*Edit.DestinationRanks)(iOrder) = Recv.DestinationRanks(iRecvDonor);
+        ++iDonor;
+      }
+    }
+    switch (Options_.ConnectionType(ConnectivityID)) {
+    case connection_type::NEAREST:
+      for (iDonor = 0; iDonor < Edit.NumConnections; ++iDonor) {
+        for (int iDim = 0; iDim < NumDims; ++iDim) {
+          (*Edit.InterpCoefs)(iDim,0,iDonor) = (*Edit.Coords)(iDim,iDonor) <= 0.5 ? 1. : 0.;
+          (*Edit.InterpCoefs)(iDim,1,iDonor) = (*Edit.Coords)(iDim,iDonor) <= 0.5 ? 0. : 1.;
+        }
+      }
+      break;
+    case connection_type::LINEAR:
+      for (iDonor = 0; iDonor < Edit.NumConnections; ++iDonor) {
+        for (int iDim = 0; iDim < NumDims; ++iDim) {
+          elem<double,2> Coefs = core::LagrangeInterpLinear((*Edit.Coords)(iDim,iDonor));
+          (*Edit.InterpCoefs)(iDim,0,iDonor) = Coefs(0);
+          (*Edit.InterpCoefs)(iDim,1,iDonor) = Coefs(1);
+        }
+      }
+      break;
+    case connection_type::CUBIC:
+      for (iDonor = 0; iDonor < Edit.NumConnections; ++iDonor) {
+        for (int iDim = 0; iDim < NumDims; ++iDim) {
+          elem<double,4> Coefs = core::LagrangeInterpCubic((*Edit.Coords)(iDim,iDonor));
+          (*Edit.InterpCoefs)(iDim,0,iDonor) = Coefs(0);
+          (*Edit.InterpCoefs)(iDim,1,iDonor) = Coefs(1);
+          (*Edit.InterpCoefs)(iDim,2,iDonor) = Coefs(2);
+          (*Edit.InterpCoefs)(iDim,3,iDonor) = Coefs(3);
+        }
+      }
+      break;
+    default:
+      OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+      break;
+    }
+  }
+
+  for (auto &ConnectivityID : ConnectivityComponent.LocalConnectivityNIDs()) {
+    int MGridID = ConnectivityID(0);
+    int NGridID = ConnectivityID(1);
+    const grid &NGrid = Domain.Grid(NGridID);
+    const range &LocalRange = NGrid.LocalRange();
+    const overlap_n &OverlapN = OverlapComponent.OverlapN(ConnectivityID);
+    const field<bool> &BaseOverlapMask = OverlapN.Mask();
+    const array<int,2> &OverlapSources = OverlapN.Sources();
+//     const array<int> &OverlapSourceRanks = OverlapN.SourceRanks();
+    const distributed_field<bool> &ReceiverMask = ReceiverMasks(NGridID);
+    const field<int> &DonorGridIDs = DonorGridIDsForLocalGrid(NGridID);
+    connectivity_n_edit &Edit = ConnectivityNEdits(ConnectivityID);
+    long long iOverlapping = 0;
+    long long iReceiver = 0;
+    for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
+      for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
+        for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
+          tuple<int> Point = {i,j,k};
+          if (BaseOverlapMask(Point)) {
+            if (ReceiverMask(Point) && DonorGridIDs(Point) == MGridID) {
+              for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+                (*Edit.Points)(iDim,iReceiver) = Point(iDim);
+                (*Edit.Sources)(iDim,iReceiver) = OverlapSources(iDim,iOverlapping);
+              }
+//               (*Edit.SourceRanks)(iReceiver) = OverlapSourceRanks(iOverlapping);
+              ++iReceiver;
+            }
+            ++iOverlapping;
+          }
+        }
+      }
+    }
+  }
+
+  ConnectivityMEdits.Clear();
+  ConnectivityNEdits.Clear();
+
+  MPI_Barrier(Domain.Comm());
+
+  Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done creating and filling connectivity data "
+    "structures.");
+  Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Done generating connectivity data.");
 
 }
 
