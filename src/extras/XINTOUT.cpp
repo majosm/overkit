@@ -18,7 +18,10 @@
 #include "ovk/core/Domain.hpp"
 #include "ovk/core/Decomp.hpp"
 #include "ovk/core/Editor.hpp"
+#include "ovk/core/Elem.hpp"
+#include "ovk/core/ElemSet.hpp"
 #include "ovk/core/Error.hpp"
+#include "ovk/core/Interval.hpp"
 #include "ovk/core/Logger.hpp"
 #include "ovk/core/Map.hpp"
 #include "ovk/core/Misc.hpp"
@@ -1920,12 +1923,12 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
 
   Profiler.StartSync(IMPORT_DISTRIBUTE_MAP_TO_BINS_TIME, Comm);
 
-  map<int,core::decomp_hash_bin> Bins;
+  elem_set<int,2> UniqueBinIDs;
 
   long long NumChunkDonors = 0;
   long long NumChunkDonorPoints = 0;
   array<int,2> ChunkDonorPoints;
-  array<int> ChunkDonorPointBinIndices;
+  array<elem<int,2>> ChunkDonorPointBinIDs;
   if (XINTOUTDonors.HasChunk) {
     const xintout_donor_chunk &DonorChunk = XINTOUTDonors.Chunk;
     NumChunkDonors = DonorChunk.End - DonorChunk.Begin;
@@ -1972,47 +1975,41 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
         }
       }
     }
-    ChunkDonorPointBinIndices.Resize({NumChunkDonorPoints});
+    ChunkDonorPointBinIDs.Resize({NumChunkDonorPoints});
     for (long long iDonorPoint = 0; iDonorPoint < NumChunkDonorPoints; ++iDonorPoint) {
       tuple<int> Point = {
         ChunkDonorPoints(0,iDonorPoint),
         ChunkDonorPoints(1,iDonorPoint),
         ChunkDonorPoints(2,iDonorPoint)
       };
-      tuple<int> BinLoc = DecompHash.MapPointToBin(Point);
-      ChunkDonorPointBinIndices(iDonorPoint) = DecompHash.BinIndexer().ToIndex(BinLoc);
-    }
-    for (long long iDonorPoint = 0; iDonorPoint < NumChunkDonorPoints; ++iDonorPoint) {
-      int BinIndex = ChunkDonorPointBinIndices(iDonorPoint);
-      Bins.Fetch(BinIndex);
+      elem<int,2> BinID = DecompHash.MapToBin(Point);
+      ChunkDonorPointBinIDs(iDonorPoint) = BinID;
+      UniqueBinIDs.Insert(BinID);
     }
   }
 
   long long NumChunkReceivers = 0;
-  array<int> ChunkReceiverBinIndices;
+  array<elem<int,2>> ChunkReceiverBinIDs;
   if (XINTOUTReceivers.HasChunk) {
     const xintout_receiver_chunk &ReceiverChunk = XINTOUTReceivers.Chunk;
     NumChunkReceivers = ReceiverChunk.End - ReceiverChunk.Begin;
-    ChunkReceiverBinIndices.Resize({NumChunkReceivers});
+    ChunkReceiverBinIDs.Resize({NumChunkReceivers});
     for (long long iReceiver = 0; iReceiver < NumChunkReceivers; ++iReceiver) {
       tuple<int> Point = {
         ReceiverChunk.Data.Points(0,iReceiver),
         ReceiverChunk.Data.Points(1,iReceiver),
         ReceiverChunk.Data.Points(2,iReceiver)
       };
-      tuple<int> BinLoc = DecompHash.MapPointToBin(Point);
-      ChunkReceiverBinIndices(iReceiver) = DecompHash.BinIndexer().ToIndex(BinLoc);
-    }
-    for (long long iReceiver = 0; iReceiver < NumChunkReceivers; ++iReceiver) {
-      int BinIndex = ChunkReceiverBinIndices(iReceiver);
-      Bins.Fetch(BinIndex);
+      elem<int,2> BinID = DecompHash.MapToBin(Point);
+      ChunkReceiverBinIDs(iReceiver) = BinID;
+      UniqueBinIDs.Insert(BinID);
     }
   }
 
   Profiler.Stop(IMPORT_DISTRIBUTE_MAP_TO_BINS_TIME);
   Profiler.StartSync(IMPORT_DISTRIBUTE_RETRIEVE_BINS_TIME, Comm);
 
-  DecompHash.RetrieveBins(Bins);
+  map<int,core::decomp_hash_retrieved_bins> RetrievedBins = DecompHash.RetrieveBins(UniqueBinIDs);
 
   Profiler.Stop(IMPORT_DISTRIBUTE_RETRIEVE_BINS_TIME);
   Profiler.StartSync(IMPORT_DISTRIBUTE_FIND_RANKS_TIME, Comm);
@@ -2031,9 +2028,15 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
         ChunkDonorPoints(1,iDonorPoint),
         ChunkDonorPoints(2,iDonorPoint)
       };
-      const core::decomp_hash_bin &Bin = Bins(ChunkDonorPointBinIndices(iDonorPoint));
-      for (int iRegion = 0; iRegion < Bin.Regions().Count(); ++iRegion) {
-        const core::decomp_hash_region_data &Region = Bin.Region(iRegion);
+      const elem<int,2> &BinID = ChunkDonorPointBinIDs(iDonorPoint);
+      int BinRank = BinID(0);
+      int iBin = BinID(1);
+      const core::decomp_hash_retrieved_bins &Bins = RetrievedBins(BinRank);
+      const interval<long long> &RegionIndicesInterval = Bins.BinRegionIndicesIntervals(iBin);
+      for (long long iBinRegionIndex = RegionIndicesInterval.Begin(0); iBinRegionIndex <
+        RegionIndicesInterval.End(0); ++iBinRegionIndex) {
+        int iRegion = Bins.BinRegionIndices(iBinRegionIndex);
+        const core::decomp_hash_region_data &Region = Bins.Regions(iRegion);
         if (Region.Extents.Contains(Point)) {
           ChunkDonorRanksData(iDonorPoint) = Region.Rank;
           break;
@@ -2066,7 +2069,7 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
       iDonorPoint += NumPointsInCell;
     }
     ChunkDonorPoints.Clear();
-    ChunkDonorPointBinIndices.Clear();
+    ChunkDonorPointBinIDs.Clear();
   }
 
   array<int> ChunkReceiverRanks;
@@ -2079,19 +2082,25 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
         ReceiverChunk.Data.Points(1,iReceiver),
         ReceiverChunk.Data.Points(2,iReceiver)
       };
-      const core::decomp_hash_bin &Bin = Bins(ChunkReceiverBinIndices(iReceiver));
-      for (int iRegion = 0; iRegion < Bin.Regions().Count(); ++iRegion) {
-        const core::decomp_hash_region_data &Region = Bin.Region(iRegion);
+      const elem<int,2> &BinID = ChunkReceiverBinIDs(iReceiver);
+      int BinRank = BinID(0);
+      int iBin = BinID(1);
+      const core::decomp_hash_retrieved_bins &Bins = RetrievedBins(BinRank);
+      const interval<long long> &RegionIndicesInterval = Bins.BinRegionIndicesIntervals(iBin);
+      for (long long iBinRegionIndex = RegionIndicesInterval.Begin(0); iBinRegionIndex <
+        RegionIndicesInterval.End(0); ++iBinRegionIndex) {
+        int iRegion = Bins.BinRegionIndices(iBinRegionIndex);
+        const core::decomp_hash_region_data &Region = Bins.Regions(iRegion);
         if (Region.Extents.Contains(Point)) {
           ChunkReceiverRanks(iReceiver) = Region.Rank;
           break;
         }
       }
     }
-    ChunkReceiverBinIndices.Clear();
+    ChunkReceiverBinIDs.Clear();
   }
 
-  Bins.Clear();
+  RetrievedBins.Clear();
 
   struct donor_send_recv {
     long long Count;

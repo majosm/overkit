@@ -8,7 +8,10 @@
 #include <ovk/core/ArrayView.hpp>
 #include <ovk/core/Box.hpp>
 #include <ovk/core/Comm.hpp>
+#include <ovk/core/Elem.hpp>
+#include <ovk/core/Field.hpp>
 #include <ovk/core/Global.hpp>
+#include <ovk/core/Interval.hpp>
 #include <ovk/core/Map.hpp>
 #include <ovk/core/Range.hpp>
 #include <ovk/core/Tuple.hpp>
@@ -72,51 +75,11 @@ template <typename CoordType> struct distributed_region_data {
   int Tag;
 };
 
-template <typename CoordType> class distributed_region_hash;
-
-template <typename CoordType> class distributed_region_hash_bin {
-
-public:
-
-  static_assert(std::is_same<CoordType, int>::value || std::is_same<CoordType, double>::value,
-    "Coord type must be int or double.");
-
-  using coord_type = CoordType;
-  using traits = distributed_region_internal::region_traits<CoordType>;
-  using extents_type = typename traits::extents_type;
-
+template <typename CoordType> struct distributed_region_hash_retrieved_bins {
   using region = distributed_region_data<CoordType>;
-
-  distributed_region_hash_bin():
-    Index_(-1),
-    Extents_(traits::MakeEmptyExtents(2))
-  {}
-
-  explicit operator bool() const { return Index_ >= 0; }
-
-  const extents_type &Extents() const { return Extents_; }
-
-  const array<region> &Regions() const { return Regions_; }
-
-  const region &Region(int iRegion) const { return Regions_(iRegion); }
-  region &Region(int iRegion) { return Regions_(iRegion); }
-
-private:
-
-  int Index_;
-
-  extents_type Extents_;
-
-  array<region> Regions_;
-
-  distributed_region_hash_bin(int Index, const extents_type &Extents, int NumRegions):
-    Index_(Index),
-    Extents_(Extents),
-    Regions_({NumRegions})
-  {}
-
-  friend class distributed_region_hash<coord_type>;
-
+  array<region> Regions;
+  map<int,interval<long long>> BinRegionIndicesIntervals;
+  array<int> BinRegionIndices;
 };
 
 template <typename CoordType> class distributed_region_hash {
@@ -127,12 +90,11 @@ public:
     "Coord type must be int or double.");
 
   using coord_type = CoordType;
-  using traits = distributed_region_internal::region_traits<CoordType>;
+  using traits = distributed_region_internal::region_traits<coord_type>;
   using extents_type = typename traits::extents_type;
 
-  using bin = distributed_region_hash_bin<CoordType>;
-
-  using region = distributed_region_data<CoordType>;
+  using region = distributed_region_data<coord_type>;
+  using retrieved_bins = distributed_region_hash_retrieved_bins<coord_type>;
 
   distributed_region_hash(int NumDims, comm_view Comm);
   distributed_region_hash(int NumDims, comm_view Comm, int NumLocalRegions, array_view<const
@@ -145,17 +107,9 @@ public:
 //   distributed_region_hash &operator=(const distributed_region_hash &Other) = delete;
 //   distributed_region_hash &operator=(distributed_region_hash &&Other) noexcept = default;
 
-  tuple<int> MapPointToBin(const tuple<coord_type> &Point) const;
-  range MapExtentsToBinRange(const extents_type &Extents) const;
+  elem<int,2> MapToBin(const tuple<coord_type> &Point) const;
 
-  const range_indexer<int> &BinIndexer() const { return BinIndexer_; }
-
-  void RetrieveBins(map<int,bin> &Bins) const;
-
-  bool HasBin() const { return static_cast<bool>(Bin_); }
-
-  const bin &Bin() const { return Bin_; }
-  bin &Bin() { return Bin_; }
+  map<int,retrieved_bins> RetrieveBins(array_view<const elem<int,2>> BinIDs) const;
 
 private:
 
@@ -165,11 +119,17 @@ private:
 
   extents_type GlobalExtents_;
 
-  range BinRange_;
-  range_indexer<int> BinIndexer_;
-  tuple<coord_type> BinSize_;
+  range ProcRange_;
+  range_indexer<int> ProcIndexer_;
+  tuple<coord_type> ProcSize_;
 
-  bin Bin_;
+  array<int> ProcToBinMultipliers_;
+
+  array<region> Regions_;
+  range BinRange_;
+  field<int> NumRegionsPerBin_;
+  field<long long> BinRegionIndicesStarts_;
+  array<int> BinRegionIndices_;
 
   static tuple<int> BinDecomp_(int NumDims, const extents_type &GlobalExtents, int MaxBins);
 

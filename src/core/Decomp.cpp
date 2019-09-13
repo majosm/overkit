@@ -8,7 +8,10 @@
 #include "ovk/core/Cart.hpp"
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/DistributedRegionHash.hpp"
+#include "ovk/core/Elem.hpp"
+#include "ovk/core/ElemSet.hpp"
 #include "ovk/core/Global.hpp"
+#include "ovk/core/Interval.hpp"
 #include "ovk/core/Map.hpp"
 #include "ovk/core/Misc.hpp"
 #include "ovk/core/Range.hpp"
@@ -55,8 +58,8 @@ array<int> DetectNeighbors(const cart &Cart, comm_view Comm, const range &LocalR
     }
   }
 
-  array<int> ExtendedPointBinIndices({NumExtendedPoints});
-  set<int> UniqueBinIndices;
+  array<elem<int,2>> ExtendedPointBinIDs({NumExtendedPoints});
+  elem_set<int,2> UniqueBinIDs;
 
   for (long long iPoint = 0; iPoint < NumExtendedPoints; ++iPoint) {
     tuple<int> Point = {
@@ -64,17 +67,12 @@ array<int> DetectNeighbors(const cart &Cart, comm_view Comm, const range &LocalR
       ExtendedPoints(1,iPoint),
       ExtendedPoints(2,iPoint)
     };
-    tuple<int> BinLoc = DecompHash.MapPointToBin(Point);
-    ExtendedPointBinIndices(iPoint) = DecompHash.BinIndexer().ToIndex(BinLoc);
-    UniqueBinIndices.Insert(ExtendedPointBinIndices(iPoint));
+    elem<int,2> BinID = DecompHash.MapToBin(Point);
+    ExtendedPointBinIDs(iPoint) = BinID;
+    UniqueBinIDs.Insert(BinID);
   }
 
-  map<int,decomp_hash_bin> Bins;
-  for (int iBin : UniqueBinIndices) {
-    Bins.Insert(iBin);
-  }
-
-  DecompHash.RetrieveBins(Bins);
+  map<int,decomp_hash_retrieved_bins> RetrievedBins = DecompHash.RetrieveBins(UniqueBinIDs);
 
   set<int> UniqueExtendedRanks;
 
@@ -84,9 +82,15 @@ array<int> DetectNeighbors(const cart &Cart, comm_view Comm, const range &LocalR
       ExtendedPoints(1,iPoint),
       ExtendedPoints(2,iPoint)
     };
-    const decomp_hash_bin &Bin = Bins(ExtendedPointBinIndices(iPoint));
-    for (int iRegion = 0; iRegion < Bin.Regions().Count(); ++iRegion) {
-      const decomp_hash_region_data &Region = Bin.Region(iRegion);
+    const elem<int,2> &BinID = ExtendedPointBinIDs(iPoint);
+    int BinRank = BinID(0);
+    int iBin = BinID(1);
+    const decomp_hash_retrieved_bins &Bins = RetrievedBins(BinRank);
+    const interval<long long> &RegionIndicesInterval = Bins.BinRegionIndicesIntervals(iBin);
+    for (long long iBinRegionIndex = RegionIndicesInterval.Begin(0); iBinRegionIndex <
+      RegionIndicesInterval.End(0); ++iBinRegionIndex) {
+      int iRegion = Bins.BinRegionIndices(iBinRegionIndex);
+      const decomp_hash_region_data &Region = Bins.Regions(iRegion);
       if (Region.Extents.Contains(Point)) {
         UniqueExtendedRanks.Insert(Region.Rank);
         break;
@@ -94,8 +98,6 @@ array<int> DetectNeighbors(const cart &Cart, comm_view Comm, const range &LocalR
     }
   }
   UniqueExtendedRanks.Erase(Comm.Rank());
-
-  Bins.Clear();
 
   return {UniqueExtendedRanks};
 

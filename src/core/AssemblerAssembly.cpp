@@ -33,6 +33,7 @@
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
 #include "ovk/core/Indexer.hpp"
+#include "ovk/core/Interval.hpp"
 #include "ovk/core/Logger.hpp"
 #include "ovk/core/Map.hpp"
 #include "ovk/core/Math.hpp"
@@ -287,8 +288,8 @@ void assembler::DetectOverlap_() {
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Mapping local coordinates into hash bins...");
   }
 
-  map<int,field<int>> LocalPointOverlappingBinIndices;
-  set<int> UniqueOverlappingBinIndices;
+  map<int,field<elem<int,2>>> LocalPointOverlappingBinIDs;
+  elem_set<int,2> UniqueOverlappingBinIDs;
 
   for (int GridID : Domain.LocalGridIDs()) {
     const grid &Grid = Domain.Grid(GridID);
@@ -297,8 +298,8 @@ void assembler::DetectOverlap_() {
     const distributed_field<bool> &ActiveMask = GridAuxData.ActiveMask;
     const geometry &Geometry = GeometryComponent.Geometry(GridID);
     auto &Coords = Geometry.Coords();
-    field<int> &BinIndices = LocalPointOverlappingBinIndices.Insert(GridID);
-    BinIndices.Resize(LocalRange, -1);
+    field<elem<int,2>> &BinIDs = LocalPointOverlappingBinIDs.Insert(GridID);
+    BinIDs.Resize(LocalRange, elem<int,2>(-1,-1));
     for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
       for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
         for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
@@ -309,10 +310,9 @@ void assembler::DetectOverlap_() {
             Coords(1)(Point),
             Coords(2)(Point)
           };
-          tuple<int> BinLoc = BoundingBoxHash.MapPointToBin(PointCoords);
-          int BinIndex = BoundingBoxHash.BinIndexer().ToIndex(BinLoc);
-          BinIndices(Point) = BinIndex;
-          UniqueOverlappingBinIndices.Insert(BinIndex);
+          elem<int,2> BinID = BoundingBoxHash.MapToBin(PointCoords);
+          BinIDs(Point) = BinID;
+          UniqueOverlappingBinIDs.Insert(BinID);
         }
       }
     }
@@ -324,13 +324,8 @@ void assembler::DetectOverlap_() {
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Retrieving remote hash bins...");
   }
 
-  map<int,bounding_box_hash_bin> Bins;
-
-  for (int BinIndex : UniqueOverlappingBinIndices) {
-    Bins.Insert(BinIndex);
-  }
-
-  BoundingBoxHash.RetrieveBins(Bins);
+  map<int,bounding_box_hash_retrieved_bins> RetrievedBins = BoundingBoxHash.RetrieveBins(
+    UniqueOverlappingBinIDs);
 
   if (Logger.LoggingDebug()) {
     MPI_Barrier(Domain.Comm());
@@ -344,23 +339,31 @@ void assembler::DetectOverlap_() {
   for (int NGridID : Domain.LocalGridIDs()) {
     const grid &NGrid = Domain.Grid(NGridID);
     const range &LocalRange = NGrid.LocalRange();
+    const local_grid_aux_data &GridAuxData = AssemblyData.LocalGridAuxData(NGridID);
+    const distributed_field<bool> &ActiveMask = GridAuxData.ActiveMask;
     const geometry &Geometry = GeometryComponent.Geometry(NGridID);
     auto &Coords = Geometry.Coords();
-    field<int> &BinIndices = LocalPointOverlappingBinIndices(NGridID);
+    const field<elem<int,2>> &BinIDs = LocalPointOverlappingBinIDs(NGridID);
     auto &MGridIDsAndRanks = OverlappingMGridIDsAndRanksForLocalNGrid.Insert(NGridID);
     for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
       for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
         for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
           tuple<int> Point = {i,j,k};
-          int BinIndex = BinIndices(Point);
-          if (BinIndex < 0) continue;
-          bounding_box_hash_bin &Bin = Bins(BinIndex);
+          if (!ActiveMask(Point)) continue;
+          const elem<int,2> &BinID = BinIDs(Point);
+          int BinRank = BinID(0);
+          int iBin = BinID(1);
+          const bounding_box_hash_retrieved_bins &Bins = RetrievedBins(BinRank);
+          const interval<long long> &RegionIndicesInterval = Bins.BinRegionIndicesIntervals(iBin);
           tuple<double> PointCoords = {
             Coords(0)(Point),
             Coords(1)(Point),
             Coords(2)(Point)
           };
-          for (auto &Region : Bin.Regions()) {
+          for (long long iBinRegionIndex = RegionIndicesInterval.Begin(0); iBinRegionIndex <
+            RegionIndicesInterval.End(0); ++iBinRegionIndex) {
+            int iRegion = Bins.BinRegionIndices(iBinRegionIndex);
+            const bounding_box_hash_region_data &Region = Bins.Regions(iRegion);
             int MGridID = Region.Tag;
             if (Options_.Overlappable({MGridID,NGridID}) && Region.Extents.Contains(PointCoords)) {
               MGridIDsAndRanks.Fetch(MGridID).Insert(Region.Rank);
@@ -771,21 +774,26 @@ void assembler::DetectOverlap_() {
     const distributed_field<bool> &ActiveMask = GridAuxData.ActiveMask;
     const geometry &Geometry = GeometryComponent.Geometry(NGridID);
     auto &Coords = Geometry.Coords();
-    field<int> &BinIndices = LocalPointOverlappingBinIndices(NGridID);
+    const field<elem<int,2>> &BinIDs = LocalPointOverlappingBinIDs(NGridID);
     for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
       for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
         for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
           tuple<int> Point = {i,j,k};
           if (!ActiveMask(Point)) continue;
-          int BinIndex = BinIndices(Point);
-          if (BinIndex < 0) continue;
-          bounding_box_hash_bin &Bin = Bins(BinIndex);
+          const elem<int,2> &BinID = BinIDs(Point);
+          int BinRank = BinID(0);
+          int iBin = BinID(1);
+          const bounding_box_hash_retrieved_bins &Bins = RetrievedBins(BinRank);
+          const interval<long long> &RegionIndicesInterval = Bins.BinRegionIndicesIntervals(iBin);
           tuple<double> PointCoords = {
             Coords(0)(Point),
             Coords(1)(Point),
             Coords(2)(Point)
           };
-          for (auto &Region : Bin.Regions()) {
+          for (long long iBinRegionIndex = RegionIndicesInterval.Begin(0); iBinRegionIndex <
+            RegionIndicesInterval.End(0); ++iBinRegionIndex) {
+            int iRegion = Bins.BinRegionIndices(iBinRegionIndex);
+            const bounding_box_hash_region_data &Region = Bins.Regions(iRegion);
             int MGridID = Region.Tag;
             if (!Region.Extents.Contains(PointCoords) || !Options_.Overlappable({MGridID,NGridID}))
               continue;

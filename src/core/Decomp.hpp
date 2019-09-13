@@ -19,8 +19,8 @@ namespace ovk {
 namespace core {
 
 using decomp_hash = distributed_region_hash<int>;
-using decomp_hash_bin = distributed_region_hash_bin<int>;
 using decomp_hash_region_data = distributed_region_data<int>;
+using decomp_hash_retrieved_bins = distributed_region_hash_retrieved_bins<int>;
 
 decomp_hash CreateDecompHash(int NumDims, comm_view Comm, const range &LocalRange);
 

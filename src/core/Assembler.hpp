@@ -249,8 +249,8 @@ private:
   };
 
   using bounding_box_hash = core::distributed_region_hash<double>;
-  using bounding_box_hash_bin = core::distributed_region_hash_bin<double>;
   using bounding_box_hash_region_data = core::distributed_region_data<double>;
+  using bounding_box_hash_retrieved_bins = core::distributed_region_hash_retrieved_bins<double>;
 
   struct local_overlap_m_aux_data {
     core::collect_map CollectMap;
