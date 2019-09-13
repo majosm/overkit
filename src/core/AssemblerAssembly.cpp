@@ -116,11 +116,12 @@ assembler::assembly_data::assembly_data(int NumDims, comm_view Comm):
 
 void assembler::InitializeAssembly_() {
 
-  const domain &Domain = *Domain_;
-  int NumDims = Domain.Dimension();
+  domain &Domain = *Domain_;
   auto &GeometryComponent = Domain.Component<geometry_component>(GeometryComponentID_);
-  auto &StateComponent = Domain.Component<state_component>(StateComponentID_);
   assembly_data &AssemblyData = *AssemblyData_;
+
+  auto StateComponentEditHandle = Domain.EditComponent<state_component>(StateComponentID_);
+  state_component &StateComponent = *StateComponentEditHandle;
 
   for (int GridID : Domain.GridIDs()) {
     OVK_DEBUG_ASSERT(GeometryComponent.GeometryExists(GridID), "No geometry data for grid %s.",
@@ -133,14 +134,36 @@ void assembler::InitializeAssembly_() {
     ValidateOptions_();
   }
 
-  range VertexOffsetRange = MakeEmptyRange(NumDims);
-  for (int iDim = 0; iDim < NumDims; ++iDim) {
-    VertexOffsetRange.Begin(iDim) = 0;
-    VertexOffsetRange.End(iDim) = 2;
-  }
+  constexpr state_flags AllAssemblyFlags =
+    state_flags::OVERLAPPED |
+    state_flags::INFERRED_DOMAIN_BOUNDARY |
+    state_flags::BOUNDARY_HOLE |
+    state_flags::OCCLUDED |
+    state_flags::FRINGE |
+    state_flags::OUTER_FRINGE |
+    state_flags::INNER_FRINGE |
+    state_flags::OVERLAP_MINIMIZED |
+    state_flags::RECEIVER |
+    state_flags::ORPHAN;
 
   for (int GridID : Domain.LocalGridIDs()) {
     const grid &Grid = Domain.Grid(GridID);
+    long long NumExtended = Grid.ExtendedRange().Count();
+    {
+      auto StateEditHandle = StateComponent.EditState(GridID);
+      auto FlagsEditHandle = StateEditHandle->EditFlags();
+      distributed_field<state_flags> &Flags = *FlagsEditHandle;
+      for (long long l = 0; l < NumExtended; ++l) {
+        if ((Flags[l] & (state_flags::BOUNDARY_HOLE | state_flags::OVERLAP_MINIMIZED)) !=
+          state_flags::NONE) {
+          Flags[l] = Flags[l] | state_flags::ACTIVE;
+        }
+        if ((Flags[l] & state_flags::INFERRED_DOMAIN_BOUNDARY) != state_flags::NONE) {
+          Flags[l] = Flags[l] & ~state_flags::DOMAIN_BOUNDARY;
+        }
+        Flags[l] = Flags[l] & ~AllAssemblyFlags;
+      }
+    }
     auto &Flags = StateComponent.State(GridID).Flags();
     core::partition_pool PartitionPool(Context_, Grid.Comm(), Grid.Partition().NeighborRanks());
     PartitionPool.Insert(Grid.SharedPartition());
