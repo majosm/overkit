@@ -53,6 +53,10 @@ add_executable(Blobs Blobs.cpp)
 list(APPEND LOCAL_TARGETS Blobs)
 list(APPEND CXX_TARGETS Blobs)
 
+add_executable(BoxInBox BoxInBox.cpp)
+list(APPEND LOCAL_TARGETS BoxInBox)
+list(APPEND CXX_TARGETS BoxInBox)
+
 #-------------------
 # Compiling/linking
 #-------------------
