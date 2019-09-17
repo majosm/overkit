@@ -53,4 +53,34 @@ static inline bool ovkValidOverlapEventFlags(ovk_overlap_event_flags EventFlags)
 }
 #endif
 
+#ifdef __cplusplus
+constexpr inline ovk_overlap_event_flags operator|(ovk_overlap_event_flags Left,
+  ovk_overlap_event_flags Right) {
+  return ovk_overlap_event_flags(int(Left) | int(Right));
+}
+constexpr inline ovk_overlap_event_flags operator&(ovk_overlap_event_flags Left,
+  ovk_overlap_event_flags Right) {
+  return ovk_overlap_event_flags(int(Left) & int(Right));
+}
+constexpr inline ovk_overlap_event_flags operator^(ovk_overlap_event_flags Left,
+  ovk_overlap_event_flags Right) {
+  return ovk_overlap_event_flags(int(Left) ^ int(Right));
+}
+constexpr inline ovk_overlap_event_flags operator~(ovk_overlap_event_flags EventFlags) {
+  return ovk_overlap_event_flags(~int(EventFlags));
+}
+inline ovk_overlap_event_flags operator|=(ovk_overlap_event_flags &Left, ovk_overlap_event_flags
+  Right) {
+  return Left = Left | Right;
+}
+inline ovk_overlap_event_flags operator&=(ovk_overlap_event_flags &Left, ovk_overlap_event_flags
+  Right) {
+  return Left = Left & Right;
+}
+inline ovk_overlap_event_flags operator^=(ovk_overlap_event_flags &Left, ovk_overlap_event_flags
+  Right) {
+  return Left = Left ^ Right;
+}
+#endif
+
 #endif

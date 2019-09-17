@@ -35,4 +35,28 @@ static inline bool ovkValidLogLevel(ovk_log_level LogLevel) {
 }
 #endif
 
+#ifdef __cplusplus
+constexpr inline ovk_log_level operator|(ovk_log_level Left, ovk_log_level Right) {
+  return ovk_log_level(int(Left) | int(Right));
+}
+constexpr inline ovk_log_level operator&(ovk_log_level Left, ovk_log_level Right) {
+  return ovk_log_level(int(Left) & int(Right));
+}
+constexpr inline ovk_log_level operator^(ovk_log_level Left, ovk_log_level Right) {
+  return ovk_log_level(int(Left) ^ int(Right));
+}
+constexpr inline ovk_log_level operator~(ovk_log_level LogLevel) {
+  return ovk_log_level(~int(LogLevel));
+}
+inline ovk_log_level operator|=(ovk_log_level &Left, ovk_log_level Right) {
+  return Left = Left | Right;
+}
+inline ovk_log_level operator&=(ovk_log_level &Left, ovk_log_level Right) {
+  return Left = Left & Right;
+}
+inline ovk_log_level operator^=(ovk_log_level &Left, ovk_log_level Right) {
+  return Left = Left ^ Right;
+}
+#endif
+
 #endif

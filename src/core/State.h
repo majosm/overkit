@@ -63,4 +63,28 @@ static inline bool ovkValidStateFlags(ovk_state_flags StateFlags) {
 }
 #endif
 
+#ifdef __cplusplus
+constexpr inline ovk_state_flags operator|(ovk_state_flags Left, ovk_state_flags Right) {
+  return ovk_state_flags(int(Left) | int(Right));
+}
+constexpr inline ovk_state_flags operator&(ovk_state_flags Left, ovk_state_flags Right) {
+  return ovk_state_flags(int(Left) & int(Right));
+}
+constexpr inline ovk_state_flags operator^(ovk_state_flags Left, ovk_state_flags Right) {
+  return ovk_state_flags(int(Left) ^ int(Right));
+}
+constexpr inline ovk_state_flags operator~(ovk_state_flags StateFlags) {
+  return ovk_state_flags(~int(StateFlags));
+}
+inline ovk_state_flags operator|=(ovk_state_flags &Left, ovk_state_flags Right) {
+  return Left = Left | Right;
+}
+inline ovk_state_flags operator&=(ovk_state_flags &Left, ovk_state_flags Right) {
+  return Left = Left & Right;
+}
+inline ovk_state_flags operator^=(ovk_state_flags &Left, ovk_state_flags Right) {
+  return Left = Left ^ Right;
+}
+#endif
+
 #endif

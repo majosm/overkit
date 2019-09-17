@@ -33,4 +33,34 @@ static inline bool ovkValidGeometryEventFlags(ovk_geometry_event_flags EventFlag
 }
 #endif
 
+#ifdef __cplusplus
+constexpr inline ovk_geometry_event_flags operator|(ovk_geometry_event_flags Left,
+  ovk_geometry_event_flags Right) {
+  return ovk_geometry_event_flags(int(Left) | int(Right));
+}
+constexpr inline ovk_geometry_event_flags operator&(ovk_geometry_event_flags Left,
+  ovk_geometry_event_flags Right) {
+  return ovk_geometry_event_flags(int(Left) & int(Right));
+}
+constexpr inline ovk_geometry_event_flags operator^(ovk_geometry_event_flags Left,
+  ovk_geometry_event_flags Right) {
+  return ovk_geometry_event_flags(int(Left) ^ int(Right));
+}
+constexpr inline ovk_geometry_event_flags operator~(ovk_geometry_event_flags EventFlags) {
+  return ovk_geometry_event_flags(~int(EventFlags));
+}
+inline ovk_geometry_event_flags operator|=(ovk_geometry_event_flags &Left, ovk_geometry_event_flags
+  Right) {
+  return Left = Left | Right;
+}
+inline ovk_geometry_event_flags operator&=(ovk_geometry_event_flags &Left, ovk_geometry_event_flags
+  Right) {
+  return Left = Left & Right;
+}
+inline ovk_geometry_event_flags operator^=(ovk_geometry_event_flags &Left, ovk_geometry_event_flags
+  Right) {
+  return Left = Left ^ Right;
+}
+#endif
+
 #endif

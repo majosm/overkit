@@ -27,6 +27,41 @@ static inline bool ovkValidGridEventFlags(ovk_grid_event_flags EventFlags) {
 
 }
 
+#ifdef __cplusplus
+}
+#endif
+
+#ifdef __cplusplus
+constexpr inline ovk_grid_event_flags operator|(ovk_grid_event_flags Left, ovk_grid_event_flags
+  Right) {
+  return ovk_grid_event_flags(int(Left) | int(Right));
+}
+constexpr inline ovk_grid_event_flags operator&(ovk_grid_event_flags Left, ovk_grid_event_flags
+  Right) {
+  return ovk_grid_event_flags(int(Left) & int(Right));
+}
+constexpr inline ovk_grid_event_flags operator^(ovk_grid_event_flags Left, ovk_grid_event_flags
+  Right) {
+  return ovk_grid_event_flags(int(Left) ^ int(Right));
+}
+constexpr inline ovk_grid_event_flags operator~(ovk_grid_event_flags EventFlags) {
+  return ovk_grid_event_flags(~int(EventFlags));
+}
+inline ovk_grid_event_flags operator|=(ovk_grid_event_flags &Left, ovk_grid_event_flags Right) {
+  return Left = Left | Right;
+}
+inline ovk_grid_event_flags operator&=(ovk_grid_event_flags &Left, ovk_grid_event_flags Right) {
+  return Left = Left & Right;
+}
+inline ovk_grid_event_flags operator^=(ovk_grid_event_flags &Left, ovk_grid_event_flags Right) {
+  return Left = Left ^ Right;
+}
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum {
   OVK_COMPONENT_EVENT_FLAGS_NONE = 0,
   OVK_COMPONENT_EVENT_FLAGS_CREATE = 1 << 0,
@@ -46,6 +81,36 @@ static inline bool ovkValidComponentEventFlags(ovk_component_event_flags EventFl
 }
 
 #ifdef __cplusplus
+}
+#endif
+
+#ifdef __cplusplus
+constexpr inline ovk_component_event_flags operator|(ovk_component_event_flags Left,
+  ovk_component_event_flags Right) {
+  return ovk_component_event_flags(int(Left) | int(Right));
+}
+constexpr inline ovk_component_event_flags operator&(ovk_component_event_flags Left,
+  ovk_component_event_flags Right) {
+  return ovk_component_event_flags(int(Left) & int(Right));
+}
+constexpr inline ovk_component_event_flags operator^(ovk_component_event_flags Left,
+  ovk_component_event_flags Right) {
+  return ovk_component_event_flags(int(Left) ^ int(Right));
+}
+constexpr inline ovk_component_event_flags operator~(ovk_component_event_flags EventFlags) {
+  return ovk_component_event_flags(~int(EventFlags));
+}
+inline ovk_component_event_flags operator|=(ovk_component_event_flags &Left,
+  ovk_component_event_flags Right) {
+  return Left = Left | Right;
+}
+inline ovk_component_event_flags operator&=(ovk_component_event_flags &Left,
+  ovk_component_event_flags Right) {
+  return Left = Left & Right;
+}
+inline ovk_component_event_flags operator^=(ovk_component_event_flags &Left,
+  ovk_component_event_flags Right) {
+  return Left = Left ^ Right;
 }
 #endif
 

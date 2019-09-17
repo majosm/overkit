@@ -57,4 +57,34 @@ static inline bool ovkValidConnectivityEventFlags(ovk_connectivity_event_flags E
 }
 #endif
 
+#ifdef __cplusplus
+constexpr inline ovk_connectivity_event_flags operator|(ovk_connectivity_event_flags Left,
+  ovk_connectivity_event_flags Right) {
+  return ovk_connectivity_event_flags(int(Left) | int(Right));
+}
+constexpr inline ovk_connectivity_event_flags operator&(ovk_connectivity_event_flags Left,
+  ovk_connectivity_event_flags Right) {
+  return ovk_connectivity_event_flags(int(Left) & int(Right));
+}
+constexpr inline ovk_connectivity_event_flags operator^(ovk_connectivity_event_flags Left,
+  ovk_connectivity_event_flags Right) {
+  return ovk_connectivity_event_flags(int(Left) ^ int(Right));
+}
+constexpr inline ovk_connectivity_event_flags operator~(ovk_connectivity_event_flags EventFlags) {
+  return ovk_connectivity_event_flags(~int(EventFlags));
+}
+inline ovk_connectivity_event_flags operator|=(ovk_connectivity_event_flags &Left,
+  ovk_connectivity_event_flags Right) {
+  return Left = Left | Right;
+}
+inline ovk_connectivity_event_flags operator&=(ovk_connectivity_event_flags &Left,
+  ovk_connectivity_event_flags Right) {
+  return Left = Left & Right;
+}
+inline ovk_connectivity_event_flags operator^=(ovk_connectivity_event_flags &Left,
+  ovk_connectivity_event_flags Right) {
+  return Left = Left ^ Right;
+}
+#endif
+
 #endif
