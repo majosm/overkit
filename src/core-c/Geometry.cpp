@@ -183,6 +183,29 @@ void ovkRestoreGeometryCoords(ovk_geometry *Geometry, int Dimension, double **Co
 
 }
 
+void ovkCreateGeometryParams(ovk_geometry_params **Params) {
+
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
+
+  auto ParamsCPPPtr = new ovk::geometry::params();
+
+  *Params = reinterpret_cast<ovk_geometry_params *>(ParamsCPPPtr);
+
+}
+
+void ovkDestroyGeometryParams(ovk_geometry_params **Params) {
+
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
+  OVK_DEBUG_ASSERT(*Params, "Invalid params pointer.");
+
+  auto ParamsCPPPtr = reinterpret_cast<ovk::geometry::params *>(*Params);
+
+  delete ParamsCPPPtr;
+
+  *Params = nullptr;
+
+}
+
 void ovkGetGeometryParamType(const ovk_geometry_params *Params, ovk_geometry_type *Type) {
 
   OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");

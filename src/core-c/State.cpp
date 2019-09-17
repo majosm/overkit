@@ -136,3 +136,26 @@ void ovkRestoreStateFlags(ovk_state *State, ovk_state_flags **Flags) {
   *Flags = nullptr;
 
 }
+
+void ovkCreateStateParams(ovk_state_params **Params) {
+
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
+
+  auto ParamsCPPPtr = new ovk::state::params();
+
+  *Params = reinterpret_cast<ovk_state_params *>(ParamsCPPPtr);
+
+}
+
+void ovkDestroyStateParams(ovk_state_params **Params) {
+
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
+  OVK_DEBUG_ASSERT(*Params, "Invalid params pointer.");
+
+  auto ParamsCPPPtr = reinterpret_cast<ovk::state::params *>(*Params);
+
+  delete ParamsCPPPtr;
+
+  *Params = nullptr;
+
+}
