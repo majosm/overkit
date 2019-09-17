@@ -184,6 +184,8 @@ void geometry::RestoreCoords() {
 
 void geometry::OnCoordsEndEdit_() {
 
+  core::logger &Logger = Context_->core_Logger();
+
   const grid &Grid = *Grid_;
   int NumDims = Grid.Dimension();
   const partition &Partition = Grid.Partition();
@@ -219,6 +221,8 @@ void geometry::OnCoordsEndEdit_() {
   MPI_Barrier(Comm_);
 
   CoordsEvent_.Trigger();
+
+  Logger.LogDebug(Comm_.Rank() == 0, 0, "Updating auxiliary data for geometry %s...", Grid.Name());
 
   for (int k = CellLocalRange.Begin(2); k < CellLocalRange.End(2); ++k) {
     for (int j = CellLocalRange.Begin(1); j < CellLocalRange.End(1); ++j) {
@@ -263,6 +267,9 @@ void geometry::OnCoordsEndEdit_() {
   Volumes_.Exchange();
 
   MPI_Barrier(Comm_);
+
+  Logger.LogDebug(Comm_.Rank() == 0, 0, "Done updating auxiliary data for geometry %s.",
+    Grid.Name());
 
   VolumesEvent_.Trigger();
   CellVolumesEvent_.Trigger();
