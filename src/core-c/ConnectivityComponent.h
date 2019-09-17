@@ -38,8 +38,6 @@ void ovkDestroyConnectivities(ovk_connectivity_component *ConnectivityComponent,
   int *MGridIDs, const int *NGridIDs);
 
 int ovkLocalConnectivityMCount(const ovk_connectivity_component *ConnectivityComponent);
-int ovkLocalConnectivityMCountForGrid(const ovk_connectivity_component *ConnectivityComponent, int
-  MGridID);
 
 void ovkGetConnectivityM(const ovk_connectivity_component *ConnectivityComponent, int MGridID, int
   NGridID, const ovk_connectivity_m **ConnectivityM);
@@ -51,8 +49,6 @@ void ovkRestoreConnectivityM(ovk_connectivity_component *ConnectivityComponent, 
   NGridID, ovk_connectivity_m **ConnectivityM);
 
 int ovkLocalConnectivityNCount(const ovk_connectivity_component *ConnectivityComponent);
-int ovkLocalConnectivityNCountForGrid(const ovk_connectivity_component *ConnectivityComponent, int
-  NGridID);
 
 void ovkGetConnectivityN(const ovk_connectivity_component *ConnectivityComponent, int MGridID, int
   NGridID, const ovk_connectivity_n **ConnectivityN);

@@ -149,8 +149,6 @@ public:
   void ClearConnectivities();
 
   int LocalConnectivityMCount() const;
-  int LocalConnectivityMCountForGrid(int MGridID) const;
-
   const elem_set<int,2> &LocalConnectivityMIDs() const;
 
   const connectivity_m &ConnectivityM(const elem<int,2> &ConnectivityID) const;
@@ -159,8 +157,6 @@ public:
   void RestoreConnectivityM(const elem<int,2> &ConnectivityID);
 
   int LocalConnectivityNCount() const;
-  int LocalConnectivityNCountForGrid(int NGridID) const;
-
   const elem_set<int,2> &LocalConnectivityNIDs() const;
 
   const connectivity_n &ConnectivityN(const elem<int,2> &ConnectivityID) const;

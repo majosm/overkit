@@ -526,23 +526,6 @@ int connectivity_component::LocalConnectivityMCount() const {
 
 }
 
-int connectivity_component::LocalConnectivityMCountForGrid(int MGridID) const {
-
-  const core::domain_base &Domain = *Domain_;
-
-  OVK_DEBUG_ASSERT(MGridID >= 0, "Invalid M grid ID.");
-  OVK_DEBUG_ASSERT(Domain.GridExists(MGridID), "Grid %i does not exist.", MGridID);
-
-  int NumLocalMsForGrid = 0;
-
-  for (auto &LocalMEntry : LocalMs_) {
-    if (LocalMEntry.Key()(0) == MGridID) ++NumLocalMsForGrid;
-  }
-
-  return NumLocalMsForGrid;
-
-}
-
 const elem_set<int,2> &connectivity_component::LocalConnectivityMIDs() const {
 
   return LocalMs_.Keys();
@@ -664,23 +647,6 @@ void connectivity_component::RestoreConnectivityM(const elem<int,2> &Connectivit
 int connectivity_component::LocalConnectivityNCount() const {
 
   return LocalNs_.Count();
-
-}
-
-int connectivity_component::LocalConnectivityNCountForGrid(int NGridID) const {
-
-  const core::domain_base &Domain = *Domain_;
-
-  OVK_DEBUG_ASSERT(NGridID >= 0, "Invalid N grid ID.");
-  OVK_DEBUG_ASSERT(Domain.GridExists(NGridID), "Grid %i does not exist.", NGridID);
-
-  int NumLocalNsForGrid = 0;
-
-  for (auto &LocalNEntry : LocalNs_) {
-    if (LocalNEntry.Key()(1) == NGridID) ++NumLocalNsForGrid;
-  }
-
-  return NumLocalNsForGrid;
 
 }
 

@@ -110,17 +110,6 @@ int ovkLocalConnectivityMCount(const ovk_connectivity_component *ConnectivityCom
 
 }
 
-int ovkLocalConnectivityMCountForGrid(const ovk_connectivity_component *ConnectivityComponent, int
-  MGridID) {
-
-  OVK_DEBUG_ASSERT(ConnectivityComponent, "Invalid connectivity component pointer.");
-
-  auto &ConnectivityComponentCPP = *reinterpret_cast<const ovk::connectivity_component *>(
-    ConnectivityComponent);
-  return ConnectivityComponentCPP.LocalConnectivityMCountForGrid(MGridID);
-
-}
-
 void ovkGetConnectivityM(const ovk_connectivity_component *ConnectivityComponent, int MGridID, int
   NGridID, const ovk_connectivity_m **ConnectivityM) {
 
@@ -184,17 +173,6 @@ int ovkLocalConnectivityNCount(const ovk_connectivity_component *ConnectivityCom
   auto &ConnectivityComponentCPP = *reinterpret_cast<const ovk::connectivity_component *>(
     ConnectivityComponent);
   return ConnectivityComponentCPP.LocalConnectivityNCount();
-
-}
-
-int ovkLocalConnectivityNCountForGrid(const ovk_connectivity_component *ConnectivityComponent, int
-  NGridID) {
-
-  OVK_DEBUG_ASSERT(ConnectivityComponent, "Invalid connectivity component pointer.");
-
-  auto &ConnectivityComponentCPP = *reinterpret_cast<const ovk::connectivity_component *>(
-    ConnectivityComponent);
-  return ConnectivityComponentCPP.LocalConnectivityNCountForGrid(NGridID);
 
 }
 

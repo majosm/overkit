@@ -100,15 +100,6 @@ int ovkLocalOverlapMCount(const ovk_overlap_component *OverlapComponent) {
 
 }
 
-int ovkLocalOverlapMCountForGrid(const ovk_overlap_component *OverlapComponent, int MGridID) {
-
-  OVK_DEBUG_ASSERT(OverlapComponent, "Invalid overlap component pointer.");
-
-  auto &OverlapComponentCPP = *reinterpret_cast<const ovk::overlap_component *>(OverlapComponent);
-  return OverlapComponentCPP.LocalOverlapMCountForGrid(MGridID);
-
-}
-
 void ovkGetOverlapM(const ovk_overlap_component *OverlapComponent, int MGridID, int NGridID, const
   ovk_overlap_m **OverlapM) {
 
@@ -165,16 +156,6 @@ int ovkLocalOverlapNCount(const ovk_overlap_component *OverlapComponent) {
 
   auto &OverlapComponentCPP = *reinterpret_cast<const ovk::overlap_component *>(OverlapComponent);
   return OverlapComponentCPP.LocalOverlapNCount();
-
-}
-
-int ovkLocalOverlapNCountForGrid(const ovk_overlap_component *OverlapComponent, int NGridID) {
-
-  OVK_DEBUG_ASSERT(OverlapComponent, "Invalid overlap component pointer.");
-
-  auto &OverlapComponentCPP = *reinterpret_cast<const ovk::overlap_component *>(
-    OverlapComponent);
-  return OverlapComponentCPP.LocalOverlapNCountForGrid(NGridID);
 
 }
 

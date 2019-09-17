@@ -144,8 +144,6 @@ public:
   void ClearOverlaps();
 
   int LocalOverlapMCount() const;
-  int LocalOverlapMCountForGrid(int MGridID) const;
-
   const elem_set<int,2> &LocalOverlapMIDs() const;
 
   const overlap_m &OverlapM(const elem<int,2> &OverlapID) const;
@@ -154,8 +152,6 @@ public:
   void RestoreOverlapM(const elem<int,2> &OverlapID);
 
   int LocalOverlapNCount() const;
-  int LocalOverlapNCountForGrid(int NGridID) const;
-
   const elem_set<int,2> &LocalOverlapNIDs() const;
 
   const overlap_n &OverlapN(const elem<int,2> &OverlapID) const;
