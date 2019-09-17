@@ -111,10 +111,9 @@ bool ovkEditingStateFlags(const ovk_state *State) {
 
 }
 
-void ovkEditStateFlags(ovk_state *State, int Dimension, ovk_state_flags **Flags) {
+void ovkEditStateFlags(ovk_state *State, ovk_state_flags **Flags) {
 
   OVK_DEBUG_ASSERT(State, "Invalid state pointer.");
-  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < ovk::MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Flags, "Invalid flags pointer.");
 
   auto &StateCPP = *reinterpret_cast<ovk::state *>(State);
@@ -126,10 +125,9 @@ void ovkEditStateFlags(ovk_state *State, int Dimension, ovk_state_flags **Flags)
 
 }
 
-void ovkRestoreStateFlags(ovk_state *State, int Dimension, ovk_state_flags **Flags) {
+void ovkRestoreStateFlags(ovk_state *State, ovk_state_flags **Flags) {
 
   OVK_DEBUG_ASSERT(State, "Invalid state pointer.");
-  OVK_DEBUG_ASSERT(Dimension >= 0 && Dimension < ovk::MAX_DIMS, "Invalid dimension.");
   OVK_DEBUG_ASSERT(Flags, "Invalid flags pointer.");
 
   auto &StateCPP = *reinterpret_cast<ovk::state *>(State);
