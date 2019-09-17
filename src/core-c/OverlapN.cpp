@@ -112,22 +112,21 @@ void ovkGetOverlapNCommRank(const ovk_overlap_n *OverlapN, int *CommRank) {
 
 }
 
-void ovkGetOverlapNCount(const ovk_overlap_n *OverlapN, long long *Count) {
+long long ovkGetOverlapNSize(const ovk_overlap_n *OverlapN) {
 
   OVK_DEBUG_ASSERT(OverlapN, "Invalid overlap N pointer.");
-  OVK_DEBUG_ASSERT(Count, "Invalid count pointer.");
 
   auto &OverlapNCPP = *reinterpret_cast<const ovk::overlap_n *>(OverlapN);
-  *Count = OverlapNCPP.Count();
+  return OverlapNCPP.Size();
 
 }
 
-void ovkResizeOverlapN(ovk_overlap_n *OverlapN, long long Count) {
+void ovkResizeOverlapN(ovk_overlap_n *OverlapN, long long NumPoints) {
 
   OVK_DEBUG_ASSERT(OverlapN, "Invalid overlap N pointer.");
 
   auto &OverlapNCPP = *reinterpret_cast<ovk::overlap_n *>(OverlapN);
-  OverlapNCPP.Resize(Count);
+  OverlapNCPP.Resize(NumPoints);
 
 }
 

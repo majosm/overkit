@@ -30,9 +30,10 @@ void ovkGetOverlapNDimension(const ovk_overlap_n *OverlapN, int *NumDims);
 void ovkGetOverlapNComm(const ovk_overlap_n *OverlapN, MPI_Comm *Comm);
 void ovkGetOverlapNCommSize(const ovk_overlap_n *OverlapN, int *CommSize);
 void ovkGetOverlapNCommRank(const ovk_overlap_n *OverlapN, int *CommRank);
-void ovkGetOverlapNCount(const ovk_overlap_n *OverlapN, long long *Count);
 
-void ovkResizeOverlapN(ovk_overlap_n *OverlapN, long long Count);
+long long ovkGetOverlapNSize(const ovk_overlap_n *OverlapN);
+
+void ovkResizeOverlapN(ovk_overlap_n *OverlapN, long long NumPoints);
 
 void ovkGetOverlapNMask(const ovk_overlap_n *OverlapN, const bool **OverlapMask);
 
@@ -41,10 +42,10 @@ bool ovkEditingOverlapNPoints(const ovk_overlap_n *OverlapN);
 void ovkEditOverlapNPoints(ovk_overlap_n *OverlapN, int Dimension, int **Points);
 void ovkRestoreOverlapNPoints(ovk_overlap_n *OverlapN, int Dimension, int **Points);
 
-void ovkGetOverlapNSources(const ovk_overlap_n *OverlapN, int iDim, const int **Sources);
+void ovkGetOverlapNSources(const ovk_overlap_n *OverlapN, int Dimension, const int **Sources);
 bool ovkEditingOverlapNSources(const ovk_overlap_n *OverlapN);
-void ovkEditOverlapNSources(ovk_overlap_n *OverlapN, int iDim, int **Sources);
-void ovkRestoreOverlapNSources(ovk_overlap_n *OverlapN, int iDim, int **Sources);
+void ovkEditOverlapNSources(ovk_overlap_n *OverlapN, int Dimension, int **Sources);
+void ovkRestoreOverlapNSources(ovk_overlap_n *OverlapN, int Dimension, int **Sources);
 
 void ovkGetOverlapNSourceRanks(const ovk_overlap_n *OverlapN, const int **SourceRanks);
 bool ovkEditingOverlapNSourceRanks(const ovk_overlap_n *OverlapN);

@@ -216,7 +216,7 @@ TEST_F(AssemblerTests, Overlap2D) {
         }
       }
 
-      EXPECT_EQ(OverlapM.Count(), NumOverlapping);
+      EXPECT_EQ(OverlapM.Size(), NumOverlapping);
 
       ovk::array<int,2> ExpectedCells({{ovk::MAX_DIMS,NumOverlapping}});
       ovk::array<Matcher<double>,2> ExpectedCoords({{ovk::MAX_DIMS,NumOverlapping}});
@@ -262,7 +262,7 @@ TEST_F(AssemblerTests, Overlap2D) {
         }
       }
 
-      EXPECT_EQ(OverlapN.Count(), NumOverlapping);
+      EXPECT_EQ(OverlapN.Size(), NumOverlapping);
       EXPECT_THAT(OverlapN.Mask(), ElementsAreArray(ExpectedMask));
 
       ovk::array<int,2> ExpectedPoints({{ovk::MAX_DIMS,NumOverlapping}});
@@ -314,7 +314,7 @@ TEST_F(AssemblerTests, Overlap2D) {
         }
       }
 
-      EXPECT_EQ(OverlapM.Count(), NumOverlapping);
+      EXPECT_EQ(OverlapM.Size(), NumOverlapping);
 
       ovk::array<int,2> ExpectedCells({{ovk::MAX_DIMS,NumOverlapping}});
       ovk::array<Matcher<double>,2> ExpectedCoords({{ovk::MAX_DIMS,NumOverlapping}});
@@ -361,7 +361,7 @@ TEST_F(AssemblerTests, Overlap2D) {
         }
       }
 
-      EXPECT_EQ(OverlapN.Count(), NumOverlapping);
+      EXPECT_EQ(OverlapN.Size(), NumOverlapping);
       EXPECT_THAT(OverlapN.Mask(), ElementsAreArray(ExpectedMask));
 
       ovk::array<int,2> ExpectedPoints({{ovk::MAX_DIMS,NumOverlapping}});
@@ -489,7 +489,7 @@ TEST_F(AssemblerTests, Overlap3D) {
         }
       }
 
-      EXPECT_EQ(OverlapM.Count(), NumOverlapping);
+      EXPECT_EQ(OverlapM.Size(), NumOverlapping);
 
       ovk::array<int,2> ExpectedCells({{ovk::MAX_DIMS,NumOverlapping}});
       ovk::array<Matcher<double>,2> ExpectedCoords({{ovk::MAX_DIMS,NumOverlapping}});
@@ -540,7 +540,7 @@ TEST_F(AssemblerTests, Overlap3D) {
         }
       }
 
-      EXPECT_EQ(OverlapN.Count(), NumOverlapping);
+      EXPECT_EQ(OverlapN.Size(), NumOverlapping);
       EXPECT_THAT(OverlapN.Mask(), ElementsAreArray(ExpectedMask));
 
       ovk::array<int,2> ExpectedPoints({{ovk::MAX_DIMS,NumOverlapping}});
@@ -596,7 +596,7 @@ TEST_F(AssemblerTests, Overlap3D) {
         }
       }
 
-      EXPECT_EQ(OverlapM.Count(), NumOverlapping);
+      EXPECT_EQ(OverlapM.Size(), NumOverlapping);
 
       ovk::array<int,2> ExpectedCells({{ovk::MAX_DIMS,NumOverlapping}});
       ovk::array<Matcher<double>,2> ExpectedCoords({{ovk::MAX_DIMS,NumOverlapping}});
@@ -647,7 +647,7 @@ TEST_F(AssemblerTests, Overlap3D) {
         }
       }
 
-      EXPECT_EQ(OverlapN.Count(), NumOverlapping);
+      EXPECT_EQ(OverlapN.Size(), NumOverlapping);
       EXPECT_THAT(OverlapN.Mask(), ElementsAreArray(ExpectedMask));
 
       ovk::array<int,2> ExpectedPoints({{ovk::MAX_DIMS,NumOverlapping}});
@@ -736,7 +736,7 @@ TEST_F(AssemblerTests, OverlapPeriodic) {
 
       long long NumOverlapping = OverlapMRange.Count();
 
-      EXPECT_EQ(OverlapM.Count(), NumOverlapping);
+      EXPECT_EQ(OverlapM.Size(), NumOverlapping);
 
       ovk::array<int,2> ExpectedCells({{ovk::MAX_DIMS,NumOverlapping}});
       ovk::array<Matcher<double>,2> ExpectedCoords({{ovk::MAX_DIMS,NumOverlapping}});
@@ -799,7 +799,7 @@ TEST_F(AssemblerTests, OverlapPeriodic) {
         }
       }
 
-      EXPECT_EQ(OverlapN.Count(), NumOverlapping);
+      EXPECT_EQ(OverlapN.Size(), NumOverlapping);
       EXPECT_THAT(OverlapN.Mask(), ElementsAreArray(ExpectedMask));
 
       ovk::array<int,2> ExpectedPoints({{ovk::MAX_DIMS,NumOverlapping}});
@@ -851,7 +851,7 @@ TEST_F(AssemblerTests, OverlapPeriodic) {
 
       long long NumOverlapping = OverlapMRange.Count();
 
-      EXPECT_EQ(OverlapM.Count(), NumOverlapping);
+      EXPECT_EQ(OverlapM.Size(), NumOverlapping);
 
       ovk::array<int,2> ExpectedCells({{ovk::MAX_DIMS,NumOverlapping}});
       ovk::array<Matcher<double>,2> ExpectedCoords({{ovk::MAX_DIMS,NumOverlapping}});
@@ -918,7 +918,7 @@ TEST_F(AssemblerTests, OverlapPeriodic) {
         }
       }
 
-      EXPECT_EQ(OverlapN.Count(), NumOverlapping);
+      EXPECT_EQ(OverlapN.Size(), NumOverlapping);
       EXPECT_THAT(OverlapN.Mask(), ElementsAreArray(ExpectedMask));
 
       ovk::array<int,2> ExpectedPoints({{ovk::MAX_DIMS,NumOverlapping}});

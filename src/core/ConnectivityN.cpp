@@ -50,7 +50,7 @@ connectivity_n::connectivity_n(std::shared_ptr<context> &&Context, const grid &G
   &&SourceGridInfo):
   connectivity_n_base(std::move(Context), Grid, std::move(SourceGridInfo)),
   NumDims_(Grid_->Dimension()),
-  Count_(0),
+  NumReceivers_(0),
   Points_({{MAX_DIMS,0}}),
   Sources_({{MAX_DIMS,0}}),
   SourceRanks_({0})
@@ -93,9 +93,9 @@ connectivity_n CreateConnectivityN(std::shared_ptr<context> Context, const grid 
 
 }
 
-void connectivity_n::Resize(long long Count) {
+void connectivity_n::Resize(long long NumReceivers) {
 
-  OVK_DEBUG_ASSERT(Count >= 0, "Invalid count.");
+  OVK_DEBUG_ASSERT(NumReceivers >= 0, "Invalid num receivers value.");
 
   MPI_Barrier(Comm_);
 
@@ -103,13 +103,13 @@ void connectivity_n::Resize(long long Count) {
   OVK_DEBUG_ASSERT(!SourcesEditor_.Active(), "Cannot resize while editing sources.");
   OVK_DEBUG_ASSERT(!SourceRanksEditor_.Active(), "Cannot resize while editing source ranks.");
 
-  Count_ = Count;
+  NumReceivers_ = NumReceivers;
 
-  Points_.Resize({{MAX_DIMS,Count}});
-  Sources_.Resize({{MAX_DIMS,Count}});
-  SourceRanks_.Resize({Count});
+  Points_.Resize({{MAX_DIMS,NumReceivers}});
+  Sources_.Resize({{MAX_DIMS,NumReceivers}});
+  SourceRanks_.Resize({NumReceivers});
 
-  for (long long iPoint = 0; iPoint < Count_; ++iPoint) {
+  for (long long iPoint = 0; iPoint < NumReceivers_; ++iPoint) {
     for (int iDim = 0; iDim < NumDims_; ++iDim) {
       Points_(iDim,iPoint) = Grid_->GlobalRange().Begin(iDim)-1;
     }

@@ -114,22 +114,21 @@ void ovkGetConnectivityNCommRank(const ovk_connectivity_n *ConnectivityN, int *C
 
 }
 
-void ovkGetConnectivityNCount(const ovk_connectivity_n *ConnectivityN, long long *Count) {
+long long ovkGetConnectivityNSize(const ovk_connectivity_n *ConnectivityN) {
 
   OVK_DEBUG_ASSERT(ConnectivityN, "Invalid connectivity N pointer.");
-  OVK_DEBUG_ASSERT(Count, "Invalid count pointer.");
 
   auto &ConnectivityNCPP = *reinterpret_cast<const ovk::connectivity_n *>(ConnectivityN);
-  *Count = ConnectivityNCPP.Count();
+  return ConnectivityNCPP.Size();
 
 }
 
-void ovkResizeConnectivityN(ovk_connectivity_n *ConnectivityN, long long Count) {
+void ovkResizeConnectivityN(ovk_connectivity_n *ConnectivityN, long long NumReceivers) {
 
   OVK_DEBUG_ASSERT(ConnectivityN, "Invalid connectivity N pointer.");
 
   auto &ConnectivityNCPP = *reinterpret_cast<ovk::connectivity_n *>(ConnectivityN);
-  ConnectivityNCPP.Resize(Count);
+  ConnectivityNCPP.Resize(NumReceivers);
 
 }
 

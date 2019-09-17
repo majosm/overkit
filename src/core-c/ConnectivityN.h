@@ -32,9 +32,10 @@ void ovkGetConnectivityNDimension(const ovk_connectivity_n *ConnectivityN, int *
 void ovkGetConnectivityNComm(const ovk_connectivity_n *ConnectivityN, MPI_Comm *Comm);
 void ovkGetConnectivityNCommSize(const ovk_connectivity_n *ConnectivityN, int *CommSize);
 void ovkGetConnectivityNCommRank(const ovk_connectivity_n *ConnectivityN, int *CommRank);
-void ovkGetConnectivityNCount(const ovk_connectivity_n *ConnectivityN, long long *Count);
 
-void ovkResizeConnectivityN(ovk_connectivity_n *ConnectivityN, long long Count);
+long long ovkGetConnectivityNSize(const ovk_connectivity_n *ConnectivityN);
+
+void ovkResizeConnectivityN(ovk_connectivity_n *ConnectivityN, long long NumReceivers);
 
 void ovkGetConnectivityNPoints(const ovk_connectivity_n *ConnectivityN, int Dimension, const int
   **Points);
@@ -42,11 +43,12 @@ bool ovkEditingConnectivityNPoints(const ovk_connectivity_n *ConnectivityN);
 void ovkEditConnectivityNPoints(ovk_connectivity_n *ConnectivityN, int Dimension, int **Points);
 void ovkRestoreConnectivityNPoints(ovk_connectivity_n *ConnectivityN, int Dimension, int **Points);
 
-void ovkGetConnectivityNSources(const ovk_connectivity_n *ConnectivityN, int iDim, const int
+void ovkGetConnectivityNSources(const ovk_connectivity_n *ConnectivityN, int Dimension, const int
   **Sources);
 bool ovkEditingConnectivityNSources(const ovk_connectivity_n *ConnectivityN);
-void ovkEditConnectivityNSources(ovk_connectivity_n *ConnectivityN, int iDim, int **Sources);
-void ovkRestoreConnectivityNSources(ovk_connectivity_n *ConnectivityN, int iDim, int **Sources);
+void ovkEditConnectivityNSources(ovk_connectivity_n *ConnectivityN, int Dimension, int **Sources);
+void ovkRestoreConnectivityNSources(ovk_connectivity_n *ConnectivityN, int Dimension, int
+  **Sources);
 
 void ovkGetConnectivityNSourceRanks(const ovk_connectivity_n *ConnectivityN, const int
   **SourceRanks);

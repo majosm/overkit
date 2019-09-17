@@ -1260,7 +1260,7 @@ void assembler::DetectOverlap_() {
 
   struct overlap_m_edit {
     edit_handle<overlap_m> Overlap;
-    long long NumOverlapping = 0;
+    long long NumCells = 0;
     edit_handle<array<int,2>> Cells;
     edit_handle<array<double,2>> Coords;
     edit_handle<array<int,2>> Destinations;
@@ -1269,7 +1269,7 @@ void assembler::DetectOverlap_() {
 
   struct overlap_n_edit {
     edit_handle<overlap_n> Overlap;
-    long long NumOverlapping = 0;
+    long long NumPoints = 0;
     edit_handle<array<int,2>> Points;
     edit_handle<array<int,2>> Sources;
     edit_handle<array<int>> SourceRanks;
@@ -1296,7 +1296,7 @@ void assembler::DetectOverlap_() {
       const set<int> &NGridRanks = NEntry.Value();
       for (int Rank : NGridRanks) {
         long long NumOverlapping = NumFromNGridAndRank({NGridID,Rank});
-        OverlapMEdits({MGridID,NGridID}).NumOverlapping += NumOverlapping;
+        OverlapMEdits({MGridID,NGridID}).NumCells += NumOverlapping;
       }
     }
   }
@@ -1312,13 +1312,13 @@ void assembler::DetectOverlap_() {
           ++NumOverlapping;
         }
       }
-      OverlapNEdits({MGridID,NGridID}).NumOverlapping = NumOverlapping;
+      OverlapNEdits({MGridID,NGridID}).NumPoints = NumOverlapping;
     }
   }
 
   for (auto &Entry : OverlapMEdits) {
     overlap_m_edit &Edit = Entry.Value();
-    Edit.Overlap->Resize(Edit.NumOverlapping);
+    Edit.Overlap->Resize(Edit.NumCells);
     Edit.Cells = Edit.Overlap->EditCells();
     Edit.Coords = Edit.Overlap->EditCoords();
     Edit.Destinations = Edit.Overlap->EditDestinations();
@@ -1327,7 +1327,7 @@ void assembler::DetectOverlap_() {
 
   for (auto &Entry : OverlapNEdits) {
     overlap_n_edit &Edit = Entry.Value();
-    Edit.Overlap->Resize(Edit.NumOverlapping);
+    Edit.Overlap->Resize(Edit.NumPoints);
     Edit.Points = Edit.Overlap->EditPoints();
     Edit.Sources = Edit.Overlap->EditSources();
     Edit.SourceRanks = Edit.Overlap->EditSourceRanks();
@@ -1343,7 +1343,7 @@ void assembler::DetectOverlap_() {
       const set<int> &NGridRanks = NEntry.Value();
       field_indexer NGridGlobalIndexer(Domain.GridInfo(NGridID).GlobalRange());
       overlap_m_edit &Edit = OverlapMEdits({MGridID,NGridID});
-      long long NumOverlapping = Edit.Overlap->Count();
+      long long NumOverlapping = Edit.NumCells;
       // Want to have the same order as overlap N data
       array<long long> DestinationPointIndices;
       DestinationPointIndices.Reserve(NumOverlapping);
@@ -1463,8 +1463,8 @@ void assembler::DetectOverlap_() {
     local_overlap_m_aux_data &OverlapMAuxData = AssemblyData.LocalOverlapMAuxData(OverlapID);
     const overlap_m &OverlapM = OverlapComponent.OverlapM(OverlapID);
     const array<int,2> &Cells = OverlapM.Cells();
-    array<int,3> CellExtents({{2,MAX_DIMS,OverlapM.Count()}});
-    for (long long iOverlapping = 0; iOverlapping < OverlapM.Count(); ++iOverlapping) {
+    array<int,3> CellExtents({{2,MAX_DIMS,OverlapM.Size()}});
+    for (long long iOverlapping = 0; iOverlapping < OverlapM.Size(); ++iOverlapping) {
       for (int iDim = 0; iDim < NumDims; ++iDim) {
         CellExtents(0,iDim,iOverlapping) = Cells(iDim,iOverlapping);
         CellExtents(1,iDim,iOverlapping) = Cells(iDim,iOverlapping)+2;
@@ -1499,7 +1499,7 @@ void assembler::DetectOverlap_() {
     const overlap_n &OverlapN = OverlapComponent.OverlapN(OverlapID);
     const array<int,2> &Points = OverlapN.Points();
     OverlapMask.Assign(NGrid.SharedPartition(), false);
-    for (long long iOverlapping = 0; iOverlapping < OverlapN.Count(); ++iOverlapping) {
+    for (long long iOverlapping = 0; iOverlapping < OverlapN.Size(); ++iOverlapping) {
       tuple<int> Point = {
         Points(0,iOverlapping),
         Points(1,iOverlapping),
@@ -1532,8 +1532,8 @@ void assembler::DetectOverlap_() {
     const local_overlap_m_aux_data &OverlapMAuxData = AssemblyData.LocalOverlapMAuxData(OverlapID);
     exchange_m &ExchangeM = ExchangeMs.Insert(OverlapID);
     array<double,3> &InterpCoefs = ExchangeM.InterpCoefs;
-    InterpCoefs.Resize({{MAX_DIMS,2,OverlapM.Count()}});
-    for (long long iOverlapping = 0; iOverlapping < OverlapM.Count(); ++iOverlapping) {
+    InterpCoefs.Resize({{MAX_DIMS,2,OverlapM.Size()}});
+    for (long long iOverlapping = 0; iOverlapping < OverlapM.Size(); ++iOverlapping) {
       for (int iDim = 0; iDim < NumDims; ++iDim) {
         elem<double,2> Coefs = core::LagrangeInterpLinear(OverlapM.Coords()(iDim,iOverlapping));
         InterpCoefs(iDim,0,iOverlapping) = Coefs(0);
@@ -1550,7 +1550,7 @@ void assembler::DetectOverlap_() {
       array_layout::COLUMN_MAJOR, InterpCoefsRef);
     ExchangeM.Send = core::CreateSend(Context_, Domain.Comm(), OverlapMAuxData.SendMap,
       data_type::DOUBLE, 1, 0);
-    ExchangeM.SendBuffer.Resize({OverlapM.Count()});
+    ExchangeM.SendBuffer.Resize({OverlapM.Size()});
   }
 
   for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
@@ -1559,7 +1559,7 @@ void assembler::DetectOverlap_() {
     exchange_n &ExchangeN = ExchangeNs.Insert(OverlapID);
     ExchangeN.Recv = core::CreateRecv(Context_, Domain.Comm(), OverlapNAuxData.RecvMap,
       data_type::DOUBLE, 1, 0);
-    OverlapNAuxData.Volumes.Resize({OverlapN.Count()});
+    OverlapNAuxData.Volumes.Resize({OverlapN.Size()});
   }
 
   array<request> Requests;
@@ -1753,7 +1753,7 @@ void assembler::CutBoundaryHoles_() {
     ExchangeM.RecvMap = core::recv_map(OverlapM.DestinationRanks());
     ExchangeM.Recv = core::CreateRecv(Context_, Domain.Comm(), ExchangeM.RecvMap, data_type::BOOL,
       1, 0);
-    ExchangeM.RecvBuffer.Resize({OverlapM.Count()});
+    ExchangeM.RecvBuffer.Resize({OverlapM.Size()});
   }
 
   for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
@@ -1763,7 +1763,7 @@ void assembler::CutBoundaryHoles_() {
     ExchangeN.SendMap = core::send_map(OverlapN.SourceRanks());
     ExchangeN.Send = core::CreateSend(Context_, Domain.Comm(), ExchangeN.SendMap, data_type::BOOL,
       1, 0);
-    ExchangeN.SendBuffer.Resize({OverlapN.Count()});
+    ExchangeN.SendBuffer.Resize({OverlapN.Size()});
   }
 
   array<request> Requests;
@@ -1793,7 +1793,7 @@ void assembler::CutBoundaryHoles_() {
     reverse_exchange_n &ExchangeN = ReverseExchangeNs(OverlapID);
     core::send &Send = ExchangeN.Send;
     array<bool> &SendBuffer = ExchangeN.SendBuffer;
-    for (long long iOverlapped = 0; iOverlapped < OverlapN.Count(); ++iOverlapped) {
+    for (long long iOverlapped = 0; iOverlapped < OverlapN.Size(); ++iOverlapped) {
       tuple<int> Point = {
         Points(0,iOverlapped),
         Points(1,iOverlapped),
@@ -1824,7 +1824,7 @@ void assembler::CutBoundaryHoles_() {
     reverse_exchange_m &ExchangeM = ReverseExchangeMs(OverlapID);
     const array<bool> &RecvBuffer = ExchangeM.RecvBuffer;
     distributed_field<bool> CellCoverMask(MGrid.SharedPartition(), false);
-    for (long long iOverlapping = 0; iOverlapping < OverlapM.Count(); ++iOverlapping) {
+    for (long long iOverlapping = 0; iOverlapping < OverlapM.Size(); ++iOverlapping) {
       tuple<int> Cell = {
         Cells(0,iOverlapping),
         Cells(1,iOverlapping),
@@ -1916,7 +1916,7 @@ void assembler::CutBoundaryHoles_() {
     reverse_exchange_n &ExchangeN = ReverseExchangeNs(OverlapID);
     core::send &Send = ExchangeN.Send;
     array<bool> &SendBuffer = ExchangeN.SendBuffer;
-    for (long long iOverlapped = 0; iOverlapped < OverlapN.Count(); ++iOverlapped) {
+    for (long long iOverlapped = 0; iOverlapped < OverlapN.Size(); ++iOverlapped) {
       tuple<int> Point = {
         Points(0,iOverlapped),
         Points(1,iOverlapped),
@@ -1943,7 +1943,7 @@ void assembler::CutBoundaryHoles_() {
     reverse_exchange_m &ExchangeM = ReverseExchangeMs(OverlapID);
     const array<bool> &RecvBuffer = ExchangeM.RecvBuffer;
     distributed_field<bool> CellCoverMask(MGrid.SharedPartition(), false);
-    for (long long iOverlapping = 0; iOverlapping < OverlapM.Count(); ++iOverlapping) {
+    for (long long iOverlapping = 0; iOverlapping < OverlapM.Size(); ++iOverlapping) {
       tuple<int> Cell = {
         Cells(0,iOverlapping),
         Cells(1,iOverlapping),
@@ -2150,7 +2150,7 @@ void assembler::CutBoundaryHoles_() {
       array_layout::COLUMN_MAJOR);
     ExchangeM.Send = core::CreateSend(Context_, Domain.Comm(), OverlapMAuxData.SendMap,
       data_type::BOOL, 1, 0);
-    ExchangeM.SendBuffer.Resize({OverlapM.Count()});
+    ExchangeM.SendBuffer.Resize({OverlapM.Size()});
   }
 
   for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
@@ -2161,7 +2161,7 @@ void assembler::CutBoundaryHoles_() {
     exchange_n &ExchangeN = ExchangeNs.Insert(OverlapID);
     ExchangeN.Recv = core::CreateRecv(Context_, Domain.Comm(), OverlapNAuxData.RecvMap,
       data_type::BOOL, 1, 0);
-    ExchangeN.RecvBuffer.Resize({OverlapN.Count()});
+    ExchangeN.RecvBuffer.Resize({OverlapN.Size()});
     ExchangeN.Disperse = core::CreateDisperseOverwrite(Context_, OverlapNAuxData.DisperseMap,
       data_type::BOOL, 1, NGrid.ExtendedRange(), array_layout::COLUMN_MAJOR);
   }
@@ -2432,7 +2432,7 @@ void assembler::DetectOccluded_() {
       array_layout::COLUMN_MAJOR);
     ExchangeM.Send = core::CreateSend(Context_, Domain.Comm(), OverlapMAuxData.SendMap,
       data_type::BOOL, 1, 0);
-    ExchangeM.SendBuffer.Resize({OverlapM.Count()});
+    ExchangeM.SendBuffer.Resize({OverlapM.Size()});
   }
 
   for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
@@ -2443,7 +2443,7 @@ void assembler::DetectOccluded_() {
     exchange_n &ExchangeN = ExchangeNs.Insert(OverlapID);
     ExchangeN.Recv = core::CreateRecv(Context_, Domain.Comm(), OverlapNAuxData.RecvMap,
       data_type::BOOL, 1, 0);
-    ExchangeN.RecvBuffer.Resize({OverlapN.Count()});
+    ExchangeN.RecvBuffer.Resize({OverlapN.Size()});
     ExchangeN.Disperse = core::CreateDisperseOverwrite(Context_, OverlapNAuxData.DisperseMap,
       data_type::BOOL, 1, NGrid.ExtendedRange(), array_layout::COLUMN_MAJOR);
   }
@@ -2938,7 +2938,7 @@ void assembler::MinimizeOverlap_() {
       array_layout::COLUMN_MAJOR);
     ExchangeM.Send = core::CreateSend(Context_, Domain.Comm(), OverlapMAuxData.SendMap,
       data_type::BOOL, 1, 0);
-    ExchangeM.SendBuffer.Resize({OverlapM.Count()});
+    ExchangeM.SendBuffer.Resize({OverlapM.Size()});
   }
 
   for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
@@ -2949,7 +2949,7 @@ void assembler::MinimizeOverlap_() {
     exchange_n &ExchangeN = ExchangeNs.Insert(OverlapID);
     ExchangeN.Recv = core::CreateRecv(Context_, Domain.Comm(), OverlapNAuxData.RecvMap,
       data_type::BOOL, 1, 0);
-    ExchangeN.RecvBuffer.Resize({OverlapN.Count()});
+    ExchangeN.RecvBuffer.Resize({OverlapN.Size()});
     ExchangeN.Disperse = core::CreateDisperseOverwrite(Context_, OverlapNAuxData.DisperseMap,
       data_type::BOOL, 1, NGrid.ExtendedRange(), array_layout::COLUMN_MAJOR);
   }
@@ -3142,7 +3142,7 @@ void assembler::GenerateConnectivityData_() {
       array_layout::COLUMN_MAJOR);
     ExchangeM.Send = core::CreateSend(Context_, Domain.Comm(), OverlapMAuxData.SendMap,
       data_type::INT, 1, 0);
-    ExchangeM.SendBuffer.Resize({OverlapM.Count()});
+    ExchangeM.SendBuffer.Resize({OverlapM.Size()});
   }
 
   elem_map<int,2,array<int>> OverlapReceiverDistances;
@@ -3154,7 +3154,7 @@ void assembler::GenerateConnectivityData_() {
     ExchangeN.Recv = core::CreateRecv(Context_, Domain.Comm(), OverlapNAuxData.RecvMap,
       data_type::INT, 1, 0);
     array<int> &ReceiverDistances = OverlapReceiverDistances.Insert(OverlapID);
-    ReceiverDistances.Resize({OverlapN.Count()});
+    ReceiverDistances.Resize({OverlapN.Size()});
   }
 
   array<request> Requests;
@@ -3324,7 +3324,7 @@ void assembler::GenerateConnectivityData_() {
     ExchangeM.Recv = core::CreateRecv(Context_, Domain.Comm(), ExchangeM.RecvMap, data_type::BOOL,
       1, 0);
     array<bool> &Donates = OverlappingCellDonates.Insert(OverlapID);
-    Donates.Resize({OverlapM.Count()});
+    Donates.Resize({OverlapM.Size()});
   }
 
   for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
@@ -3334,7 +3334,7 @@ void assembler::GenerateConnectivityData_() {
     ExchangeN.SendMap = core::send_map(OverlapN.SourceRanks());
     ExchangeN.Send = core::CreateSend(Context_, Domain.Comm(), ExchangeN.SendMap, data_type::BOOL,
       1, 0);
-    ExchangeN.SendBuffer.Resize({OverlapN.Count()});
+    ExchangeN.SendBuffer.Resize({OverlapN.Size()});
   }
 
   Requests.Reserve(OverlapComponent.LocalOverlapMCount() + OverlapComponent.LocalOverlapNCount());
@@ -3359,7 +3359,7 @@ void assembler::GenerateConnectivityData_() {
     reverse_exchange_n &ExchangeN = ReverseExchangeNs(OverlapID);
     core::send &Send = ExchangeN.Send;
     array<bool> &SendBuffer = ExchangeN.SendBuffer;
-    for (long long iOverlapped = 0; iOverlapped < OverlapN.Count(); ++iOverlapped) {
+    for (long long iOverlapped = 0; iOverlapped < OverlapN.Size(); ++iOverlapped) {
       tuple<int> Point = {
         Points(0,iOverlapped),
         Points(1,iOverlapped),
@@ -3409,7 +3409,7 @@ void assembler::GenerateConnectivityData_() {
     const overlap_m &OverlapM = OverlapComponent.OverlapM(OverlapID);
     const array<bool> &Donates = OverlappingCellDonates(OverlapID);
     long long &NumLocalDonors = NumLocalDonorsForGridPair.Insert(OverlapID, 0);
-    for (long long iOverlapping = 0; iOverlapping < OverlapM.Count(); ++iOverlapping) {
+    for (long long iOverlapping = 0; iOverlapping < OverlapM.Size(); ++iOverlapping) {
       if (Donates(iOverlapping)) {
         ++NumLocalDonors;
       }
@@ -3485,7 +3485,7 @@ void assembler::GenerateConnectivityData_() {
     case connection_type::NEAREST:
     case connection_type::LINEAR: {
       long long iDonor = 0;
-      for (long long iOverlapping = 0; iOverlapping < OverlapM.Count(); ++iOverlapping) {
+      for (long long iOverlapping = 0; iOverlapping < OverlapM.Size(); ++iOverlapping) {
         if (!Donates(iOverlapping)) continue;
         for (int iDim = 0; iDim < NumDims; ++iDim) {
           ConnectivityMData.Extents(0,iDim,iDonor) = OverlapCells(iDim,iOverlapping);
@@ -3664,7 +3664,7 @@ void assembler::GenerateConnectivityData_() {
 
   struct connectivity_m_edit {
     edit_handle<connectivity_m> Connectivity;
-    long long NumConnections = 0;
+    long long NumDonors = 0;
     edit_handle<array<int,3>> Extents;
     edit_handle<array<double,2>> Coords;
     edit_handle<array<double,3>> InterpCoefs;
@@ -3674,7 +3674,7 @@ void assembler::GenerateConnectivityData_() {
 
   struct connectivity_n_edit {
     edit_handle<connectivity_n> Connectivity;
-    long long NumConnections = 0;
+    long long NumReceivers = 0;
     edit_handle<array<int,2>> Points;
     edit_handle<array<int,2>> Sources;
     edit_handle<array<int>> SourceRanks;
@@ -3694,24 +3694,24 @@ void assembler::GenerateConnectivityData_() {
       connectivity_m_data &Recv = Recvs(iNeighbor);
       NumDonors += Recv.NumDonors;
     }
-    int MaxSize;
+    int MaxStencilSize;
     switch (Options_.ConnectionType(ConnectivityID)) {
     case connection_type::NEAREST:
     case connection_type::LINEAR:
-      MaxSize = 2;
+      MaxStencilSize = 2;
       break;
     case connection_type::CUBIC:
-      MaxSize = 4;
+      MaxStencilSize = 4;
       break;
     default:
       OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
-      MaxSize = 2;
+      MaxStencilSize = 2;
       break;
     }
     connectivity_m_edit &Edit = ConnectivityMEdits.Insert(ConnectivityID);
     Edit.Connectivity = ConnectivityComponent.EditConnectivityM(ConnectivityID);
-    Edit.NumConnections = NumDonors;
-    Edit.Connectivity->Resize(Edit.NumConnections, MaxSize);
+    Edit.NumDonors = NumDonors;
+    Edit.Connectivity->Resize(Edit.NumDonors, MaxStencilSize);
     Edit.Extents = Edit.Connectivity->EditExtents();
     Edit.Coords = Edit.Connectivity->EditCoords();
     Edit.InterpCoefs = Edit.Connectivity->EditInterpCoefs();
@@ -3739,8 +3739,8 @@ void assembler::GenerateConnectivityData_() {
     }
     connectivity_n_edit &Edit = ConnectivityNEdits.Insert(ConnectivityID);
     Edit.Connectivity = ConnectivityComponent.EditConnectivityN(ConnectivityID);
-    Edit.NumConnections = NumReceivers;
-    Edit.Connectivity->Resize(Edit.NumConnections);
+    Edit.NumReceivers = NumReceivers;
+    Edit.Connectivity->Resize(Edit.NumReceivers);
     Edit.Points = Edit.Connectivity->EditPoints();
     Edit.Sources = Edit.Connectivity->EditSources();
     Edit.SourceRanks = Edit.Connectivity->EditSourceRanks();
@@ -3755,7 +3755,7 @@ void assembler::GenerateConnectivityData_() {
     connectivity_m_data &LocalDonors = ConnectivityMDataForLocalDonors(ConnectivityID);
     array<connectivity_m_data> &Recvs = ConnectivityMRecvs(ConnectivityID);
     connectivity_m_edit &Edit = ConnectivityMEdits(ConnectivityID);
-    array<long long> DestinationPointIndices({Edit.NumConnections});
+    array<long long> DestinationPointIndices({Edit.NumDonors});
     LocalDonors.Order.Resize({LocalDonors.NumDonors});
     long long iDonor = 0;
     for (long long iLocalDonor = 0; iLocalDonor < LocalDonors.NumDonors; ++iLocalDonor) {
@@ -3784,8 +3784,8 @@ void assembler::GenerateConnectivityData_() {
     }
     array<long long> ROrder = ArrayOrder(DestinationPointIndices);
     // Need to use order on LHS since RHS is not one contiguous array
-    array<long long> LOrder({Edit.NumConnections});
-    for (long long iDonor = 0; iDonor < Edit.NumConnections; ++iDonor) {
+    array<long long> LOrder({Edit.NumDonors});
+    for (long long iDonor = 0; iDonor < Edit.NumDonors; ++iDonor) {
       LOrder(ROrder(iDonor)) = iDonor;
     }
     iDonor = 0;
@@ -3819,7 +3819,7 @@ void assembler::GenerateConnectivityData_() {
     }
     switch (Options_.ConnectionType(ConnectivityID)) {
     case connection_type::NEAREST:
-      for (iDonor = 0; iDonor < Edit.NumConnections; ++iDonor) {
+      for (iDonor = 0; iDonor < Edit.NumDonors; ++iDonor) {
         for (int iDim = 0; iDim < NumDims; ++iDim) {
           (*Edit.InterpCoefs)(iDim,0,iDonor) = (*Edit.Coords)(iDim,iDonor) <= 0.5 ? 1. : 0.;
           (*Edit.InterpCoefs)(iDim,1,iDonor) = (*Edit.Coords)(iDim,iDonor) <= 0.5 ? 0. : 1.;
@@ -3827,7 +3827,7 @@ void assembler::GenerateConnectivityData_() {
       }
       break;
     case connection_type::LINEAR:
-      for (iDonor = 0; iDonor < Edit.NumConnections; ++iDonor) {
+      for (iDonor = 0; iDonor < Edit.NumDonors; ++iDonor) {
         for (int iDim = 0; iDim < NumDims; ++iDim) {
           elem<double,2> Coefs = core::LagrangeInterpLinear((*Edit.Coords)(iDim,iDonor));
           (*Edit.InterpCoefs)(iDim,0,iDonor) = Coefs(0);
@@ -3836,7 +3836,7 @@ void assembler::GenerateConnectivityData_() {
       }
       break;
     case connection_type::CUBIC:
-      for (iDonor = 0; iDonor < Edit.NumConnections; ++iDonor) {
+      for (iDonor = 0; iDonor < Edit.NumDonors; ++iDonor) {
         for (int iDim = 0; iDim < NumDims; ++iDim) {
           elem<double,4> Coefs = core::LagrangeInterpCubic((*Edit.Coords)(iDim,iDonor));
           (*Edit.InterpCoefs)(iDim,0,iDonor) = Coefs(0);

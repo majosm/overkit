@@ -463,16 +463,14 @@ static int Interface() {
     ovkCreateExchangerCollect(Exchanger, 1, 2, 1, OVK_COLLECT_INTERPOLATE,
       OVK_DOUBLE, 1, Data->ExtendedRange, Data->ExtendedRange+3, OVK_ROW_MAJOR);
     ovkCreateExchangerSend(Exchanger, 1, 2, 1, OVK_DOUBLE, 1, 1);
-    long long NumDonors;
-    ovkGetConnectivityMCount(ConnectivityM, &NumDonors);
+    long long NumDonors = ovkGetConnectivityMSize(ConnectivityM);
     LeftDonorValues = malloc(NumDonors*sizeof(double));
     const ovk_connectivity_n *ConnectivityN;
     ovkGetConnectivityN(ConnectivityComponent, 2, 1, &ConnectivityN);
     ovkCreateExchangerReceive(Exchanger, 2, 1, 1, OVK_DOUBLE, 1, 1);
     ovkCreateExchangerDisperse(Exchanger, 2, 1, 1, OVK_DISPERSE_OVERWRITE, OVK_DOUBLE, 1,
       Data->ExtendedRange, Data->ExtendedRange+3, OVK_ROW_MAJOR);
-    long long NumReceivers;
-    ovkGetConnectivityNCount(ConnectivityN, &NumReceivers);
+    long long NumReceivers = ovkGetConnectivityNSize(ConnectivityN);
     LeftReceiverValues = malloc(NumReceivers*sizeof(double));
   }
 
@@ -484,16 +482,14 @@ static int Interface() {
     ovkCreateExchangerCollect(Exchanger, 2, 1, 1, OVK_COLLECT_INTERPOLATE,
       OVK_DOUBLE, 1, Data->ExtendedRange, Data->ExtendedRange+3, OVK_ROW_MAJOR);
     ovkCreateExchangerSend(Exchanger, 2, 1, 1, OVK_DOUBLE, 1, 1);
-    long long NumDonors;
-    ovkGetConnectivityMCount(ConnectivityM, &NumDonors);
+    long long NumDonors = ovkGetConnectivityMSize(ConnectivityM);
     RightDonorValues = malloc(NumDonors*sizeof(double));
     const ovk_connectivity_n *ConnectivityN;
     ovkGetConnectivityN(ConnectivityComponent, 1, 2, &ConnectivityN);
     ovkCreateExchangerReceive(Exchanger, 1, 2, 1, OVK_DOUBLE, 1, 1);
     ovkCreateExchangerDisperse(Exchanger, 1, 2, 1, OVK_DISPERSE_OVERWRITE, OVK_DOUBLE, 1,
       Data->ExtendedRange, Data->ExtendedRange+3, OVK_ROW_MAJOR);
-    long long NumReceivers;
-    ovkGetConnectivityNCount(ConnectivityN, &NumReceivers);
+    long long NumReceivers = ovkGetConnectivityNSize(ConnectivityN);
     RightReceiverValues = malloc(NumReceivers*sizeof(double));
   }
 

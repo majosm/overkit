@@ -33,10 +33,11 @@ void ovkGetConnectivityMComm(const ovk_connectivity_m *ConnectivityM, MPI_Comm *
 void ovkGetConnectivityMCommSize(const ovk_connectivity_m *ConnectivityM, int *CommSize);
 void ovkGetConnectivityMCommRank(const ovk_connectivity_m *ConnectivityM, int *CommRank);
 
-void ovkGetConnectivityMCount(const ovk_connectivity_m *ConnectivityM, long long *Count);
-void ovkGetConnectivityMMaxSize(const ovk_connectivity_m *ConnectivityM, int *MaxSize);
+long long ovkGetConnectivityMSize(const ovk_connectivity_m *ConnectivityM);
+int ovkGetConnectivityMMaxStencilSize(const ovk_connectivity_m *ConnectivityM);
 
-void ovkResizeConnectivityM(ovk_connectivity_m *ConnectivityM, long long Count, int MaxSize);
+void ovkResizeConnectivityM(ovk_connectivity_m *ConnectivityM, long long NumDonors, int
+  MaxStencilSize);
 
 void ovkGetConnectivityMExtents(const ovk_connectivity_m *ConnectivityM, int Dimension, const int
   **Begins, const int **Ends);

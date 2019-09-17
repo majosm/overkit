@@ -50,7 +50,7 @@ overlap_n::overlap_n(std::shared_ptr<context> &&Context, const grid &Grid, grid_
   &&SourceGridInfo):
   overlap_n_base(std::move(Context), Grid, std::move(SourceGridInfo)),
   NumDims_(Grid_->Dimension()),
-  Count_(0),
+  NumPoints_(0),
   Mask_(Grid_->LocalRange(), false),
   Points_({{MAX_DIMS,0}}),
   Sources_({{MAX_DIMS,0}}),
@@ -94,9 +94,9 @@ overlap_n CreateOverlapN(std::shared_ptr<context> Context, const grid &Grid, gri
 
 }
 
-void overlap_n::Resize(long long Count) {
+void overlap_n::Resize(long long NumPoints) {
 
-  OVK_DEBUG_ASSERT(Count >= 0, "Invalid count.");
+  OVK_DEBUG_ASSERT(NumPoints >= 0, "Invalid num points value.");
 
   MPI_Barrier(Comm_);
 
@@ -104,13 +104,13 @@ void overlap_n::Resize(long long Count) {
   OVK_DEBUG_ASSERT(!SourcesEditor_.Active(), "Cannot resize while editing sources.");
   OVK_DEBUG_ASSERT(!SourceRanksEditor_.Active(), "Cannot resize while editing source ranks.");
 
-  Count_ = Count;
+  NumPoints_ = NumPoints;
 
-  Points_.Resize({{MAX_DIMS,Count}});
-  Sources_.Resize({{MAX_DIMS,Count}});
-  SourceRanks_.Resize({Count});
+  Points_.Resize({{MAX_DIMS,NumPoints}});
+  Sources_.Resize({{MAX_DIMS,NumPoints}});
+  SourceRanks_.Resize({NumPoints});
 
-  for (long long iPoint = 0; iPoint < Count_; ++iPoint) {
+  for (long long iPoint = 0; iPoint < NumPoints_; ++iPoint) {
     for (int iDim = 0; iDim < NumDims_; ++iDim) {
       Points_(iDim,iPoint) = Grid_->GlobalRange().Begin(iDim)-1;
     }
@@ -179,7 +179,7 @@ void overlap_n::UpdateMask_() {
     GlobalBeginMinusOne(iDim) -= 1;
   }
 
-  for (long long iPoint = 0; iPoint < Count_; ++iPoint) {
+  for (long long iPoint = 0; iPoint < NumPoints_; ++iPoint) {
     tuple<int> Point = {
       Points_(0,iPoint),
       Points_(1,iPoint),

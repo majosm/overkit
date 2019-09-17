@@ -324,12 +324,12 @@ void Interface() {
     Exchanger.CreateCollect({1,2}, 1, ovk::collect_op::INTERPOLATE, ovk::data_type::DOUBLE, 1,
       ExtendedRange, ovk::array_layout::ROW_MAJOR);
     Exchanger.CreateSend({1,2}, 1, ovk::data_type::DOUBLE, 1, 1);
-    LeftDonorValues.resize(ConnectivityM.Count());
+    LeftDonorValues.resize(ConnectivityM.Size());
     const ovk::connectivity_n &ConnectivityN = ConnectivityComponent.ConnectivityN({2,1});
     Exchanger.CreateReceive({2,1}, 1, ovk::data_type::DOUBLE, 1, 1);
     Exchanger.CreateDisperse({2,1}, 1, ovk::disperse_op::OVERWRITE, ovk::data_type::DOUBLE, 1,
       ExtendedRange, ovk::array_layout::ROW_MAJOR);
-    LeftReceiverValues.resize(ConnectivityN.Count());
+    LeftReceiverValues.resize(ConnectivityN.Size());
   }
 
   std::vector<double> RightDonorValues, RightReceiverValues;
@@ -339,12 +339,12 @@ void Interface() {
     Exchanger.CreateCollect({2,1}, 1, ovk::collect_op::INTERPOLATE, ovk::data_type::DOUBLE, 1,
       ExtendedRange, ovk::array_layout::ROW_MAJOR);
     Exchanger.CreateSend({2,1}, 1, ovk::data_type::DOUBLE, 1, 1);
-    RightDonorValues.resize(ConnectivityM.Count());
+    RightDonorValues.resize(ConnectivityM.Size());
     const ovk::connectivity_n &ConnectivityN = ConnectivityComponent.ConnectivityN({1,2});
     Exchanger.CreateReceive({1,2}, 1, ovk::data_type::DOUBLE, 1, 1);
     Exchanger.CreateDisperse({1,2}, 1, ovk::disperse_op::OVERWRITE, ovk::data_type::DOUBLE, 1,
       ExtendedRange, ovk::array_layout::ROW_MAJOR);
-    RightReceiverValues.resize(ConnectivityN.Count());
+    RightReceiverValues.resize(ConnectivityN.Size());
   }
 
   std::vector<double> LeftFieldValues;

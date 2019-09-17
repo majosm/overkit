@@ -308,7 +308,7 @@ void exchanger::UpdateSourceDestRanks_() {
     LocalM.DestinationRanks = ConnectivityM.DestinationRanks();
     // Ensure only process containing lower corner of donor cell communicates
     const array<int,3> &Extents = ConnectivityM.Extents();
-    for (long long iDonor = 0; iDonor < ConnectivityM.Count(); ++iDonor) {
+    for (long long iDonor = 0; iDonor < ConnectivityM.Size(); ++iDonor) {
       tuple<int> CellLower = {
         Extents(0,0,iDonor),
         Extents(0,1,iDonor),
@@ -376,7 +376,7 @@ void exchanger::UpdateSourceDestRanks_() {
     const array<int,3> &Extents = ConnectivityM.Extents();
     const array<int,2> &Destinations = ConnectivityM.Destinations();
     const array<int> &DestinationRanks = LocalM.DestinationRanks;
-    for (long long iDonor = 0; iDonor < ConnectivityM.Count(); ++iDonor) {
+    for (long long iDonor = 0; iDonor < ConnectivityM.Size(); ++iDonor) {
       tuple<int> CellLower = {
         Extents(0,0,iDonor),
         Extents(0,1,iDonor),
@@ -404,7 +404,7 @@ void exchanger::UpdateSourceDestRanks_() {
     const connectivity_n &ConnectivityN = *LocalN.Connectivity;
     const array<int,2> &Points = ConnectivityN.Points();
     const array<int> &SourceRanks = LocalN.SourceRanks;
-    for (long long iReceiver = 0; iReceiver < ConnectivityN.Count(); ++iReceiver) {
+    for (long long iReceiver = 0; iReceiver < ConnectivityN.Size(); ++iReceiver) {
       if (SourceRanks(iReceiver) < 0) {
         tuple<int> Point = {
           Points(0,iReceiver),
@@ -440,7 +440,7 @@ void exchanger::UpdateSourceDestRanks_() {
     const array<int,3> &Extents = ConnectivityM.Extents();
     const array<int,2> &Destinations = ConnectivityM.Destinations();
     const array<int> &DestinationRanks = LocalM.DestinationRanks;
-    for (long long iDonor = 0; iDonor < ConnectivityM.Count(); ++iDonor) {
+    for (long long iDonor = 0; iDonor < ConnectivityM.Size(); ++iDonor) {
       tuple<int> CellLower = {
         Extents(0,0,iDonor),
         Extents(0,1,iDonor),
@@ -468,7 +468,7 @@ void exchanger::UpdateSourceDestRanks_() {
     const connectivity_n &ConnectivityN = *LocalN.Connectivity;
     const array<int,2> &Points = ConnectivityN.Points();
     const array<int> &SourceRanks = LocalN.SourceRanks;
-    for (long long iReceiver = 0; iReceiver < ConnectivityN.Count(); ++iReceiver) {
+    for (long long iReceiver = 0; iReceiver < ConnectivityN.Size(); ++iReceiver) {
       if (SourceRanks(iReceiver) < 0) {
         tuple<int> Point = {
           Points(0,iReceiver),
@@ -691,7 +691,7 @@ void exchanger::UpdateSourceDestRanks_() {
     const array<int,3> &Extents = ConnectivityM.Extents();
     const array<int,2> &Destinations = ConnectivityM.Destinations();
     array<int> &DestinationRanks = LocalM.DestinationRanks;
-    for (long long iDonor = 0; iDonor < ConnectivityM.Count(); ++iDonor) {
+    for (long long iDonor = 0; iDonor < ConnectivityM.Size(); ++iDonor) {
       tuple<int> CellLower = {
         Extents(0,0,iDonor),
         Extents(0,1,iDonor),
@@ -720,7 +720,7 @@ void exchanger::UpdateSourceDestRanks_() {
     const connectivity_n &ConnectivityN = *LocalN.Connectivity;
     const array<int,2> &Points = ConnectivityN.Points();
     array<int> &SourceRanks = LocalN.SourceRanks;
-    for (long long iReceiver = 0; iReceiver < ConnectivityN.Count(); ++iReceiver) {
+    for (long long iReceiver = 0; iReceiver < ConnectivityN.Size(); ++iReceiver) {
       if (SourceRanks(iReceiver) < 0) {
         tuple<int> Point = {
           Points(0,iReceiver),
@@ -744,7 +744,7 @@ void exchanger::UpdateSourceDestRanks_() {
       const connectivity_m &ConnectivityM = *LocalM.Connectivity;
       const array<int,3> &Extents = ConnectivityM.Extents();
       const array<int> &DestinationRanks = LocalM.DestinationRanks;
-      for (long long iDonor = 0; iDonor < ConnectivityM.Count(); ++iDonor) {
+      for (long long iDonor = 0; iDonor < ConnectivityM.Size(); ++iDonor) {
         tuple<int> CellLower = {
           Extents(0,0,iDonor),
           Extents(0,1,iDonor),
@@ -762,7 +762,7 @@ void exchanger::UpdateSourceDestRanks_() {
       const connectivity_n &ConnectivityN = *LocalN.Connectivity;
       const array<int,2> &Points = ConnectivityN.Points();
       const array<int> &SourceRanks = LocalN.SourceRanks;
-      for (long long iReceiver = 0; iReceiver < ConnectivityN.Count(); ++iReceiver) {
+      for (long long iReceiver = 0; iReceiver < ConnectivityN.Size(); ++iReceiver) {
         OVK_DEBUG_ASSERT(SourceRanks(iReceiver) >= 0, "Failed to connect receiver point (%i,%i,%i) "
           "of grid %s to donor cell.", Points(0,iReceiver), Points(1,iReceiver), Points(2,
           iReceiver), NGrid.Name());

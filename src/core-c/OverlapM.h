@@ -31,9 +31,9 @@ void ovkGetOverlapMComm(const ovk_overlap_m *OverlapM, MPI_Comm *Comm);
 void ovkGetOverlapMCommSize(const ovk_overlap_m *OverlapM, int *CommSize);
 void ovkGetOverlapMCommRank(const ovk_overlap_m *OverlapM, int *CommRank);
 
-void ovkGetOverlapMCount(const ovk_overlap_m *OverlapM, long long *Count);
+long long ovkGetOverlapMSize(const ovk_overlap_m *OverlapM);
 
-void ovkResizeOverlapM(ovk_overlap_m *OverlapM, long long Count);
+void ovkResizeOverlapM(ovk_overlap_m *OverlapM, long long NumCells);
 
 void ovkGetOverlapMCells(const ovk_overlap_m *OverlapM, int Dimension, const int **Cells);
 bool ovkEditingOverlapMCells(const ovk_overlap_m *OverlapM);

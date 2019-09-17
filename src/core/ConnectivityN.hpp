@@ -81,9 +81,9 @@ public:
 
   comm_view Comm() const { return Comm_; }
 
-  long long Count() const { return Count_; }
+  long long Size() const { return NumReceivers_; }
 
-  void Resize(long long Count);
+  void Resize(long long NumReceivers);
   template <typename F, OVK_FUNCTION_REQUIRES(core::IsCallableWith<F>())> event_listener_handle
     AddResizeEventListener(F Listener) const {
     return ResizeEvent_.AddListener(std::move(Listener));
@@ -125,7 +125,7 @@ private:
 
   int NumDims_;
 
-  long long Count_;
+  long long NumReceivers_;
   mutable event<void()> ResizeEvent_;
 
   array<int,2> Points_;

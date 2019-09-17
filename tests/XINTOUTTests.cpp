@@ -69,7 +69,7 @@ TEST_F(XINTOUTTests, ImportStandard2D) {
 
       if (HasInterface) {
 
-        long long NumDonors = ConnectivityM.Count();
+        long long NumDonors = ConnectivityM.Size();
         EXPECT_EQ(NumDonors, LocalRange.Size(0));
         const ovk::array<int,3> &Extents = ConnectivityM.Extents();
         const ovk::array<double,2> &Coords = ConnectivityM.Coords();
@@ -103,7 +103,7 @@ TEST_F(XINTOUTTests, ImportStandard2D) {
         EXPECT_THAT(InterpCoefs, ElementsAreArray(ExpectedInterpCoefs));
         EXPECT_THAT(Destinations, ElementsAreArray(ExpectedDestinations));
 
-        long long NumReceivers = ConnectivityN.Count();
+        long long NumReceivers = ConnectivityN.Size();
         EXPECT_EQ(NumReceivers, LocalRange.Size(0));
         const ovk::array<int,2> &Points = ConnectivityN.Points();
         const ovk::array<int,2> &Sources = ConnectivityN.Sources();
@@ -124,8 +124,8 @@ TEST_F(XINTOUTTests, ImportStandard2D) {
 
       } else {
 
-        EXPECT_EQ(ConnectivityM.Count(), 0);
-        EXPECT_EQ(ConnectivityN.Count(), 0);
+        EXPECT_EQ(ConnectivityM.Size(), 0);
+        EXPECT_EQ(ConnectivityN.Size(), 0);
 
       }
 
@@ -144,7 +144,7 @@ TEST_F(XINTOUTTests, ImportStandard2D) {
 
       if (HasInterface) {
 
-        long long NumDonors = ConnectivityM.Count();
+        long long NumDonors = ConnectivityM.Size();
         EXPECT_EQ(NumDonors, LocalRange.Size(0));
         const ovk::array<int,3> &Extents = ConnectivityM.Extents();
         const ovk::array<double,2> &Coords = ConnectivityM.Coords();
@@ -178,7 +178,7 @@ TEST_F(XINTOUTTests, ImportStandard2D) {
         EXPECT_THAT(InterpCoefs, ElementsAreArray(ExpectedInterpCoefs));
         EXPECT_THAT(Destinations, ElementsAreArray(ExpectedDestinations));
 
-        long long NumReceivers = ConnectivityN.Count();
+        long long NumReceivers = ConnectivityN.Size();
         EXPECT_EQ(NumReceivers, LocalRange.Size(0));
         const ovk::array<int,2> &Points = ConnectivityN.Points();
         const ovk::array<int,2> &Sources = ConnectivityN.Sources();
@@ -199,8 +199,8 @@ TEST_F(XINTOUTTests, ImportStandard2D) {
 
       } else {
 
-        EXPECT_EQ(ConnectivityM.Count(), 0);
-        EXPECT_EQ(ConnectivityN.Count(), 0);
+        EXPECT_EQ(ConnectivityM.Size(), 0);
+        EXPECT_EQ(ConnectivityN.Size(), 0);
 
       }
 
@@ -248,7 +248,7 @@ TEST_F(XINTOUTTests, ImportStandard3D) {
 
       if (HasInterface) {
 
-        long long NumDonors = ConnectivityM.Count();
+        long long NumDonors = ConnectivityM.Size();
         EXPECT_EQ(NumDonors, LocalRange.Size(0)*LocalRange.Size(1));
         const ovk::array<int,3> &Extents = ConnectivityM.Extents();
         const ovk::array<double,2> &Coords = ConnectivityM.Coords();
@@ -284,7 +284,7 @@ TEST_F(XINTOUTTests, ImportStandard3D) {
         EXPECT_THAT(InterpCoefs, ElementsAreArray(ExpectedInterpCoefs));
         EXPECT_THAT(Destinations, ElementsAreArray(ExpectedDestinations));
 
-        long long NumReceivers = ConnectivityN.Count();
+        long long NumReceivers = ConnectivityN.Size();
         EXPECT_EQ(NumReceivers, LocalRange.Size(0)*LocalRange.Size(1));
         const ovk::array<int,2> &Points = ConnectivityN.Points();
         const ovk::array<int,2> &Sources = ConnectivityN.Sources();
@@ -307,8 +307,8 @@ TEST_F(XINTOUTTests, ImportStandard3D) {
 
       } else {
 
-        EXPECT_EQ(ConnectivityM.Count(), 0);
-        EXPECT_EQ(ConnectivityN.Count(), 0);
+        EXPECT_EQ(ConnectivityM.Size(), 0);
+        EXPECT_EQ(ConnectivityN.Size(), 0);
 
       }
     }
@@ -326,7 +326,7 @@ TEST_F(XINTOUTTests, ImportStandard3D) {
 
       if (HasInterface) {
 
-        long long NumDonors = ConnectivityM.Count();
+        long long NumDonors = ConnectivityM.Size();
         EXPECT_EQ(NumDonors, LocalRange.Size(0)*LocalRange.Size(1));
         const ovk::array<int,3> &Extents = ConnectivityM.Extents();
         const ovk::array<double,2> &Coords = ConnectivityM.Coords();
@@ -362,7 +362,7 @@ TEST_F(XINTOUTTests, ImportStandard3D) {
         EXPECT_THAT(InterpCoefs, ElementsAreArray(ExpectedInterpCoefs));
         EXPECT_THAT(Destinations, ElementsAreArray(ExpectedDestinations));
 
-        long long NumReceivers = ConnectivityN.Count();
+        long long NumReceivers = ConnectivityN.Size();
         EXPECT_EQ(NumReceivers, LocalRange.Size(0)*LocalRange.Size(1));
         const ovk::array<int,2> &Points = ConnectivityN.Points();
         const ovk::array<int,2> &Sources = ConnectivityN.Sources();
@@ -385,8 +385,8 @@ TEST_F(XINTOUTTests, ImportStandard3D) {
 
       } else {
 
-        EXPECT_EQ(ConnectivityM.Count(), 0);
-        EXPECT_EQ(ConnectivityN.Count(), 0);
+        EXPECT_EQ(ConnectivityM.Size(), 0);
+        EXPECT_EQ(ConnectivityN.Size(), 0);
 
       }
 
@@ -434,7 +434,7 @@ TEST_F(XINTOUTTests, ImportExtended2D) {
 
       if (HasInterface) {
 
-        long long NumDonors = ConnectivityM.Count();
+        long long NumDonors = ConnectivityM.Size();
         EXPECT_EQ(NumDonors, LocalRange.Size(0));
         const ovk::array<int,3> &Extents = ConnectivityM.Extents();
         const ovk::array<double,2> &Coords = ConnectivityM.Coords();
@@ -468,7 +468,7 @@ TEST_F(XINTOUTTests, ImportExtended2D) {
         EXPECT_THAT(InterpCoefs, ElementsAreArray(ExpectedInterpCoefs));
         EXPECT_THAT(Destinations, ElementsAreArray(ExpectedDestinations));
 
-        long long NumReceivers = ConnectivityN.Count();
+        long long NumReceivers = ConnectivityN.Size();
         EXPECT_EQ(NumReceivers, LocalRange.Size(0));
         const ovk::array<int,2> &Points = ConnectivityN.Points();
         const ovk::array<int,2> &Sources = ConnectivityN.Sources();
@@ -489,8 +489,8 @@ TEST_F(XINTOUTTests, ImportExtended2D) {
 
       } else {
 
-        EXPECT_EQ(ConnectivityM.Count(), 0);
-        EXPECT_EQ(ConnectivityN.Count(), 0);
+        EXPECT_EQ(ConnectivityM.Size(), 0);
+        EXPECT_EQ(ConnectivityN.Size(), 0);
 
       }
 
@@ -509,7 +509,7 @@ TEST_F(XINTOUTTests, ImportExtended2D) {
 
       if (HasInterface) {
 
-        long long NumDonors = ConnectivityM.Count();
+        long long NumDonors = ConnectivityM.Size();
         EXPECT_EQ(NumDonors, LocalRange.Size(0));
         const ovk::array<int,3> &Extents = ConnectivityM.Extents();
         const ovk::array<double,2> &Coords = ConnectivityM.Coords();
@@ -543,7 +543,7 @@ TEST_F(XINTOUTTests, ImportExtended2D) {
         EXPECT_THAT(InterpCoefs, ElementsAreArray(ExpectedInterpCoefs));
         EXPECT_THAT(Destinations, ElementsAreArray(ExpectedDestinations));
 
-        long long NumReceivers = ConnectivityN.Count();
+        long long NumReceivers = ConnectivityN.Size();
         EXPECT_EQ(NumReceivers, LocalRange.Size(0));
         const ovk::array<int,2> &Points = ConnectivityN.Points();
         const ovk::array<int,2> &Sources = ConnectivityN.Sources();
@@ -564,8 +564,8 @@ TEST_F(XINTOUTTests, ImportExtended2D) {
 
       } else {
 
-        EXPECT_EQ(ConnectivityM.Count(), 0);
-        EXPECT_EQ(ConnectivityN.Count(), 0);
+        EXPECT_EQ(ConnectivityM.Size(), 0);
+        EXPECT_EQ(ConnectivityN.Size(), 0);
 
       }
 
@@ -613,7 +613,7 @@ TEST_F(XINTOUTTests, ImportExtended3D) {
 
       if (HasInterface) {
 
-        long long NumDonors = ConnectivityM.Count();
+        long long NumDonors = ConnectivityM.Size();
         EXPECT_EQ(NumDonors, LocalRange.Size(0)*LocalRange.Size(1));
         const ovk::array<int,3> &Extents = ConnectivityM.Extents();
         const ovk::array<double,2> &Coords = ConnectivityM.Coords();
@@ -649,7 +649,7 @@ TEST_F(XINTOUTTests, ImportExtended3D) {
         EXPECT_THAT(InterpCoefs, ElementsAreArray(ExpectedInterpCoefs));
         EXPECT_THAT(Destinations, ElementsAreArray(ExpectedDestinations));
 
-        long long NumReceivers = ConnectivityN.Count();
+        long long NumReceivers = ConnectivityN.Size();
         EXPECT_EQ(NumReceivers, LocalRange.Size(0)*LocalRange.Size(1));
         const ovk::array<int,2> &Points = ConnectivityN.Points();
         const ovk::array<int,2> &Sources = ConnectivityN.Sources();
@@ -672,8 +672,8 @@ TEST_F(XINTOUTTests, ImportExtended3D) {
 
       } else {
 
-        EXPECT_EQ(ConnectivityM.Count(), 0);
-        EXPECT_EQ(ConnectivityN.Count(), 0);
+        EXPECT_EQ(ConnectivityM.Size(), 0);
+        EXPECT_EQ(ConnectivityN.Size(), 0);
 
       }
     }
@@ -691,7 +691,7 @@ TEST_F(XINTOUTTests, ImportExtended3D) {
 
       if (HasInterface) {
 
-        long long NumDonors = ConnectivityM.Count();
+        long long NumDonors = ConnectivityM.Size();
         EXPECT_EQ(NumDonors, LocalRange.Size(0)*LocalRange.Size(1));
         const ovk::array<int,3> &Extents = ConnectivityM.Extents();
         const ovk::array<double,2> &Coords = ConnectivityM.Coords();
@@ -727,7 +727,7 @@ TEST_F(XINTOUTTests, ImportExtended3D) {
         EXPECT_THAT(InterpCoefs, ElementsAreArray(ExpectedInterpCoefs));
         EXPECT_THAT(Destinations, ElementsAreArray(ExpectedDestinations));
 
-        long long NumReceivers = ConnectivityN.Count();
+        long long NumReceivers = ConnectivityN.Size();
         EXPECT_EQ(NumReceivers, LocalRange.Size(0)*LocalRange.Size(1));
         const ovk::array<int,2> &Points = ConnectivityN.Points();
         const ovk::array<int,2> &Sources = ConnectivityN.Sources();
@@ -750,8 +750,8 @@ TEST_F(XINTOUTTests, ImportExtended3D) {
 
       } else {
 
-        EXPECT_EQ(ConnectivityM.Count(), 0);
-        EXPECT_EQ(ConnectivityN.Count(), 0);
+        EXPECT_EQ(ConnectivityM.Size(), 0);
+        EXPECT_EQ(ConnectivityN.Size(), 0);
 
       }
 

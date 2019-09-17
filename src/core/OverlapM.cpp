@@ -50,7 +50,7 @@ overlap_m::overlap_m(std::shared_ptr<context> &&Context, const grid &Grid, grid_
   &&DestinationGridInfo):
   overlap_m_base(std::move(Context), Grid, std::move(DestinationGridInfo)),
   NumDims_(Grid_->Dimension()),
-  Count_(0),
+  NumCells_(0),
   Cells_({{MAX_DIMS,0}}),
   Coords_({{MAX_DIMS,0}}),
   Destinations_({{MAX_DIMS,0}}),
@@ -94,9 +94,9 @@ overlap_m CreateOverlapM(std::shared_ptr<context> Context, const grid &Grid, gri
 
 }
 
-void overlap_m::Resize(long long Count) {
+void overlap_m::Resize(long long NumCells) {
 
-  OVK_DEBUG_ASSERT(Count >= 0, "Invalid count.");
+  OVK_DEBUG_ASSERT(NumCells >= 0, "Invalid num cells value.");
 
   MPI_Barrier(Comm_);
 
@@ -106,14 +106,14 @@ void overlap_m::Resize(long long Count) {
   OVK_DEBUG_ASSERT(!DestinationRanksEditor_.Active(), "Cannot resize while editing destination "
     "ranks.");
 
-  Count_ = Count;
+  NumCells_ = NumCells;
 
-  Cells_.Resize({{MAX_DIMS,Count}});
-  Coords_.Resize({{MAX_DIMS,Count}});
-  Destinations_.Resize({{MAX_DIMS,Count}});
-  DestinationRanks_.Resize({Count});
+  Cells_.Resize({{MAX_DIMS,NumCells}});
+  Coords_.Resize({{MAX_DIMS,NumCells}});
+  Destinations_.Resize({{MAX_DIMS,NumCells}});
+  DestinationRanks_.Resize({NumCells});
 
-  for (long long iCell = 0; iCell < Count_; ++iCell) {
+  for (long long iCell = 0; iCell < NumCells_; ++iCell) {
     for (int iDim = 0; iDim < NumDims_; ++iDim) {
       Cells_(iDim,iCell) = Grid_->CellGlobalRange().Begin(iDim)-1;
     }

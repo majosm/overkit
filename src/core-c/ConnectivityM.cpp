@@ -115,32 +115,31 @@ void ovkGetConnectivityMCommRank(const ovk_connectivity_m *ConnectivityM, int *C
 
 }
 
-void ovkGetConnectivityMCount(const ovk_connectivity_m *ConnectivityM, long long *Count) {
+long long ovkGetConnectivityMSize(const ovk_connectivity_m *ConnectivityM) {
 
   OVK_DEBUG_ASSERT(ConnectivityM, "Invalid connectivity M pointer.");
-  OVK_DEBUG_ASSERT(Count, "Invalid count pointer.");
 
   auto &ConnectivityMCPP = *reinterpret_cast<const ovk::connectivity_m *>(ConnectivityM);
-  *Count = ConnectivityMCPP.Count();
+  return ConnectivityMCPP.Size();
 
 }
 
-void ovkGetConnectivityMMaxSize(const ovk_connectivity_m *ConnectivityM, int *MaxSize) {
+int ovkGetConnectivityMMaxStencilSize(const ovk_connectivity_m *ConnectivityM) {
 
   OVK_DEBUG_ASSERT(ConnectivityM, "Invalid connectivity M pointer.");
-  OVK_DEBUG_ASSERT(MaxSize, "Invalid max size pointer.");
 
   auto &ConnectivityMCPP = *reinterpret_cast<const ovk::connectivity_m *>(ConnectivityM);
-  *MaxSize = ConnectivityMCPP.MaxSize();
+  return ConnectivityMCPP.MaxStencilSize();
 
 }
 
-void ovkResizeConnectivityM(ovk_connectivity_m *ConnectivityM, long long Count, int MaxSize) {
+void ovkResizeConnectivityM(ovk_connectivity_m *ConnectivityM, long long NumDonors, int
+  MaxStencilSize) {
 
   OVK_DEBUG_ASSERT(ConnectivityM, "Invalid connectivity M pointer.");
 
   auto &ConnectivityMCPP = *reinterpret_cast<ovk::connectivity_m *>(ConnectivityM);
-  ConnectivityMCPP.Resize(Count, MaxSize);
+  ConnectivityMCPP.Resize(NumDonors, MaxStencilSize);
 
 }
 
@@ -260,7 +259,7 @@ void ovkGetConnectivityMInterpCoefs(const ovk_connectivity_m *ConnectivityM, int
 
   auto &ConnectivityMCPP = *reinterpret_cast<const ovk::connectivity_m *>(ConnectivityM);
 
-  OVK_DEBUG_ASSERT(Point >= 0 && Point < ConnectivityMCPP.MaxSize(), "Invalid point.");
+  OVK_DEBUG_ASSERT(Point >= 0 && Point < ConnectivityMCPP.MaxStencilSize(), "Invalid point.");
 
   *InterpCoefs = ConnectivityMCPP.InterpCoefs().Data(Dimension,Point,0);
 
@@ -284,7 +283,7 @@ void ovkEditConnectivityMInterpCoefs(ovk_connectivity_m *ConnectivityM, int Dime
 
   auto &ConnectivityMCPP = *reinterpret_cast<ovk::connectivity_m *>(ConnectivityM);
 
-  OVK_DEBUG_ASSERT(Point >= 0 && Point < ConnectivityMCPP.MaxSize(), "Invalid point.");
+  OVK_DEBUG_ASSERT(Point >= 0 && Point < ConnectivityMCPP.MaxStencilSize(), "Invalid point.");
 
   ovk::edit_handle<ovk::array<double,3>> EditHandle = ConnectivityMCPP.EditInterpCoefs();
   auto &InterpCoefsCPP = *EditHandle.Release();
@@ -302,7 +301,7 @@ void ovkRestoreConnectivityMInterpCoefs(ovk_connectivity_m *ConnectivityM, int D
 
   auto &ConnectivityMCPP = *reinterpret_cast<ovk::connectivity_m *>(ConnectivityM);
 
-  OVK_DEBUG_ASSERT(Point >= 0 && Point < ConnectivityMCPP.MaxSize(), "Invalid point.");
+  OVK_DEBUG_ASSERT(Point >= 0 && Point < ConnectivityMCPP.MaxStencilSize(), "Invalid point.");
 
   ConnectivityMCPP.RestoreInterpCoefs();
 

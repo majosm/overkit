@@ -81,10 +81,10 @@ public:
 
   comm_view Comm() const { return Comm_; }
 
-  long long Count() const { return Count_; }
-  int MaxSize() const { return MaxSize_; }
+  long long Size() const { return NumDonors_; }
+  int MaxStencilSize() const { return MaxStencilSize_; }
 
-  void Resize(long long Count, int MaxSize);
+  void Resize(long long NumDonors, int MaxStencilSize);
   template <typename F, OVK_FUNCTION_REQUIRES(core::IsCallableWith<F>())> event_listener_handle
     AddResizeEventListener(F Listener) const {
     return ResizeEvent_.AddListener(std::move(Listener));
@@ -144,8 +144,8 @@ private:
 
   int NumDims_;
 
-  long long Count_;
-  int MaxSize_;
+  long long NumDonors_;
+  int MaxStencilSize_;
   mutable event<void()> ResizeEvent_;
 
   array<int,3> Extents_;

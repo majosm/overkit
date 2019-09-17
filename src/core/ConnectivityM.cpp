@@ -50,8 +50,8 @@ connectivity_m::connectivity_m(std::shared_ptr<context> &&Context, const grid &G
   &&DestinationGridInfo):
   connectivity_m_base(std::move(Context), Grid, std::move(DestinationGridInfo)),
   NumDims_(Grid_->Dimension()),
-  Count_(0),
-  MaxSize_(1),
+  NumDonors_(0),
+  MaxStencilSize_(1),
   Extents_({{2,MAX_DIMS,0}}),
   Coords_({{MAX_DIMS,0}}),
   InterpCoefs_({{MAX_DIMS,0,0}}),
@@ -96,10 +96,10 @@ connectivity_m CreateConnectivityM(std::shared_ptr<context> Context, const grid 
 
 }
 
-void connectivity_m::Resize(long long Count, int MaxSize) {
+void connectivity_m::Resize(long long NumDonors, int MaxStencilSize) {
 
-  OVK_DEBUG_ASSERT(Count >= 0, "Invalid count.");
-  OVK_DEBUG_ASSERT(MaxSize > 0, "Invalid max size.");
+  OVK_DEBUG_ASSERT(NumDonors >= 0, "Invalid num donors value.");
+  OVK_DEBUG_ASSERT(MaxStencilSize > 0, "Invalid max stencil size.");
 
   MPI_Barrier(Comm_);
 
@@ -110,16 +110,16 @@ void connectivity_m::Resize(long long Count, int MaxSize) {
   OVK_DEBUG_ASSERT(!DestinationRanksEditor_.Active(), "Cannot resize while editing destination "
     "ranks.");
 
-  Count_ = Count;
-  MaxSize_ = MaxSize;
+  NumDonors_ = NumDonors;
+  MaxStencilSize_ = MaxStencilSize;
 
-  Extents_.Resize({{2,MAX_DIMS,Count}});
-  Coords_.Resize({{MAX_DIMS,Count}});
-  InterpCoefs_.Resize({{MAX_DIMS,MaxSize,Count}});
-  Destinations_.Resize({{MAX_DIMS,Count}});
-  DestinationRanks_.Resize({Count});
+  Extents_.Resize({{2,MAX_DIMS,NumDonors}});
+  Coords_.Resize({{MAX_DIMS,NumDonors}});
+  InterpCoefs_.Resize({{MAX_DIMS,MaxStencilSize,NumDonors}});
+  Destinations_.Resize({{MAX_DIMS,NumDonors}});
+  DestinationRanks_.Resize({NumDonors});
 
-  for (long long iCell = 0; iCell < Count_; ++iCell) {
+  for (long long iCell = 0; iCell < NumDonors_; ++iCell) {
     for (int iDim = 0; iDim < NumDims_; ++iDim) {
       Extents_(0,iDim,iCell) = Grid_->CellGlobalRange().Begin(iDim)-1;
       Extents_(1,iDim,iCell) = Grid_->CellGlobalRange().Begin(iDim)-1;
@@ -132,13 +132,13 @@ void connectivity_m::Resize(long long Count, int MaxSize) {
       Coords_(iDim,iCell) = 0.;
     }
     for (int iDim = 0; iDim < NumDims_; ++iDim) {
-      for (int iPoint = 0; iPoint < MaxSize; ++iPoint) {
+      for (int iPoint = 0; iPoint < MaxStencilSize; ++iPoint) {
         InterpCoefs_(iDim,iPoint,iCell) = 0.;
       }
     }
     for (int iDim = NumDims_; iDim < MAX_DIMS; ++iDim) {
       InterpCoefs_(iDim,0,iCell) = 1.;
-      for (int iPoint = 1; iPoint < MaxSize; ++iPoint) {
+      for (int iPoint = 1; iPoint < MaxStencilSize; ++iPoint) {
         InterpCoefs_(iDim,iPoint,iCell) = 0.;
       }
     }
