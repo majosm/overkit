@@ -34,8 +34,8 @@ void ovkDestroyOverlap(ovk_overlap_component *OverlapComponent, int MGridID, int
 void ovkDestroyOverlaps(ovk_overlap_component *OverlapComponent, int Count, const int *MGridIDs,
   const int *NGridIDs);
 
-int LocalOverlapMCount(const ovk_overlap_component *OverlapComponent);
-int LocalOverlapMCountForGrid(const ovk_overlap_component *OverlapComponent, int MGridID);
+int ovkLocalOverlapMCount(const ovk_overlap_component *OverlapComponent);
+int ovkLocalOverlapMCountForGrid(const ovk_overlap_component *OverlapComponent, int MGridID);
 
 void ovkGetOverlapM(const ovk_overlap_component *OverlapComponent, int MGridID, int NGridID, const
   ovk_overlap_m **OverlapM);
@@ -45,8 +45,8 @@ void ovkEditOverlapM(ovk_overlap_component *OverlapComponent, int MGridID, int N
 void ovkRestoreOverlapM(ovk_overlap_component *OverlapComponent, int MGridID, int NGridID,
   ovk_overlap_m **OverlapM);
 
-int LocalOverlapNCount(const ovk_overlap_component *OverlapComponent);
-int LocalOverlapNCountForGrid(const ovk_overlap_component *OverlapComponent, int NGridID);
+int ovkLocalOverlapNCount(const ovk_overlap_component *OverlapComponent);
+int ovkLocalOverlapNCountForGrid(const ovk_overlap_component *OverlapComponent, int NGridID);
 
 void ovkGetOverlapN(const ovk_overlap_component *OverlapComponent, int MGridID, int NGridID, const
   ovk_overlap_n **OverlapN);

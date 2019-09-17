@@ -37,8 +37,8 @@ void ovkDestroyConnectivity(ovk_connectivity_component *ConnectivityComponent, i
 void ovkDestroyConnectivities(ovk_connectivity_component *ConnectivityComponent, int Count, const
   int *MGridIDs, const int *NGridIDs);
 
-int LocalConnectivityMCount(const ovk_connectivity_component *ConnectivityComponent);
-int LocalConnectivityMCountForGrid(const ovk_connectivity_component *ConnectivityComponent, int
+int ovkLocalConnectivityMCount(const ovk_connectivity_component *ConnectivityComponent);
+int ovkLocalConnectivityMCountForGrid(const ovk_connectivity_component *ConnectivityComponent, int
   MGridID);
 
 void ovkGetConnectivityM(const ovk_connectivity_component *ConnectivityComponent, int MGridID, int
@@ -50,8 +50,8 @@ void ovkEditConnectivityM(ovk_connectivity_component *ConnectivityComponent, int
 void ovkRestoreConnectivityM(ovk_connectivity_component *ConnectivityComponent, int MGridID, int
   NGridID, ovk_connectivity_m **ConnectivityM);
 
-int LocalConnectivityNCount(const ovk_connectivity_component *ConnectivityComponent);
-int LocalConnectivityNCountForGrid(const ovk_connectivity_component *ConnectivityComponent, int
+int ovkLocalConnectivityNCount(const ovk_connectivity_component *ConnectivityComponent);
+int ovkLocalConnectivityNCountForGrid(const ovk_connectivity_component *ConnectivityComponent, int
   NGridID);
 
 void ovkGetConnectivityN(const ovk_connectivity_component *ConnectivityComponent, int MGridID, int
