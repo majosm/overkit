@@ -13,6 +13,8 @@
 #include "ovk/core/ConnectivityN.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Editor.hpp"
+#include "ovk/core/Elem.hpp"
+#include "ovk/core/ElemSet.hpp"
 #include "ovk/core/Global.hpp"
 
 #include <mpi.h>
@@ -28,6 +30,27 @@ int ovkConnectivityCount(const ovk_connectivity_component *ConnectivityComponent
   auto &ConnectivityComponentCPP = *reinterpret_cast<const ovk::connectivity_component *>(
     ConnectivityComponent);
   return ConnectivityComponentCPP.ConnectivityCount();
+
+}
+
+void ovkGetConnectivityIDs(const ovk_connectivity_component *ConnectivityComponent, int *MGridIDs,
+  int *NGridIDs) {
+
+  OVK_DEBUG_ASSERT(ConnectivityComponent, "Invalid connectivity component pointer.");
+
+  auto &ConnectivityComponentCPP = *reinterpret_cast<const ovk::connectivity_component *>(
+    ConnectivityComponent);
+
+  const ovk::elem_set<int,2> &ConnectivityIDs = ConnectivityComponentCPP.ConnectivityIDs();
+
+  OVK_DEBUG_ASSERT(MGridIDs || ConnectivityIDs.Count() == 0, "Invalid M grid IDs pointer.");
+  OVK_DEBUG_ASSERT(NGridIDs || ConnectivityIDs.Count() == 0, "Invalid N grid IDs pointer.");
+
+  for (int iConnectivity = 0; iConnectivity < ConnectivityIDs.Count(); ++iConnectivity) {
+    const ovk::elem<int,2> &ConnectivityID = ConnectivityIDs[iConnectivity];
+    MGridIDs[iConnectivity] = ConnectivityID(0);
+    NGridIDs[iConnectivity] = ConnectivityID(1);
+  }
 
 }
 
@@ -110,6 +133,27 @@ int ovkLocalConnectivityMCount(const ovk_connectivity_component *ConnectivityCom
 
 }
 
+void ovkGetLocalConnectivityMIDs(const ovk_connectivity_component *ConnectivityComponent, int
+  *MGridIDs, int *NGridIDs) {
+
+  OVK_DEBUG_ASSERT(ConnectivityComponent, "Invalid connectivity component pointer.");
+
+  auto &ConnectivityComponentCPP = *reinterpret_cast<const ovk::connectivity_component *>(
+    ConnectivityComponent);
+
+  const ovk::elem_set<int,2> &ConnectivityIDs = ConnectivityComponentCPP.LocalConnectivityMIDs();
+
+  OVK_DEBUG_ASSERT(MGridIDs || ConnectivityIDs.Count() == 0, "Invalid M grid IDs pointer.");
+  OVK_DEBUG_ASSERT(NGridIDs || ConnectivityIDs.Count() == 0, "Invalid N grid IDs pointer.");
+
+  for (int iConnectivity = 0; iConnectivity < ConnectivityIDs.Count(); ++iConnectivity) {
+    const ovk::elem<int,2> &ConnectivityID = ConnectivityIDs[iConnectivity];
+    MGridIDs[iConnectivity] = ConnectivityID(0);
+    NGridIDs[iConnectivity] = ConnectivityID(1);
+  }
+
+}
+
 void ovkGetConnectivityM(const ovk_connectivity_component *ConnectivityComponent, int MGridID, int
   NGridID, const ovk_connectivity_m **ConnectivityM) {
 
@@ -173,6 +217,27 @@ int ovkLocalConnectivityNCount(const ovk_connectivity_component *ConnectivityCom
   auto &ConnectivityComponentCPP = *reinterpret_cast<const ovk::connectivity_component *>(
     ConnectivityComponent);
   return ConnectivityComponentCPP.LocalConnectivityNCount();
+
+}
+
+void ovkGetLocalConnectivityNIDs(const ovk_connectivity_component *ConnectivityComponent, int
+  *MGridIDs, int *NGridIDs) {
+
+  OVK_DEBUG_ASSERT(ConnectivityComponent, "Invalid connectivity component pointer.");
+
+  auto &ConnectivityComponentCPP = *reinterpret_cast<const ovk::connectivity_component *>(
+    ConnectivityComponent);
+
+  const ovk::elem_set<int,2> &ConnectivityIDs = ConnectivityComponentCPP.LocalConnectivityNIDs();
+
+  OVK_DEBUG_ASSERT(MGridIDs || ConnectivityIDs.Count() == 0, "Invalid M grid IDs pointer.");
+  OVK_DEBUG_ASSERT(NGridIDs || ConnectivityIDs.Count() == 0, "Invalid N grid IDs pointer.");
+
+  for (int iConnectivity = 0; iConnectivity < ConnectivityIDs.Count(); ++iConnectivity) {
+    const ovk::elem<int,2> &ConnectivityID = ConnectivityIDs[iConnectivity];
+    MGridIDs[iConnectivity] = ConnectivityID(0);
+    NGridIDs[iConnectivity] = ConnectivityID(1);
+  }
 
 }
 
