@@ -39,24 +39,72 @@ bool ovkGeometryExists(const ovk_geometry_component *GeometryComponent, int Grid
 
 }
 
-void ovkCreateGeometry(ovk_geometry_component *GeometryComponent, int GridID) {
+void ovkCreateGeometry(ovk_geometry_component *GeometryComponent, int GridID, ovk_geometry_params
+  **MaybeParams) {
 
   OVK_DEBUG_ASSERT(GeometryComponent, "Invalid geometry component pointer.");
 
   auto &GeometryComponentCPP = *reinterpret_cast<ovk::geometry_component *>(
     GeometryComponent);
-  GeometryComponentCPP.CreateGeometry(GridID);
+
+  ovk::geometry::params *ParamsCPPPtr = nullptr;
+  if (MaybeParams && *MaybeParams) {
+    ParamsCPPPtr = reinterpret_cast<ovk::geometry::params *>(*MaybeParams);
+  }
+
+  ovk::optional<ovk::geometry::params> MaybeParamsCPP;
+  if (ParamsCPPPtr) {
+    MaybeParamsCPP = std::move(*ParamsCPPPtr);
+  }
+
+  GeometryComponentCPP.CreateGeometry(GridID, std::move(MaybeParamsCPP));
+
+  if (ParamsCPPPtr) {
+    delete ParamsCPPPtr;
+    *MaybeParams = nullptr;
+  }
 
 }
 
-void ovkCreateGeometries(ovk_geometry_component *GeometryComponent, int Count, const int *GridIDs) {
+void ovkCreateGeometries(ovk_geometry_component *GeometryComponent, int Count, const int *GridIDs,
+  ovk_geometry_params **MaybeParams) {
 
   OVK_DEBUG_ASSERT(GeometryComponent, "Invalid geometry component pointer.");
   OVK_DEBUG_ASSERT(Count >= 0, "Invalid count value.");
 
   auto &GeometryComponentCPP = *reinterpret_cast<ovk::geometry_component *>(
     GeometryComponent);
-  GeometryComponentCPP.CreateGeometries({GridIDs, {Count}});
+
+  if (MaybeParams) {
+
+    ovk::array<ovk::geometry::params *> ParamsCPPPtrs({Count}, nullptr);
+    for (int iCreate = 0; iCreate < Count; ++iCreate) {
+      if (MaybeParams[iCreate]) {
+        ParamsCPPPtrs(iCreate) = reinterpret_cast<ovk::geometry::params *>(MaybeParams[iCreate]);
+      }
+    }
+
+    ovk::array<ovk::optional<ovk::geometry::params>> MaybeParamsCPP({Count});
+    for (int iCreate = 0; iCreate < Count; ++iCreate) {
+      if (ParamsCPPPtrs(iCreate)) {
+        MaybeParamsCPP(iCreate) = std::move(*ParamsCPPPtrs(iCreate));
+      }
+    }
+
+    GeometryComponentCPP.CreateGeometries({GridIDs, {Count}}, std::move(MaybeParamsCPP));
+
+    for (int iCreate = 0; iCreate < Count; ++iCreate) {
+      if (ParamsCPPPtrs(iCreate)) {
+        delete ParamsCPPPtrs(iCreate);
+        MaybeParams[iCreate] = nullptr;
+      }
+    }
+
+  } else {
+
+    GeometryComponentCPP.CreateGeometries({GridIDs, {Count}});
+
+  }
 
 }
 

@@ -25,8 +25,10 @@ int ovkGeometryCount(const ovk_geometry_component *GeometryComponent);
 
 bool ovkGeometryExists(const ovk_geometry_component *GeometryComponent, int GridID);
 
-void ovkCreateGeometry(ovk_geometry_component *GeometryComponent, int GridID);
-void ovkCreateGeometries(ovk_geometry_component *GeometryComponent, int Count, const int *GridIDs);
+void ovkCreateGeometry(ovk_geometry_component *GeometryComponent, int GridID, ovk_geometry_params
+  **MaybeParams);
+void ovkCreateGeometries(ovk_geometry_component *GeometryComponent, int Count, const int *GridIDs,
+  ovk_geometry_params **MaybeParams);
 
 void ovkDestroyGeometry(ovk_geometry_component *GeometryComponent, int GridID);
 void ovkDestroyGeometries(ovk_geometry_component *GeometryComponent, int Count, const int *GridIDs);

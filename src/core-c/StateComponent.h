@@ -25,8 +25,10 @@ int ovkStateCount(const ovk_state_component *StateComponent);
 
 bool ovkStateExists(const ovk_state_component *StateComponent, int GridID);
 
-void ovkCreateState(ovk_state_component *StateComponent, int GridID);
-void ovkCreateStates(ovk_state_component *StateComponent, int Count, const int *GridIDs);
+void ovkCreateState(ovk_state_component *StateComponent, int GridID, ovk_state_params
+  **MaybeStateParams);
+void ovkCreateStates(ovk_state_component *StateComponent, int Count, const int *GridIDs,
+  ovk_state_params **MaybeStateParams);
 
 void ovkDestroyState(ovk_state_component *StateComponent, int GridID);
 void ovkDestroyStates(ovk_state_component *StateComponent, int Count, const int *GridIDs);

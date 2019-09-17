@@ -37,22 +37,70 @@ bool ovkStateExists(const ovk_state_component *StateComponent, int GridID) {
 
 }
 
-void ovkCreateState(ovk_state_component *StateComponent, int GridID) {
+void ovkCreateState(ovk_state_component *StateComponent, int GridID, ovk_state_params
+  **MaybeParams) {
 
   OVK_DEBUG_ASSERT(StateComponent, "Invalid state component pointer.");
 
   auto &StateComponentCPP = *reinterpret_cast<ovk::state_component *>(StateComponent);
-  StateComponentCPP.CreateState(GridID);
+
+  ovk::state::params *ParamsCPPPtr = nullptr;
+  if (MaybeParams && *MaybeParams) {
+    ParamsCPPPtr = reinterpret_cast<ovk::state::params *>(*MaybeParams);
+  }
+
+  ovk::optional<ovk::state::params> MaybeParamsCPP;
+  if (ParamsCPPPtr) {
+    MaybeParamsCPP = std::move(*ParamsCPPPtr);
+  }
+
+  StateComponentCPP.CreateState(GridID, std::move(MaybeParamsCPP));
+
+  if (ParamsCPPPtr) {
+    delete ParamsCPPPtr;
+    *MaybeParams = nullptr;
+  }
 
 }
 
-void ovkCreateStates(ovk_state_component *StateComponent, int Count, const int *GridIDs) {
+void ovkCreateStates(ovk_state_component *StateComponent, int Count, const int *GridIDs,
+  ovk_state_params **MaybeParams) {
 
   OVK_DEBUG_ASSERT(StateComponent, "Invalid state component pointer.");
   OVK_DEBUG_ASSERT(Count >= 0, "Invalid count value.");
 
   auto &StateComponentCPP = *reinterpret_cast<ovk::state_component *>(StateComponent);
-  StateComponentCPP.CreateStates({GridIDs, {Count}});
+
+  if (MaybeParams) {
+
+    ovk::array<ovk::state::params *> ParamsCPPPtrs({Count}, nullptr);
+    for (int iCreate = 0; iCreate < Count; ++iCreate) {
+      if (MaybeParams[iCreate]) {
+        ParamsCPPPtrs(iCreate) = reinterpret_cast<ovk::state::params *>(MaybeParams[iCreate]);
+      }
+    }
+
+    ovk::array<ovk::optional<ovk::state::params>> MaybeParamsCPP({Count});
+    for (int iCreate = 0; iCreate < Count; ++iCreate) {
+      if (ParamsCPPPtrs(iCreate)) {
+        MaybeParamsCPP(iCreate) = std::move(*ParamsCPPPtrs(iCreate));
+      }
+    }
+
+    StateComponentCPP.CreateStates({GridIDs, {Count}}, std::move(MaybeParamsCPP));
+
+    for (int iCreate = 0; iCreate < Count; ++iCreate) {
+      if (ParamsCPPPtrs(iCreate)) {
+        delete ParamsCPPPtrs(iCreate);
+        MaybeParams[iCreate] = nullptr;
+      }
+    }
+
+  } else {
+
+    StateComponentCPP.CreateStates({GridIDs, {Count}});
+
+  }
 
 }
 
