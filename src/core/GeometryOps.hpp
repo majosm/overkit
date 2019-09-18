@@ -18,17 +18,18 @@
 namespace ovk {
 namespace core {
 
-void GetCellNodeCoords(int NumDims, const array<field<double>> &Coords, const range &CellExtents,
-  const array_view<tuple<double>> &NodeCoords);
+void GetCellNodeCoords(int NumDims, const array_view<const field_view<const double>> &Coords, const
+  range &CellExtents, const array_view<tuple<double>> &NodeCoords);
 
-bool OverlapsCell(int NumDims, const array<field<double>> &Coords, geometry_type GeometryType,
-  double Tolerance, const tuple<int> &Cell, const tuple<double> &PointCoords);
+bool OverlapsCell(int NumDims, const array_view<const field_view<const double>> &Coords,
+  geometry_type GeometryType, double Tolerance, const tuple<int> &Cell, const tuple<double>
+  &PointCoords);
 
-optional<tuple<double>> CoordsInCell(int NumDims, const array<field<double>> &Coords, geometry_type
-  GeometryType, const tuple<int> &Cell, const tuple<double> &PointCoords);
+optional<tuple<double>> CoordsInCell(int NumDims, const array_view<const field_view<const double>>
+  &Coords, geometry_type GeometryType, const tuple<int> &Cell, const tuple<double> &PointCoords);
 
-double CellVolume(int NumDims, const array<field<double>> &Coords, geometry_type
-  GeometryType, const tuple<int> &Cell);
+double CellVolume(int NumDims, const array_view<const field_view<const double>> &Coords,
+  geometry_type GeometryType, const tuple<int> &Cell);
 
 }}
 

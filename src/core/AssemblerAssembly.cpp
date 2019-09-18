@@ -629,48 +629,43 @@ void assembler::DetectOverlap_() {
   }
 
   struct cell_coord_data {
-    array<field<double>> Coords;
+    array<field<double>> CoordsData;
+    array<field_view<const double>> Coords;
     geometry_type GeometryType;
-    field<bool> CellActiveMask;
+    field<bool> CellActiveMaskData;
+    field_view<const bool> CellActiveMask;
   };
 
   elem_map<int,2,cell_coord_data> CellCoordData;
-
-  for (int NGridID : Domain.LocalGridIDs()) {
-    auto &MGridIDsAndRanks = OverlappingMGridIDsAndRanksForLocalNGrid(NGridID);
-    for (auto &MEntry : MGridIDsAndRanks) {
-      int MGridID = MEntry.Key();
-      const set<int> &MGridRanks = MEntry.Value();
-      for (int Rank : MGridRanks) {
-        const partition_data &PartitionData = MGridPartitionData({MGridID,Rank});
-        cell_coord_data &CoordData = CellCoordData.Insert({MGridID,Rank});
-        CoordData.Coords.Resize({MAX_DIMS});
-        CoordData.Coords(0).Resize(PartitionData.ExtendedRange);
-        CoordData.Coords(1).Resize(PartitionData.ExtendedRange);
-        CoordData.Coords(2).Resize(PartitionData.ExtendedRange);
-        CoordData.CellActiveMask.Resize(PartitionData.CellExtendedRange);
-      }
-    }
-  }
 
   MPIRequests.Reserve(5*(MGridDataSends.Count() + MGridDataRecvs.Count()));
 
   for (auto &MGridIDAndRankPair : MGridDataRecvs) {
     int Rank = MGridIDAndRankPair(1);
     const partition_data &PartitionData = MGridPartitionData(MGridIDAndRankPair);
-    cell_coord_data &CoordData = CellCoordData(MGridIDAndRankPair);
+    cell_coord_data &CoordData = CellCoordData.Insert(MGridIDAndRankPair);
     long long NumExtended = PartitionData.ExtendedRange.Count();
     long long NumCellExtended = PartitionData.CellExtendedRange.Count();
-    MPI_Irecv(CoordData.Coords(0).Data(), NumExtended, MPI_DOUBLE, Rank, 0, Domain.Comm(),
+    CoordData.CoordsData.Resize({MAX_DIMS});
+    CoordData.CoordsData(0).Resize(PartitionData.ExtendedRange);
+    CoordData.CoordsData(1).Resize(PartitionData.ExtendedRange);
+    CoordData.CoordsData(2).Resize(PartitionData.ExtendedRange);
+    CoordData.Coords.Resize({MAX_DIMS});
+    CoordData.Coords(0) = CoordData.CoordsData(0);
+    CoordData.Coords(1) = CoordData.CoordsData(1);
+    CoordData.Coords(2) = CoordData.CoordsData(2);
+    CoordData.CellActiveMaskData.Resize(PartitionData.CellExtendedRange);
+    CoordData.CellActiveMask = CoordData.CellActiveMaskData;
+    MPI_Irecv(CoordData.CoordsData(0).Data(), NumExtended, MPI_DOUBLE, Rank, 0, Domain.Comm(),
       &MPIRequests.Append());
-    MPI_Irecv(CoordData.Coords(1).Data(), NumExtended, MPI_DOUBLE, Rank, 0, Domain.Comm(),
+    MPI_Irecv(CoordData.CoordsData(1).Data(), NumExtended, MPI_DOUBLE, Rank, 0, Domain.Comm(),
       &MPIRequests.Append());
-    MPI_Irecv(CoordData.Coords(2).Data(), NumExtended, MPI_DOUBLE, Rank, 0, Domain.Comm(),
+    MPI_Irecv(CoordData.CoordsData(2).Data(), NumExtended, MPI_DOUBLE, Rank, 0, Domain.Comm(),
       &MPIRequests.Append());
     MPI_Irecv(&CoordData.GeometryType, 1, core::GetMPIDataType<geometry_type>(), Rank, 0,
       Domain.Comm(), &MPIRequests.Append());
-    MPI_Irecv(CoordData.CellActiveMask.Data(), NumCellExtended, MPI_C_BOOL, Rank, 0, Domain.Comm(),
-      &MPIRequests.Append());
+    MPI_Irecv(CoordData.CellActiveMaskData.Data(), NumCellExtended, MPI_C_BOOL, Rank, 0,
+      Domain.Comm(), &MPIRequests.Append());
   }
 
   // Need to store geometry type values somewhere for Isend buffer
@@ -714,12 +709,13 @@ void assembler::DetectOverlap_() {
           const array<distributed_field<double>> &Coords = Geometry.Coords();
           const local_grid_aux_data &GridAuxData = AssemblyData.LocalGridAuxData(MGridID);
           const distributed_field<bool> &CellActiveMask = GridAuxData.CellActiveMask;
-          cell_coord_data &Data = CellCoordData({MGridID,Rank});
+          cell_coord_data &Data = CellCoordData.Insert({MGridID,Rank});
+          Data.Coords.Resize({MAX_DIMS});
+          Data.Coords(0) = Coords(0);
+          Data.Coords(1) = Coords(1);
+          Data.Coords(2) = Coords(2);
           Data.GeometryType = Geometry.Type();
-          Data.Coords(0).Fill(Coords(0));
-          Data.Coords(1).Fill(Coords(1));
-          Data.Coords(2).Fill(Coords(2));
-          Data.CellActiveMask.Fill(CellActiveMask);
+          Data.CellActiveMask = CellActiveMask;
         }
       }
     }
@@ -736,9 +732,9 @@ void assembler::DetectOverlap_() {
   }
 
   // Brute force for now
-  auto FindOverlappingCell = [NumDims](const range &CellRange, const array<field<double>> &Coords,
-    geometry_type GeometryType, const field<bool> &CellActiveMask, double Tolerance, const
-    tuple<double> &PointCoords) -> optional<tuple<int>> {
+  auto FindOverlappingCell = [NumDims](const range &CellRange, const array_view<const
+    field_view<const double>> &Coords, geometry_type GeometryType, const field<bool>
+    &CellActiveMask, double Tolerance, const tuple<double> &PointCoords) -> optional<tuple<int>> {
     for (int k = CellRange.Begin(2); k < CellRange.End(2); ++k) {
       for (int j = CellRange.Begin(1); j < CellRange.End(1); ++j) {
         for (int i = CellRange.Begin(0); i < CellRange.End(0); ++i) {

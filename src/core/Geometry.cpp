@@ -224,11 +224,16 @@ void geometry::OnCoordsEndEdit_() {
 
   Logger.LogDebug(Comm_.Rank() == 0, 0, "Updating auxiliary data for geometry %s...", Grid.Name());
 
+  array<field_view<const double>> CoordsView({MAX_DIMS});
+  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+    CoordsView(iDim) = Coords_(iDim);
+  }
+
   for (int k = CellLocalRange.Begin(2); k < CellLocalRange.End(2); ++k) {
     for (int j = CellLocalRange.Begin(1); j < CellLocalRange.End(1); ++j) {
       for (int i = CellLocalRange.Begin(0); i < CellLocalRange.End(0); ++i) {
         tuple<int> Cell = {i,j,k};
-        CellVolumes_(Cell) = core::CellVolume(NumDims, Coords_, Type_, Cell);
+        CellVolumes_(Cell) = core::CellVolume(NumDims, CoordsView, Type_, Cell);
       }
     }
   }

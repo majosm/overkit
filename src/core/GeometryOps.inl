@@ -6,8 +6,8 @@ namespace core {
 
 namespace overlaps_cell_internal {
 
-inline bool OverlapsCellUniform(int NumDims, const array<field<double>> &Coords, double Tolerance,
-  const tuple<int> &Cell, const tuple<double> &PointCoords) {
+inline bool OverlapsCellUniform(int NumDims, const array_view<const field_view<const double>>
+  &Coords, double Tolerance, const tuple<int> &Cell, const tuple<double> &PointCoords) {
 
   tuple<int> UpperCornerOffset = MakeUniformTuple<int>(NumDims, 1, 0);
 
@@ -58,8 +58,8 @@ inline bool OverlapsCellUniform(int NumDims, const array<field<double>> &Coords,
 
 }
 
-inline bool OverlapsCellOrientedUniform(int NumDims, const array<field<double>> &Coords, double
-  Tolerance, const tuple<int> &Cell, const tuple<double> &PointCoords) {
+inline bool OverlapsCellOrientedUniform(int NumDims, const array_view<const field_view<const
+  double>> &Coords, double Tolerance, const tuple<int> &Cell, const tuple<double> &PointCoords) {
 
   bool Overlaps;
 
@@ -105,8 +105,8 @@ inline bool OverlapsCellOrientedUniform(int NumDims, const array<field<double>> 
 
 }
 
-inline bool OverlapsCellNonUniform(int NumDims, const array<field<double>> &Coords, double
-  Tolerance, const tuple<int> &Cell, const tuple<double> &PointCoords) {
+inline bool OverlapsCellNonUniform(int NumDims, const array_view<const field_view<const double>>
+  &Coords, double Tolerance, const tuple<int> &Cell, const tuple<double> &PointCoords) {
 
   bool Overlaps;
 
@@ -154,8 +154,9 @@ inline bool OverlapsCellNonUniform(int NumDims, const array<field<double>> &Coor
 
 }
 
-inline bool OverlapsCell(int NumDims, const array<field<double>> &Coords, geometry_type
-  GeometryType, double Tolerance, const tuple<int> &Cell, const tuple<double> &PointCoords) {
+inline bool OverlapsCell(int NumDims, const array_view<const field_view<const double>> &Coords,
+  geometry_type GeometryType, double Tolerance, const tuple<int> &Cell, const tuple<double>
+  &PointCoords) {
 
   using overlaps_cell_internal::OverlapsCellUniform;
   using overlaps_cell_internal::OverlapsCellOrientedUniform;
@@ -187,8 +188,8 @@ inline bool OverlapsCell(int NumDims, const array<field<double>> &Coords, geomet
 
 namespace coords_in_cell_internal {
 
-inline tuple<double> CoordsInCellUniform(int NumDims, const array<field<double>> &Coords, const
-  tuple<int> &Cell, const tuple<double> &PointCoords) {
+inline tuple<double> CoordsInCellUniform(int NumDims, const array_view<const field_view<const
+  double>> &Coords, const tuple<int> &Cell, const tuple<double> &PointCoords) {
 
   tuple<int> UpperCornerOffset = MakeUniformTuple<int>(NumDims, 1, 0);
 
@@ -246,8 +247,8 @@ inline tuple<double> CoordsInCellUniform(int NumDims, const array<field<double>>
 
 }
 
-inline tuple<double> CoordsInCellOrientedUniform(int NumDims, const array<field<double>> &Coords,
-  const tuple<int> &Cell, const tuple<double> &PointCoords) {
+inline tuple<double> CoordsInCellOrientedUniform(int NumDims, const array_view<const
+  field_view<const double>> &Coords, const tuple<int> &Cell, const tuple<double> &PointCoords) {
 
   tuple<double> LocalCoords;
 
@@ -297,8 +298,8 @@ inline tuple<double> CoordsInCellOrientedUniform(int NumDims, const array<field<
 
 }
 
-inline optional<tuple<double>> CoordsInCellNonUniform(int NumDims, const array<field<double>>
-  &Coords, const tuple<int> &Cell, const tuple<double> &PointCoords) {
+inline optional<tuple<double>> CoordsInCellNonUniform(int NumDims, const array_view<const
+  field_view<const double>> &Coords, const tuple<int> &Cell, const tuple<double> &PointCoords) {
 
   optional<tuple<double>> MaybeLocalCoords;
 
@@ -401,8 +402,9 @@ inline optional<tuple<double>> CoordsInCellNonUniform(int NumDims, const array<f
 
 }
 
-inline optional<tuple<double>> CoordsInCell(int NumDims, const array<field<double>> &Coords,
-  geometry_type GeometryType, const tuple<int> &Cell, const tuple<double> &PointCoords) {
+inline optional<tuple<double>> CoordsInCell(int NumDims, const array_view<const field_view<const
+  double>> &Coords, geometry_type GeometryType, const tuple<int> &Cell, const tuple<double>
+  &PointCoords) {
 
   using coords_in_cell_internal::CoordsInCellUniform;
   using coords_in_cell_internal::CoordsInCellOrientedUniform;
@@ -433,8 +435,8 @@ inline optional<tuple<double>> CoordsInCell(int NumDims, const array<field<doubl
 
 namespace cell_volume_internal {
 
-inline double CellVolumeUniform(int NumDims, const array<field<double>> &Coords, const tuple<int>
-  &Cell) {
+inline double CellVolumeUniform(int NumDims, const array_view<const field_view<const double>>
+  &Coords, const tuple<int> &Cell) {
 
   tuple<int> UpperCornerOffset = MakeUniformTuple<int>(NumDims, 1, 0);
 
@@ -481,8 +483,8 @@ inline double CellVolumeUniform(int NumDims, const array<field<double>> &Coords,
 
 }
 
-inline double CellVolumeOrientedUniform(int NumDims, const array<field<double>> &Coords, const
-  tuple<int> &Cell) {
+inline double CellVolumeOrientedUniform(int NumDims, const array_view<const field_view<const
+  double>> &Coords, const tuple<int> &Cell) {
 
   double Volume;
 
@@ -527,8 +529,8 @@ inline double CellVolumeOrientedUniform(int NumDims, const array<field<double>> 
 
 }
 
-inline double CellVolumeNonUniform(int NumDims, const array<field<double>> &Coords, const tuple<int>
-  &Cell) {
+inline double CellVolumeNonUniform(int NumDims, const array_view<const field_view<const double>>
+  &Coords, const tuple<int> &Cell) {
 
   double Volume;
 
@@ -575,8 +577,8 @@ inline double CellVolumeNonUniform(int NumDims, const array<field<double>> &Coor
 
 }
 
-inline double CellVolume(int NumDims, const array<field<double>> &Coords, geometry_type
-  GeometryType, const tuple<int> &Cell) {
+inline double CellVolume(int NumDims, const array_view<const field_view<const double>> &Coords,
+  geometry_type GeometryType, const tuple<int> &Cell) {
 
   using cell_volume_internal::CellVolumeUniform;
   using cell_volume_internal::CellVolumeOrientedUniform;
