@@ -20,7 +20,9 @@
 
 #include <mpi.h>
 
+using testing::DoubleEq;
 using testing::ElementsAreArray;
+using testing::Matcher;
 
 class HaloTests : public tests::mpi_test {};
 
@@ -122,19 +124,20 @@ TEST_F(HaloTests, Exchange) {
   };
 
   auto CreateAfterDataDouble = [](const ovk::cart &Cart, const ovk::range &ExtendedRange) ->
-    ovk::field<double> {
-    ovk::field<double> AfterData(ExtendedRange);
+    ovk::field<Matcher<double>> {
+    ovk::field<Matcher<double>> AfterData(ExtendedRange);
     ovk::range_indexer_c<int> GlobalIndexer(Cart.Range());
     for (int k = ExtendedRange.Begin(2); k < ExtendedRange.End(2); ++k) {
       for (int j = ExtendedRange.Begin(1); j < ExtendedRange.End(1); ++j) {
         for (int i = ExtendedRange.Begin(0); i < ExtendedRange.End(0); ++i) {
           ovk::tuple<int> Point = {i,j,k};
           if (Cart.Range().Contains(Point)) {
-            AfterData(Point) = double(GlobalIndexer.ToIndex(Point))/double(Cart.Range().Count()-1);
+            AfterData(Point) = DoubleEq(double(GlobalIndexer.ToIndex(Point))/
+              double(Cart.Range().Count()-1));
           } else {
             ovk::tuple<int> AdjustedPoint = Cart.PeriodicAdjust(Point);
-            AfterData(Point) = double(GlobalIndexer.ToIndex(AdjustedPoint))/double(Cart.Range()
-              .Count()-1);
+            AfterData(Point) = DoubleEq(double(GlobalIndexer.ToIndex(AdjustedPoint))/
+              double(Cart.Range().Count()-1));
           }
         }
       }
@@ -275,7 +278,7 @@ TEST_F(HaloTests, Exchange) {
     Requests(1) = Halo.Exchange(Data2);
     ovk::WaitAll(Requests);
     ovk::field<int> ExpectedData1 = CreateAfterDataInt(Cart, ExtendedRange);
-    ovk::field<double> ExpectedData2 = CreateAfterDataDouble(Cart, ExtendedRange);
+    ovk::field<Matcher<double>> ExpectedData2 = CreateAfterDataDouble(Cart, ExtendedRange);
     EXPECT_THAT(Data1, ElementsAreArray(ExpectedData1));
     EXPECT_THAT(Data2, ElementsAreArray(ExpectedData2));
   }
@@ -297,7 +300,7 @@ TEST_F(HaloTests, Exchange) {
     Requests(1) = Halo.Exchange(Data2);
     ovk::WaitAll(Requests);
     ovk::field<int> ExpectedData1 = CreateAfterDataInt(Cart, ExtendedRange);
-    ovk::field<double> ExpectedData2 = CreateAfterDataDouble(Cart, ExtendedRange);
+    ovk::field<Matcher<double>> ExpectedData2 = CreateAfterDataDouble(Cart, ExtendedRange);
     EXPECT_THAT(Data1, ElementsAreArray(ExpectedData1));
     EXPECT_THAT(Data2, ElementsAreArray(ExpectedData2));
   }
