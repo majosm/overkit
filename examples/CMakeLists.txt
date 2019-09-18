@@ -116,6 +116,7 @@ foreach(EXAMPLE ${C_TARGETS} ${CXX_TARGETS})
   # Profiling
   if(PROFILE)
     target_compile_options(${EXAMPLE} PRIVATE ${PROFILE_COMPILE_FLAGS})
+    target_link_libraries(${EXAMPLE} PRIVATE ${PROFILE_EXE_LINKER_FLAGS})
   endif()
 
   # MPI
