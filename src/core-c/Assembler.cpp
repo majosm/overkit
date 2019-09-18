@@ -721,4 +721,35 @@ void ovkResetAssemblerOptionMinimizeOverlap(ovk_assembler_options *Options, int 
 
 }
 
+void ovkGetAssemblerOptionDisjointConnections(const ovk_assembler_options *Options, int MGridID, int
+  NGridID, bool *DisjointConnections) {
+
+  OVK_DEBUG_ASSERT(Options, "Invalid options pointer.");
+  OVK_DEBUG_ASSERT(DisjointConnections, "Invalid disjoint connections pointer.");
+
+  auto &OptionsCPP = *reinterpret_cast<const ovk::assembler::options *>(Options);
+  *DisjointConnections = OptionsCPP.DisjointConnections({MGridID,NGridID});
+
+}
+
+void ovkSetAssemblerOptionDisjointConnections(ovk_assembler_options *Options, int MGridID, int
+  NGridID, bool DisjointConnections) {
+
+  OVK_DEBUG_ASSERT(Options, "Invalid options pointer.");
+
+  auto &OptionsCPP = *reinterpret_cast<ovk::assembler::options *>(Options);
+  OptionsCPP.SetDisjointConnections({MGridID,NGridID}, DisjointConnections);
+
+}
+
+void ovkResetAssemblerOptionDisjointConnections(ovk_assembler_options *Options, int MGridID, int
+  NGridID) {
+
+  OVK_DEBUG_ASSERT(Options, "Invalid options pointer.");
+
+  auto &OptionsCPP = *reinterpret_cast<ovk::assembler::options *>(Options);
+  OptionsCPP.ResetDisjointConnections({MGridID,NGridID});
+
+}
+
 }

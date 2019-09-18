@@ -3199,6 +3199,7 @@ void assembler::GenerateConnectivityData_() {
 
   for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
     if (Options_.ConnectionType(OverlapID) == connection_type::NONE) continue;
+    bool Disjoint = Options_.DisjointConnections(OverlapID);
     int MGridID = OverlapID(0);
     int NGridID = OverlapID(1);
     const grid &NGrid = Domain.Grid(NGridID);
@@ -3225,9 +3226,11 @@ void assembler::GenerateConnectivityData_() {
               double NormalizedDistance = Min(ReceiverDistance/MaxDistance, 1.);
               double Volume = OverlapVolumes(iOverlapping);
               if (DonorGridIDs(Point) < 0) {
-                DonorGridIDs(Point) = MGridID;
-                DonorNormalizedDistances(Point) = NormalizedDistance;
-                DonorVolumes(Point) = Volume;
+                if (!Disjoint || NormalizedDistance > 0.) {
+                  DonorGridIDs(Point) = MGridID;
+                  DonorNormalizedDistances(Point) = NormalizedDistance;
+                  DonorVolumes(Point) = Volume;
+                }
               } else {
                 bool BetterDonor;
                 if (std::abs(NormalizedDistance-DonorNormalizedDistances(Point)) > TOLERANCE) {
@@ -3236,9 +3239,11 @@ void assembler::GenerateConnectivityData_() {
                   BetterDonor = Volume < DonorVolumes(Point);
                 }
                 if (BetterDonor) {
-                  DonorGridIDs(Point) = MGridID;
-                  DonorNormalizedDistances(Point) = NormalizedDistance;
-                  DonorVolumes(Point) = Volume;
+                  if (!Disjoint || NormalizedDistance > 0.) {
+                    DonorGridIDs(Point) = MGridID;
+                    DonorNormalizedDistances(Point) = NormalizedDistance;
+                    DonorVolumes(Point) = Volume;
+                  }
                 }
               }
             }

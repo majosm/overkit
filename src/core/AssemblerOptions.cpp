@@ -48,6 +48,7 @@ void assembler::options::RemoveGrids(const set<int> &GridIDs) {
   ConnectionType_.EraseIf(MatchesGridToRemovePair);
   FringeSize_.EraseIf(MatchesGridToRemove);
   MinimizeOverlap_.EraseIf(MatchesGridToRemovePair);
+  DisjointConnections_.EraseIf(MatchesGridToRemovePair);
 
   GridIDs_.EraseIf(MatchesGridToRemove);
 
@@ -338,6 +339,29 @@ assembler::options &assembler::options::ResetMinimizeOverlap(const elem<int,2> &
 
 }
 
+bool assembler::options::DisjointConnections(const elem<int,2> &GridIDPair) const {
+
+  return GetOption_(DisjointConnections_, GridIDPair, true);
+
+}
+
+assembler::options &assembler::options::SetDisjointConnections(const elem<int,2> &GridIDPair, bool
+  DisjointConnections) {
+
+  SetOption_(DisjointConnections_, GridIDPair, DisjointConnections, true);
+
+  return *this;
+
+}
+
+assembler::options &assembler::options::ResetDisjointConnections(const elem<int,2> &GridIDPair) {
+
+  SetOption_(DisjointConnections_, GridIDPair, true, true);
+
+  return *this;
+
+}
+
 void assembler::options::PrintOptions_() {
 
   for (auto &Entry : Overlappable_) {
@@ -417,13 +441,18 @@ void assembler::options::PrintOptions_() {
       ConnectionTypeString.c_str());
   }
 
+  for (auto &Entry : FringeSize_) {
+    std::printf("FringeSize(%i) = %i\n", Entry.Key(), Entry.Value());
+  }
+
   for (auto &Entry : MinimizeOverlap_) {
     std::printf("MinimizeOverlap(%i,%i) = %c\n", Entry.Key()(0), Entry.Key()(1), Entry.Value() ?
       'T' : 'F');
   }
 
-  for (auto &Entry : FringeSize_) {
-    std::printf("FringeSize(%i) = %i\n", Entry.Key(), Entry.Value());
+  for (auto &Entry : DisjointConnections_) {
+    std::printf("DisjointConnections(%i,%i) = %c\n", Entry.Key()(0), Entry.Key()(1), Entry.Value() ?
+      'T' : 'F');
   }
 
 }

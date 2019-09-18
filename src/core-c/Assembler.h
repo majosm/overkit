@@ -150,6 +150,13 @@ void ovkSetAssemblerOptionMinimizeOverlap(ovk_assembler_options *Options, int MG
 void ovkResetAssemblerOptionMinimizeOverlap(ovk_assembler_options *Options, int MGridID, int
   NGridID);
 
+void ovkGetAssemblerOptionDisjointConnections(const ovk_assembler_options *Options, int MGridID, int
+  NGridID, bool *DisjointConnections);
+void ovkSetAssemblerOptionDisjointConnections(ovk_assembler_options *Options, int MGridID, int
+  NGridID, bool DisjointConnections);
+void ovkResetAssemblerOptionDisjointConnections(ovk_assembler_options *Options, int MGridID, int
+  NGridID);
+
 #ifdef __cplusplus
 }
 #endif

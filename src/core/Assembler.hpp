@@ -131,6 +131,9 @@ public:
     bool MinimizeOverlap(const elem<int,2> &GridIDPair) const;
     options &SetMinimizeOverlap(const elem<int,2> &GridIDPair, bool MinimizeOverlap);
     options &ResetMinimizeOverlap(const elem<int,2> &GridIDPair);
+    bool DisjointConnections(const elem<int,2> &GridIDPair) const;
+    options &SetDisjointConnections(const elem<int,2> &GridIDPair, bool DisjointConnections);
+    options &ResetDisjointConnections(const elem<int,2> &GridIDPair);
   private:
     set<int> GridIDs_;
     elem_map<int,2,bool> Overlappable_;
@@ -145,6 +148,7 @@ public:
     elem_map<int,2,connection_type> ConnectionType_;
     map<int,int> FringeSize_;
     elem_map<int,2,bool> MinimizeOverlap_;
+    elem_map<int,2,bool> DisjointConnections_;
     options() = default;
     void AddGrids(const set<int> &GridIDs);
     void RemoveGrids(const set<int> &GridIDs);
