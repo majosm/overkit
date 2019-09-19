@@ -433,7 +433,7 @@ void Blobs() {
     Options.SetCutBoundaryHoles({ovk::ALL_GRIDS,ovk::ALL_GRIDS}, true);
     Options.SetOccludes({ovk::ALL_GRIDS,ovk::ALL_GRIDS}, ovk::occludes::COARSE);
     Options.SetOccludes({ovk::ALL_GRIDS,1}, ovk::occludes::ALL);
-    Options.SetEdgePadding({ovk::ALL_GRIDS,ovk::ALL_GRIDS}, 2);
+    Options.SetEdgePadding({ovk::ALL_GRIDS,ovk::ALL_GRIDS}, 3);
     Options.SetEdgeSmoothing(ovk::ALL_GRIDS, 2);
     Options.SetConnectionType({ovk::ALL_GRIDS,ovk::ALL_GRIDS}, ovk::connection_type::LINEAR);
     Options.SetFringeSize(ovk::ALL_GRIDS, 2);
