@@ -422,7 +422,6 @@ void assembler::DetectOverlap_() {
   }
 
   MPI_Waitall(MPIRequests.Count(), MPIRequests.Data(), MPI_STATUSES_IGNORE);
-
   MPIRequests.Clear();
 
   map<int,array<int>> GridIDPairRecvData;
@@ -467,7 +466,6 @@ void assembler::DetectOverlap_() {
   }
 
   MPI_Waitall(MPIRequests.Count(), MPIRequests.Data(), MPI_STATUSES_IGNORE);
-
   MPIRequests.Clear();
 
   map<int,map<int,set<int>>> OverlappingNGridIDsAndRanksForLocalMGrid;
@@ -611,7 +609,6 @@ void assembler::DetectOverlap_() {
   }
 
   MPI_Waitall(MPIRequests.Count(), MPIRequests.Data(), MPI_STATUSES_IGNORE);
-
   MPIRequests.Clear();
 
   for (int NGridID : Domain.LocalGridIDs()) {
@@ -722,7 +719,6 @@ void assembler::DetectOverlap_() {
   }
 
   MPI_Waitall(MPIRequests.Count(), MPIRequests.Data(), MPI_STATUSES_IGNORE);
-
   MPIRequests.Clear();
 
   if (Logger.LoggingDebug()) {
@@ -898,7 +894,6 @@ void assembler::DetectOverlap_() {
   }
 
   MPI_Waitall(MPIRequests.Count(), MPIRequests.Data(), MPI_STATUSES_IGNORE);
-
   MPIRequests.Clear();
 
   for (int NGridID : Domain.LocalGridIDs()) {
@@ -1251,7 +1246,6 @@ void assembler::DetectOverlap_() {
   }
 
   MPI_Waitall(MPIRequests.Count(), MPIRequests.Data(), MPI_STATUSES_IGNORE);
-
   MPIRequests.Clear();
 
   struct overlap_m_edit {
