@@ -157,6 +157,7 @@ set(INTERNAL_HEADERS
   Geometry.h
   GeometryBase.hpp
   GeometryComponent.h
+  GeometryManipulator.hpp
   GeometryOps.hpp
   GeometryOps.inl
   Global.h

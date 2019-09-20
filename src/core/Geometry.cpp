@@ -12,6 +12,7 @@
 #include "ovk/core/Event.hpp"
 #include "ovk/core/Field.hpp"
 #include "ovk/core/FloatingRef.hpp"
+#include "ovk/core/GeometryManipulator.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
 #include "ovk/core/Logger.hpp"
@@ -58,24 +59,6 @@ geometry::geometry(std::shared_ptr<context> &&Context, const grid &Grid, params 
   if (OVK_DEBUG) {
     for (int iDim = NumDims_; iDim < MAX_DIMS; ++iDim) {
       OVK_DEBUG_ASSERT(PeriodicLength_(iDim) == 0., "Periodic length has incorrect dimension.");
-    }
-  }
-
-  // In 1D, geometry type is always uniform or rectilinear
-  if (NumDims_ == 1) {
-    switch (Type_) {
-    case geometry_type::UNIFORM:
-    case geometry_type::ORIENTED_UNIFORM:
-      Type_ = geometry_type::UNIFORM;
-      break;
-    case geometry_type::RECTILINEAR:
-    case geometry_type::ORIENTED_RECTILINEAR:
-    case geometry_type::CURVILINEAR:
-      Type_ = geometry_type::RECTILINEAR;
-      break;
-    default:
-      OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
-      break;
     }
   }
 
@@ -182,6 +165,29 @@ void geometry::RestoreCoords() {
 
 }
 
+namespace {
+struct compute_cell_volumes {
+  template <typename T> void operator()(const T &Manipulator, const array<distributed_field<
+    double>> &Coords, distributed_field<double> &CellVolumes) const {
+    field_view<const double> CoordsViews[MAX_DIMS] = {
+      Coords(0),
+      Coords(1),
+      Coords(2)
+    };
+    const range &CellLocalRange = CellVolumes.LocalRange();
+    for (int k = CellLocalRange.Begin(2); k < CellLocalRange.End(2); ++k) {
+      for (int j = CellLocalRange.Begin(1); j < CellLocalRange.End(1); ++j) {
+        for (int i = CellLocalRange.Begin(0); i < CellLocalRange.End(0); ++i) {
+          tuple<int> Cell = {i,j,k};
+          CellVolumes(Cell) = Manipulator.CellVolume(CoordsViews, Cell);
+        }
+      }
+    }
+    CellVolumes.Exchange();
+  }
+};
+}
+
 void geometry::OnCoordsEndEdit_() {
 
   core::logger &Logger = Context_->core_Logger();
@@ -193,7 +199,6 @@ void geometry::OnCoordsEndEdit_() {
   const range &GlobalRange = Grid.GlobalRange();
   const range &LocalRange = Grid.LocalRange();
   const range &ExtendedRange = Grid.ExtendedRange();
-  const range &CellLocalRange = Grid.CellLocalRange();
   const range &CellExtendedRange = Grid.CellExtendedRange();
 
   request Requests[MAX_DIMS];
@@ -224,21 +229,8 @@ void geometry::OnCoordsEndEdit_() {
 
   Logger.LogDebug(Comm_.Rank() == 0, 0, "Updating auxiliary data for geometry %s...", Grid.Name());
 
-  array<field_view<const double>> CoordsView({MAX_DIMS});
-  for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    CoordsView(iDim) = Coords_(iDim);
-  }
-
-  for (int k = CellLocalRange.Begin(2); k < CellLocalRange.End(2); ++k) {
-    for (int j = CellLocalRange.Begin(1); j < CellLocalRange.End(1); ++j) {
-      for (int i = CellLocalRange.Begin(0); i < CellLocalRange.End(0); ++i) {
-        tuple<int> Cell = {i,j,k};
-        CellVolumes_(Cell) = core::CellVolume(NumDims, CoordsView, Type_, Cell);
-      }
-    }
-  }
-
-  CellVolumes_.Exchange();
+  core::geometry_manipulator GeometryManipulator(Type_, NumDims);
+  GeometryManipulator.Apply(compute_cell_volumes(), Coords_, CellVolumes_);
 
   // Compute the volume at each point by averaging the volumes of neighboring cells
   for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {

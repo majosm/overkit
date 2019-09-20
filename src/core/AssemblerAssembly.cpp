@@ -29,7 +29,7 @@
 #include "ovk/core/FloatingRef.hpp"
 #include "ovk/core/Geometry.hpp"
 #include "ovk/core/GeometryComponent.hpp"
-#include "ovk/core/GeometryOps.hpp"
+#include "ovk/core/GeometryManipulator.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
 #include "ovk/core/Indexer.hpp"
@@ -203,6 +203,36 @@ void assembler::ValidateOptions_() {
 
   // This is incomplete; add rest
 
+}
+
+namespace {
+struct find_overlapping_cell {
+  template <typename T> void operator()(const T &Manipulator, const range &CellRange, const
+    array_view<const field_view<const double>> &Coords, const field<bool> &CellActiveMask, double
+    Tolerance, const tuple<double> &PointCoords, optional<tuple<int>> &MaybeCell) const {
+    // Brute force for now
+    for (int k = CellRange.Begin(2); k < CellRange.End(2); ++k) {
+      for (int j = CellRange.Begin(1); j < CellRange.End(1); ++j) {
+        for (int i = CellRange.Begin(0); i < CellRange.End(0); ++i) {
+          tuple<int> Cell = {i,j,k};
+          if (!CellActiveMask(Cell)) continue;
+          if (Manipulator.OverlapsCell(Coords, Tolerance, Cell, PointCoords)) {
+            MaybeCell = Cell;
+            return;
+          }
+        }
+      }
+    }
+  }
+};
+
+struct coords_in_cell {
+  template <typename T> void operator()(const T &Manipulator, const array_view<const
+    field_view<const double>> &Coords, const tuple<int> &Cell, const tuple<double> &PointCoords,
+    optional<tuple<double>> &MaybeLocalCoords) const {
+    MaybeLocalCoords = Manipulator.CoordsInCell(Coords, Cell, PointCoords);
+  }
+};
 }
 
 void assembler::DetectOverlap_() {
@@ -631,6 +661,10 @@ void assembler::DetectOverlap_() {
     geometry_type Type;
     field<bool> CellActiveMaskData;
     field_view<const bool> CellActiveMask;
+    core::geometry_manipulator Manipulator;
+    geometry_data():
+      Manipulator(geometry_type::CURVILINEAR, 1)
+    {}
   };
 
   elem_map<int,2,geometry_data> MGridGeometryData;
@@ -721,29 +755,24 @@ void assembler::DetectOverlap_() {
   MPI_Waitall(MPIRequests.Count(), MPIRequests.Data(), MPI_STATUSES_IGNORE);
   MPIRequests.Clear();
 
+  for (int NGridID : Domain.LocalGridIDs()) {
+    auto &MGridIDsAndRanks = OverlappingMGridIDsAndRanksForLocalNGrid(NGridID);
+    for (auto &MEntry : MGridIDsAndRanks) {
+      int MGridID = MEntry.Key();
+      const set<int> &MGridRanks = MEntry.Value();
+      for (int Rank : MGridRanks) {
+        geometry_data &Data = MGridGeometryData({MGridID,Rank});
+        Data.Manipulator = core::geometry_manipulator(Data.Type, NumDims);
+      }
+    }
+  }
+
   if (Logger.LoggingDebug()) {
     MPI_Barrier(Domain.Comm());
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done transferring geometry data.");
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Searching for overlapping cells...");
   }
 
-  // Brute force for now
-  auto FindOverlappingCell = [NumDims](const range &CellRange, const array_view<const
-    field_view<const double>> &Coords, geometry_type GeometryType, const field<bool>
-    &CellActiveMask, double Tolerance, const tuple<double> &PointCoords) -> optional<tuple<int>> {
-    for (int k = CellRange.Begin(2); k < CellRange.End(2); ++k) {
-      for (int j = CellRange.Begin(1); j < CellRange.End(1); ++j) {
-        for (int i = CellRange.Begin(0); i < CellRange.End(0); ++i) {
-          tuple<int> Cell = {i,j,k};
-          if (!CellActiveMask(Cell)) continue;
-          if (core::OverlapsCell(NumDims, Coords, GeometryType, Tolerance, Cell, PointCoords)) {
-            return Cell;
-          }
-        }
-      }
-    }
-    return {};
-  };
 
   struct overlapping_cell_data {
     bool Allocated = false;
@@ -792,9 +821,10 @@ void assembler::DetectOverlap_() {
             elem<int,2> IDPair = {MGridID,NGridID};
             const partition_data &PartitionData = MGridPartitionData({MGridID,Region.Rank});
             const geometry_data &GeometryData = MGridGeometryData({MGridID,Region.Rank});
-            auto MaybeCell = FindOverlappingCell(PartitionData.CellLocalRange, GeometryData.Coords,
-              GeometryData.Type, GeometryData.CellActiveMask, Options_.OverlapTolerance(IDPair),
-              PointCoords);
+            optional<tuple<int>> MaybeCell;
+            GeometryData.Manipulator.Apply(find_overlapping_cell(), PartitionData.CellLocalRange,
+              GeometryData.Coords, GeometryData.CellActiveMask, Options_.OverlapTolerance(IDPair),
+              PointCoords, MaybeCell);
             if (MaybeCell) {
               const tuple<int> &Cell = *MaybeCell;
               overlapping_cell_data &CellData = OverlappingCellData.Fetch(IDPair);
@@ -1146,8 +1176,9 @@ void assembler::DetectOverlap_() {
                 OverlapMData.Cells(0,iOverlapping) = MappedCell(0);
                 OverlapMData.Cells(1,iOverlapping) = MappedCell(1);
                 OverlapMData.Cells(2,iOverlapping) = MappedCell(2);
-                auto MaybeLocalCoords = core::CoordsInCell(NumDims, GeometryData.Coords,
-                  GeometryData.Type, MappedCell, PointCoords);
+                optional<tuple<double>> MaybeLocalCoords;
+                GeometryData.Manipulator.Apply(coords_in_cell(), GeometryData.Coords, MappedCell,
+                  PointCoords, MaybeLocalCoords);
                 if (MaybeLocalCoords) {
                   const tuple<double> &LocalCoords = *MaybeLocalCoords;
                   OverlapMData.Coords(0,iOverlapping) = LocalCoords(0);
@@ -1219,8 +1250,9 @@ void assembler::DetectOverlap_() {
                   OverlapMData.Cells(0,iOverlapping) = MappedCell(0);
                   OverlapMData.Cells(1,iOverlapping) = MappedCell(1);
                   OverlapMData.Cells(2,iOverlapping) = MappedCell(2);
-                  auto MaybeLocalCoords = core::CoordsInCell(NumDims, GeometryData.Coords,
-                    GeometryData.Type, MappedCell, PointCoords);
+                  optional<tuple<double>> MaybeLocalCoords;
+                  GeometryData.Manipulator.Apply(coords_in_cell(), GeometryData.Coords, MappedCell,
+                    PointCoords, MaybeLocalCoords);
                   if (MaybeLocalCoords) {
                     const tuple<double> &LocalCoords = *MaybeLocalCoords;
                     OverlapMData.Coords(0,iOverlapping) = LocalCoords(0);
