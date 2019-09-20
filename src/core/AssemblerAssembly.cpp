@@ -502,7 +502,7 @@ void assembler::DetectOverlap_() {
     MPI_Barrier(Domain.Comm());
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done establishing communication between "
       "potentially-overlapping ranks.");
-    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Transferring coordinate data...");
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Transferring geometry data...");
   }
 
   elem_set<int,2> MGridDataSends;
@@ -625,43 +625,43 @@ void assembler::DetectOverlap_() {
     }
   }
 
-  struct cell_coord_data {
+  struct geometry_data {
     array<field<double>> CoordsData;
     array<field_view<const double>> Coords;
-    geometry_type GeometryType;
+    geometry_type Type;
     field<bool> CellActiveMaskData;
     field_view<const bool> CellActiveMask;
   };
 
-  elem_map<int,2,cell_coord_data> CellCoordData;
+  elem_map<int,2,geometry_data> MGridGeometryData;
 
   MPIRequests.Reserve(5*(MGridDataSends.Count() + MGridDataRecvs.Count()));
 
   for (auto &MGridIDAndRankPair : MGridDataRecvs) {
     int Rank = MGridIDAndRankPair(1);
     const partition_data &PartitionData = MGridPartitionData(MGridIDAndRankPair);
-    cell_coord_data &CoordData = CellCoordData.Insert(MGridIDAndRankPair);
+    geometry_data &GeometryData = MGridGeometryData.Insert(MGridIDAndRankPair);
     long long NumExtended = PartitionData.ExtendedRange.Count();
     long long NumCellExtended = PartitionData.CellExtendedRange.Count();
-    CoordData.CoordsData.Resize({MAX_DIMS});
-    CoordData.CoordsData(0).Resize(PartitionData.ExtendedRange);
-    CoordData.CoordsData(1).Resize(PartitionData.ExtendedRange);
-    CoordData.CoordsData(2).Resize(PartitionData.ExtendedRange);
-    CoordData.Coords.Resize({MAX_DIMS});
-    CoordData.Coords(0) = CoordData.CoordsData(0);
-    CoordData.Coords(1) = CoordData.CoordsData(1);
-    CoordData.Coords(2) = CoordData.CoordsData(2);
-    CoordData.CellActiveMaskData.Resize(PartitionData.CellExtendedRange);
-    CoordData.CellActiveMask = CoordData.CellActiveMaskData;
-    MPI_Irecv(CoordData.CoordsData(0).Data(), NumExtended, MPI_DOUBLE, Rank, 0, Domain.Comm(),
+    GeometryData.CoordsData.Resize({MAX_DIMS});
+    GeometryData.CoordsData(0).Resize(PartitionData.ExtendedRange);
+    GeometryData.CoordsData(1).Resize(PartitionData.ExtendedRange);
+    GeometryData.CoordsData(2).Resize(PartitionData.ExtendedRange);
+    GeometryData.Coords.Resize({MAX_DIMS});
+    GeometryData.Coords(0) = GeometryData.CoordsData(0);
+    GeometryData.Coords(1) = GeometryData.CoordsData(1);
+    GeometryData.Coords(2) = GeometryData.CoordsData(2);
+    GeometryData.CellActiveMaskData.Resize(PartitionData.CellExtendedRange);
+    GeometryData.CellActiveMask = GeometryData.CellActiveMaskData;
+    MPI_Irecv(GeometryData.CoordsData(0).Data(), NumExtended, MPI_DOUBLE, Rank, 0, Domain.Comm(),
       &MPIRequests.Append());
-    MPI_Irecv(CoordData.CoordsData(1).Data(), NumExtended, MPI_DOUBLE, Rank, 0, Domain.Comm(),
+    MPI_Irecv(GeometryData.CoordsData(1).Data(), NumExtended, MPI_DOUBLE, Rank, 0, Domain.Comm(),
       &MPIRequests.Append());
-    MPI_Irecv(CoordData.CoordsData(2).Data(), NumExtended, MPI_DOUBLE, Rank, 0, Domain.Comm(),
+    MPI_Irecv(GeometryData.CoordsData(2).Data(), NumExtended, MPI_DOUBLE, Rank, 0, Domain.Comm(),
       &MPIRequests.Append());
-    MPI_Irecv(&CoordData.GeometryType, 1, core::GetMPIDataType<geometry_type>(), Rank, 0,
+    MPI_Irecv(&GeometryData.Type, 1, core::GetMPIDataType<geometry_type>(), Rank, 0,
       Domain.Comm(), &MPIRequests.Append());
-    MPI_Irecv(CoordData.CellActiveMaskData.Data(), NumCellExtended, MPI_C_BOOL, Rank, 0,
+    MPI_Irecv(GeometryData.CellActiveMaskData.Data(), NumCellExtended, MPI_C_BOOL, Rank, 0,
       Domain.Comm(), &MPIRequests.Append());
   }
 
@@ -706,12 +706,12 @@ void assembler::DetectOverlap_() {
           const array<distributed_field<double>> &Coords = Geometry.Coords();
           const local_grid_aux_data &GridAuxData = AssemblyData.LocalGridAuxData(MGridID);
           const distributed_field<bool> &CellActiveMask = GridAuxData.CellActiveMask;
-          cell_coord_data &Data = CellCoordData.Insert({MGridID,Rank});
+          geometry_data &Data = MGridGeometryData.Insert({MGridID,Rank});
           Data.Coords.Resize({MAX_DIMS});
           Data.Coords(0) = Coords(0);
           Data.Coords(1) = Coords(1);
           Data.Coords(2) = Coords(2);
-          Data.GeometryType = Geometry.Type();
+          Data.Type = Geometry.Type();
           Data.CellActiveMask = CellActiveMask;
         }
       }
@@ -723,7 +723,7 @@ void assembler::DetectOverlap_() {
 
   if (Logger.LoggingDebug()) {
     MPI_Barrier(Domain.Comm());
-    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done transferring coordinate data.");
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done transferring geometry data.");
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Searching for overlapping cells...");
   }
 
@@ -791,9 +791,9 @@ void assembler::DetectOverlap_() {
               continue;
             elem<int,2> IDPair = {MGridID,NGridID};
             const partition_data &PartitionData = MGridPartitionData({MGridID,Region.Rank});
-            const cell_coord_data &CoordData = CellCoordData({MGridID,Region.Rank});
-            auto MaybeCell = FindOverlappingCell(PartitionData.CellLocalRange, CoordData.Coords,
-              CoordData.GeometryType, CoordData.CellActiveMask, Options_.OverlapTolerance(IDPair),
+            const geometry_data &GeometryData = MGridGeometryData({MGridID,Region.Rank});
+            auto MaybeCell = FindOverlappingCell(PartitionData.CellLocalRange, GeometryData.Coords,
+              GeometryData.Type, GeometryData.CellActiveMask, Options_.OverlapTolerance(IDPair),
               PointCoords);
             if (MaybeCell) {
               const tuple<int> &Cell = *MaybeCell;
@@ -1120,7 +1120,7 @@ void assembler::DetectOverlap_() {
       const cart &MGridCart = MGridInfo.Cart();
       overlap_m_data &OverlapMData = Entry.Value();
       const partition_data &PartitionData = MGridPartitionData({MGridID,Rank});
-      const cell_coord_data &CoordData = CellCoordData({MGridID,Rank});
+      const geometry_data &GeometryData = MGridGeometryData({MGridID,Rank});
       const overlapping_cell_data &CellData = OverlappingCellData({MGridID,NGridID});
       long long iOverlapping = 0;
       for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
@@ -1146,8 +1146,8 @@ void assembler::DetectOverlap_() {
                 OverlapMData.Cells(0,iOverlapping) = MappedCell(0);
                 OverlapMData.Cells(1,iOverlapping) = MappedCell(1);
                 OverlapMData.Cells(2,iOverlapping) = MappedCell(2);
-                auto MaybeLocalCoords = core::CoordsInCell(NumDims, CoordData.Coords,
-                  CoordData.GeometryType, MappedCell, PointCoords);
+                auto MaybeLocalCoords = core::CoordsInCell(NumDims, GeometryData.Coords,
+                  GeometryData.Type, MappedCell, PointCoords);
                 if (MaybeLocalCoords) {
                   const tuple<double> &LocalCoords = *MaybeLocalCoords;
                   OverlapMData.Coords(0,iOverlapping) = LocalCoords(0);
@@ -1192,7 +1192,7 @@ void assembler::DetectOverlap_() {
       for (int Rank : MGridRanks) {
         if (Rank != Domain.Comm().Rank()) continue;
         const partition_data &PartitionData = MGridPartitionData({MGridID,Rank});
-        const cell_coord_data &CoordData = CellCoordData({MGridID,Rank});
+        const geometry_data &GeometryData = MGridGeometryData({MGridID,Rank});
         const overlapping_cell_data &CellData = OverlappingCellData({MGridID,NGridID});
         overlap_m_data &OverlapMData = OverlapMLocalToLocalData({MGridID,NGridID});
         long long iOverlapping = 0;
@@ -1219,8 +1219,8 @@ void assembler::DetectOverlap_() {
                   OverlapMData.Cells(0,iOverlapping) = MappedCell(0);
                   OverlapMData.Cells(1,iOverlapping) = MappedCell(1);
                   OverlapMData.Cells(2,iOverlapping) = MappedCell(2);
-                  auto MaybeLocalCoords = core::CoordsInCell(NumDims, CoordData.Coords,
-                    CoordData.GeometryType, MappedCell, PointCoords);
+                  auto MaybeLocalCoords = core::CoordsInCell(NumDims, GeometryData.Coords,
+                    GeometryData.Type, MappedCell, PointCoords);
                   if (MaybeLocalCoords) {
                     const tuple<double> &LocalCoords = *MaybeLocalCoords;
                     OverlapMData.Coords(0,iOverlapping) = LocalCoords(0);
