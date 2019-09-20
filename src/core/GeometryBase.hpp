@@ -8,9 +8,11 @@
 #include <ovk/core/Geometry.h>
 #include <ovk/core/Global.hpp>
 
+#include <type_traits>
+
 namespace ovk {
 
-enum class geometry_type {
+enum class geometry_type : typename std::underlying_type<ovk_geometry_type>::type {
   UNIFORM = OVK_GEOMETRY_TYPE_UNIFORM,
   ORIENTED_UNIFORM = OVK_GEOMETRY_TYPE_ORIENTED_UNIFORM,
   RECTILINEAR = OVK_GEOMETRY_TYPE_RECTILINEAR,

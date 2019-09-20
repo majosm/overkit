@@ -21,10 +21,11 @@
 
 #include <memory>
 #include <utility>
+#include <type_traits>
 
 namespace ovk {
 
-enum class state_flags : int {
+enum class state_flags : typename std::underlying_type<ovk_state_flags>::type {
   NONE = OVK_STATE_FLAGS_NONE,
   ACTIVE = OVK_STATE_FLAGS_ACTIVE,
   DOMAIN_BOUNDARY = OVK_STATE_FLAGS_DOMAIN_BOUNDARY,

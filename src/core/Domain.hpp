@@ -31,7 +31,7 @@
 
 namespace ovk {
 
-enum class component_event_flags : int {
+enum class component_event_flags : typename std::underlying_type<ovk_component_event_flags>::type {
   NONE = OVK_COMPONENT_EVENT_FLAGS_NONE,
   CREATE = OVK_COMPONENT_EVENT_FLAGS_CREATE,
   DESTROY = OVK_COMPONENT_EVENT_FLAGS_DESTROY,

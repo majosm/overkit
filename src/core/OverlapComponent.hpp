@@ -29,10 +29,11 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <type_traits>
 
 namespace ovk {
 
-enum class overlap_event_flags : int {
+enum class overlap_event_flags : typename std::underlying_type<ovk_overlap_event_flags>::type {
   NONE = OVK_OVERLAP_EVENT_FLAGS_NONE,
   CREATE = OVK_OVERLAP_EVENT_FLAGS_CREATE,
   DESTROY = OVK_OVERLAP_EVENT_FLAGS_DESTROY,

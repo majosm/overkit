@@ -25,11 +25,12 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 namespace ovk {
 
-enum class grid_event_flags : int {
+enum class grid_event_flags : typename std::underlying_type<ovk_grid_event_flags>::type {
   NONE = OVK_GRID_EVENT_FLAGS_NONE,
   CREATE = OVK_GRID_EVENT_FLAGS_CREATE,
   DESTROY = OVK_GRID_EVENT_FLAGS_DESTROY,

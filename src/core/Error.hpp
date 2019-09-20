@@ -11,10 +11,11 @@
 #include <mpi.h>
 
 #include <stdexcept>
+#include <type_traits>
 
 namespace ovk {
 
-enum class error {
+enum class error : typename std::underlying_type<ovk_error>::type {
   NONE = OVK_ERROR_NONE,
   FILE_OPEN = OVK_ERROR_FILE_OPEN,
   FILE_READ = OVK_ERROR_FILE_READ,

@@ -36,10 +36,11 @@
 
 #include <memory>
 #include <string>
+#include <type_traits>
 
 namespace ovk {
 
-enum class collect_op {
+enum class collect_op : typename std::underlying_type<ovk_collect_op>::type {
   NONE = OVK_COLLECT_NONE,
   ANY = OVK_COLLECT_ANY,
   NOT_ALL = OVK_COLLECT_NOT_ALL,
@@ -51,7 +52,7 @@ inline bool ValidCollectOp(collect_op CollectOp) {
   return ovkValidCollectOp(ovk_collect_op(CollectOp));
 }
 
-enum class disperse_op {
+enum class disperse_op : typename std::underlying_type<ovk_disperse_op>::type {
   OVERWRITE = OVK_DISPERSE_OVERWRITE,
   APPEND = OVK_DISPERSE_APPEND
 };

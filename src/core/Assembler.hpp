@@ -36,10 +36,11 @@
 
 #include <memory>
 #include <string>
+#include <type_traits>
 
 namespace ovk {
 
-enum class occludes {
+enum class occludes : typename std::underlying_type<ovk_occludes>::type {
   NONE = OVK_OCCLUDES_NONE,
   ALL = OVK_OCCLUDES_ALL,
   COARSE = OVK_OCCLUDES_COARSE
@@ -49,7 +50,7 @@ inline bool ValidOccludes(occludes Occludes) {
   return ovkValidOccludes(ovk_occludes(Occludes));
 }
 
-enum class connection_type {
+enum class connection_type : typename std::underlying_type<ovk_connection_type>::type {
   NONE = OVK_CONNECTION_NONE,
   NEAREST = OVK_CONNECTION_NEAREST,
   LINEAR = OVK_CONNECTION_LINEAR,

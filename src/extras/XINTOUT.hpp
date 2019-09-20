@@ -12,10 +12,11 @@
 #include <mpi.h>
 
 #include <string>
+#include <type_traits>
 
 namespace ovk {
 
-enum class xintout_format {
+enum class xintout_format : typename std::underlying_type<ovk_xintout_format>::type {
   STANDARD = OVK_XINTOUT_STANDARD,
   EXTENDED = OVK_XINTOUT_EXTENDED
 };

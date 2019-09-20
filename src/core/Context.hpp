@@ -17,10 +17,11 @@
 #include <mpi.h>
 
 #include <memory>
+#include <type_traits>
 
 namespace ovk {
 
-enum class log_level {
+enum class log_level : typename std::underlying_type<ovk_log_level>::type {
   NONE = OVK_LOG_NONE,
   ERRORS = OVK_LOG_ERRORS,
   WARNINGS = OVK_LOG_WARNINGS,

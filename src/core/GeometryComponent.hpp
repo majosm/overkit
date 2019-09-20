@@ -25,10 +25,11 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <type_traits>
 
 namespace ovk {
 
-enum class geometry_event_flags : int {
+enum class geometry_event_flags : typename std::underlying_type<ovk_geometry_event_flags>::type {
   NONE = OVK_GEOMETRY_EVENT_FLAGS_NONE,
   CREATE = OVK_GEOMETRY_EVENT_FLAGS_CREATE,
   DESTROY = OVK_GEOMETRY_EVENT_FLAGS_DESTROY,

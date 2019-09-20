@@ -29,10 +29,12 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <type_traits>
 
 namespace ovk {
 
-enum class connectivity_event_flags : int {
+enum class connectivity_event_flags : typename std::underlying_type<ovk_connectivity_event_flags
+  >::type {
   NONE = OVK_CONNECTIVITY_EVENT_FLAGS_NONE,
   CREATE = OVK_CONNECTIVITY_EVENT_FLAGS_CREATE,
   DESTROY = OVK_CONNECTIVITY_EVENT_FLAGS_DESTROY,

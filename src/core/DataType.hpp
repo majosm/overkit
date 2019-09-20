@@ -11,10 +11,11 @@
 #include <mpi.h>
 
 #include <cstdint>
+#include <type_traits>
 
 namespace ovk {
 
-enum class data_type : int {
+enum class data_type : typename std::underlying_type<ovk_data_type>::type {
   BOOL = OVK_BOOL,
   BYTE = OVK_BYTE,
   INT = OVK_INT,

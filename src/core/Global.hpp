@@ -6,6 +6,8 @@
 
 #include <ovk/core/Global.h>
 
+#include <type_traits>
+
 namespace ovk {
 
 // For detecting accidently-included C++ code in C headers
@@ -23,7 +25,7 @@ constexpr int ALL_GRIDS = OVK_ALL_GRIDS;
 
 using byte = unsigned char;
 
-enum class array_layout {
+enum class array_layout : typename std::underlying_type<ovk_array_layout>::type {
   ROW_MAJOR = OVK_ROW_MAJOR,
   COLUMN_MAJOR = OVK_COLUMN_MAJOR
 };
@@ -32,7 +34,7 @@ inline bool ValidArrayLayout(array_layout Layout) {
   return ovkValidArrayLayout(ovk_array_layout(Layout));
 }
 
-enum class endian {
+enum class endian : typename std::underlying_type<ovk_endian>::type {
   LITTLE = OVK_LITTLE_ENDIAN,
   BIG = OVK_BIG_ENDIAN
 };
@@ -41,7 +43,7 @@ inline bool ValidEndian(endian Endian) {
   return ovkValidEndian(ovk_endian(Endian));
 }
 
-enum class periodic_storage {
+enum class periodic_storage : typename std::underlying_type<ovk_periodic_storage>::type {
   UNIQUE = OVK_PERIODIC_STORAGE_UNIQUE,
   DUPLICATED = OVK_PERIODIC_STORAGE_DUPLICATED
 };
