@@ -44,6 +44,7 @@ set(SOURCES
   Halo.cpp
   Logger.cpp
   Misc.cpp
+  OverlapAccel.cpp
   OverlapComponent.cpp
   OverlapM.cpp
   OverlapN.cpp
@@ -172,6 +173,7 @@ set(INTERNAL_HEADERS
   Misc.inl
   Moveabool.hpp
   Optional.inl
+  OverlapAccel.hpp
   OverlapComponent.h
   PointerIterator.hpp
   Profiler.hpp

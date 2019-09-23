@@ -38,6 +38,7 @@
 #include "ovk/core/Map.hpp"
 #include "ovk/core/Math.hpp"
 #include "ovk/core/Misc.hpp"
+#include "ovk/core/OverlapAccel.hpp"
 #include "ovk/core/OverlapComponent.hpp"
 #include "ovk/core/OverlapM.hpp"
 #include "ovk/core/OverlapN.hpp"
@@ -206,26 +207,6 @@ void assembler::ValidateOptions_() {
 }
 
 namespace {
-struct find_overlapping_cell {
-  template <typename T> void operator()(const T &Manipulator, const range &CellRange, const
-    array_view<const field_view<const double>> &Coords, const field<bool> &CellActiveMask, double
-    Tolerance, const tuple<double> &PointCoords, optional<tuple<int>> &MaybeCell) const {
-    // Brute force for now
-    for (int k = CellRange.Begin(2); k < CellRange.End(2); ++k) {
-      for (int j = CellRange.Begin(1); j < CellRange.End(1); ++j) {
-        for (int i = CellRange.Begin(0); i < CellRange.End(0); ++i) {
-          tuple<int> Cell = {i,j,k};
-          if (!CellActiveMask(Cell)) continue;
-          if (Manipulator.OverlapsCell(Coords, Tolerance, Cell, PointCoords)) {
-            MaybeCell = Cell;
-            return;
-          }
-        }
-      }
-    }
-  }
-};
-
 struct coords_in_cell {
   template <typename T> void operator()(const T &Manipulator, const array_view<const
     field_view<const double>> &Coords, const tuple<int> &Cell, const tuple<double> &PointCoords,
@@ -771,9 +752,46 @@ void assembler::DetectOverlap_() {
   if (Logger.LoggingDebug()) {
     MPI_Barrier(Domain.Comm());
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done transferring geometry data.");
-    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Searching for overlapping cells...");
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Building overlap search accelerators...");
   }
 
+  const elem_set<int,2> &CandidateOverlappingMGridIDsAndRanks = MGridGeometryData.Keys();
+
+  map<int,double> MaxOverlapTolerances;
+
+  for (int NGridID : Domain.LocalGridIDs()) {
+    auto &MGridIDsAndRanks = OverlappingMGridIDsAndRanksForLocalNGrid(NGridID);
+    for (auto &MEntry : MGridIDsAndRanks) {
+      int MGridID = MEntry.Key();
+      double &MaxOverlapTolerance = MaxOverlapTolerances.Fetch(MGridID, 0.);
+      MaxOverlapTolerance = Max(MaxOverlapTolerance, Options_.OverlapTolerance({MGridID,NGridID}));
+    }
+  }
+
+  elem_map<int,2,core::overlap_accel> OverlapAccels;
+
+  for (auto &MGridIDAndRankPair : CandidateOverlappingMGridIDsAndRanks) {
+    int MGridID = MGridIDAndRankPair(0);
+    const partition_data &PartitionData = MGridPartitionData(MGridIDAndRankPair);
+    geometry_data &GeometryData = MGridGeometryData(MGridIDAndRankPair);
+    double DepthAdjust = Options_.OverlapAccelDepthAdjust(MGridID);
+    double ResolutionAdjust = Options_.OverlapAccelResolutionAdjust(MGridID);
+    double MaxOverlapTolerance = MaxOverlapTolerances(MGridID);
+    long long NumCellsLeaf = (long long)(Max(std::pow(2., 12.-DepthAdjust), 1.));
+    double MaxNodeUnoccupiedVolume = std::pow(2., -2.-DepthAdjust);
+    double MaxNodeCellVolumeVariation = 0.5;
+    double BinScale = std::pow(2., -1.-ResolutionAdjust);
+    OverlapAccels.Insert(MGridIDAndRankPair, GeometryData.Type, NumDims,
+      PartitionData.CellLocalRange, GeometryData.Coords, GeometryData.CellActiveMask,
+      MaxOverlapTolerance, NumCellsLeaf, MaxNodeUnoccupiedVolume, MaxNodeCellVolumeVariation,
+      BinScale);
+  }
+
+  if (Logger.LoggingDebug()) {
+    MPI_Barrier(Domain.Comm());
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done building overlap search accelerators.");
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Searching for overlapping cells...");
+  }
 
   struct overlapping_cell_data {
     bool Allocated = false;
@@ -817,15 +835,10 @@ void assembler::DetectOverlap_() {
             int iRegion = Bins.BinRegionIndices(iBinRegionIndex);
             const bounding_box_hash_region_data &RegionData = Bins.RegionData(iRegion);
             int MGridID = RegionData.Tag;
-            if (!RegionData.Region.Contains(PointCoords) ||
-              !Options_.Overlappable({MGridID,NGridID})) continue;
             elem<int,2> IDPair = {MGridID,NGridID};
-            const partition_data &PartitionData = MGridPartitionData({MGridID,RegionData.Rank});
-            const geometry_data &GeometryData = MGridGeometryData({MGridID,RegionData.Rank});
-            optional<tuple<int>> MaybeCell;
-            GeometryData.Manipulator.Apply(find_overlapping_cell(), PartitionData.CellLocalRange,
-              GeometryData.Coords, GeometryData.CellActiveMask, Options_.OverlapTolerance(IDPair),
-              PointCoords, MaybeCell);
+            if (!RegionData.Region.Contains(PointCoords) || !Options_.Overlappable(IDPair)) continue;
+            const core::overlap_accel &OverlapAccel = OverlapAccels({MGridID,RegionData.Rank});
+            auto MaybeCell = OverlapAccel.FindCell(PointCoords, Options_.OverlapTolerance(IDPair));
             if (MaybeCell) {
               const tuple<int> &Cell = *MaybeCell;
               overlapping_cell_data &CellData = OverlappingCellData.Fetch(IDPair);
