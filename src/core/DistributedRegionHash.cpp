@@ -13,6 +13,7 @@
 #include "ovk/core/Map.hpp"
 #include "ovk/core/Misc.hpp"
 #include "ovk/core/Range.hpp"
+#include "ovk/core/RegionTraits.hpp"
 #include "ovk/core/ScalarOps.hpp"
 #include "ovk/core/Set.hpp"
 #include "ovk/core/Tuple.hpp"
@@ -31,7 +32,7 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
   NumDims, comm_view Comm):
   NumDims_(NumDims),
   Comm_(Comm),
-  GlobalExtents_(traits::MakeEmptyExtents(NumDims)),
+  GlobalExtents_(traits::MakeEmptyRegion(NumDims)),
   ProcRange_(MakeEmptyRange(NumDims)),
   ProcIndexer_(ProcRange_),
   ProcSize_(MakeUniformTuple<coord_type>(NumDims, coord_type(0), coord_type(1))),
@@ -39,7 +40,7 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
 {}
 
 template <typename CoordType> distributed_region_hash<CoordType>::distributed_region_hash(int
-  NumDims, comm_view Comm, int NumLocalRegions, array_view<const extents_type> LocalRegionExtents,
+  NumDims, comm_view Comm, int NumLocalRegions, array_view<const region_type> LocalRegions,
   array_view<const int> LocalRegionTags):
   NumDims_(NumDims),
   Comm_(Comm)
@@ -47,9 +48,9 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
 
   MPI_Datatype MPICoordType = GetMPIDataType<coord_type>();
 
-  GlobalExtents_ = traits::MakeEmptyExtents(NumDims);
-  for (auto &RegionExtents : LocalRegionExtents) {
-    GlobalExtents_ = traits::UnionExtents(GlobalExtents_, RegionExtents);
+  GlobalExtents_ = traits::MakeEmptyRegion(NumDims);
+  for (auto &Region : LocalRegions) {
+    GlobalExtents_ = traits::UnionRegions(GlobalExtents_, Region);
   }
 
   MPI_Allreduce(MPI_IN_PLACE, GlobalExtents_.Begin().Data(), NumDims_, MPICoordType, MPI_MIN, Comm_);
@@ -65,8 +66,8 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
   array<set<int>> LocalRegionOverlappedRanks({NumLocalRegions});
 
   for (int iRegion = 0; iRegion < NumLocalRegions; ++iRegion) {
-    tuple<coord_type> LowerCorner = traits::GetExtentsLowerCorner(LocalRegionExtents(iRegion));
-    tuple<coord_type> UpperCorner = traits::GetExtentsUpperCorner(LocalRegionExtents(iRegion));
+    tuple<coord_type> LowerCorner = traits::GetRegionLowerCorner(LocalRegions(iRegion));
+    tuple<coord_type> UpperCorner = traits::GetRegionUpperCorner(LocalRegions(iRegion));
     tuple<int> ProcLocLower = ClampToRange(ProcRange_, MapToUniformCell_(NumDims_,
       GlobalExtents_.Begin(), ProcSize_, LowerCorner));
     tuple<int> ProcLocUpper = ClampToRange(ProcRange_, MapToUniformCell_(NumDims_,
@@ -134,19 +135,19 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
 
   Requests.Reserve(4*(NumSends + NumRecvs));
 
-  Regions_.Resize({NumRecvs});
+  RegionData_.Resize({NumRecvs});
 
   int iNextRegion = 0;
   for (int Rank : RecvFromRanks) {
     int NumRegions = NumRegionsFromRank(Rank);
     for (int iRegionFromRank = 0; iRegionFromRank < NumRegions; ++iRegionFromRank) {
-      region &Region = Regions_(iNextRegion);
-      Region.Rank = Rank;
-      MPI_Irecv(Region.Extents.Begin().Data(), MAX_DIMS, MPICoordType, Rank, 0, Comm_,
+      region_data &Data = RegionData_(iNextRegion);
+      MPI_Irecv(Data.Region.Begin().Data(), MAX_DIMS, MPICoordType, Rank, 0, Comm_,
         &Requests.Append());
-      MPI_Irecv(Region.Extents.End().Data(), MAX_DIMS, MPICoordType, Rank, 0, Comm_,
+      MPI_Irecv(Data.Region.End().Data(), MAX_DIMS, MPICoordType, Rank, 0, Comm_,
         &Requests.Append());
-      MPI_Irecv(&Region.Tag, 1, MPI_INT, Rank, 0, Comm_, &Requests.Append());
+      Data.Rank = Rank;
+      MPI_Irecv(&Data.Tag, 1, MPI_INT, Rank, 0, Comm_, &Requests.Append());
       ++iNextRegion;
     }
   }
@@ -154,10 +155,10 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
   for (int iRegion = 0; iRegion < NumLocalRegions; ++iRegion) {
     auto &Ranks = LocalRegionOverlappedRanks(iRegion);
     for (int Rank : Ranks) {
-      MPI_Isend(LocalRegionExtents(iRegion).Begin().Data(), MAX_DIMS, MPICoordType, Rank, 0,
-        Comm_, &Requests.Append());
-      MPI_Isend(LocalRegionExtents(iRegion).End().Data(), MAX_DIMS, MPICoordType, Rank, 0,
-        Comm_, &Requests.Append());
+      MPI_Isend(LocalRegions(iRegion).Begin().Data(), MAX_DIMS, MPICoordType, Rank, 0, Comm_,
+        &Requests.Append());
+      MPI_Isend(LocalRegions(iRegion).End().Data(), MAX_DIMS, MPICoordType, Rank, 0, Comm_,
+        &Requests.Append());
       MPI_Isend(&LocalRegionTags(iRegion), 1, MPI_INT, Rank, 0, Comm_, &Requests.Append());
     }
   }
@@ -167,15 +168,15 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
 
   int ProcToBinMultiplier = 1;
 
-  if (Regions_.Count() > 0) {
+  if (RegionData_.Count() > 0) {
 
     double AvgBinRegionLength = 0.;
-    for (auto &Region : Regions_) {
+    for (auto &Data : RegionData_) {
       for (int iDim = 0; iDim < NumDims_; ++iDim) {
-        AvgBinRegionLength += double(Region.Extents.Size(iDim));
+        AvgBinRegionLength += double(Data.Region.Size(iDim));
       }
     }
-    AvgBinRegionLength /= double(NumDims_*Regions_.Count());
+    AvgBinRegionLength /= double(NumDims_*RegionData_.Count());
 
     double AvgProcLength = 0.;
     for (int iDim = 0; iDim < NumDims_; ++iDim) {
@@ -195,8 +196,8 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
   array<map<int,range>> LocalRegionOverlappedBinRanges({NumLocalRegions});
 
   for (int iRegion = 0; iRegion < NumLocalRegions; ++iRegion) {
-    tuple<coord_type> LowerCorner = traits::GetExtentsLowerCorner(LocalRegionExtents(iRegion));
-    tuple<coord_type> UpperCorner = traits::GetExtentsUpperCorner(LocalRegionExtents(iRegion));
+    tuple<coord_type> LowerCorner = traits::GetRegionLowerCorner(LocalRegions(iRegion));
+    tuple<coord_type> UpperCorner = traits::GetRegionUpperCorner(LocalRegions(iRegion));
     tuple<int> ProcLocLower = ClampToRange(ProcRange_, MapToUniformCell_(NumDims_,
       GlobalExtents_.Begin(), ProcSize_, LowerCorner));
     tuple<int> ProcLocUpper = ClampToRange(ProcRange_, MapToUniformCell_(NumDims_,
@@ -214,7 +215,7 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
             ProcBinRange.Begin(iDim) = 0;
             ProcBinRange.End(iDim) = ProcToBinMultipliers_(Rank);
           }
-          extents_type ProcExtents = traits::MakeEmptyExtents(NumDims_);
+          region_type ProcExtents = traits::MakeEmptyRegion(NumDims_);
           for (int iDim = 0; iDim < NumDims_; ++iDim) {
             ProcExtents.Begin(iDim) = GlobalExtents_.Begin(iDim) + coord_type(ProcLoc(iDim))*
               ProcSize_(iDim);
@@ -238,7 +239,7 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
   Requests.Reserve(2*(NumSends + NumRecvs));
 
   array<range> BinRegionOverlappedBinRanges;
-  BinRegionOverlappedBinRanges.Resize({Regions_.Count()});
+  BinRegionOverlappedBinRanges.Resize({RegionData_.Count()});
 
   iNextRegion = 0;
   for (int Rank : RecvFromRanks) {
@@ -268,7 +269,7 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
   MPI_Waitall(Requests.Count(), Requests.Data(), MPI_STATUSES_IGNORE);
   Requests.Clear();
 
-  if (Regions_.Count() > 0) {
+  if (RegionData_.Count() > 0) {
 
     BinRange_ = MakeEmptyRange(NumDims_);
     for (int iDim = 0; iDim < NumDims_; ++iDim) {
@@ -307,7 +308,7 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
     // Reset for filling in indices
     NumRegionsPerBin_.Fill(0);
 
-    for (int iRegion = 0; iRegion < Regions_.Count(); ++iRegion) {
+    for (int iRegion = 0; iRegion < RegionData_.Count(); ++iRegion) {
       const range &OverlappedBinRange = BinRegionOverlappedBinRanges(iRegion);
       for (int k = OverlappedBinRange.Begin(2); k < OverlappedBinRange.End(2); ++k) {
         for (int j = OverlappedBinRange.Begin(1); j < OverlappedBinRange.End(1); ++j) {
@@ -341,7 +342,7 @@ template <typename CoordType> elem<int,2> distributed_region_hash<CoordType>::Ma
 
   range_indexer_c<int> ProcBinIndexer(ProcBinRange);
 
-  extents_type ProcExtents = traits::MakeEmptyExtents(NumDims_);
+  region_type ProcExtents = traits::MakeEmptyRegion(NumDims_);
   for (int iDim = 0; iDim < NumDims_; ++iDim) {
     ProcExtents.Begin(iDim) = GlobalExtents_.Begin(iDim) + coord_type(ProcLoc(iDim))*
       ProcSize_(iDim);
@@ -477,51 +478,51 @@ template <typename CoordType> map<int,distributed_region_hash_retrieved_bins<Coo
 
   Requests.Reserve(3*(RetrievingRanks.Count()+BinRanks.Count()));
 
-  struct region_data {
+  struct region_send_recv {
+    array<coord_type,3> Regions;
     array<int> Ranks;
-    array<coord_type,3> Extents;
     array<int> Tags;
   };
 
-  map<int,region_data> RecvRegionData;
+  map<int,region_send_recv> RecvRegionData;
   RecvRegionData.Reserve(BinRanks.Count());
 
   for (int Rank : BinRanks) {
-    region_data &RegionData = RecvRegionData.Insert(Rank);
+    region_send_recv &Recv = RecvRegionData.Insert(Rank);
     int NumRegions = NumRecvRegions(Rank);
-    RegionData.Ranks.Resize({NumRegions});
-    RegionData.Extents.Resize({{2,MAX_DIMS,NumRegions}});
-    RegionData.Tags.Resize({NumRegions});
-    MPI_Irecv(RegionData.Ranks.Data(), NumRegions, MPI_INT, Rank, 0, Comm_, &Requests.Append());
-    MPI_Irecv(RegionData.Extents.Data(), 2*MAX_DIMS*NumRegions, MPICoordType, Rank, 0, Comm_,
+    Recv.Regions.Resize({{2,MAX_DIMS,NumRegions}});
+    Recv.Ranks.Resize({NumRegions});
+    Recv.Tags.Resize({NumRegions});
+    MPI_Irecv(Recv.Regions.Data(), 2*MAX_DIMS*NumRegions, MPICoordType, Rank, 0, Comm_,
       &Requests.Append());
-    MPI_Irecv(RegionData.Tags.Data(), NumRegions, MPI_INT, Rank, 0, Comm_, &Requests.Append());
+    MPI_Irecv(Recv.Ranks.Data(), NumRegions, MPI_INT, Rank, 0, Comm_, &Requests.Append());
+    MPI_Irecv(Recv.Tags.Data(), NumRegions, MPI_INT, Rank, 0, Comm_, &Requests.Append());
   }
 
-  map<int,region_data> SendRegionData;
+  map<int,region_send_recv> SendRegionData;
   SendRegionData.Reserve(RetrievingRanks.Count());
 
   for (int Rank : RetrievingRanks) {
-    region_data &RegionData = SendRegionData.Insert(Rank);
+    region_send_recv &Send = SendRegionData.Insert(Rank);
     const set<int> &RegionIndices = SendingRegionIndices(Rank);
     int NumRegions = RegionIndices.Count();
-    RegionData.Ranks.Resize({NumRegions});
-    RegionData.Extents.Resize({{2,MAX_DIMS,NumRegions}});
-    RegionData.Tags.Resize({NumRegions});
+    Send.Regions.Resize({{2,MAX_DIMS,NumRegions}});
+    Send.Ranks.Resize({NumRegions});
+    Send.Tags.Resize({NumRegions});
     for (int iSendRegion = 0; iSendRegion < NumRegions; ++iSendRegion) {
       int iRegion = RegionIndices[iSendRegion];
-      const region &Region = Regions_(iRegion);
-      RegionData.Ranks(iSendRegion) = Region.Rank;
+      const region_data &Data = RegionData_(iRegion);
+      Send.Ranks(iSendRegion) = Data.Rank;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        RegionData.Extents(0,iDim,iSendRegion) = Region.Extents.Begin(iDim);
-        RegionData.Extents(1,iDim,iSendRegion) = Region.Extents.End(iDim);
+        Send.Regions(0,iDim,iSendRegion) = Data.Region.Begin(iDim);
+        Send.Regions(1,iDim,iSendRegion) = Data.Region.End(iDim);
       }
-      RegionData.Tags(iSendRegion) = Region.Tag;
+      Send.Tags(iSendRegion) = Data.Tag;
     }
-    MPI_Isend(RegionData.Ranks.Data(), NumRegions, MPI_INT, Rank, 0, Comm_, &Requests.Append());
-    MPI_Isend(RegionData.Extents.Data(), 2*MAX_DIMS*NumRegions, MPICoordType, Rank, 0, Comm_,
+    MPI_Isend(Send.Regions.Data(), 2*MAX_DIMS*NumRegions, MPICoordType, Rank, 0, Comm_,
       &Requests.Append());
-    MPI_Isend(RegionData.Tags.Data(), NumRegions, MPI_INT, Rank, 0, Comm_, &Requests.Append());
+    MPI_Isend(Send.Ranks.Data(), NumRegions, MPI_INT, Rank, 0, Comm_, &Requests.Append());
+    MPI_Isend(Send.Tags.Data(), NumRegions, MPI_INT, Rank, 0, Comm_, &Requests.Append());
   }
 
   MPI_Waitall(Requests.Count(), Requests.Data(), MPI_STATUSES_IGNORE);
@@ -582,7 +583,7 @@ template <typename CoordType> map<int,distributed_region_hash_retrieved_bins<Coo
     const set<int> &RegionIndices = SendingRegionIndices(Rank);
     const array<int> &Bins = BinsSending(Rank);
     int NumBins = Bins.Count();
-    array<int> BinRegionIndexToSendRegionIndex({Regions_.Count()}, -1);
+    array<int> BinRegionIndexToSendRegionIndex({RegionData_.Count()}, -1);
     for (int iSendRegion = 0; iSendRegion < RegionIndices.Count(); ++iSendRegion) {
       int iRegion = RegionIndices[iSendRegion];
       BinRegionIndexToSendRegionIndex(iRegion) = iSendRegion;
@@ -613,40 +614,40 @@ template <typename CoordType> map<int,distributed_region_hash_retrieved_bins<Coo
   RetrievedBins.Reserve(BinRanks.Count());
 
   for (int Rank : BinRanks) {
-    retrieved_bins &BinData = RetrievedBins.Insert(Rank);
-    const region_data &RegionData = RecvRegionData(Rank);
-    int NumRegions = RegionData.Ranks.Count();
-    BinData.Regions.Resize({NumRegions});
+    retrieved_bins &Bins = RetrievedBins.Insert(Rank);
+    const region_send_recv &Recv = RecvRegionData(Rank);
+    int NumRegions = Recv.Ranks.Count();
+    Bins.RegionData.Resize({NumRegions});
     for (int iRegion = 0; iRegion < NumRegions; ++iRegion) {
-      region &Region = BinData.Regions(iRegion);
-      Region.Rank = RegionData.Ranks(iRegion);
-      Region.Extents.Begin() = {
-        RegionData.Extents(0,0,iRegion),
-        RegionData.Extents(0,1,iRegion),
-        RegionData.Extents(0,2,iRegion)
+      region_data &Data = Bins.RegionData(iRegion);
+      Data.Region.Begin() = {
+        Recv.Regions(0,0,iRegion),
+        Recv.Regions(0,1,iRegion),
+        Recv.Regions(0,2,iRegion)
       };
-      Region.Extents.End() = {
-        RegionData.Extents(1,0,iRegion),
-        RegionData.Extents(1,1,iRegion),
-        RegionData.Extents(1,2,iRegion)
+      Data.Region.End() = {
+        Recv.Regions(1,0,iRegion),
+        Recv.Regions(1,1,iRegion),
+        Recv.Regions(1,2,iRegion)
       };
-      Region.Tag = RegionData.Tags(iRegion);
+      Data.Rank = Recv.Ranks(iRegion);
+      Data.Tag = Recv.Tags(iRegion);
     }
     bin_index_data &BinIndexData = RecvBinIndexData(Rank);
-    const array<int> &Bins = BinsReceiving(Rank);
-    int NumBins = Bins.Count();
+    const array<int> &BinIndices = BinsReceiving(Rank);
+    int NumBins = BinIndices.Count();
     long long TotalBinRegions = BinIndexData.BinRegionIndices.Count();
-    BinData.BinRegionIndicesIntervals.Reserve(NumBins);
-    BinData.BinRegionIndices.Resize({TotalBinRegions});
+    Bins.BinRegionIndicesIntervals.Reserve(NumBins);
+    Bins.BinRegionIndices.Resize({TotalBinRegions});
     long long iBinRegionIndex = 0;
     for (int iRecvBin = 0; iRecvBin < NumBins; ++iRecvBin) {
-      int iBin = Bins[iRecvBin];
+      int iBin = BinIndices(iRecvBin);
       int NumRegions = BinIndexData.NumRegionsPerBin(iRecvBin);
-      interval<long long> &Interval = BinData.BinRegionIndicesIntervals.Insert(iBin);
+      interval<long long> &Interval = Bins.BinRegionIndicesIntervals.Insert(iBin);
       Interval = {iBinRegionIndex,iBinRegionIndex+NumRegions};
       iBinRegionIndex += NumRegions;
     }
-    BinData.BinRegionIndices = std::move(BinIndexData.BinRegionIndices);
+    Bins.BinRegionIndices = std::move(BinIndexData.BinRegionIndices);
   }
 
   return RetrievedBins;
@@ -654,7 +655,7 @@ template <typename CoordType> map<int,distributed_region_hash_retrieved_bins<Coo
 }
 
 template <typename CoordType> tuple<int> distributed_region_hash<CoordType>::BinDecomp_(int NumDims,
-  const extents_type &GlobalExtents, int MaxBins) {
+  const region_type &GlobalExtents, int MaxBins) {
 
   tuple<int> NumBins = {1,1,1};
 
@@ -687,7 +688,7 @@ template <typename CoordType> tuple<int> distributed_region_hash<CoordType>::Bin
 
     NumBins(iMinLengthDim) = Max(int(Length(iMinLengthDim)*Base),1);
 
-    extents_type GlobalExtentsReduced = traits::MakeEmptyExtents(NumDims-1);
+    region_type GlobalExtentsReduced = traits::MakeEmptyRegion(NumDims-1);
 
     int iReducedDim;
 

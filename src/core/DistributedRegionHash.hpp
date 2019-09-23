@@ -14,6 +14,7 @@
 #include <ovk/core/Interval.hpp>
 #include <ovk/core/Map.hpp>
 #include <ovk/core/Range.hpp>
+#include <ovk/core/RegionTraits.hpp>
 #include <ovk/core/Tuple.hpp>
 
 #include <mpi.h>
@@ -23,61 +24,17 @@
 namespace ovk {
 namespace core {
 
-namespace distributed_region_internal {
-template <typename CoordType> struct region_traits;
-template <> struct region_traits<int> {
-  using extents_type = range;
-  static range MakeEmptyExtents(int NumDims) {
-    return MakeEmptyRange(NumDims);
-  }
-  static range UnionExtents(const range &Left, const range &Right) {
-    return UnionRanges(Left, Right);
-  }
-  static range IntersectExtents(const range &Left, const range &Right) {
-    return IntersectRanges(Left, Right);
-  }
-  static tuple<int> GetExtentsLowerCorner(const range &Extents) {
-    return Extents.Begin();
-  }
-  static tuple<int> GetExtentsUpperCorner(const range &Extents) {
-    tuple<int> UpperCorner;
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      UpperCorner(iDim) = Extents.End(iDim)-1;
-    }
-    return UpperCorner;
-  }
-};
-template <> struct region_traits<double> {
-  using extents_type = box;
-  static box MakeEmptyExtents(int NumDims) {
-    return MakeEmptyBox(NumDims);
-  }
-  static box UnionExtents(const box &Left, const box &Right) {
-    return UnionBoxes(Left, Right);
-  }
-  static box IntersectExtents(const box &Left, const box &Right) {
-    return IntersectBoxes(Left, Right);
-  }
-  static tuple<double> GetExtentsLowerCorner(const box &Extents) {
-    return Extents.Begin();
-  }
-  static tuple<double> GetExtentsUpperCorner(const box &Extents) {
-    return Extents.End();
-  }
-};
-}
-
 template <typename CoordType> struct distributed_region_data {
-  using traits = distributed_region_internal::region_traits<CoordType>;
-  using extents_type = typename traits::extents_type;
+  using region_type = typename std::conditional<std::is_same<CoordType, double>::value, box,
+    range>::type;
+  region_type Region;
   int Rank;
-  extents_type Extents;
   int Tag;
 };
 
-template <typename CoordType> struct distributed_region_hash_retrieved_bins {
-  using region = distributed_region_data<CoordType>;
-  array<region> Regions;
+template <typename RegionType> struct distributed_region_hash_retrieved_bins {
+  using region_data = distributed_region_data<RegionType>;
+  array<region_data> RegionData;
   map<int,interval<long long>> BinRegionIndicesIntervals;
   array<int> BinRegionIndices;
 };
@@ -90,15 +47,16 @@ public:
     "Coord type must be int or double.");
 
   using coord_type = CoordType;
-  using traits = distributed_region_internal::region_traits<coord_type>;
-  using extents_type = typename traits::extents_type;
+  using region_type = typename std::conditional<std::is_same<coord_type, double>::value, box,
+    range>::type;
+  using traits = region_traits<region_type>;
 
-  using region = distributed_region_data<coord_type>;
+  using region_data = distributed_region_data<coord_type>;
   using retrieved_bins = distributed_region_hash_retrieved_bins<coord_type>;
 
   distributed_region_hash(int NumDims, comm_view Comm);
   distributed_region_hash(int NumDims, comm_view Comm, int NumLocalRegions, array_view<const
-    extents_type> LocalRegionExtents, array_view<const int> LocalRegionTags);
+    region_type> LocalRegionExtents, array_view<const int> LocalRegionTags);
 
   // Can't define these here due to issues with GCC < 6.3 and Intel < 17
 //   distributed_region_hash(const distributed_region_hash &Other) = delete;
@@ -117,7 +75,7 @@ private:
 
   comm_view Comm_;
 
-  extents_type GlobalExtents_;
+  region_type GlobalExtents_;
 
   range ProcRange_;
   range_indexer<int> ProcIndexer_;
@@ -125,13 +83,13 @@ private:
 
   array<int> ProcToBinMultipliers_;
 
-  array<region> Regions_;
+  array<region_data> RegionData_;
   range BinRange_;
   field<int> NumRegionsPerBin_;
   field<long long> BinRegionIndicesStarts_;
   array<int> BinRegionIndices_;
 
-  static tuple<int> BinDecomp_(int NumDims, const extents_type &GlobalExtents, int MaxBins);
+  static tuple<int> BinDecomp_(int NumDims, const region_type &GlobalExtents, int MaxBins);
 
   static tuple<int> GetBinSize_(const range &GlobalExtents, const tuple<int> &NumBins);
   static tuple<double> GetBinSize_(const box &GlobalExtents, const tuple<int> &NumBins);

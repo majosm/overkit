@@ -90,9 +90,9 @@ array<int> DetectNeighbors(const cart &Cart, comm_view Comm, const range &LocalR
     for (long long iBinRegionIndex = RegionIndicesInterval.Begin(0); iBinRegionIndex <
       RegionIndicesInterval.End(0); ++iBinRegionIndex) {
       int iRegion = Bins.BinRegionIndices(iBinRegionIndex);
-      const decomp_hash_region_data &Region = Bins.Regions(iRegion);
-      if (Region.Extents.Contains(Point)) {
-        UniqueExtendedRanks.Insert(Region.Rank);
+      const decomp_hash_region_data &RegionData = Bins.RegionData(iRegion);
+      if (RegionData.Region.Contains(Point)) {
+        UniqueExtendedRanks.Insert(RegionData.Rank);
         break;
       }
     }

@@ -2036,9 +2036,9 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
       for (long long iBinRegionIndex = RegionIndicesInterval.Begin(0); iBinRegionIndex <
         RegionIndicesInterval.End(0); ++iBinRegionIndex) {
         int iRegion = Bins.BinRegionIndices(iBinRegionIndex);
-        const core::decomp_hash_region_data &Region = Bins.Regions(iRegion);
-        if (Region.Extents.Contains(Point)) {
-          ChunkDonorRanksData(iDonorPoint) = Region.Rank;
+        const core::decomp_hash_region_data &RegionData = Bins.RegionData(iRegion);
+        if (RegionData.Region.Contains(Point)) {
+          ChunkDonorRanksData(iDonorPoint) = RegionData.Rank;
           break;
         }
       }
@@ -2090,9 +2090,9 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
       for (long long iBinRegionIndex = RegionIndicesInterval.Begin(0); iBinRegionIndex <
         RegionIndicesInterval.End(0); ++iBinRegionIndex) {
         int iRegion = Bins.BinRegionIndices(iBinRegionIndex);
-        const core::decomp_hash_region_data &Region = Bins.Regions(iRegion);
-        if (Region.Extents.Contains(Point)) {
-          ChunkReceiverRanks(iReceiver) = Region.Rank;
+        const core::decomp_hash_region_data &RegionData = Bins.RegionData(iRegion);
+        if (RegionData.Region.Contains(Point)) {
+          ChunkReceiverRanks(iReceiver) = RegionData.Rank;
           break;
         }
       }

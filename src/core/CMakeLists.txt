@@ -179,6 +179,7 @@ set(INTERNAL_HEADERS
   Range.inl
   Recv.hpp
   RecvMap.hpp
+  RegionTraits.hpp
   Requires.hpp
   ScopeGuard.hpp
   ScopeGuard.inl

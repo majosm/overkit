@@ -8,6 +8,7 @@
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Indexer.hpp>
 #include <ovk/core/Interval.hpp>
+#include <ovk/core/RegionTraits.hpp>
 #include <ovk/core/ScalarOps.hpp>
 #include <ovk/core/Tuple.hpp>
 
@@ -28,6 +29,31 @@ template <typename IndexType> using range_indexer_r = range_indexer<IndexType,
   array_layout::ROW_MAJOR>;
 template <typename IndexType> using range_indexer_c = range_indexer<IndexType,
   array_layout::COLUMN_MAJOR>;
+
+namespace core {
+template <> struct region_traits<range> {
+  using coord_type = int;
+  static range MakeEmptyRegion(int NumDims) {
+    return MakeEmptyRange(NumDims);
+  }
+  static range UnionRegions(const range &Left, const range &Right) {
+    return UnionRanges(Left, Right);
+  }
+  static range IntersectRegions(const range &Left, const range &Right) {
+    return IntersectRanges(Left, Right);
+  }
+  static tuple<int> GetRegionLowerCorner(const range &Region) {
+    return Region.Begin();
+  }
+  static tuple<int> GetRegionUpperCorner(const range &Region) {
+    tuple<int> UpperCorner;
+    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+      UpperCorner(iDim) = Region.End(iDim)-1;
+    }
+    return UpperCorner;
+  }
+};
+}
 
 }
 

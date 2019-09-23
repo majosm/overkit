@@ -393,10 +393,11 @@ void assembler::DetectOverlap_() {
           for (long long iBinRegionIndex = RegionIndicesInterval.Begin(0); iBinRegionIndex <
             RegionIndicesInterval.End(0); ++iBinRegionIndex) {
             int iRegion = Bins.BinRegionIndices(iBinRegionIndex);
-            const bounding_box_hash_region_data &Region = Bins.Regions(iRegion);
-            int MGridID = Region.Tag;
-            if (Options_.Overlappable({MGridID,NGridID}) && Region.Extents.Contains(PointCoords)) {
-              MGridIDsAndRanks.Fetch(MGridID).Insert(Region.Rank);
+            const bounding_box_hash_region_data &RegionData = Bins.RegionData(iRegion);
+            int MGridID = RegionData.Tag;
+            if (Options_.Overlappable({MGridID,NGridID}) && RegionData.Region.Contains(PointCoords))
+              {
+              MGridIDsAndRanks.Fetch(MGridID).Insert(RegionData.Rank);
             }
           }
         }
@@ -814,13 +815,13 @@ void assembler::DetectOverlap_() {
           for (long long iBinRegionIndex = RegionIndicesInterval.Begin(0); iBinRegionIndex <
             RegionIndicesInterval.End(0); ++iBinRegionIndex) {
             int iRegion = Bins.BinRegionIndices(iBinRegionIndex);
-            const bounding_box_hash_region_data &Region = Bins.Regions(iRegion);
-            int MGridID = Region.Tag;
-            if (!Region.Extents.Contains(PointCoords) || !Options_.Overlappable({MGridID,NGridID}))
-              continue;
+            const bounding_box_hash_region_data &RegionData = Bins.RegionData(iRegion);
+            int MGridID = RegionData.Tag;
+            if (!RegionData.Region.Contains(PointCoords) ||
+              !Options_.Overlappable({MGridID,NGridID})) continue;
             elem<int,2> IDPair = {MGridID,NGridID};
-            const partition_data &PartitionData = MGridPartitionData({MGridID,Region.Rank});
-            const geometry_data &GeometryData = MGridGeometryData({MGridID,Region.Rank});
+            const partition_data &PartitionData = MGridPartitionData({MGridID,RegionData.Rank});
+            const geometry_data &GeometryData = MGridGeometryData({MGridID,RegionData.Rank});
             optional<tuple<int>> MaybeCell;
             GeometryData.Manipulator.Apply(find_overlapping_cell(), PartitionData.CellLocalRange,
               GeometryData.Coords, GeometryData.CellActiveMask, Options_.OverlapTolerance(IDPair),
