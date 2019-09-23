@@ -6,6 +6,7 @@
 
 #include <ovk/core/Array.hpp>
 #include <ovk/core/ArrayView.hpp>
+#include <ovk/core/Box.hpp>
 #include <ovk/core/Debug.hpp>
 #include <ovk/core/Field.hpp>
 #include <ovk/core/GeometricPrimitiveOps.hpp>
@@ -26,6 +27,9 @@ template <geometry_type Type, int NumDims> optional<tuple<double>> CoordsInCell(
   &PointCoords);
 
 template <geometry_type Type, int NumDims> double CellVolume(const array_view<const field_view<const
+  double>> &Coords, const tuple<int> &Cell);
+
+template <geometry_type Type, int NumDims> box CellBounds(const array_view<const field_view<const
   double>> &Coords, const tuple<int> &Cell);
 
 }}

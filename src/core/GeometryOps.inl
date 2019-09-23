@@ -15,6 +15,10 @@ template <> inline optional<tuple<double>> CoordsInCell<geometry_type::CURVILINE
 template <> inline optional<tuple<double>> CoordsInCell<geometry_type::CURVILINEAR, 3>(const
   array_view<const field_view<const double>> &Coords, const tuple<int> &Cell, const tuple<double>
   &PointCoords);
+template <> inline box CellBounds<geometry_type::CURVILINEAR, 2>(const array_view<const
+  field_view<const double>> &Coords, const tuple<int> &Cell);
+template <> inline box CellBounds<geometry_type::CURVILINEAR, 3>(const array_view<const
+  field_view<const double>> &Coords, const tuple<int> &Cell);
 
 template <> inline bool OverlapsCell<geometry_type::UNIFORM, 1>(const array_view<const field_view<
   const double>> &Coords, double Tolerance, const tuple<int> &Cell, const tuple<double>
@@ -760,6 +764,182 @@ template <> inline double CellVolume<geometry_type::CURVILINEAR, 3>(const array_
   }
 
   return VolumeHexNonUniform(NodeCoords);
+
+}
+
+template <> inline box CellBounds<geometry_type::UNIFORM, 1>(const array_view<const field_view<
+  const double>> &Coords, const tuple<int> &Cell) {
+
+  box Bounds;
+
+  Bounds.Begin(0) = Coords(0)(Cell(0),0,0);
+  Bounds.End(0) = Coords(0)(Cell(0)+1,0,0);
+
+  return Bounds;
+
+}
+
+template <> inline box CellBounds<geometry_type::UNIFORM, 2>(const array_view<const field_view<
+  const double>> &Coords, const tuple<int> &Cell) {
+
+  constexpr tuple<int> UpperCornerOffset = {1,1,0};
+
+  long long iLowerCorner = Coords(0).Indexer().ToIndex(Cell);
+  long long iUpperCorner = Coords(0).Indexer().ToIndex(Cell+UpperCornerOffset);
+
+  box Bounds;
+
+  Bounds.Begin() = {
+    Coords(0)[iLowerCorner],
+    Coords(1)[iLowerCorner],
+    0.
+  };
+  Bounds.End() = {
+    Coords(0)[iUpperCorner],
+    Coords(1)[iUpperCorner],
+    0.
+  };
+
+  return Bounds;
+
+}
+
+template <> inline box CellBounds<geometry_type::UNIFORM, 3>(const array_view<const field_view<
+  const double>> &Coords, const tuple<int> &Cell) {
+
+  constexpr tuple<int> UpperCornerOffset = {1,1,1};
+
+  long long iLowerCorner = Coords(0).Indexer().ToIndex(Cell);
+  long long iUpperCorner = Coords(0).Indexer().ToIndex(Cell+UpperCornerOffset);
+
+  box Bounds;
+
+  Bounds.Begin() = {
+    Coords(0)[iLowerCorner],
+    Coords(1)[iLowerCorner],
+    Coords(2)[iLowerCorner]
+  };
+  Bounds.End() = {
+    Coords(0)[iUpperCorner],
+    Coords(1)[iUpperCorner],
+    Coords(2)[iUpperCorner]
+  };
+
+  return Bounds;
+
+}
+
+template <> inline box CellBounds<geometry_type::RECTILINEAR, 1>(const array_view<const
+  field_view<const double>> &Coords, const tuple<int> &Cell) {
+
+  return CellBounds<geometry_type::UNIFORM, 1>(Coords, Cell);
+
+}
+
+template <> inline box CellBounds<geometry_type::RECTILINEAR, 2>(const array_view<const
+  field_view<const double>> &Coords, const tuple<int> &Cell) {
+
+  return CellBounds<geometry_type::UNIFORM, 2>(Coords, Cell);
+
+}
+
+template <> inline box CellBounds<geometry_type::RECTILINEAR, 3>(const array_view<const
+  field_view<const double>> &Coords, const tuple<int> &Cell) {
+
+  return CellBounds<geometry_type::UNIFORM, 3>(Coords, Cell);
+
+}
+
+template <> inline box CellBounds<geometry_type::ORIENTED_UNIFORM, 1>(const array_view<const
+  field_view<const double>> &Coords, const tuple<int> &Cell) {
+
+  return CellBounds<geometry_type::UNIFORM, 1>(Coords, Cell);
+
+}
+
+template <> inline box CellBounds<geometry_type::ORIENTED_UNIFORM, 2>(const array_view<const
+  field_view<const double>> &Coords, const tuple<int> &Cell) {
+
+  return CellBounds<geometry_type::CURVILINEAR, 2>(Coords, Cell);
+
+}
+
+template <> inline box CellBounds<geometry_type::ORIENTED_UNIFORM, 3>(const array_view<const
+  field_view<const double>> &Coords, const tuple<int> &Cell) {
+
+  return CellBounds<geometry_type::CURVILINEAR, 3>(Coords, Cell);
+
+}
+
+template <> inline box CellBounds<geometry_type::ORIENTED_RECTILINEAR, 1>(const array_view<const
+  field_view<const double>> &Coords, const tuple<int> &Cell) {
+
+  return CellBounds<geometry_type::UNIFORM, 1>(Coords, Cell);
+
+}
+
+template <> inline box CellBounds<geometry_type::ORIENTED_RECTILINEAR, 2>(const array_view<const
+  field_view<const double>> &Coords, const tuple<int> &Cell) {
+
+  return CellBounds<geometry_type::CURVILINEAR, 2>(Coords, Cell);
+
+}
+
+template <> inline box CellBounds<geometry_type::ORIENTED_RECTILINEAR, 3>(const array_view<const
+  field_view<const double>> &Coords, const tuple<int> &Cell) {
+
+  return CellBounds<geometry_type::CURVILINEAR, 3>(Coords, Cell);
+
+}
+
+template <> inline box CellBounds<geometry_type::CURVILINEAR, 1>(const array_view<const field_view<
+  const double>> &Coords, const tuple<int> &Cell) {
+
+  return CellBounds<geometry_type::UNIFORM, 1>(Coords, Cell);
+
+}
+
+template <> inline box CellBounds<geometry_type::CURVILINEAR, 2>(const array_view<const field_view<
+  const double>> &Coords, const tuple<int> &Cell) {
+
+  box Bounds = MakeEmptyBox(2);
+
+  for (int j = Cell(1); j <= Cell(1)+1; ++j) {
+    for (int i = Cell(0); i <= Cell(0)+1; ++i) {
+      long long iPoint = Coords(0).Indexer().ToIndex(i,j,0);
+      tuple<double> NodeCoords = {
+        Coords(0)[iPoint],
+        Coords(1)[iPoint],
+        0.
+      };
+      Bounds = ExtendBox(Bounds, NodeCoords);
+    }
+  }
+
+  return Bounds;
+
+}
+
+template <> inline box CellBounds<geometry_type::CURVILINEAR, 3>(const array_view<const field_view<
+  const double>> &Coords, const tuple<int> &Cell) {
+
+  box Bounds = MakeEmptyBox(3);
+
+  for (int k = Cell(2); k <= Cell(2)+1; ++k) {
+    for (int j = Cell(1); j <= Cell(1)+1; ++j) {
+      for (int i = Cell(0); i <= Cell(0)+1; ++i) {
+        long long iPoint = Coords(0).Indexer().ToIndex(i,j,k);
+        tuple<double> NodeCoords = {
+          Coords(0)[iPoint],
+          Coords(1)[iPoint],
+          Coords(2)[iPoint]
+        };
+        Bounds = ExtendBox(Bounds, NodeCoords);
+      }
+    }
+  }
+
+  return Bounds;
 
 }
 

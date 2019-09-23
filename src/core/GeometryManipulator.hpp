@@ -31,6 +31,10 @@ template <geometry_type Type, int NumDims> struct geometry_manipulator_for_type_
     &Cell) const {
     return core::CellVolume<Type, NumDims>(Coords, Cell);
   }
+  box CellBounds(const array_view<const field_view<const double>> &Coords, const tuple<int> &Cell)
+    const {
+    return core::CellBounds<Type, NumDims>(Coords, Cell);
+  }
 };
 
 }
