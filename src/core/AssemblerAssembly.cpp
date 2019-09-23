@@ -1739,7 +1739,8 @@ void assembler::CutBoundaryHoles_() {
   for (int MGridID : Domain.GridIDs()) {
     for (int NGridID : Domain.GridIDs()) {
       elem<int,2> IDPair = {MGridID,NGridID};
-      if (Options_.CutBoundaryHoles(IDPair)) {
+      if (Options_.CutBoundaryHoles(IDPair) && OverlapComponent.OverlapExists(IDPair) &&
+        OverlapComponent.OverlapExists({NGridID,MGridID})) {
         if (Domain.GridIsLocal(MGridID)) {
           LocalCutMPairIDs.Insert(IDPair);
           LocalCutMGridIDs.Insert(MGridID);
@@ -2012,7 +2013,6 @@ void assembler::CutBoundaryHoles_() {
     .ProjectedBoundaryMasks;
 
   for (auto &OverlapID : LocalCutNPairIDs) {
-    if (!Options_.CutBoundaryHoles(OverlapID)) continue;
     int MGridID = OverlapID(0);
     int NGridID = OverlapID(1);
     const grid &NGrid = Domain.Grid(NGridID);
