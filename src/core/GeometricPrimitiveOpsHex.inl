@@ -129,13 +129,6 @@ inline optional<elem<double,3>> IsoHex8NodeNonUniformInverse(const array_view<co
       std::abs(Tuple(2)) <= Tolerance;
   };
 
-  auto IsNaN = [](const elem<double,3> &Tuple) -> bool {
-    return
-      std::isnan(Tuple(0)) ||
-      std::isnan(Tuple(1)) ||
-      std::isnan(Tuple(2));
-  };
-
   elem<double,3> LocalCoords = {0.5, 0.5, 0.5};
 
   for (int iStep = 0; iStep < MaxSteps; ++iStep) {
@@ -219,13 +212,6 @@ inline optional<elem<double,3>> IsoHex64NodeInverse(const array_view<const elem<
       std::abs(Tuple(0)) <= Tolerance &&
       std::abs(Tuple(1)) <= Tolerance &&
       std::abs(Tuple(2)) <= Tolerance;
-  };
-
-  auto IsNaN = [](const elem<double,3> &Tuple) -> bool {
-    return
-      std::isnan(Tuple(0)) ||
-      std::isnan(Tuple(1)) ||
-      std::isnan(Tuple(2));
   };
 
   elem<double,3> LocalCoords = {0.5, 0.5, 0.5};

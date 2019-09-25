@@ -4,6 +4,29 @@
 namespace ovk {
 namespace core {
 
+inline bool IsNaN(double Value) {
+
+// std::isnan is unreliable if using GCC's -ffast-math, so just disable NaN handling
+#ifndef __FAST_MATH__
+  return std::isnan(Value);
+#else
+  return false;
+#endif
+
+}
+
+template <int N> bool IsNaN(const elem<double,N> &Value) {
+
+  bool HasNaN = false;
+
+  for (int iDim = 0; iDim < N; ++iDim) {
+    HasNaN = HasNaN || IsNaN(Value(iDim));
+  }
+
+  return HasNaN;
+
+}
+
 inline double ColumnDeterminant2D(const elem<double,2> &AI, const elem<double,2> &AJ) {
 
   return AI(0)*AJ(1) - AI(1)*AJ(0);

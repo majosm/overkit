@@ -12,6 +12,9 @@
 namespace ovk {
 namespace core {
 
+bool IsNaN(double Value);
+template <int N> bool IsNaN(const elem<double,N> &Value);
+
 double ColumnDeterminant2D(const elem<double,2> &AI, const elem<double,2> &AJ);
 double ColumnDeterminant3D(const elem<double,3> &AI, const elem<double,3> &AJ, const elem<double,3>
   &AK);

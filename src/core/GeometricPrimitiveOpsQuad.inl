@@ -113,12 +113,6 @@ inline optional<elem<double,2>> IsoQuad4NodeNonUniformInverse(const array_view<c
       std::abs(Tuple(1)) <= Tolerance;
   };
 
-  auto IsNaN = [](const elem<double,2> &Tuple) -> bool {
-    return
-      std::isnan(Tuple(0)) ||
-      std::isnan(Tuple(1));
-  };
-
   elem<double,2> LocalCoords = {0.5, 0.5};
 
   for (int iStep = 0; iStep < MaxSteps; ++iStep) {
@@ -191,12 +185,6 @@ inline optional<elem<double,2>> IsoQuad16NodeInverse(const array_view<const elem
     return
       std::abs(Tuple(0)) <= Tolerance &&
       std::abs(Tuple(1)) <= Tolerance;
-  };
-
-  auto IsNaN = [](const elem<double,2> &Tuple) -> bool {
-    return
-      std::isnan(Tuple(0)) ||
-      std::isnan(Tuple(1));
   };
 
   elem<double,2> LocalCoords = {0.5, 0.5};

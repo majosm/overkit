@@ -51,7 +51,7 @@ inline optional<double> IsoLine4NodeInverse(const array_view<const double> &Node
   }
 
   double Error = Coord - IsoLine4Node(NodeCoords, LocalCoord);
-  if (Error <= Tolerance && !std::isnan(Error)) {
+  if (Error <= Tolerance && !IsNaN(Error)) {
     return LocalCoord;
   } else {
     return {};
