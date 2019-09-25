@@ -13,10 +13,12 @@
 
 #include <string>
 
-#if OVK_DEBUG
-
 namespace ovk {
 namespace core {
+
+extern int &DebugFlag;
+
+#if OVK_DEBUG
 
 template <typename... Ts> void DebugExit(const char *File, int Line, const std::string &Format,
   const Ts &... Args) {
@@ -42,14 +44,12 @@ template <typename... Ts> void DebugExit(const char *File, int Line, const std::
 #undef OVK_DEBUG_ASSERT
 #define OVK_DEBUG_ASSERT OVK_DEBUG_ASSERT_CPP
 
-extern int &DebugFlag;
-
-}}
-
 #else
 
 #define OVK_DEBUG_ASSERT_CPP(...)
 
 #endif
+
+}}
 
 #endif

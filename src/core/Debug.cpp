@@ -12,8 +12,6 @@
 #include <cstdio>
 #include <string>
 
-#if OVK_DEBUG
-
 extern "C" {
 int ovk_core_DebugFlag;
 }
@@ -22,6 +20,8 @@ namespace ovk {
 namespace core {
 int &DebugFlag = ovk_core_DebugFlag;
 }}
+
+#if OVK_DEBUG
 
 extern "C" {
 
