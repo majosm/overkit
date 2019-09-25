@@ -131,12 +131,15 @@ inline optional<elem<double,3>> IsoHex8NodeNonUniformInverse(const array_view<co
 
   elem<double,3> LocalCoords = {0.5, 0.5, 0.5};
 
+  bool Converged = false;
+
   for (int iStep = 0; iStep < MaxSteps; ++iStep) {
     elem<double,2> ShapeI = LagrangeInterpLinear(LocalCoords(0));
     elem<double,2> ShapeJ = LagrangeInterpLinear(LocalCoords(1));
     elem<double,2> ShapeK = LagrangeInterpLinear(LocalCoords(2));
     elem<double,3> Error = Coords - IsoHex8NodeNonUniform(NodeCoords, ShapeI, ShapeJ, ShapeK);
-    if (SmallEnough(Error)) break;
+    Converged = SmallEnough(Error);
+    if (Converged) break;
     elem<double,2> InterpDerivI = LagrangeInterpLinearDeriv(LocalCoords(0));
     elem<double,2> InterpDerivJ = LagrangeInterpLinearDeriv(LocalCoords(1));
     elem<double,2> InterpDerivK = LagrangeInterpLinearDeriv(LocalCoords(2));
@@ -159,16 +162,21 @@ inline optional<elem<double,3>> IsoHex8NodeNonUniformInverse(const array_view<co
     }
     LocalCoords = LocalCoords + ColumnSolve3D(JacobianI, JacobianJ, JacobianK, Error);
   }
-
-  elem<double,2> ShapeI = LagrangeInterpLinear(LocalCoords(0));
-  elem<double,2> ShapeJ = LagrangeInterpLinear(LocalCoords(1));
-  elem<double,2> ShapeK = LagrangeInterpLinear(LocalCoords(2));
-  elem<double,3> Error = Coords - IsoHex8NodeNonUniform(NodeCoords, ShapeI, ShapeJ, ShapeK);
-  if (SmallEnough(Error) && !IsNaN(Error)) {
-    return LocalCoords;
-  } else {
-    return {};
+  if (!Converged) {
+    elem<double,2> ShapeI = LagrangeInterpLinear(LocalCoords(0));
+    elem<double,2> ShapeJ = LagrangeInterpLinear(LocalCoords(1));
+    elem<double,2> ShapeK = LagrangeInterpLinear(LocalCoords(2));
+    elem<double,3> Error = Coords - IsoHex8NodeNonUniform(NodeCoords, ShapeI, ShapeJ, ShapeK);
+    Converged = SmallEnough(Error);
   }
+
+  optional<elem<double,3>> MaybeLocalCoords;
+
+  if (Converged && !IsNaN(LocalCoords)) {
+    MaybeLocalCoords = LocalCoords;
+  }
+
+  return MaybeLocalCoords;
 
 }
 
@@ -216,12 +224,15 @@ inline optional<elem<double,3>> IsoHex64NodeInverse(const array_view<const elem<
 
   elem<double,3> LocalCoords = {0.5, 0.5, 0.5};
 
+  bool Converged = false;
+
   for (int iStep = 0; iStep < MaxSteps; ++iStep) {
     elem<double,4> ShapeI = LagrangeInterpCubic(LocalCoords(0));
     elem<double,4> ShapeJ = LagrangeInterpCubic(LocalCoords(1));
     elem<double,4> ShapeK = LagrangeInterpCubic(LocalCoords(2));
     elem<double,3> Error = Coords - IsoHex64Node(NodeCoords, ShapeI, ShapeJ, ShapeK);
-    if (SmallEnough(Error)) break;
+    Converged = SmallEnough(Error);
+    if (Converged) break;
     elem<double,4> InterpDerivI = LagrangeInterpCubicDeriv(LocalCoords(0));
     elem<double,4> InterpDerivJ = LagrangeInterpCubicDeriv(LocalCoords(1));
     elem<double,4> InterpDerivK = LagrangeInterpCubicDeriv(LocalCoords(2));
@@ -244,16 +255,21 @@ inline optional<elem<double,3>> IsoHex64NodeInverse(const array_view<const elem<
     }
     LocalCoords = LocalCoords + ColumnSolve3D(JacobianI, JacobianJ, JacobianK, Error);
   }
-
-  elem<double,4> ShapeI = LagrangeInterpCubic(LocalCoords(0));
-  elem<double,4> ShapeJ = LagrangeInterpCubic(LocalCoords(1));
-  elem<double,4> ShapeK = LagrangeInterpCubic(LocalCoords(2));
-  elem<double,3> Error = Coords - IsoHex64Node(NodeCoords, ShapeI, ShapeJ, ShapeK);
-  if (SmallEnough(Error) && !IsNaN(Error)) {
-    return LocalCoords;
-  } else {
-    return {};
+  if (!Converged) {
+    elem<double,4> ShapeI = LagrangeInterpCubic(LocalCoords(0));
+    elem<double,4> ShapeJ = LagrangeInterpCubic(LocalCoords(1));
+    elem<double,4> ShapeK = LagrangeInterpCubic(LocalCoords(2));
+    elem<double,3> Error = Coords - IsoHex64Node(NodeCoords, ShapeI, ShapeJ, ShapeK);
+    Converged = SmallEnough(Error);
   }
+
+  optional<elem<double,3>> MaybeLocalCoords;
+
+  if (Converged && !IsNaN(LocalCoords)) {
+    MaybeLocalCoords = LocalCoords;
+  }
+
+  return MaybeLocalCoords;
 
 }
 

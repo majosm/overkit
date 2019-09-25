@@ -115,11 +115,14 @@ inline optional<elem<double,2>> IsoQuad4NodeNonUniformInverse(const array_view<c
 
   elem<double,2> LocalCoords = {0.5, 0.5};
 
+  bool Converged = false;
+
   for (int iStep = 0; iStep < MaxSteps; ++iStep) {
     elem<double,2> ShapeI = LagrangeInterpLinear(LocalCoords(0));
     elem<double,2> ShapeJ = LagrangeInterpLinear(LocalCoords(1));
     elem<double,2> Error = Coords - IsoQuad4NodeNonUniform(NodeCoords, ShapeI, ShapeJ);
-    if (SmallEnough(Error)) break;
+    Converged = SmallEnough(Error);
+    if (Converged) break;
     elem<double,2> InterpDerivI = LagrangeInterpLinearDeriv(LocalCoords(0));
     elem<double,2> InterpDerivJ = LagrangeInterpLinearDeriv(LocalCoords(1));
     elem<double,2> JacobianI = {0., 0.};
@@ -137,15 +140,20 @@ inline optional<elem<double,2>> IsoQuad4NodeNonUniformInverse(const array_view<c
     }
     LocalCoords = LocalCoords + ColumnSolve2D(JacobianI, JacobianJ, Error);
   }
-
-  elem<double,2> ShapeI = LagrangeInterpLinear(LocalCoords(0));
-  elem<double,2> ShapeJ = LagrangeInterpLinear(LocalCoords(1));
-  elem<double,2> Error = Coords - IsoQuad4NodeNonUniform(NodeCoords, ShapeI, ShapeJ);
-  if (SmallEnough(Error) && !IsNaN(Error)) {
-    return LocalCoords;
-  } else {
-    return {};
+  if (!Converged) {
+    elem<double,2> ShapeI = LagrangeInterpLinear(LocalCoords(0));
+    elem<double,2> ShapeJ = LagrangeInterpLinear(LocalCoords(1));
+    elem<double,2> Error = Coords - IsoQuad4NodeNonUniform(NodeCoords, ShapeI, ShapeJ);
+    Converged = SmallEnough(Error);
   }
+
+  optional<elem<double,2>> MaybeLocalCoords;
+
+  if (Converged && !IsNaN(LocalCoords)) {
+    MaybeLocalCoords = LocalCoords;
+  }
+
+  return MaybeLocalCoords;
 
 }
 
@@ -189,11 +197,14 @@ inline optional<elem<double,2>> IsoQuad16NodeInverse(const array_view<const elem
 
   elem<double,2> LocalCoords = {0.5, 0.5};
 
+  bool Converged = false;
+
   for (int iStep = 0; iStep < MaxSteps; ++iStep) {
     elem<double,4> ShapeI = LagrangeInterpCubic(LocalCoords(0));
     elem<double,4> ShapeJ = LagrangeInterpCubic(LocalCoords(1));
     elem<double,2> Error = Coords - IsoQuad16Node(NodeCoords, ShapeI, ShapeJ);
-    if (SmallEnough(Error)) break;
+    Converged = SmallEnough(Error);
+    if (Converged) break;
     elem<double,4> InterpDerivI = LagrangeInterpCubicDeriv(LocalCoords(0));
     elem<double,4> InterpDerivJ = LagrangeInterpCubicDeriv(LocalCoords(1));
     elem<double,2> JacobianI = {0., 0.};
@@ -211,15 +222,20 @@ inline optional<elem<double,2>> IsoQuad16NodeInverse(const array_view<const elem
     }
     LocalCoords = LocalCoords + ColumnSolve2D(JacobianI, JacobianJ, Error);
   }
-
-  elem<double,4> ShapeI = LagrangeInterpCubic(LocalCoords(0));
-  elem<double,4> ShapeJ = LagrangeInterpCubic(LocalCoords(1));
-  elem<double,2> Error = Coords - IsoQuad16Node(NodeCoords, ShapeI, ShapeJ);
-  if (SmallEnough(Error) && !IsNaN(Error)) {
-    return LocalCoords;
-  } else {
-    return {};
+  if (!Converged) {
+    elem<double,4> ShapeI = LagrangeInterpCubic(LocalCoords(0));
+    elem<double,4> ShapeJ = LagrangeInterpCubic(LocalCoords(1));
+    elem<double,2> Error = Coords - IsoQuad16Node(NodeCoords, ShapeI, ShapeJ);
+    Converged = SmallEnough(Error);
   }
+
+  optional<elem<double,2>> MaybeLocalCoords;
+
+  if (Converged && !IsNaN(LocalCoords)) {
+    MaybeLocalCoords = LocalCoords;
+  }
+
+  return MaybeLocalCoords;
 
 }
 

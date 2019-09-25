@@ -39,9 +39,12 @@ inline optional<double> IsoLine4NodeInverse(const array_view<const double> &Node
 
   double LocalCoord = 0.5;
 
+  bool Converged = false;
+
   for (int iStep = 0; iStep < MaxSteps; ++iStep) {
     double Error = Coord - IsoLine4Node(NodeCoords, LocalCoord);
-    if (std::abs(Error) <= Tolerance) break;
+    Converged = std::abs(Error) <= Tolerance;
+    if (Converged) break;
     elem<double,4> InterpDeriv = LagrangeInterpCubicDeriv(LocalCoord);
     double Deriv = 0.;
     for (int i = 0; i < 4; ++i) {
@@ -49,13 +52,18 @@ inline optional<double> IsoLine4NodeInverse(const array_view<const double> &Node
     }
     LocalCoord = LocalCoord + Error/Deriv;
   }
-
-  double Error = Coord - IsoLine4Node(NodeCoords, LocalCoord);
-  if (Error <= Tolerance && !IsNaN(Error)) {
-    return LocalCoord;
-  } else {
-    return {};
+  if (!Converged) {
+    double Error = Coord - IsoLine4Node(NodeCoords, LocalCoord);
+    Converged = std::abs(Error) <= Tolerance;
   }
+
+  optional<double> MaybeLocalCoord;
+
+  if (Converged && !IsNaN(LocalCoord)) {
+    MaybeLocalCoord = LocalCoord;
+  }
+
+  return MaybeLocalCoord;
 
 }
 
