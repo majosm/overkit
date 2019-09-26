@@ -1546,6 +1546,43 @@ void assembler::DetectOverlap_() {
     OverlapMask.Exchange();
   }
 
+  auto StateComponentEditHandle = Domain.EditComponent<state_component>(StateComponentID_);
+  state_component &StateComponent = *StateComponentEditHandle;
+
+  map<int,distributed_field<bool>> LocalGridOverlapMasks;
+
+  for (int GridID : Domain.LocalGridIDs()) {
+    const grid &Grid = Domain.Grid(GridID);
+    LocalGridOverlapMasks.Insert(GridID, Grid.SharedPartition(), false);
+  }
+
+  for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
+    int NGridID = OverlapID(1);
+    const grid &Grid = Domain.Grid(NGridID);
+    long long NumExtended = Grid.ExtendedRange().Count();
+    distributed_field<bool> &GridOverlapMask = LocalGridOverlapMasks(NGridID);
+    local_overlap_n_aux_data &OverlapNAuxData = AssemblyData.LocalOverlapNAuxData(OverlapID);
+    for (long long l = 0; l < NumExtended; ++l) {
+      GridOverlapMask[l] = GridOverlapMask[l] || OverlapNAuxData.OverlapMask[l];
+    }
+  }
+
+  for (int GridID : Domain.LocalGridIDs()) {
+    const grid &Grid = Domain.Grid(GridID);
+    long long NumExtended = Grid.ExtendedRange().Count();
+    const distributed_field<bool> &GridOverlapMask = LocalGridOverlapMasks(GridID);
+    auto StateEditHandle = StateComponent.EditState(GridID);
+    auto FlagsEditHandle = StateEditHandle->EditFlags();
+    distributed_field<state_flags> &Flags = *FlagsEditHandle;
+    for (long long l = 0; l < NumExtended; ++l) {
+      if (GridOverlapMask[l]) {
+        Flags[l] |= state_flags::OVERLAPPED;
+      }
+    }
+  }
+
+  StateComponentEditHandle.Restore();
+
   struct exchange_m {
     floating_ref_generator FloatingRefGenerator;
     array<double,3> InterpCoefs;
