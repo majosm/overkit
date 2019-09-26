@@ -208,11 +208,11 @@ void assembler::ValidateOptions_() {
 
 namespace {
 struct compute_bounds {
-  template <typename T> void operator()(const T &Manipulator, int NumDims, const range &CellRange,
+  template <typename T> box operator()(const T &Manipulator, int NumDims, const range &CellRange,
     array_view<const field_view<const double>> Coords, field_view<const bool> CellActiveMask,
-    double MaxTolerance, box &Bounds) {
+    double MaxTolerance) {
     tuple<double> ScaleFactor = MakeUniformTuple<double>(NumDims, 1.+2.*MaxTolerance, 1.);
-    Bounds = MakeEmptyBox(NumDims);
+    box Bounds = MakeEmptyBox(NumDims);
     for (int k = CellRange.Begin(2); k < CellRange.End(2); ++k) {
       for (int j = CellRange.Begin(1); j < CellRange.End(1); ++j) {
         for (int i = CellRange.Begin(0); i < CellRange.End(0); ++i) {
@@ -223,13 +223,14 @@ struct compute_bounds {
         }
       }
     }
+    return Bounds;
   }
 };
 struct coords_in_cell {
-  template <typename T> void operator()(const T &Manipulator, array_view<const field_view<const
-    double>> Coords, const tuple<int> &Cell, const tuple<double> &PointCoords,
-    optional<tuple<double>> &MaybeLocalCoords) const {
-    MaybeLocalCoords = Manipulator.CoordsInCell(Coords, Cell, PointCoords);
+  template <typename T> optional<tuple<double>> operator()(const T &Manipulator, array_view<const
+    field_view<const double>> Coords, const tuple<int> &Cell, const tuple<double> &PointCoords)
+    const {
+    return Manipulator.CoordsInCell(Coords, Cell, PointCoords);
   }
 };
 }
@@ -289,8 +290,8 @@ void assembler::DetectOverlap_() {
       CoordsViews(iDim) = Coords(iDim);
     }
     box &Bounds = LocalGridBounds.Append();
-    GeometryManipulator.Apply(compute_bounds(), NumDims, CellCoverRange, CoordsViews,
-      CellActiveMask, MaxOverlapTolerances(GridID), Bounds);
+    Bounds = GeometryManipulator.Apply(compute_bounds(), NumDims, CellCoverRange, CoordsViews,
+      CellActiveMask, MaxOverlapTolerances(GridID));
   }
 
   array<int> LocalGridIDs(Domain.LocalGridIDs());
@@ -1185,9 +1186,8 @@ void assembler::DetectOverlap_() {
                 OverlapMData.Cells(0,iOverlapping) = MappedCell(0);
                 OverlapMData.Cells(1,iOverlapping) = MappedCell(1);
                 OverlapMData.Cells(2,iOverlapping) = MappedCell(2);
-                optional<tuple<double>> MaybeLocalCoords;
-                GeometryData.Manipulator.Apply(coords_in_cell(), GeometryData.Coords, MappedCell,
-                  PointCoords, MaybeLocalCoords);
+                auto MaybeLocalCoords = GeometryData.Manipulator.Apply(coords_in_cell(),
+                  GeometryData.Coords, MappedCell, PointCoords);
                 if (MaybeLocalCoords) {
                   const tuple<double> &LocalCoords = *MaybeLocalCoords;
                   OverlapMData.Coords(0,iOverlapping) = LocalCoords(0);
@@ -1259,9 +1259,8 @@ void assembler::DetectOverlap_() {
                   OverlapMData.Cells(0,iOverlapping) = MappedCell(0);
                   OverlapMData.Cells(1,iOverlapping) = MappedCell(1);
                   OverlapMData.Cells(2,iOverlapping) = MappedCell(2);
-                  optional<tuple<double>> MaybeLocalCoords;
-                  GeometryData.Manipulator.Apply(coords_in_cell(), GeometryData.Coords, MappedCell,
-                    PointCoords, MaybeLocalCoords);
+                  auto MaybeLocalCoords = GeometryData.Manipulator.Apply(coords_in_cell(),
+                    GeometryData.Coords, MappedCell, PointCoords);
                   if (MaybeLocalCoords) {
                     const tuple<double> &LocalCoords = *MaybeLocalCoords;
                     OverlapMData.Coords(0,iOverlapping) = LocalCoords(0);

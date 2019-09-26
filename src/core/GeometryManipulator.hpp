@@ -51,92 +51,72 @@ public:
     NumDims_(NumDims)
   {}
 
-  template <typename F, typename... Args> void Apply(F &&Func, Args &&... Arguments) const {
+  template <typename F, typename... Args> auto Apply(F &&Func, Args &&... Arguments) const ->
+    decltype(std::forward<F>(Func)(manipulator_type<geometry_type::UNIFORM, 1>(),
+    std::forward<Args>(Arguments)...)) {
 
     switch (Type_) {
     case geometry_type::UNIFORM:
       switch (NumDims_) {
       case 1:
-        std::forward<F>(Func)(manipulator_type<geometry_type::UNIFORM, 1>(),
+        return std::forward<F>(Func)(manipulator_type<geometry_type::UNIFORM, 1>(),
           std::forward<Args>(Arguments)...);
-        break;
       case 2:
-        std::forward<F>(Func)(manipulator_type<geometry_type::UNIFORM, 2>(),
+        return std::forward<F>(Func)(manipulator_type<geometry_type::UNIFORM, 2>(),
           std::forward<Args>(Arguments)...);
-        break;
       default:
-        std::forward<F>(Func)(manipulator_type<geometry_type::UNIFORM, 3>(),
+        return std::forward<F>(Func)(manipulator_type<geometry_type::UNIFORM, 3>(),
           std::forward<Args>(Arguments)...);
-        break;
       }
-      break;
     case geometry_type::RECTILINEAR:
       switch (NumDims_) {
       case 1:
-        std::forward<F>(Func)(manipulator_type<geometry_type::RECTILINEAR, 1>(),
+        return std::forward<F>(Func)(manipulator_type<geometry_type::RECTILINEAR, 1>(),
           std::forward<Args>(Arguments)...);
-        break;
       case 2:
-        std::forward<F>(Func)(manipulator_type<geometry_type::RECTILINEAR, 2>(),
+        return std::forward<F>(Func)(manipulator_type<geometry_type::RECTILINEAR, 2>(),
           std::forward<Args>(Arguments)...);
-        break;
       default:
-        std::forward<F>(Func)(manipulator_type<geometry_type::RECTILINEAR, 3>(),
+        return std::forward<F>(Func)(manipulator_type<geometry_type::RECTILINEAR, 3>(),
           std::forward<Args>(Arguments)...);
-        break;
       }
-      break;
     case geometry_type::ORIENTED_UNIFORM:
       switch (NumDims_) {
       case 1:
-        std::forward<F>(Func)(manipulator_type<geometry_type::ORIENTED_UNIFORM, 1>(),
+        return std::forward<F>(Func)(manipulator_type<geometry_type::ORIENTED_UNIFORM, 1>(),
           std::forward<Args>(Arguments)...);
-        break;
       case 2:
-        std::forward<F>(Func)(manipulator_type<geometry_type::ORIENTED_UNIFORM, 2>(),
+        return std::forward<F>(Func)(manipulator_type<geometry_type::ORIENTED_UNIFORM, 2>(),
           std::forward<Args>(Arguments)...);
-        break;
       default:
-        std::forward<F>(Func)(manipulator_type<geometry_type::ORIENTED_UNIFORM, 3>(),
+        return std::forward<F>(Func)(manipulator_type<geometry_type::ORIENTED_UNIFORM, 3>(),
           std::forward<Args>(Arguments)...);
-        break;
       }
-      break;
     case geometry_type::ORIENTED_RECTILINEAR:
       switch (NumDims_) {
       case 1:
-        std::forward<F>(Func)(manipulator_type<geometry_type::ORIENTED_RECTILINEAR, 1>(),
+        return std::forward<F>(Func)(manipulator_type<geometry_type::ORIENTED_RECTILINEAR, 1>(),
           std::forward<Args>(Arguments)...);
-        break;
       case 2:
-        std::forward<F>(Func)(manipulator_type<geometry_type::ORIENTED_RECTILINEAR, 2>(),
+        return std::forward<F>(Func)(manipulator_type<geometry_type::ORIENTED_RECTILINEAR, 2>(),
           std::forward<Args>(Arguments)...);
-        break;
       default:
-        std::forward<F>(Func)(manipulator_type<geometry_type::ORIENTED_RECTILINEAR, 3>(),
+        return std::forward<F>(Func)(manipulator_type<geometry_type::ORIENTED_RECTILINEAR, 3>(),
           std::forward<Args>(Arguments)...);
-        break;
       }
-      break;
-    case geometry_type::CURVILINEAR:
+    default: // geometry_type::CURVILINEAR
+      OVK_DEBUG_ASSERT(Type_ == geometry_type::CURVILINEAR, "Unhandled enum value.");
       switch (NumDims_) {
       case 1:
-        std::forward<F>(Func)(manipulator_type<geometry_type::CURVILINEAR, 1>(),
+        return std::forward<F>(Func)(manipulator_type<geometry_type::CURVILINEAR, 1>(),
           std::forward<Args>(Arguments)...);
-        break;
       case 2:
-        std::forward<F>(Func)(manipulator_type<geometry_type::CURVILINEAR, 2>(),
+        return std::forward<F>(Func)(manipulator_type<geometry_type::CURVILINEAR, 2>(),
           std::forward<Args>(Arguments)...);
-        break;
       default:
-        std::forward<F>(Func)(manipulator_type<geometry_type::CURVILINEAR, 3>(),
+        return std::forward<F>(Func)(manipulator_type<geometry_type::CURVILINEAR, 3>(),
           std::forward<Args>(Arguments)...);
-        break;
       }
-      break;
-    default:
-      OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
-      break;
     }
 
   }
