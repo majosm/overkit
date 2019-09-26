@@ -207,9 +207,27 @@ void assembler::ValidateOptions_() {
 }
 
 namespace {
+struct compute_bounds {
+  template <typename T> void operator()(const T &Manipulator, int NumDims, const range &CellRange,
+    array_view<const field_view<const double>> Coords, field_view<const bool> CellActiveMask,
+    double MaxTolerance, box &Bounds) {
+    tuple<double> ScaleFactor = MakeUniformTuple<double>(NumDims, 1.+2.*MaxTolerance, 1.);
+    Bounds = MakeEmptyBox(NumDims);
+    for (int k = CellRange.Begin(2); k < CellRange.End(2); ++k) {
+      for (int j = CellRange.Begin(1); j < CellRange.End(1); ++j) {
+        for (int i = CellRange.Begin(0); i < CellRange.End(0); ++i) {
+          tuple<int> Cell = {i,j,k};
+          if (!CellActiveMask(Cell)) continue;
+          box CellBounds = ScaleBox(Manipulator.CellBounds(Coords, Cell), ScaleFactor);
+          Bounds = UnionBoxes(Bounds, CellBounds);
+        }
+      }
+    }
+  }
+};
 struct coords_in_cell {
-  template <typename T> void operator()(const T &Manipulator, const array_view<const
-    field_view<const double>> &Coords, const tuple<int> &Cell, const tuple<double> &PointCoords,
+  template <typename T> void operator()(const T &Manipulator, array_view<const field_view<const
+    double>> Coords, const tuple<int> &Cell, const tuple<double> &PointCoords,
     optional<tuple<double>> &MaybeLocalCoords) const {
     MaybeLocalCoords = Manipulator.CoordsInCell(Coords, Cell, PointCoords);
   }
@@ -231,12 +249,6 @@ void assembler::DetectOverlap_() {
 
   Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Generating distributed bounding box hash...");
 
-  range VertexOffsetRange = MakeEmptyRange(NumDims);
-  for (int iDim = 0; iDim < NumDims; ++iDim) {
-    VertexOffsetRange.Begin(iDim) = 0;
-    VertexOffsetRange.End(iDim) = 2;
-  }
-
   // Range consisting of all cells having vertices in local range
   auto MakeCellCoverRange = [](const cart &CellCart, const range &CellLocalRange) -> range {
     range CellCoverRange = MakeEmptyRange(CellCart.Dimension());
@@ -252,6 +264,15 @@ void assembler::DetectOverlap_() {
     return CellCoverRange;
   };
 
+  map<int,double> MaxOverlapTolerances;
+
+  for (int MGridID : Domain.GridIDs()) {
+    double &MaxOverlapTolerance = MaxOverlapTolerances.Insert(MGridID, 0.);
+    for (int NGridID : Domain.GridIDs()) {
+      MaxOverlapTolerance = Max(MaxOverlapTolerance, Options_.OverlapTolerance({MGridID,NGridID}));
+    }
+  }
+
   array<box> LocalGridBounds;
   LocalGridBounds.Reserve(Domain.LocalGridCount());
 
@@ -262,29 +283,14 @@ void assembler::DetectOverlap_() {
     const distributed_field<bool> &CellActiveMask = GridAuxData.CellActiveMask;
     const geometry &Geometry = GeometryComponent.Geometry(GridID);
     auto &Coords = Geometry.Coords();
-    box &Bounds = LocalGridBounds.Append();
-    Bounds = MakeEmptyBox(NumDims);
-    for (int k = CellCoverRange.Begin(2); k < CellCoverRange.End(2); ++k) {
-      for (int j = CellCoverRange.Begin(1); j < CellCoverRange.End(1); ++j) {
-        for (int i = CellCoverRange.Begin(0); i < CellCoverRange.End(0); ++i) {
-          tuple<int> Cell = {i,j,k};
-          if (!CellActiveMask(Cell)) continue;
-          for (int o = VertexOffsetRange.Begin(2); o < VertexOffsetRange.End(2); ++o) {
-            for (int n = VertexOffsetRange.Begin(1); n < VertexOffsetRange.End(1); ++n) {
-              for (int m = VertexOffsetRange.Begin(0); m < VertexOffsetRange.End(0); ++m) {
-                tuple<int> Vertex = {Cell(0)+m,Cell(1)+n,Cell(2)+o};
-                tuple<double> VertexCoords = {
-                  Coords(0)(Vertex),
-                  Coords(1)(Vertex),
-                  Coords(2)(Vertex)
-                };
-                Bounds = ExtendBox(Bounds, VertexCoords);
-              }
-            }
-          }
-        }
-      }
+    core::geometry_manipulator GeometryManipulator(Geometry.Type(), NumDims);
+    array<field_view<const double>> CoordsViews({MAX_DIMS});
+    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+      CoordsViews(iDim) = Coords(iDim);
     }
+    box &Bounds = LocalGridBounds.Append();
+    GeometryManipulator.Apply(compute_bounds(), NumDims, CellCoverRange, CoordsViews,
+      CellActiveMask, MaxOverlapTolerances(GridID), Bounds);
   }
 
   array<int> LocalGridIDs(Domain.LocalGridIDs());
@@ -756,17 +762,6 @@ void assembler::DetectOverlap_() {
   }
 
   const elem_set<int,2> &CandidateOverlappingMGridIDsAndRanks = MGridGeometryData.Keys();
-
-  map<int,double> MaxOverlapTolerances;
-
-  for (int NGridID : Domain.LocalGridIDs()) {
-    auto &MGridIDsAndRanks = OverlappingMGridIDsAndRanksForLocalNGrid(NGridID);
-    for (auto &MEntry : MGridIDsAndRanks) {
-      int MGridID = MEntry.Key();
-      double &MaxOverlapTolerance = MaxOverlapTolerances.Fetch(MGridID, 0.);
-      MaxOverlapTolerance = Max(MaxOverlapTolerance, Options_.OverlapTolerance({MGridID,NGridID}));
-    }
-  }
 
   elem_map<int,2,core::overlap_accel> OverlapAccels;
 
