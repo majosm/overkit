@@ -201,7 +201,7 @@ halo::halo(std::shared_ptr<context> Context, const cart &Cart, comm Comm, const 
 
   profiler &Profiler = Context_->core_Profiler();
 
-  Profiler.StartSync(TOTAL_TIME, Comm);
+  Profiler.StartSync(TOTAL_TIME, Comm_);
   Profiler.Start(SETUP_TIME);
 
   HaloMap_ = halo_map(Cart, LocalRange, ExtendedRange, Neighbors);
