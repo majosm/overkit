@@ -168,9 +168,17 @@ overlap_accel::node overlap_accel::CreateNode_(const box &AccelBounds, const fie
     }
     CellVolumeVariation = std::sqrt(CellVolumeVariation/double(NumContainedCells-1))/MeanCellVolume;
 
-    double UnoccupiedVolume = Max(NodeBounds.Volume()-TotalCellVolume, 0.);
+    auto BoxVolume = [&](const box &Box) -> double {
+      double Volume = 1.;
+      for (int iDim = 0; iDim < NumDims_; ++iDim) {
+        Volume *= Box.Size(iDim);
+      }
+      return Volume;
+    };
 
-    bool OccupiedEnough = UnoccupiedVolume < MaxUnoccupiedVolume*AccelBounds.Volume();
+    double UnoccupiedVolume = Max(BoxVolume(NodeBounds)-TotalCellVolume, 0.);
+
+    bool OccupiedEnough = UnoccupiedVolume <= MaxUnoccupiedVolume*BoxVolume(AccelBounds);
     bool UniformEnough = CellVolumeVariation <= MaxCellVolumeVariation;
     bool NotTooBig = NumContainedCells <= MAX_HASH_SIZE;
 
