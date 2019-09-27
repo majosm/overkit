@@ -207,23 +207,145 @@ void assembler::ValidateOptions_() {
 }
 
 namespace {
-struct compute_bounds {
-  template <typename T> box operator()(const T &Manipulator, int NumDims, const range &CellRange,
-    array_view<const field_view<const double>> Coords, field_view<const bool> CellActiveMask,
-    double MaxTolerance) {
-    tuple<double> ScaleFactor = MakeUniformTuple<double>(NumDims, 1.+2.*MaxTolerance, 1.);
-    box Bounds = MakeEmptyBox(NumDims);
+struct generate_subdivisions {
+  int NumDims_;
+  array<field_view<const double>> Coords_;
+  field_view<const bool> CellActiveMask_;
+  field_view<const double> CellVolumes_;
+  double MaxUnoccupiedVolume_;
+  int MaxDepth_;
+  generate_subdivisions(int NumDims, const array<distributed_field<double>> &Coords, const
+    distributed_field<bool> &CellActiveMask, const distributed_field<double> &CellVolumes,
+    double MaxUnoccupiedVolume, int MaxDepth):
+    NumDims_(NumDims),
+    Coords_({MAX_DIMS}, {Coords(0), Coords(1), Coords(2)}),
+    CellActiveMask_(CellActiveMask),
+    CellVolumes_(CellVolumes),
+    MaxUnoccupiedVolume_(MaxUnoccupiedVolume),
+    MaxDepth_(MaxDepth)
+  {}
+  template <typename T> array<range> operator()(const T &Manipulator, const range &CellRange) {
+    box Bounds = ComputeBounds_(Manipulator, CellRange);
+    double UnoccupiedVolume = Max(BoxVolume_(Bounds) - ComputeOccupiedVolume_(CellRange), 0.);
+    return Subdivide_(Manipulator, Bounds, CellRange, UnoccupiedVolume, 0);
+  }
+  template <typename T> box ComputeBounds_(const T &Manipulator, const range &CellRange) const {
+    box Bounds = MakeEmptyBox(NumDims_);
     for (int k = CellRange.Begin(2); k < CellRange.End(2); ++k) {
       for (int j = CellRange.Begin(1); j < CellRange.End(1); ++j) {
         for (int i = CellRange.Begin(0); i < CellRange.End(0); ++i) {
           tuple<int> Cell = {i,j,k};
-          if (!CellActiveMask(Cell)) continue;
-          box CellBounds = ScaleBox(Manipulator.CellBounds(Coords, Cell), ScaleFactor);
+          if (!CellActiveMask_(Cell)) continue;
+          box CellBounds = Manipulator.CellBounds(Coords_, Cell);
           Bounds = UnionBoxes(Bounds, CellBounds);
         }
       }
     }
     return Bounds;
+  }
+  double ComputeOccupiedVolume_(const range &CellRange) const {
+    double OccupiedVolume = 0.;
+    for (int k = CellRange.Begin(2); k < CellRange.End(2); ++k) {
+      for (int j = CellRange.Begin(1); j < CellRange.End(1); ++j) {
+        for (int i = CellRange.Begin(0); i < CellRange.End(0); ++i) {
+          tuple<int> Cell = {i,j,k};
+          if (!CellActiveMask_(Cell)) continue;
+          OccupiedVolume += CellVolumes_(Cell);
+        }
+      }
+    }
+    return OccupiedVolume;
+  }
+  template <typename T> array<range> Subdivide_(const T &Manipulator, const box &BaseBounds, const
+    range &CellRange, double UnoccupiedVolume, int Depth) {
+    array<range> Subdivisions;
+    bool Leaf = Depth == MaxDepth_ || UnoccupiedVolume <= MaxUnoccupiedVolume_ *
+      BoxVolume_(BaseBounds);
+    if (!Leaf) {
+      int BestSplitDim = -1;
+      range BestLeftCellRange;
+      range BestRightCellRange;
+      double BestLeftUnoccupiedVolume;
+      double BestRightUnoccupiedVolume;
+      for (int iDim = 0; iDim < NumDims_; ++iDim) {
+        int iSplit = (CellRange.Begin(iDim)+CellRange.End(iDim))/2;
+        range LeftCellRange = CellRange;
+        LeftCellRange.End(iDim) = iSplit;
+        range RightCellRange = CellRange;
+        RightCellRange.Begin(iDim) = iSplit;
+        box LeftBounds = ComputeBounds_(Manipulator, LeftCellRange);
+        box RightBounds = ComputeBounds_(Manipulator, RightCellRange);
+        double LeftUnoccupiedVolume = Max(BoxVolume_(LeftBounds) - ComputeOccupiedVolume_(
+          LeftCellRange), 0.);
+        double RightUnoccupiedVolume = Max(BoxVolume_(RightBounds) - ComputeOccupiedVolume_(
+          RightCellRange), 0.);
+        if (BestSplitDim < 0 || (LeftUnoccupiedVolume+RightUnoccupiedVolume <
+          BestLeftUnoccupiedVolume+BestRightUnoccupiedVolume)) {
+          BestSplitDim = iDim;
+          BestLeftCellRange = LeftCellRange;
+          BestRightCellRange = RightCellRange;
+          BestLeftUnoccupiedVolume = LeftUnoccupiedVolume;
+          BestRightUnoccupiedVolume = RightUnoccupiedVolume;
+        }
+      }
+      array<range> LeftSubdivisions = Subdivide_(Manipulator, BaseBounds, BestLeftCellRange,
+        BestLeftUnoccupiedVolume, Depth+1);
+      array<range> RightSubdivisions = Subdivide_(Manipulator, BaseBounds, BestRightCellRange,
+        BestRightUnoccupiedVolume, Depth+1);
+      Subdivisions.Reserve(LeftSubdivisions.Count() + RightSubdivisions.Count());
+      for (auto &Subdivision : LeftSubdivisions) {
+        Subdivisions.Append(Subdivision);
+      }
+      for (auto &Subdivision : RightSubdivisions) {
+        Subdivisions.Append(Subdivision);
+      }
+    } else {
+      long long NumActiveCells = 0;
+      for (int k = CellRange.Begin(2); k < CellRange.End(2); ++k) {
+        for (int j = CellRange.Begin(1); j < CellRange.End(1); ++j) {
+          for (int i = CellRange.Begin(0); i < CellRange.End(0); ++i) {
+            tuple<int> Cell = {i,j,k};
+            if (CellActiveMask_(Cell)) ++NumActiveCells;
+          }
+        }
+      }
+      if (NumActiveCells > 0) {
+        Subdivisions.Append(CellRange);
+      }
+    }
+    return Subdivisions;
+  }
+  double BoxVolume_(const box &Box) {
+    double Volume = 1.;
+    for (int iDim = 0; iDim < NumDims_; ++iDim) {
+      Volume *= Box.Size(iDim);
+    }
+    return Volume;
+  }
+};
+struct generate_bounding_boxes {
+  template <typename T> array<box> operator()(const T &Manipulator, int NumDims, const array<
+    distributed_field<double>> &Coords, const distributed_field<bool> &CellActiveMask, double
+    Tolerance, const array<range> &Subdivisions) const {
+    array<field_view<const double>> CoordsViews({MAX_DIMS}, {Coords(0), Coords(1), Coords(2)});
+    tuple<double> ScaleFactor = MakeUniformTuple<double>(NumDims, 1.+2.*Tolerance, 1.);
+    array<box> Boxes;
+    Boxes.Reserve(Subdivisions.Count());
+    for (auto &CellRange : Subdivisions) {
+      box &Bounds = Boxes.Append();
+      Bounds = MakeEmptyBox(NumDims);
+      for (int k = CellRange.Begin(2); k < CellRange.End(2); ++k) {
+        for (int j = CellRange.Begin(1); j < CellRange.End(1); ++j) {
+          for (int i = CellRange.Begin(0); i < CellRange.End(0); ++i) {
+            tuple<int> Cell = {i,j,k};
+            if (!CellActiveMask(Cell)) continue;
+            box CellBounds = ScaleBox(Manipulator.CellBounds(CoordsViews, Cell), ScaleFactor);
+            Bounds = UnionBoxes(Bounds, CellBounds);
+          }
+        }
+      }
+    }
+    return Boxes;
   }
 };
 struct coords_in_cell {
@@ -265,6 +387,26 @@ void assembler::DetectOverlap_() {
     return CellCoverRange;
   };
 
+  map<int, array<range>> SubdivisionsForLocalGrid;
+  int TotalSubdivisions = 0;
+
+  // Subdivide partitions to avoid excessive empty space in bounding boxes
+  for (int GridID : Domain.LocalGridIDs()) {
+    const grid &Grid = Domain.Grid(GridID);
+    range CellCoverRange = MakeCellCoverRange(Grid.CellCart(), Grid.CellLocalRange());
+    const local_grid_aux_data &GridAuxData = AssemblyData.LocalGridAuxData(GridID);
+    const distributed_field<bool> &CellActiveMask = GridAuxData.CellActiveMask;
+    const geometry &Geometry = GeometryComponent.Geometry(GridID);
+    core::geometry_manipulator GeometryManipulator(Geometry.Type(), NumDims);
+    array<range> &Subdivisions = SubdivisionsForLocalGrid.Insert(GridID);
+    double DepthAdjust = Options_.OverlapAccelDepthAdjust(GridID);
+    double MaxUnoccupiedVolume = std::pow(2., -2.-DepthAdjust);
+    int MaxDepth = 8;
+    Subdivisions = GeometryManipulator.Apply(generate_subdivisions(NumDims, Geometry.Coords(),
+      CellActiveMask, Geometry.CellVolumes(), MaxUnoccupiedVolume, MaxDepth), CellCoverRange);
+    TotalSubdivisions += Subdivisions.Count();
+  }
+
   map<int,double> MaxOverlapTolerances;
 
   for (int MGridID : Domain.GridIDs()) {
@@ -274,31 +416,29 @@ void assembler::DetectOverlap_() {
     }
   }
 
-  array<box> LocalGridBounds;
-  LocalGridBounds.Reserve(Domain.LocalGridCount());
+  array<box> SubdivisionBoxes;
+  array<int> SubdivisionTags;
+  SubdivisionBoxes.Reserve(TotalSubdivisions);
+  SubdivisionTags.Reserve(TotalSubdivisions);
 
-  for (int GridID : Domain.LocalGridIDs()) {
-    const grid &Grid = Domain.Grid(GridID);
-    range CellCoverRange = MakeCellCoverRange(Grid.CellCart(), Grid.CellLocalRange());
+  for (int iLocalGrid = 0; iLocalGrid < Domain.LocalGridCount(); ++iLocalGrid) {
+    int GridID = Domain.LocalGridIDs()[iLocalGrid];
     const local_grid_aux_data &GridAuxData = AssemblyData.LocalGridAuxData(GridID);
     const distributed_field<bool> &CellActiveMask = GridAuxData.CellActiveMask;
     const geometry &Geometry = GeometryComponent.Geometry(GridID);
-    auto &Coords = Geometry.Coords();
     core::geometry_manipulator GeometryManipulator(Geometry.Type(), NumDims);
-    array<field_view<const double>> CoordsViews({MAX_DIMS});
-    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-      CoordsViews(iDim) = Coords(iDim);
+    const array<range> &Subdivisions = SubdivisionsForLocalGrid(GridID);
+    array<box> Boxes = GeometryManipulator.Apply(generate_bounding_boxes(), NumDims,
+      Geometry.Coords(), CellActiveMask, MaxOverlapTolerances(GridID), Subdivisions);
+    for (int iSubdivision = 0; iSubdivision < Subdivisions.Count(); ++iSubdivision) {
+      SubdivisionBoxes.Append(Boxes(iSubdivision));
+      SubdivisionTags.Append(GridID);
     }
-    box &Bounds = LocalGridBounds.Append();
-    Bounds = GeometryManipulator.Apply(compute_bounds(), NumDims, CellCoverRange, CoordsViews,
-      CellActiveMask, MaxOverlapTolerances(GridID));
   }
 
-  array<int> LocalGridIDs(Domain.LocalGridIDs());
-
   bounding_box_hash &BoundingBoxHash = AssemblyData.BoundingBoxHash;
-  BoundingBoxHash = bounding_box_hash(NumDims, Domain.Comm(), Domain.LocalGridCount(),
-    LocalGridBounds, LocalGridIDs);
+  BoundingBoxHash = bounding_box_hash(NumDims, Domain.Comm(), TotalSubdivisions, SubdivisionBoxes,
+    SubdivisionTags);
 
   if (Logger.LoggingDebug()) {
     MPI_Barrier(Domain.Comm());
