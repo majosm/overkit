@@ -361,16 +361,21 @@ void assembler::DetectOverlap_() {
 
   domain &Domain = *Domain_;
   core::logger &Logger = Context_->core_Logger();
+  core::profiler &Profiler = Context_->core_Profiler();
 
   MPI_Barrier(Domain.Comm());
 
   Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Detecting overlap between grids...");
+
+  Profiler.StartSync(OVERLAP_TIME, Domain.Comm());
 
   int NumDims = Domain.Dimension();
   auto &GeometryComponent = Domain.Component<geometry_component>(GeometryComponentID_);
   assembly_data &AssemblyData = *AssemblyData_;
 
   Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Generating distributed bounding box hash...");
+
+  Profiler.StartSync(OVERLAP_BB_TIME, Domain.Comm());
 
   // Range consisting of all cells having vertices in local range
   auto MakeCellCoverRange = [](const cart &CellCart, const range &CellLocalRange) -> range {
@@ -386,6 +391,8 @@ void assembler::DetectOverlap_() {
     }
     return CellCoverRange;
   };
+
+  Profiler.Start(OVERLAP_BB_SUBDIVIDE_TIME);
 
   map<int, array<range>> SubdivisionsForLocalGrid;
   int TotalSubdivisions = 0;
@@ -436,15 +443,22 @@ void assembler::DetectOverlap_() {
     }
   }
 
+  Profiler.Stop(OVERLAP_BB_SUBDIVIDE_TIME);
+  Profiler.StartSync(OVERLAP_BB_HASH_CREATE_TIME, Domain.Comm());
+
   bounding_box_hash &BoundingBoxHash = AssemblyData.BoundingBoxHash;
   BoundingBoxHash = bounding_box_hash(NumDims, Domain.Comm(), TotalSubdivisions, SubdivisionBoxes,
     SubdivisionTags);
+
+  Profiler.Stop(OVERLAP_BB_HASH_CREATE_TIME);
 
   if (Logger.LoggingDebug()) {
     MPI_Barrier(Domain.Comm());
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done generating distributed bounding box hash.");
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Mapping local coordinates into hash bins...");
   }
+
+  Profiler.Start(OVERLAP_BB_HASH_MAP_TIME);
 
   map<int,field<elem<int,2>>> LocalPointOverlappingBinIDs;
   elem_set<int,2> UniqueOverlappingBinIDs;
@@ -476,14 +490,21 @@ void assembler::DetectOverlap_() {
     }
   }
 
+  Profiler.Stop(OVERLAP_BB_HASH_MAP_TIME);
+
   if (Logger.LoggingDebug()) {
     MPI_Barrier(Domain.Comm());
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done mapping local coordinates into hash bins.");
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Retrieving remote hash bins...");
   }
 
+  Profiler.StartSync(OVERLAP_BB_HASH_RETRIEVE_TIME, Domain.Comm());
+
   map<int,bounding_box_hash_retrieved_bins> RetrievedBins = BoundingBoxHash.RetrieveBins(
     UniqueOverlappingBinIDs);
+
+  Profiler.Stop(OVERLAP_BB_HASH_RETRIEVE_TIME);
+  Profiler.Stop(OVERLAP_BB_TIME);
 
   if (Logger.LoggingDebug()) {
     MPI_Barrier(Domain.Comm());
@@ -491,6 +512,8 @@ void assembler::DetectOverlap_() {
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Establishing communication between potentially-"
       "overlapping ranks...");
   }
+
+  Profiler.StartSync(OVERLAP_CONNECT_TIME, Domain.Comm());
 
   map<int,map<int,set<int>>> OverlappingMGridIDsAndRanksForLocalNGrid;
 
@@ -657,12 +680,16 @@ void assembler::DetectOverlap_() {
     }
   }
 
+  Profiler.Stop(OVERLAP_CONNECT_TIME);
+
   if (Logger.LoggingDebug()) {
     MPI_Barrier(Domain.Comm());
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done establishing communication between "
       "potentially-overlapping ranks.");
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Transferring geometry data...");
   }
+
+  Profiler.StartSync(OVERLAP_TRANSFER_TIME, Domain.Comm());
 
   elem_set<int,2> MGridDataSends;
 
@@ -896,11 +923,15 @@ void assembler::DetectOverlap_() {
     }
   }
 
+  Profiler.Stop(OVERLAP_TRANSFER_TIME);
+
   if (Logger.LoggingDebug()) {
     MPI_Barrier(Domain.Comm());
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done transferring geometry data.");
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Building overlap search accelerators...");
   }
+
+  Profiler.Start(OVERLAP_ACCEL_TIME);
 
   const elem_set<int,2> &CandidateOverlappingMGridIDsAndRanks = MGridGeometryData.Keys();
 
@@ -923,11 +954,15 @@ void assembler::DetectOverlap_() {
       BinScale);
   }
 
+  Profiler.Stop(OVERLAP_ACCEL_TIME);
+
   if (Logger.LoggingDebug()) {
     MPI_Barrier(Domain.Comm());
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done building overlap search accelerators.");
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Searching for overlapping cells...");
   }
+
+  Profiler.StartSync(OVERLAP_SEARCH_TIME, Domain.Comm());
 
   struct overlapping_cell_data {
     bool Allocated = false;
@@ -1112,6 +1147,8 @@ void assembler::DetectOverlap_() {
     });
   }
 
+  Profiler.Stop(OVERLAP_SEARCH_TIME);
+
   if (Logger.LoggingDebug()) {
     MPI_Barrier(Domain.Comm());
     elem_map<int,2,long long> NumOverlappedByMGridForLocalNGrid;
@@ -1153,6 +1190,8 @@ void assembler::DetectOverlap_() {
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Creating and filling overlap data "
       "structures...");
   }
+
+  Profiler.StartSync(OVERLAP_FILL_TIME, Domain.Comm());
 
   elem_set<int,2> OverlappingGridIDs;
 
@@ -1612,12 +1651,16 @@ void assembler::DetectOverlap_() {
   OverlapMEdits.Clear();
   OverlapNEdits.Clear();
 
+  Profiler.Stop(OVERLAP_FILL_TIME);
+
   if (Logger.LoggingDebug()) {
     MPI_Barrier(Domain.Comm());
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done creating and filling overlap data "
       "structures.");
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Setting up overlap exchanges...");
   }
+
+  Profiler.StartSync(OVERLAP_CREATE_EXCHANGE_TIME, Domain.Comm());
 
   for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
     AssemblyData.LocalOverlapMAuxData.Insert(OverlapID);
@@ -1655,11 +1698,15 @@ void assembler::DetectOverlap_() {
     OverlapNAuxData.DisperseMap = core::disperse_map(OverlapN.Points());
   }
 
+  Profiler.Stop(OVERLAP_CREATE_EXCHANGE_TIME);
+
   if (Logger.LoggingDebug()) {
     MPI_Barrier(Domain.Comm());
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done setting up overlap exchanges.");
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Creating auxiliary overlap data...");
   }
+
+  Profiler.StartSync(OVERLAP_CREATE_AUX_TIME, Domain.Comm());
 
   for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
     int NGridID = OverlapID(1);
@@ -1801,10 +1848,14 @@ void assembler::DetectOverlap_() {
   ExchangeMs.Clear();
   ExchangeNs.Clear();
 
+  Profiler.Stop(OVERLAP_CREATE_AUX_TIME);
+
   if (Logger.LoggingDebug()) {
     MPI_Barrier(Domain.Comm());
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done creating auxiliary overlap data.");
   }
+
+  Profiler.Stop(OVERLAP_TIME);
 
   MPI_Barrier(Domain.Comm());
 
@@ -1816,10 +1867,13 @@ void assembler::InferBoundaries_() {
 
   domain &Domain = *Domain_;
   core::logger &Logger = Context_->core_Logger();
+  core::profiler &Profiler = Context_->core_Profiler();
 
   MPI_Barrier(Domain.Comm());
 
   Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Inferring non-overlapping boundaries...");
+
+  Profiler.StartSync(INFER_BOUNDARIES_TIME, Domain.Comm());
 
   auto &OverlapComponent = Domain.Component<overlap_component>(OverlapComponentID_);
   assembly_data &AssemblyData = *AssemblyData_;
@@ -1892,6 +1946,8 @@ void assembler::InferBoundaries_() {
     }
   }
 
+  Profiler.Stop(INFER_BOUNDARIES_TIME);
+
   MPI_Barrier(Domain.Comm());
 
   Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Done inferring non-overlapping boundaries.");
@@ -1902,10 +1958,13 @@ void assembler::CutBoundaryHoles_() {
 
   domain &Domain = *Domain_;
   core::logger &Logger = Context_->core_Logger();
+  core::profiler &Profiler = Context_->core_Profiler();
 
   MPI_Barrier(Domain.Comm());
 
   Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Cutting boundary holes...");
+
+  Profiler.StartSync(CUT_BOUNDARY_HOLES_TIME, Domain.Comm());
 
   int NumDims = Domain.Dimension();
   assembly_data &AssemblyData = *AssemblyData_;
@@ -1941,6 +2000,8 @@ void assembler::CutBoundaryHoles_() {
     MPI_Barrier(Domain.Comm());
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Projecting domain boundaries...");
   }
+
+  Profiler.StartSync(CUT_BOUNDARY_HOLES_PROJECT_TIME, Domain.Comm());
 
   // Exchanging in reverse, from points to cells
 
@@ -2223,11 +2284,15 @@ void assembler::CutBoundaryHoles_() {
 
   NumDilates.Clear();
 
+  Profiler.Stop(CUT_BOUNDARY_HOLES_PROJECT_TIME);
+
   if (Logger.LoggingDebug()) {
     MPI_Barrier(Domain.Comm());
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done projecting boundaries.");
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Detecting exterior regions...");
   }
+
+  Profiler.StartSync(CUT_BOUNDARY_HOLES_DETECT_EXTERIOR_TIME, Domain.Comm());
 
   map<int,distributed_field<bool>> BoundaryMasks;
   map<int,distributed_field<bool>> InteriorMasks;
@@ -2306,6 +2371,8 @@ void assembler::CutBoundaryHoles_() {
     NumRemoved = core::CountDistributedMask(BoundaryHoleMasks(GridID));
   }
 
+  Profiler.Stop(CUT_BOUNDARY_HOLES_DETECT_EXTERIOR_TIME);
+
   if (Logger.LoggingDebug()) {
     MPI_Barrier(Domain.Comm());
     for (int GridID : Domain.GridIDs()) {
@@ -2323,6 +2390,8 @@ void assembler::CutBoundaryHoles_() {
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done detecting exterior regions.");
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Updating auxiliary grid/overlap data...");
   }
+
+  Profiler.StartSync(CUT_BOUNDARY_HOLES_UPDATE_AUX_TIME, Domain.Comm());
 
   for (int GridID : LocalCutNGridIDs) {
     if (NumRemovedForGrid(GridID) == 0) continue;
@@ -2440,6 +2509,9 @@ void assembler::CutBoundaryHoles_() {
     OverlapMask.Exchange();
   }
 
+  Profiler.Stop(CUT_BOUNDARY_HOLES_UPDATE_AUX_TIME);
+  Profiler.Stop(CUT_BOUNDARY_HOLES_TIME);
+
   MPI_Barrier(Domain.Comm());
 
   if (Logger.LoggingDebug()) {
@@ -2453,10 +2525,13 @@ void assembler::LocateOuterFringe_() {
 
   domain &Domain = *Domain_;
   core::logger &Logger = Context_->core_Logger();
+  core::profiler &Profiler = Context_->core_Profiler();
 
   MPI_Barrier(Domain.Comm());
 
   Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Locating outer fringe points...");
+
+  Profiler.StartSync(LOCATE_OUTER_FRINGE_TIME, Domain.Comm());
 
   assembly_data &AssemblyData = *AssemblyData_;
 
@@ -2535,6 +2610,8 @@ void assembler::LocateOuterFringe_() {
     }
   }
 
+  Profiler.Stop(LOCATE_OUTER_FRINGE_TIME);
+
   if (Logger.LoggingDebug()) {
     for (int GridID : Domain.GridIDs()) {
       if (Domain.GridIsLocal(GridID)) {
@@ -2561,10 +2638,13 @@ void assembler::DetectOccluded_() {
 
   domain &Domain = *Domain_;
   core::logger &Logger = Context_->core_Logger();
+  core::profiler &Profiler = Context_->core_Profiler();
 
   MPI_Barrier(Domain.Comm());
 
   Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Detecting occluded points...");
+
+  Profiler.StartSync(OCCLUSION_TIME, Domain.Comm());
 
   assembly_data &AssemblyData = *AssemblyData_;
 
@@ -2576,6 +2656,8 @@ void assembler::DetectOccluded_() {
   auto &OverlapComponent = Domain.Component<overlap_component>(OverlapComponentID_);
 
   Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Computing pairwise occlusion...");
+
+  Profiler.StartSync(OCCLUSION_PAIRWISE_TIME, Domain.Comm());
 
   elem_map<int,2,distributed_field<bool>> &PairwiseOcclusionMasks = AssemblyData
     .PairwiseOcclusionMasks;
@@ -2764,6 +2846,8 @@ void assembler::DetectOccluded_() {
     PairwiseOcclusionMask.Exchange();
   }
 
+  Profiler.Stop(OCCLUSION_PAIRWISE_TIME);
+
   if (Logger.LoggingDebug()) {
     elem_map<int,2,long long> NumOccludedForGridPair;
     for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
@@ -2790,6 +2874,8 @@ void assembler::DetectOccluded_() {
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done computing pairwise occlusion.");
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Applying edge padding and smoothing...");
   }
+
+  Profiler.StartSync(OCCLUSION_PAD_SMOOTH_TIME, Domain.Comm());
 
   elem_map<int,2,distributed_field<bool>> DisallowMasks;
 
@@ -2915,6 +3001,8 @@ void assembler::DetectOccluded_() {
     }
   }
 
+  Profiler.Stop(OCCLUSION_PAD_SMOOTH_TIME);
+
   if (Logger.LoggingDebug()) {
     elem_map<int,2,long long> NumPaddedForGridPair;
     for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
@@ -2944,6 +3032,8 @@ void assembler::DetectOccluded_() {
   }
 
   PaddingMasks.Clear();
+
+  Profiler.StartSync(OCCLUSION_ACCUMULATE_TIME, Domain.Comm());
 
   for (int GridID : Domain.LocalGridIDs()) {
     distributed_field<bool> &OcclusionMask = OcclusionMasks(GridID);
@@ -2984,6 +3074,9 @@ void assembler::DetectOccluded_() {
     }
   }
 
+  Profiler.Stop(OCCLUSION_ACCUMULATE_TIME);
+  Profiler.Stop(OCCLUSION_TIME);
+
   MPI_Barrier(Domain.Comm());
 
   if (Logger.LoggingDebug()) {
@@ -3010,10 +3103,13 @@ void assembler::MinimizeOverlap_() {
 
   domain &Domain = *Domain_;
   core::logger &Logger = Context_->core_Logger();
+  core::profiler &Profiler = Context_->core_Profiler();
 
   MPI_Barrier(Domain.Comm());
 
   Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Minimizing overlap...");
+
+  Profiler.StartSync(MINIMIZE_OVERLAP_TIME, Domain.Comm());
 
   assembly_data &AssemblyData = *AssemblyData_;
 
@@ -3218,6 +3314,8 @@ void assembler::MinimizeOverlap_() {
     OverlapMask.Exchange();
   }
 
+  Profiler.Stop(MINIMIZE_OVERLAP_TIME);
+
   MPI_Barrier(Domain.Comm());
 
   if (Logger.LoggingDebug()) {
@@ -3242,10 +3340,13 @@ void assembler::GenerateConnectivityData_() {
 
   domain &Domain = *Domain_;
   core::logger &Logger = Context_->core_Logger();
+  core::profiler &Profiler = Context_->core_Profiler();
 
   MPI_Barrier(Domain.Comm());
 
   Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Generating connectivity data...");
+
+  Profiler.StartSync(CONNECTIVITY_TIME, Domain.Comm());
 
   int NumDims = Domain.Dimension();
   const assembly_data &AssemblyData = *AssemblyData_;
@@ -3262,6 +3363,8 @@ void assembler::GenerateConnectivityData_() {
   auto &OverlapComponent = Domain.Component<overlap_component>(OverlapComponentID_);
 
   Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Locating receiver points...");
+
+  Profiler.StartSync(CONNECTIVITY_LOCATE_RECEIVERS_TIME, Domain.Comm());
 
   const map<int,distributed_field<bool>> &OcclusionMasks = AssemblyData.OcclusionMasks;
   const map<int,distributed_field<bool>> &OuterFringeMasks = AssemblyData.OuterFringeMasks;
@@ -3290,6 +3393,8 @@ void assembler::GenerateConnectivityData_() {
     NumReceivers = core::CountDistributedMask(ReceiverMasks(GridID));
   }
 
+  Profiler.Stop(CONNECTIVITY_LOCATE_RECEIVERS_TIME);
+
   if (Logger.LoggingDebug()) {
     MPI_Barrier(Domain.Comm());
     for (int GridID : Domain.GridIDs()) {
@@ -3308,6 +3413,8 @@ void assembler::GenerateConnectivityData_() {
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done locating receiver points.");
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Choosing donors...");
   }
+
+  Profiler.StartSync(CONNECTIVITY_CHOOSE_DONORS_TIME, Domain.Comm());
 
   map<int,int> MaxReceiverDistances;
 
@@ -3608,6 +3715,8 @@ void assembler::GenerateConnectivityData_() {
   ReverseExchangeMs.Clear();
   ReverseExchangeNs.Clear();
 
+  Profiler.Stop(CONNECTIVITY_CHOOSE_DONORS_TIME);
+
   if (Logger.LoggingDebug()) {
     MPI_Barrier(Domain.Comm());
     for (int GridID : Domain.GridIDs()) {
@@ -3627,6 +3736,8 @@ void assembler::GenerateConnectivityData_() {
     Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Creating and filling connectivity data "
       "structures...");
   }
+
+  Profiler.StartSync(CONNECTIVITY_FILL_TIME, Domain.Comm());
 
   elem_map<int,2,long long> NumLocalDonorsForGridPair;
 
@@ -4118,6 +4229,9 @@ void assembler::GenerateConnectivityData_() {
 
   ConnectivityMEdits.Clear();
   ConnectivityNEdits.Clear();
+
+  Profiler.Stop(CONNECTIVITY_FILL_TIME);
+  Profiler.Stop(CONNECTIVITY_TIME);
 
   MPI_Barrier(Domain.Comm());
 

@@ -315,6 +315,35 @@ private:
   void MinimizeOverlap_();
   void GenerateConnectivityData_();
 
+  static constexpr int OVERLAP_TIME = core::profiler::ASSEMBLER_OVERLAP_TIME;
+  static constexpr int OVERLAP_BB_TIME = core::profiler::ASSEMBLER_OVERLAP_BB_TIME;
+  static constexpr int OVERLAP_BB_SUBDIVIDE_TIME = core::profiler::ASSEMBLER_OVERLAP_BB_SUBDIVIDE_TIME;
+  static constexpr int OVERLAP_BB_HASH_CREATE_TIME = core::profiler::ASSEMBLER_OVERLAP_BB_HASH_CREATE_TIME;
+  static constexpr int OVERLAP_BB_HASH_MAP_TIME = core::profiler::ASSEMBLER_OVERLAP_BB_HASH_MAP_TIME;
+  static constexpr int OVERLAP_BB_HASH_RETRIEVE_TIME = core::profiler::ASSEMBLER_OVERLAP_BB_HASH_RETRIEVE_TIME;
+  static constexpr int OVERLAP_CONNECT_TIME = core::profiler::ASSEMBLER_OVERLAP_CONNECT_TIME;
+  static constexpr int OVERLAP_TRANSFER_TIME = core::profiler::ASSEMBLER_OVERLAP_TRANSFER_TIME;
+  static constexpr int OVERLAP_ACCEL_TIME = core::profiler::ASSEMBLER_OVERLAP_ACCEL_TIME;
+  static constexpr int OVERLAP_SEARCH_TIME = core::profiler::ASSEMBLER_OVERLAP_SEARCH_TIME;
+  static constexpr int OVERLAP_FILL_TIME = core::profiler::ASSEMBLER_OVERLAP_FILL_TIME;
+  static constexpr int OVERLAP_CREATE_EXCHANGE_TIME = core::profiler::ASSEMBLER_OVERLAP_CREATE_EXCHANGE_TIME;
+  static constexpr int OVERLAP_CREATE_AUX_TIME = core::profiler::ASSEMBLER_OVERLAP_CREATE_AUX_TIME;
+  static constexpr int INFER_BOUNDARIES_TIME = core::profiler::ASSEMBLER_INFER_BOUNDARIES_TIME;
+  static constexpr int CUT_BOUNDARY_HOLES_TIME = core::profiler::ASSEMBLER_CUT_BOUNDARY_HOLES_TIME;
+  static constexpr int CUT_BOUNDARY_HOLES_PROJECT_TIME = core::profiler::ASSEMBLER_CUT_BOUNDARY_HOLES_PROJECT_TIME;
+  static constexpr int CUT_BOUNDARY_HOLES_DETECT_EXTERIOR_TIME = core::profiler::ASSEMBLER_CUT_BOUNDARY_HOLES_DETECT_EXTERIOR_TIME;
+  static constexpr int CUT_BOUNDARY_HOLES_UPDATE_AUX_TIME = core::profiler::ASSEMBLER_CUT_BOUNDARY_HOLES_UPDATE_AUX_TIME;
+  static constexpr int LOCATE_OUTER_FRINGE_TIME = core::profiler::ASSEMBLER_LOCATE_OUTER_FRINGE_TIME;
+  static constexpr int OCCLUSION_TIME = core::profiler::ASSEMBLER_OCCLUSION_TIME;
+  static constexpr int OCCLUSION_PAIRWISE_TIME = core::profiler::ASSEMBLER_OCCLUSION_PAIRWISE_TIME;
+  static constexpr int OCCLUSION_PAD_SMOOTH_TIME = core::profiler::ASSEMBLER_OCCLUSION_PAD_SMOOTH_TIME;
+  static constexpr int OCCLUSION_ACCUMULATE_TIME = core::profiler::ASSEMBLER_OCCLUSION_ACCUMULATE_TIME;
+  static constexpr int MINIMIZE_OVERLAP_TIME = core::profiler::ASSEMBLER_MINIMIZE_OVERLAP_TIME;
+  static constexpr int CONNECTIVITY_TIME = core::profiler::ASSEMBLER_CONNECTIVITY_TIME;
+  static constexpr int CONNECTIVITY_LOCATE_RECEIVERS_TIME = core::profiler::ASSEMBLER_CONNECTIVITY_LOCATE_RECEIVERS_TIME;
+  static constexpr int CONNECTIVITY_CHOOSE_DONORS_TIME = core::profiler::ASSEMBLER_CONNECTIVITY_CHOOSE_DONORS_TIME;
+  static constexpr int CONNECTIVITY_FILL_TIME = core::profiler::ASSEMBLER_CONNECTIVITY_FILL_TIME;
+
 };
 
 assembler CreateAssembler(std::shared_ptr<context> Context, assembler::params Params={});
