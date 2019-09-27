@@ -1937,6 +1937,11 @@ void assembler::CutBoundaryHoles_() {
     }
   }
 
+  if (Logger.LoggingDebug()) {
+    MPI_Barrier(Domain.Comm());
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Projecting domain boundaries...");
+  }
+
   // Exchanging in reverse, from points to cells
 
   struct reverse_exchange_m {
@@ -2218,6 +2223,12 @@ void assembler::CutBoundaryHoles_() {
 
   NumDilates.Clear();
 
+  if (Logger.LoggingDebug()) {
+    MPI_Barrier(Domain.Comm());
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done projecting boundaries.");
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Detecting exterior regions...");
+  }
+
   map<int,distributed_field<bool>> BoundaryMasks;
   map<int,distributed_field<bool>> InteriorMasks;
 
@@ -2293,6 +2304,24 @@ void assembler::CutBoundaryHoles_() {
   for (int GridID : LocalCutNGridIDs) {
     long long &NumRemoved = NumRemovedForGrid.Insert(GridID);
     NumRemoved = core::CountDistributedMask(BoundaryHoleMasks(GridID));
+  }
+
+  if (Logger.LoggingDebug()) {
+    MPI_Barrier(Domain.Comm());
+    for (int GridID : Domain.GridIDs()) {
+      if (LocalCutNGridIDs.Contains(GridID)) {
+        const grid &Grid = Domain.Grid(GridID);
+        long long NumRemoved = NumRemovedForGrid(GridID);
+        if (NumRemoved > 0) {
+          std::string NumRemovedString = core::FormatNumber(NumRemoved, "points", "point");
+          Logger.LogDebug(Grid.Comm().Rank() == 0, 2, "%s removed from grid %s.",
+            NumRemovedString, Grid.Name());
+        }
+      }
+      MPI_Barrier(Domain.Comm());
+    }
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done detecting exterior regions.");
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Updating auxiliary grid/overlap data...");
   }
 
   for (int GridID : LocalCutNGridIDs) {
@@ -2414,18 +2443,7 @@ void assembler::CutBoundaryHoles_() {
   MPI_Barrier(Domain.Comm());
 
   if (Logger.LoggingDebug()) {
-    for (int GridID : Domain.GridIDs()) {
-      if (LocalCutNGridIDs.Contains(GridID)) {
-        const grid &Grid = Domain.Grid(GridID);
-        long long NumRemoved = NumRemovedForGrid(GridID);
-        if (NumRemoved > 0) {
-          std::string NumRemovedString = core::FormatNumber(NumRemoved, "points", "point");
-          Logger.LogDebug(Grid.Comm().Rank() == 0, 2, "%s removed from grid %s.",
-            NumRemovedString, Grid.Name());
-        }
-      }
-      MPI_Barrier(Domain.Comm());
-    }
+    Logger.LogDebug(Domain.Comm().Rank() == 0, 2, "Done updating auxiliary grid/overlap data.");
     Logger.LogDebug(Domain.Comm().Rank() == 0, 1, "Done cutting boundary holes.");
   }
 
