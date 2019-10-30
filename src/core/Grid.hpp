@@ -28,7 +28,7 @@ class grid_base {
 
 protected:
 
-  grid_base(std::shared_ptr<context> &&Context, std::string &&Name, MPI_Comm Comm);
+  grid_base(std::shared_ptr<context> &&Context, std::string &&Name, comm &&Comm);
 
   grid_base(const grid_base &Other) = delete;
   grid_base(grid_base &&Other) noexcept = default;
@@ -134,18 +134,18 @@ private:
   std::shared_ptr<const partition> CellPartition_;
 
   grid(std::shared_ptr<context> &&Context, params &&Params);
-  grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
-    range &LocalRange);
-  grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
-    range &LocalRange, const cart &CellCart, const range &CellLocalRange);
-  grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
-    range &LocalRange, const cart &CellCart, const range &CellLocalRange, const range
+  grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, comm &&Comm, const cart
+    &Cart, const range &LocalRange);
+  grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, comm &&Comm, const cart
+    &Cart, const range &LocalRange, const cart &CellCart, const range &CellLocalRange);
+  grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, comm &&Comm, const cart
+    &Cart, const range &LocalRange, const cart &CellCart, const range &CellLocalRange, const range
     &CellExtendedRange);
-  grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
-    range &LocalRange, const range &ExtendedRange, const cart &CellCart, const range
+  grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, comm &&Comm, const cart
+    &Cart, const range &LocalRange, const range &ExtendedRange, const cart &CellCart, const range
     &CellLocalRange, const range &CellExtendedRange);
-  grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
-    range &LocalRange, const range &ExtendedRange, const cart &CellCart, const range
+  grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, comm &&Comm, const cart
+    &Cart, const range &LocalRange, const range &ExtendedRange, const cart &CellCart, const range
     &CellLocalRange, const range &CellExtendedRange, const array<int> &NeighborRanks);
 
 };

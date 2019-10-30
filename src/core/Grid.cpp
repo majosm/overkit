@@ -28,10 +28,10 @@ namespace ovk {
 
 namespace grid_internal {
 
-grid_base::grid_base(std::shared_ptr<context> &&Context, std::string &&Name, MPI_Comm Comm):
+grid_base::grid_base(std::shared_ptr<context> &&Context, std::string &&Name, comm &&Comm):
   Context_(std::move(Context)),
   Name_(std::move(Name)),
-  Comm_(DuplicateComm(Comm))
+  Comm_(std::move(Comm))
 {} 
 
 grid_base::~grid_base() noexcept {
@@ -47,40 +47,41 @@ grid_base::~grid_base() noexcept {
 }
 
 grid::grid(std::shared_ptr<context> &&Context, params &&Params):
-  grid(std::move(Context), std::move(Params), Params.NumDims_, Params.Cart_, Params.LocalRange_)
+  grid(std::move(Context), std::move(Params), Params.NumDims_, DuplicateComm(Params.Comm_),
+    Params.Cart_, Params.LocalRange_)
 {}
 
-grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
-  range &LocalRange):
-  grid(std::move(Context), std::move(Params), NumDims, Cart, LocalRange,
+grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, comm &&Comm, const cart
+  &Cart, const range &LocalRange):
+  grid(std::move(Context), std::move(Params), NumDims, std::move(Comm), Cart, LocalRange,
     core::CartPointToCell(Cart), core::RangePointToCell(Cart, LocalRange))
 {}
 
-grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
-  range &LocalRange, const cart &CellCart, const range &CellLocalRange):
-  grid(std::move(Context), std::move(Params), NumDims, Cart, LocalRange, CellCart, CellLocalRange,
-    core::ExtendLocalRange(CellCart, CellLocalRange, 2))
+grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, comm &&Comm, const cart
+  &Cart, const range &LocalRange, const cart &CellCart, const range &CellLocalRange):
+  grid(std::move(Context), std::move(Params), NumDims, std::move(Comm), Cart, LocalRange, CellCart,
+    CellLocalRange, core::ExtendLocalRange(CellCart, CellLocalRange, 2))
 {}
 
-grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
-  range &LocalRange, const cart &CellCart, const range &CellLocalRange, const range
+grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, comm &&Comm, const cart
+  &Cart, const range &LocalRange, const cart &CellCart, const range &CellLocalRange, const range
   &CellExtendedRange):
-  grid(std::move(Context), std::move(Params), NumDims, Cart, LocalRange, core::RangeCellToPointAll(
-    Cart, CellExtendedRange), CellCart, CellLocalRange, CellExtendedRange)
+  grid(std::move(Context), std::move(Params), NumDims, std::move(Comm), Cart, LocalRange,
+    core::RangeCellToPointAll(Cart, CellExtendedRange), CellCart, CellLocalRange, CellExtendedRange)
 {}
 
-grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
-  range &LocalRange, const range &ExtendedRange, const cart &CellCart, const range &CellLocalRange,
-  const range &CellExtendedRange):
-  grid(std::move(Context), std::move(Params), NumDims, Cart, LocalRange, ExtendedRange, CellCart,
-    CellLocalRange, CellExtendedRange, core::DetectNeighbors(Cart, Params.Comm_, LocalRange,
-    core::CreateDecompHash(NumDims, Params.Comm_, LocalRange)))
+grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, comm &&Comm, const cart
+  &Cart, const range &LocalRange, const range &ExtendedRange, const cart &CellCart, const range
+  &CellLocalRange, const range &CellExtendedRange):
+  grid(std::move(Context), std::move(Params), NumDims, std::move(Comm), Cart, LocalRange,
+    ExtendedRange, CellCart, CellLocalRange, CellExtendedRange, core::DetectNeighbors(Cart, Comm,
+    LocalRange, core::CreateDecompHash(NumDims, Comm, LocalRange)))
 {}
 
-grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
-  range &LocalRange, const range &ExtendedRange, const cart &CellCart, const range &CellLocalRange,
-  const range &CellExtendedRange, const array<int> &NeighborRanks):
-  grid_base(std::move(Context), std::move(*Params.Name_), Params.Comm_),
+grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, comm &&Comm, const cart
+  &Cart, const range &LocalRange, const range &ExtendedRange, const cart &CellCart, const range
+  &CellLocalRange, const range &CellExtendedRange, const array<int> &NeighborRanks):
+  grid_base(std::move(Context), std::move(*Params.Name_), std::move(Comm)),
   NumDims_(NumDims),
   Partition_(std::make_shared<partition>(Context_, Cart, Comm_, LocalRange, ExtendedRange, 1,
     NeighborRanks)),
