@@ -136,9 +136,8 @@ public:
 
   const std::string &Name() const { return *Name_; }
 
-  int ConnectivityCount() const;
-
-  const elem_set<int,2> &ConnectivityIDs() const;
+  int ConnectivityCount() const { return ConnectivityRecords_.Count(); }
+  const elem_set<int,2> &ConnectivityIDs() const { return ConnectivityRecords_.Keys(); }
 
   bool ConnectivityExists(const elem<int,2> &ConnectivityID) const;
 
@@ -150,16 +149,16 @@ public:
 
   void ClearConnectivities();
 
-  int LocalConnectivityMCount() const;
-  const elem_set<int,2> &LocalConnectivityMIDs() const;
+  int LocalConnectivityMCount() const { return LocalMs_.Count(); }
+  const elem_set<int,2> &LocalConnectivityMIDs() const { return LocalMs_.Keys(); }
 
   const connectivity_m &ConnectivityM(const elem<int,2> &ConnectivityID) const;
   bool EditingConnectivityM(const elem<int,2> &ConnectivityID) const;
   edit_handle<connectivity_m> EditConnectivityM(const elem<int,2> &ConnectivityID);
   void RestoreConnectivityM(const elem<int,2> &ConnectivityID);
 
-  int LocalConnectivityNCount() const;
-  const elem_set<int,2> &LocalConnectivityNIDs() const;
+  int LocalConnectivityNCount() const { return LocalNs_.Count(); }
+  const elem_set<int,2> &LocalConnectivityNIDs() const { return LocalNs_.Keys(); }
 
   const connectivity_n &ConnectivityN(const elem<int,2> &ConnectivityID) const;
   bool EditingConnectivityN(const elem<int,2> &ConnectivityID) const;

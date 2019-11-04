@@ -130,9 +130,8 @@ public:
 
   const std::string &Name() const { return *Name_; }
 
-  int OverlapCount() const;
-
-  const elem_set<int,2> &OverlapIDs() const;
+  int OverlapCount() const { return OverlapRecords_.Count(); }
+  const elem_set<int,2> &OverlapIDs() const { return OverlapRecords_.Keys(); }
 
   bool OverlapExists(const elem<int,2> &OverlapID) const;
 
@@ -144,16 +143,16 @@ public:
 
   void ClearOverlaps();
 
-  int LocalOverlapMCount() const;
-  const elem_set<int,2> &LocalOverlapMIDs() const;
+  int LocalOverlapMCount() const { return LocalMs_.Count(); }
+  const elem_set<int,2> &LocalOverlapMIDs() const { return LocalMs_.Keys(); }
 
   const overlap_m &OverlapM(const elem<int,2> &OverlapID) const;
   bool EditingOverlapM(const elem<int,2> &OverlapID) const;
   edit_handle<overlap_m> EditOverlapM(const elem<int,2> &OverlapID);
   void RestoreOverlapM(const elem<int,2> &OverlapID);
 
-  int LocalOverlapNCount() const;
-  const elem_set<int,2> &LocalOverlapNIDs() const;
+  int LocalOverlapNCount() const { return LocalNs_.Count(); }
+  const elem_set<int,2> &LocalOverlapNIDs() const { return LocalNs_.Keys(); }
 
   const overlap_n &OverlapN(const elem<int,2> &OverlapID) const;
   bool EditingOverlapN(const elem<int,2> &OverlapID) const;

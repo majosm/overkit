@@ -119,9 +119,8 @@ public:
 
   const std::string &Name() const { return *Name_; }
 
-  int GeometryCount() const;
-
-  const set<int> &GeometryIDs() const;
+  int GeometryCount() const { return GeometryRecords_.Count(); }
+  const set<int> &GeometryIDs() const { return GeometryRecords_.Keys(); }
 
   bool GeometryExists(int GridID) const;
 
@@ -134,9 +133,8 @@ public:
 
   void ClearGeometries();
 
-  int LocalGeometryCount() const;
-
-  const set<int> &LocalGeometryIDs() const;
+  int LocalGeometryCount() const { return Locals_.Count(); }
+  const set<int> &LocalGeometryIDs() const { return Locals_.Keys(); }
 
   const geometry &Geometry(int GridID) const;
   bool EditingGeometry(int GridID) const;

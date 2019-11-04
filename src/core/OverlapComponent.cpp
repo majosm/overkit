@@ -201,18 +201,6 @@ void overlap_component::SyncEdits_() {
 
 }
 
-int overlap_component::OverlapCount() const {
-
-  return OverlapRecords_.Count();
-
-}
-
-const elem_set<int,2> &overlap_component::OverlapIDs() const {
-
-  return OverlapRecords_.Keys();
-
-}
-
 bool overlap_component::OverlapExists(const elem<int,2> &OverlapID) const {
 
   const core::domain_base &Domain = *Domain_;
@@ -515,18 +503,6 @@ void overlap_component::ClearOverlaps() {
 
 }
 
-int overlap_component::LocalOverlapMCount() const {
-
-  return LocalMs_.Count();
-
-}
-
-const elem_set<int,2> &overlap_component::LocalOverlapMIDs() const {
-
-  return LocalMs_.Keys();
-
-}
-
 const overlap_m &overlap_component::OverlapM(const elem<int,2> &OverlapID) const {
 
   const core::domain_base &Domain = *Domain_;
@@ -632,18 +608,6 @@ void overlap_component::RestoreOverlapM(const elem<int,2> &OverlapID) {
   }
 
   Editor.Restore();
-
-}
-
-int overlap_component::LocalOverlapNCount() const {
-
-  return LocalNs_.Count();
-
-}
-
-const elem_set<int,2> &overlap_component::LocalOverlapNIDs() const {
-
-  return LocalNs_.Keys();
 
 }
 

@@ -116,9 +116,8 @@ public:
 
   const std::string &Name() const { return *Name_; }
 
-  int StateCount() const;
-
-  const set<int> &StateIDs() const;
+  int StateCount() const { return StateRecords_.Count(); }
+  const set<int> &StateIDs() const { return StateRecords_.Keys(); }
 
   bool StateExists(int GridID) const;
 
@@ -130,9 +129,8 @@ public:
 
   void ClearStates();
 
-  int LocalStateCount() const;
-
-  const set<int> &LocalStateIDs() const;
+  int LocalStateCount() const { return Locals_.Count(); }
+  const set<int> &LocalStateIDs() const { return Locals_.Keys(); }
 
   const state &State(int GridID) const;
   bool EditingState(int GridID) const;

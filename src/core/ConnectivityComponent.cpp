@@ -202,18 +202,6 @@ void connectivity_component::SyncEdits_() {
 
 }
 
-int connectivity_component::ConnectivityCount() const {
-
-  return ConnectivityRecords_.Count();
-
-}
-
-const elem_set<int,2> &connectivity_component::ConnectivityIDs() const {
-
-  return ConnectivityRecords_.Keys();
-
-}
-
 bool connectivity_component::ConnectivityExists(const elem<int,2> &ConnectivityID) const {
 
   const core::domain_base &Domain = *Domain_;
@@ -520,18 +508,6 @@ void connectivity_component::ClearConnectivities() {
 
 }
 
-int connectivity_component::LocalConnectivityMCount() const {
-
-  return LocalMs_.Count();
-
-}
-
-const elem_set<int,2> &connectivity_component::LocalConnectivityMIDs() const {
-
-  return LocalMs_.Keys();
-
-}
-
 const connectivity_m &connectivity_component::ConnectivityM(const elem<int,2> &ConnectivityID) const
   {
 
@@ -641,18 +617,6 @@ void connectivity_component::RestoreConnectivityM(const elem<int,2> &Connectivit
   }
 
   Editor.Restore();
-
-}
-
-int connectivity_component::LocalConnectivityNCount() const {
-
-  return LocalNs_.Count();
-
-}
-
-const elem_set<int,2> &connectivity_component::LocalConnectivityNIDs() const {
-
-  return LocalNs_.Keys();
 
 }
 

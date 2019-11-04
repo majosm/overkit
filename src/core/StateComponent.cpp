@@ -172,18 +172,6 @@ void state_component::SyncEdits_() {
 
 }
 
-int state_component::StateCount() const {
-
-  return StateRecords_.Count();
-
-}
-
-const set<int> &state_component::StateIDs() const {
-
-  return StateRecords_.Keys();
-
-}
-
 bool state_component::StateExists(int GridID) const {
 
   const core::domain_base &Domain = *Domain_;
@@ -487,18 +475,6 @@ void state_component::ClearStates() {
   MPI_Barrier(Domain.Comm());
 
   Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Done clearing states.");
-
-}
-
-int state_component::LocalStateCount() const {
-
-  return Locals_.Count();
-
-}
-
-const set<int> &state_component::LocalStateIDs() const {
-
-  return Locals_.Keys();
 
 }
 

@@ -172,18 +172,6 @@ void geometry_component::SyncEdits_() {
 
 }
 
-int geometry_component::GeometryCount() const {
-
-  return GeometryRecords_.Count();
-
-}
-
-const set<int> &geometry_component::GeometryIDs() const {
-
-  return GeometryRecords_.Keys();
-
-}
-
 bool geometry_component::GeometryExists(int GridID) const {
 
   const core::domain_base &Domain = *Domain_;
@@ -487,18 +475,6 @@ void geometry_component::ClearGeometries() {
   MPI_Barrier(Domain.Comm());
 
   Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Done clearing geometries.");
-
-}
-
-int geometry_component::LocalGeometryCount() const {
-
-  return Locals_.Count();
-
-}
-
-const set<int> &geometry_component::LocalGeometryIDs() const {
-
-  return Locals_.Keys();
 
 }
 
