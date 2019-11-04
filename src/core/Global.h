@@ -60,23 +60,6 @@ static inline bool ovkValidEndian(ovk_endian Endian) {
 
 }
 
-typedef enum {
-  OVK_PERIODIC_STORAGE_UNIQUE,
-  OVK_PERIODIC_STORAGE_DUPLICATED
-} ovk_periodic_storage;
-
-static inline bool ovkValidPeriodicStorage(ovk_periodic_storage PeriodicStorage) {
-
-  switch (PeriodicStorage) {
-  case OVK_PERIODIC_STORAGE_UNIQUE:
-  case OVK_PERIODIC_STORAGE_DUPLICATED:
-    return true;
-  default:
-    return false;
-  }
-
-}
-
 #ifdef __cplusplus
 }
 #endif

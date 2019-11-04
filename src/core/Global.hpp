@@ -43,15 +43,6 @@ inline bool ValidEndian(endian Endian) {
   return ovkValidEndian(ovk_endian(Endian));
 }
 
-enum class periodic_storage : typename std::underlying_type<ovk_periodic_storage>::type {
-  UNIQUE = OVK_PERIODIC_STORAGE_UNIQUE,
-  DUPLICATED = OVK_PERIODIC_STORAGE_DUPLICATED
-};
-
-inline bool ValidPeriodicStorage(periodic_storage PeriodicStorage) {
-  return ovkValidPeriodicStorage(ovk_periodic_storage(PeriodicStorage));
-}
-
 }
 
 #endif

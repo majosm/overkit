@@ -36,6 +36,7 @@ set(SOURCES
 
 set(PUBLIC_HEADERS
   Assembler.h
+  Cart.h
   ConnectivityComponent.h
   ConnectivityM.h
   ConnectivityN.h

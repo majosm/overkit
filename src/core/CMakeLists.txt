@@ -113,6 +113,7 @@ set(INTERNAL_HEADERS
   ArrayTraitsBase.hpp
   Assembler.h
   Box.inl
+  Cart.h
   Cart.inl
   Collect.hpp
   CollectAll.hpp

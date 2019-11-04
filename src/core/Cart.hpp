@@ -4,6 +4,8 @@
 #ifndef OVK_CORE_CART_HPP_INCLUDED
 #define OVK_CORE_CART_HPP_INCLUDED
 
+#include <ovk/core/Cart.h>
+#include <ovk/core/DataType.hpp>
 #include <ovk/core/Debug.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Optional.hpp>
@@ -11,6 +13,20 @@
 #include <ovk/core/Tuple.hpp>
 
 namespace ovk {
+
+enum class periodic_storage : typename std::underlying_type<ovk_periodic_storage>::type {
+  UNIQUE = OVK_PERIODIC_STORAGE_UNIQUE,
+  DUPLICATED = OVK_PERIODIC_STORAGE_DUPLICATED
+};
+
+inline bool ValidPeriodicStorage(periodic_storage PeriodicStorage) {
+  return ovkValidPeriodicStorage(ovk_periodic_storage(PeriodicStorage));
+}
+
+namespace core {
+template <> struct data_type_traits<periodic_storage> : data_type_traits<typename
+  std::underlying_type<periodic_storage>::type> {};
+}
 
 class cart {
 

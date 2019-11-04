@@ -4,6 +4,7 @@
 #ifndef OVK_CORE_C_GRID_H_INCLUDED
 #define OVK_CORE_C_GRID_H_INCLUDED
 
+#include <ovk/core-c/Cart.h>
 #include <ovk/core-c/Context.h>
 #include <ovk/core-c/Global.h>
 
