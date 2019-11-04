@@ -236,15 +236,17 @@ struct generate_subdivisions {
   field_view<const bool> CellActiveMask_;
   field_view<const double> CellVolumes_;
   double MaxUnoccupiedVolume_;
+  int MaxCells_;
   int MaxDepth_;
   generate_subdivisions(int NumDims, const array<distributed_field<double>> &Coords, const
     distributed_field<bool> &CellActiveMask, const distributed_field<double> &CellVolumes,
-    double MaxUnoccupiedVolume, int MaxDepth):
+    double MaxUnoccupiedVolume, int MaxCells, int MaxDepth):
     NumDims_(NumDims),
     Coords_({MAX_DIMS}, {Coords(0), Coords(1), Coords(2)}),
     CellActiveMask_(CellActiveMask),
     CellVolumes_(CellVolumes),
     MaxUnoccupiedVolume_(MaxUnoccupiedVolume),
+    MaxCells_(MaxCells),
     MaxDepth_(MaxDepth)
   {}
   template <typename T> array<range> operator()(const T &Manipulator, const range &CellRange) {
@@ -282,8 +284,8 @@ struct generate_subdivisions {
   template <typename T> array<range> Subdivide_(const T &Manipulator, const box &BaseBounds, const
     range &CellRange, double UnoccupiedVolume, int Depth) {
     array<range> SubdivisionRanges;
-    bool Leaf = Depth == MaxDepth_ || UnoccupiedVolume <= MaxUnoccupiedVolume_ *
-      BoxVolume_(BaseBounds);
+    bool Leaf = Depth == MaxDepth_ || (UnoccupiedVolume <= MaxUnoccupiedVolume_ *
+      BoxVolume_(BaseBounds) && CellRange.Count() <= MaxCells_);
     if (!Leaf) {
       int BestSplitDim = -1;
       range BestLeftCellRange;
@@ -463,9 +465,11 @@ void assembler::DetectOverlap_() {
     array<range> &SubdivisionRanges = SubdivisionRangesForLocalGrid.Insert(GridID);
     double DepthAdjust = Options_.OverlapAccelDepthAdjust(GridID);
     double MaxUnoccupiedVolume = std::pow(2., -2.-DepthAdjust);
+    int MaxCells = 1 << 13;
     int MaxDepth = 8;
     SubdivisionRanges = GeometryManipulator.Apply(generate_subdivisions(NumDims, Geometry.Coords(),
-      CellActiveMask, Geometry.CellVolumes(), MaxUnoccupiedVolume, MaxDepth), CellLocalRange);
+      CellActiveMask, Geometry.CellVolumes(), MaxUnoccupiedVolume, MaxCells, MaxDepth),
+      CellLocalRange);
     TotalSubdivisions += SubdivisionRanges.Count();
   }
 
