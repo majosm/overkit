@@ -36,14 +36,24 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
   ProcRange_(MakeEmptyRange(NumDims)),
   ProcIndexer_(ProcRange_),
   ProcSize_(MakeUniformTuple<coord_type>(NumDims, coord_type(0), coord_type(1))),
+  AuxDataNumBytes_(0),
+  AuxDataMPIType_(MPI_DATATYPE_NULL),
   BinRange_(MakeEmptyRange(NumDims))
 {}
 
 template <typename CoordType> distributed_region_hash<CoordType>::distributed_region_hash(int
-  NumDims, comm_view Comm, int NumLocalRegions, array_view<const region_type> LocalRegions,
-  array_view<const int> LocalRegionTags):
+  NumDims, comm_view Comm, int NumLocalRegions, array_view<const region_type> LocalRegions):
+  distributed_region_hash(NumDims, Comm, NumLocalRegions, LocalRegions, array<const byte *>({
+    NumLocalRegions}, nullptr), 0, MPI_DATATYPE_NULL)
+{}
+
+template <typename CoordType> distributed_region_hash<CoordType>::distributed_region_hash(int
+  NumDims, comm_view Comm, int NumLocalRegions, array_view<const region_type> LocalRegions, const
+  array<const byte *> &LocalRegionAuxData, long long AuxDataNumBytes, MPI_Datatype AuxDataMPIType):
   NumDims_(NumDims),
-  Comm_(Comm)
+  Comm_(Comm),
+  AuxDataNumBytes_(AuxDataNumBytes),
+  AuxDataMPIType_(AuxDataMPIType)
 {
 
   MPI_Datatype MPICoordType = GetMPIDataType<coord_type>();
@@ -142,12 +152,15 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
     int NumRegions = NumRegionsFromRank(Rank);
     for (int iRegionFromRank = 0; iRegionFromRank < NumRegions; ++iRegionFromRank) {
       region_data &Data = RegionData_(iNextRegion);
-      MPI_Irecv(Data.Region.Begin().Data(), MAX_DIMS, MPICoordType, Rank, 0, Comm_,
+      MPI_Irecv(Data.Region_.Begin().Data(), MAX_DIMS, MPICoordType, Rank, 0, Comm_,
         &Requests.Append());
-      MPI_Irecv(Data.Region.End().Data(), MAX_DIMS, MPICoordType, Rank, 0, Comm_,
+      MPI_Irecv(Data.Region_.End().Data(), MAX_DIMS, MPICoordType, Rank, 0, Comm_,
         &Requests.Append());
-      Data.Rank = Rank;
-      MPI_Irecv(&Data.Tag, 1, MPI_INT, Rank, 0, Comm_, &Requests.Append());
+      Data.Rank_ = Rank;
+      Data.AuxData_.Resize({AuxDataNumBytes_});
+      if (AuxDataNumBytes_ > 0) {
+        MPI_Irecv(Data.AuxData_.Data(), 1, AuxDataMPIType_, Rank, 0, Comm_, &Requests.Append());
+      }
       ++iNextRegion;
     }
   }
@@ -159,7 +172,10 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
         &Requests.Append());
       MPI_Isend(LocalRegions(iRegion).End().Data(), MAX_DIMS, MPICoordType, Rank, 0, Comm_,
         &Requests.Append());
-      MPI_Isend(&LocalRegionTags(iRegion), 1, MPI_INT, Rank, 0, Comm_, &Requests.Append());
+      if (AuxDataNumBytes_ > 0) {
+        MPI_Isend(LocalRegionAuxData(iRegion), 1, AuxDataMPIType_, Rank, 0, Comm_,
+          &Requests.Append());
+      }
     }
   }
 
@@ -173,7 +189,7 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
     double AvgBinRegionLength = 0.;
     for (auto &Data : RegionData_) {
       for (int iDim = 0; iDim < NumDims_; ++iDim) {
-        AvgBinRegionLength += double(Data.Region.Size(iDim));
+        AvgBinRegionLength += double(Data.Region_.Size(iDim));
       }
     }
     AvgBinRegionLength /= double(NumDims_*RegionData_.Count());
@@ -481,7 +497,7 @@ template <typename CoordType> map<int,distributed_region_hash_retrieved_bins<Coo
   struct region_send_recv {
     array<coord_type,3> Regions;
     array<int> Ranks;
-    array<int> Tags;
+    array<byte,2> AuxData;
   };
 
   map<int,region_send_recv> RecvRegionData;
@@ -492,11 +508,14 @@ template <typename CoordType> map<int,distributed_region_hash_retrieved_bins<Coo
     int NumRegions = NumRecvRegions(Rank);
     Recv.Regions.Resize({{2,MAX_DIMS,NumRegions}});
     Recv.Ranks.Resize({NumRegions});
-    Recv.Tags.Resize({NumRegions});
+    Recv.AuxData.Resize({{NumRegions,AuxDataNumBytes_}});
     MPI_Irecv(Recv.Regions.Data(), 2*MAX_DIMS*NumRegions, MPICoordType, Rank, 0, Comm_,
       &Requests.Append());
     MPI_Irecv(Recv.Ranks.Data(), NumRegions, MPI_INT, Rank, 0, Comm_, &Requests.Append());
-    MPI_Irecv(Recv.Tags.Data(), NumRegions, MPI_INT, Rank, 0, Comm_, &Requests.Append());
+    if (AuxDataNumBytes_ > 0) {
+      MPI_Irecv(Recv.AuxData.Data(), NumRegions, AuxDataMPIType_, Rank, 0, Comm_,
+        &Requests.Append());
+    }
   }
 
   map<int,region_send_recv> SendRegionData;
@@ -508,21 +527,24 @@ template <typename CoordType> map<int,distributed_region_hash_retrieved_bins<Coo
     int NumRegions = RegionIndices.Count();
     Send.Regions.Resize({{2,MAX_DIMS,NumRegions}});
     Send.Ranks.Resize({NumRegions});
-    Send.Tags.Resize({NumRegions});
+    Send.AuxData.Resize({{NumRegions,AuxDataNumBytes_}});
     for (int iSendRegion = 0; iSendRegion < NumRegions; ++iSendRegion) {
       int iRegion = RegionIndices[iSendRegion];
       const region_data &Data = RegionData_(iRegion);
-      Send.Ranks(iSendRegion) = Data.Rank;
+      Send.Ranks(iSendRegion) = Data.Rank_;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        Send.Regions(0,iDim,iSendRegion) = Data.Region.Begin(iDim);
-        Send.Regions(1,iDim,iSendRegion) = Data.Region.End(iDim);
+        Send.Regions(0,iDim,iSendRegion) = Data.Region_.Begin(iDim);
+        Send.Regions(1,iDim,iSendRegion) = Data.Region_.End(iDim);
       }
-      Send.Tags(iSendRegion) = Data.Tag;
+      std::memcpy(Send.AuxData.Data(iSendRegion,0), Data.AuxData_.Data(), AuxDataNumBytes_);
     }
     MPI_Isend(Send.Regions.Data(), 2*MAX_DIMS*NumRegions, MPICoordType, Rank, 0, Comm_,
       &Requests.Append());
     MPI_Isend(Send.Ranks.Data(), NumRegions, MPI_INT, Rank, 0, Comm_, &Requests.Append());
-    MPI_Isend(Send.Tags.Data(), NumRegions, MPI_INT, Rank, 0, Comm_, &Requests.Append());
+    if (AuxDataNumBytes_ > 0) {
+      MPI_Isend(Send.AuxData.Data(), NumRegions, AuxDataMPIType_, Rank, 0, Comm_,
+        &Requests.Append());
+    }
   }
 
   MPI_Waitall(Requests.Count(), Requests.Data(), MPI_STATUSES_IGNORE);
@@ -617,37 +639,38 @@ template <typename CoordType> map<int,distributed_region_hash_retrieved_bins<Coo
     retrieved_bins &Bins = RetrievedBins.Insert(Rank);
     const region_send_recv &Recv = RecvRegionData(Rank);
     int NumRegions = Recv.Ranks.Count();
-    Bins.RegionData.Resize({NumRegions});
+    Bins.RegionData_.Resize({NumRegions});
     for (int iRegion = 0; iRegion < NumRegions; ++iRegion) {
-      region_data &Data = Bins.RegionData(iRegion);
-      Data.Region.Begin() = {
+      region_data &Data = Bins.RegionData_(iRegion);
+      Data.Region_.Begin() = {
         Recv.Regions(0,0,iRegion),
         Recv.Regions(0,1,iRegion),
         Recv.Regions(0,2,iRegion)
       };
-      Data.Region.End() = {
+      Data.Region_.End() = {
         Recv.Regions(1,0,iRegion),
         Recv.Regions(1,1,iRegion),
         Recv.Regions(1,2,iRegion)
       };
-      Data.Rank = Recv.Ranks(iRegion);
-      Data.Tag = Recv.Tags(iRegion);
+      Data.Rank_ = Recv.Ranks(iRegion);
+      Data.AuxData_.Resize({AuxDataNumBytes_});
+      std::memcpy(Data.AuxData_.Data(), Recv.AuxData.Data(iRegion,0), AuxDataNumBytes_);
     }
     bin_index_data &BinIndexData = RecvBinIndexData(Rank);
     const array<int> &BinIndices = BinsReceiving(Rank);
     int NumBins = BinIndices.Count();
     long long TotalBinRegions = BinIndexData.BinRegionIndices.Count();
-    Bins.BinRegionIndicesIntervals.Reserve(NumBins);
-    Bins.BinRegionIndices.Resize({TotalBinRegions});
+    Bins.BinRegionIndicesIntervals_.Reserve(NumBins);
+    Bins.BinRegionIndices_.Resize({TotalBinRegions});
     long long iBinRegionIndex = 0;
     for (int iRecvBin = 0; iRecvBin < NumBins; ++iRecvBin) {
       int iBin = BinIndices(iRecvBin);
       int NumRegions = BinIndexData.NumRegionsPerBin(iRecvBin);
-      interval<long long> &Interval = Bins.BinRegionIndicesIntervals.Insert(iBin);
+      interval<long long> &Interval = Bins.BinRegionIndicesIntervals_.Insert(iBin);
       Interval = {iBinRegionIndex,iBinRegionIndex+NumRegions};
       iBinRegionIndex += NumRegions;
     }
-    Bins.BinRegionIndices = std::move(BinIndexData.BinRegionIndices);
+    Bins.BinRegionIndices_ = std::move(BinIndexData.BinRegionIndices);
   }
 
   return RetrievedBins;

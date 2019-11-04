@@ -424,9 +424,9 @@ void assembler::DetectOverlap_() {
   }
 
   array<box> SubdivisionBoxes;
-  array<int> SubdivisionTags;
+  array<int> SubdivisionGridIDs;
   SubdivisionBoxes.Reserve(TotalSubdivisions);
-  SubdivisionTags.Reserve(TotalSubdivisions);
+  SubdivisionGridIDs.Reserve(TotalSubdivisions);
 
   for (int iLocalGrid = 0; iLocalGrid < Domain.LocalGridCount(); ++iLocalGrid) {
     int GridID = Domain.LocalGridIDs()[iLocalGrid];
@@ -439,7 +439,7 @@ void assembler::DetectOverlap_() {
       Geometry.Coords(), CellActiveMask, MaxOverlapTolerances(GridID), Subdivisions);
     for (int iSubdivision = 0; iSubdivision < Subdivisions.Count(); ++iSubdivision) {
       SubdivisionBoxes.Append(Boxes(iSubdivision));
-      SubdivisionTags.Append(GridID);
+      SubdivisionGridIDs.Append(GridID);
     }
   }
 
@@ -448,7 +448,7 @@ void assembler::DetectOverlap_() {
 
   bounding_box_hash &BoundingBoxHash = AssemblyData.BoundingBoxHash;
   BoundingBoxHash = bounding_box_hash(NumDims, Domain.Comm(), TotalSubdivisions, SubdivisionBoxes,
-    SubdivisionTags);
+    SubdivisionGridIDs);
 
   Profiler.Stop(OVERLAP_BB_HASH_CREATE_TIME);
 
@@ -535,20 +535,18 @@ void assembler::DetectOverlap_() {
           int BinRank = BinID(0);
           int iBin = BinID(1);
           const bounding_box_hash_retrieved_bins &Bins = RetrievedBins(BinRank);
-          const interval<long long> &RegionIndicesInterval = Bins.BinRegionIndicesIntervals(iBin);
+          array_view<const int> RegionIndices = Bins.BinRegionIndices(iBin);
           tuple<double> PointCoords = {
             Coords(0)(Point),
             Coords(1)(Point),
             Coords(2)(Point)
           };
-          for (long long iBinRegionIndex = RegionIndicesInterval.Begin(0); iBinRegionIndex <
-            RegionIndicesInterval.End(0); ++iBinRegionIndex) {
-            int iRegion = Bins.BinRegionIndices(iBinRegionIndex);
+          for (int iRegion : RegionIndices) {
             const bounding_box_hash_region_data &RegionData = Bins.RegionData(iRegion);
-            int MGridID = RegionData.Tag;
-            if (Options_.Overlappable({MGridID,NGridID}) && RegionData.Region.Contains(PointCoords))
-              {
-              MGridIDsAndRanks.Fetch(MGridID).Insert(RegionData.Rank);
+            int MGridID = RegionData.AuxData<int>();
+            if (Options_.Overlappable({MGridID,NGridID}) && RegionData.Region()
+              .Contains(PointCoords)) {
+              MGridIDsAndRanks.Fetch(MGridID).Insert(RegionData.Rank());
             }
           }
         }
@@ -995,20 +993,20 @@ void assembler::DetectOverlap_() {
           int BinRank = BinID(0);
           int iBin = BinID(1);
           const bounding_box_hash_retrieved_bins &Bins = RetrievedBins(BinRank);
-          const interval<long long> &RegionIndicesInterval = Bins.BinRegionIndicesIntervals(iBin);
+          array_view<const int> RegionIndices = Bins.BinRegionIndices(iBin);
           tuple<double> PointCoords = {
             Coords(0)(Point),
             Coords(1)(Point),
             Coords(2)(Point)
           };
-          for (long long iBinRegionIndex = RegionIndicesInterval.Begin(0); iBinRegionIndex <
-            RegionIndicesInterval.End(0); ++iBinRegionIndex) {
-            int iRegion = Bins.BinRegionIndices(iBinRegionIndex);
+          for (int iRegion : RegionIndices) {
             const bounding_box_hash_region_data &RegionData = Bins.RegionData(iRegion);
-            int MGridID = RegionData.Tag;
+            int MGridID = RegionData.AuxData<int>();
             elem<int,2> IDPair = {MGridID,NGridID};
-            if (!RegionData.Region.Contains(PointCoords) || !Options_.Overlappable(IDPair)) continue;
-            const core::overlap_accel &OverlapAccel = OverlapAccels({MGridID,RegionData.Rank});
+            if (!RegionData.Region().Contains(PointCoords) || !Options_.Overlappable(IDPair)) {
+              continue;
+            }
+            const core::overlap_accel &OverlapAccel = OverlapAccels({MGridID,RegionData.Rank()});
             auto MaybeCell = OverlapAccel.FindCell(PointCoords, Options_.OverlapTolerance(IDPair));
             if (MaybeCell) {
               const tuple<int> &Cell = *MaybeCell;

@@ -2032,13 +2032,11 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
       int BinRank = BinID(0);
       int iBin = BinID(1);
       const core::decomp_hash_retrieved_bins &Bins = RetrievedBins(BinRank);
-      const interval<long long> &RegionIndicesInterval = Bins.BinRegionIndicesIntervals(iBin);
-      for (long long iBinRegionIndex = RegionIndicesInterval.Begin(0); iBinRegionIndex <
-        RegionIndicesInterval.End(0); ++iBinRegionIndex) {
-        int iRegion = Bins.BinRegionIndices(iBinRegionIndex);
+      array_view<const int> RegionIndices = Bins.BinRegionIndices(iBin);
+      for (int iRegion : RegionIndices) {
         const core::decomp_hash_region_data &RegionData = Bins.RegionData(iRegion);
-        if (RegionData.Region.Contains(Point)) {
-          ChunkDonorRanksData(iDonorPoint) = RegionData.Rank;
+        if (RegionData.Region().Contains(Point)) {
+          ChunkDonorRanksData(iDonorPoint) = RegionData.Rank();
           break;
         }
       }
@@ -2086,13 +2084,11 @@ void DistributeGridConnectivityData(const xintout_grid &XINTOUTGrid, const grid 
       int BinRank = BinID(0);
       int iBin = BinID(1);
       const core::decomp_hash_retrieved_bins &Bins = RetrievedBins(BinRank);
-      const interval<long long> &RegionIndicesInterval = Bins.BinRegionIndicesIntervals(iBin);
-      for (long long iBinRegionIndex = RegionIndicesInterval.Begin(0); iBinRegionIndex <
-        RegionIndicesInterval.End(0); ++iBinRegionIndex) {
-        int iRegion = Bins.BinRegionIndices(iBinRegionIndex);
+      array_view<const int> RegionIndices = Bins.BinRegionIndices(iBin);
+      for (int iRegion : RegionIndices) {
         const core::decomp_hash_region_data &RegionData = Bins.RegionData(iRegion);
-        if (RegionData.Region.Contains(Point)) {
-          ChunkReceiverRanks(iReceiver) = RegionData.Rank;
+        if (RegionData.Region().Contains(Point)) {
+          ChunkReceiverRanks(iReceiver) = RegionData.Rank();
           break;
         }
       }

@@ -86,13 +86,11 @@ array<int> DetectNeighbors(const cart &Cart, comm_view Comm, const range &LocalR
     int BinRank = BinID(0);
     int iBin = BinID(1);
     const decomp_hash_retrieved_bins &Bins = RetrievedBins(BinRank);
-    const interval<long long> &RegionIndicesInterval = Bins.BinRegionIndicesIntervals(iBin);
-    for (long long iBinRegionIndex = RegionIndicesInterval.Begin(0); iBinRegionIndex <
-      RegionIndicesInterval.End(0); ++iBinRegionIndex) {
-      int iRegion = Bins.BinRegionIndices(iBinRegionIndex);
+    array_view<const int> RegionIndices = Bins.BinRegionIndices(iBin);
+    for (int iRegion : RegionIndices) {
       const decomp_hash_region_data &RegionData = Bins.RegionData(iRegion);
-      if (RegionData.Region.Contains(Point)) {
-        UniqueExtendedRanks.Insert(RegionData.Rank);
+      if (RegionData.Region().Contains(Point)) {
+        UniqueExtendedRanks.Insert(RegionData.Rank());
         break;
       }
     }
