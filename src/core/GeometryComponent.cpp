@@ -204,18 +204,21 @@ void geometry_component::CreateGeometry(int GridID, optional<geometry::params> M
 
   const std::shared_ptr<context> &SharedContext = Domain.SharedContext();
 
+  geometry *MaybeGeometry = nullptr;
+
   if (GridInfo.IsLocal()) {
     const grid &Grid = Domain.Grid(GridID);
     if (MaybeParams.Present()) {
       geometry Geometry = core::CreateGeometry(SharedContext, Grid, MaybeParams.Release());
-      Locals_.Insert(GridID, std::move(Geometry));
+      MaybeGeometry = &Locals_.Insert(GridID, std::move(Geometry)).Geometry;
     } else {
       geometry Geometry = core::CreateGeometry(SharedContext, Grid);
-      Locals_.Insert(GridID, std::move(Geometry));
+      MaybeGeometry = &Locals_.Insert(GridID, std::move(Geometry)).Geometry;
     }
   }
 
-  GeometryRecords_.Insert(GridID);
+  geometry_info GeometryInfo = core::CreateGeometryInfo(MaybeGeometry, Domain.Comm());
+  GeometryRecords_.Insert(GridID, std::move(GeometryInfo));
 
   MPI_Barrier(Domain.Comm());
 
@@ -281,7 +284,12 @@ void geometry_component::CreateGeometries(array_view<const int> GridIDs, array<o
 
   for (int iCreate = 0; iCreate < NumCreates; ++iCreate) {
     int GridID = GridIDs(iCreate);
-    GeometryRecords_.Insert(GridID);
+    geometry *MaybeGeometry = nullptr;
+    if (Domain.GridIsLocal(GridID)) {
+      MaybeGeometry = &Locals_(GridID).Geometry;
+    }
+    geometry_info GeometryInfo = core::CreateGeometryInfo(MaybeGeometry, Domain.Comm());
+    GeometryRecords_.Insert(GridID, std::move(GeometryInfo));
   }
 
   MPI_Barrier(Domain.Comm());
@@ -475,6 +483,15 @@ void geometry_component::ClearGeometries() {
   MPI_Barrier(Domain.Comm());
 
   Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Done clearing geometries.");
+
+}
+
+const geometry_info &geometry_component::GeometryInfo(int GridID) const {
+
+  OVK_DEBUG_ASSERT(GridID >= 0, "Invalid grid ID.");
+  OVK_DEBUG_ASSERT(GeometryRecords_.Contains(GridID), "Geometry %i does not exist.", GridID);
+
+  return GeometryRecords_(GridID).GeometryInfo;
 
 }
 

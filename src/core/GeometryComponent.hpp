@@ -136,6 +136,8 @@ public:
   int LocalGeometryCount() const { return Locals_.Count(); }
   const set<int> &LocalGeometryIDs() const { return Locals_.Keys(); }
 
+  const geometry_info &GeometryInfo(int GridID) const;
+
   const geometry &Geometry(int GridID) const;
   bool EditingGeometry(int GridID) const;
   edit_handle<geometry> EditGeometry(int GridID);
@@ -151,7 +153,12 @@ public:
 
 private:
 
-  struct geometry_record {};
+  struct geometry_record {
+    geometry_info GeometryInfo;
+    explicit geometry_record(geometry_info &&GeometryInfo_):
+      GeometryInfo(std::move(GeometryInfo_))
+    {}
+  };
 
   struct local {
     geometry Geometry;
@@ -167,7 +174,7 @@ private:
   map<int,grid_event_flags> GridEventFlags_;
   event_listener_handle GridEventListener_;
 
-  map<int,geometry_record> GeometryRecords_;
+  map_noncontig<int,geometry_record> GeometryRecords_;
   map_noncontig<int,local> Locals_;
 
   mutable event<void(int, geometry_event_flags, bool)> GeometryEvent_;

@@ -7,6 +7,7 @@
 #include "ovk/core/Cart.hpp"
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Context.hpp"
+#include "ovk/core/DataType.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Editor.hpp"
 #include "ovk/core/Event.hpp"
@@ -16,6 +17,7 @@
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
 #include "ovk/core/Logger.hpp"
+#include "ovk/core/Misc.hpp"
 #include "ovk/core/Partition.hpp"
 #include "ovk/core/Request.hpp"
 
@@ -294,6 +296,46 @@ geometry::params &geometry::params::SetPeriodicLength(const tuple<double> &Perio
   PeriodicLength_ = PeriodicLength;
 
   return *this;
+
+}
+
+geometry_info::geometry_info(geometry *MaybeGeometry, comm_view Comm) {
+
+  bool IsLocal = MaybeGeometry != nullptr;
+  bool IsRoot = false;
+  if (IsLocal) {
+    IsRoot = MaybeGeometry->Comm().Rank() == 0;
+  }
+
+  int RootRank;
+  if (IsRoot) RootRank = Comm.Rank();
+  core::BroadcastAnySource(&RootRank, 1, MPI_INT, IsRoot, Comm);
+
+  if (IsRoot) {
+    Type_ = MaybeGeometry->Type();
+  }
+  MPI_Bcast(&Type_, 1, core::GetMPIDataType<geometry_type>(), RootRank, Comm);
+
+  if (IsRoot) {
+    PeriodicLength_ = MaybeGeometry->PeriodicLength();
+  }
+  MPI_Bcast(PeriodicLength_.Data(), MAX_DIMS, MPI_DOUBLE, RootRank, Comm);
+
+}
+
+geometry_info geometry_info::internal_Create(geometry *MaybeGeometry, comm_view Comm) {
+
+  return {MaybeGeometry, Comm};
+
+}
+
+namespace core {
+
+geometry_info CreateGeometryInfo(geometry *MaybeGeometry, comm_view Comm) {
+
+  return geometry_info::internal_Create(MaybeGeometry, Comm);
+
+}
 
 }
 

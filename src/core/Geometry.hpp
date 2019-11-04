@@ -16,6 +16,7 @@
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Grid.hpp>
 #include <ovk/core/Requires.hpp>
+#include <ovk/core/Tuple.hpp>
 #include <ovk/core/TypeTraits.hpp>
 
 #include <mpi.h>
@@ -151,6 +152,30 @@ private:
 namespace core {
 geometry CreateGeometry(std::shared_ptr<context> Context, const grid &Grid, geometry::params
   Params={});
+}
+
+class geometry_info {
+
+public:
+
+  geometry_info() = default;
+
+  geometry_type Type() const { return Type_; }
+  const tuple<double> &PeriodicLength() const { return PeriodicLength_; }
+
+  static geometry_info internal_Create(geometry *MaybeGeometry, comm_view Comm);
+
+private:
+
+  geometry_type Type_ = geometry_type::CURVILINEAR;
+  tuple<double> PeriodicLength_ = {0., 0., 0.};
+
+  geometry_info(geometry *MaybeGeometry, comm_view Comm);
+
+};
+
+namespace core {
+geometry_info CreateGeometryInfo(geometry *MaybeGeometry, comm_view Comm);
 }
 
 }
