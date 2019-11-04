@@ -162,6 +162,8 @@ set(INTERNAL_HEADERS
   GeometryOps.hpp
   GeometryOps.inl
   Global.h
+  Handle.hpp
+  Handle.inl
   Halo.hpp
   Halo.inl
   IntegerSequence.hpp
