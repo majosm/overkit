@@ -130,6 +130,7 @@ set(INTERNAL_HEADERS
   ConnectivityComponent.h
   Context.h
   DataType.h
+  DataTypeOps.hpp
   Debug.hpp
   Debug.h
   Decomp.hpp
