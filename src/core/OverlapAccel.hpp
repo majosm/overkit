@@ -25,6 +25,7 @@ class overlap_accel {
 
 public:
 
+  overlap_accel(geometry_type GeometryType, int NumDims);
   overlap_accel(geometry_type GeometryType, int NumDims, const range &CellRange, array_view<const
     field_view<const double>> Coords, field_view<const bool> CellMask, double MaxTolerance,
     long long NumCellsLeaf, double MaxNodeUnoccupiedVolume, double MaxNodeCellVolumeVariation,

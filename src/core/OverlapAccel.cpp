@@ -62,6 +62,16 @@ struct compute_cell_volumes {
 };
 }
 
+overlap_accel::overlap_accel(geometry_type GeometryType, int NumDims):
+  GeometryType_(GeometryType),
+  NumDims_(NumDims),
+  GeometryManipulator_(GeometryType, NumDims),
+  CellRange_(MakeEmptyRange(NumDims)),
+  CellIndexer_(CellRange_),
+  Coords_({MAX_DIMS}),
+  Bounds_(MakeEmptyBox(NumDims))
+{}
+
 overlap_accel::overlap_accel(geometry_type GeometryType, int NumDims, const range &CellRange,
   array_view<const field_view<const double>> Coords, field_view<const bool> CellMask, double
   MaxTolerance, long long NumCellsLeaf, double MaxNodeUnoccupiedVolume, double
