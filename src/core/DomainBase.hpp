@@ -161,7 +161,7 @@ protected:
 
   map_noncontig<int,grid_record> GridRecords_;
   map_noncontig<int,grid> LocalGrids_;
-  
+
   mutable event<void(int, grid_event_flags, bool)> GridEvent_;
 
 };

@@ -148,9 +148,7 @@ private:
 };
 
 namespace core {
-
 grid CreateGrid(std::shared_ptr<context> Context, grid::params Params);
-
 }
 
 class grid_info {

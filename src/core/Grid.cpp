@@ -7,6 +7,7 @@
 #include "ovk/core/Cart.hpp"
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Context.hpp"
+#include "ovk/core/DataType.hpp"
 #include "ovk/core/Debug.hpp"
 #include "ovk/core/Decomp.hpp"
 #include "ovk/core/Global.hpp"
@@ -322,19 +323,15 @@ grid_info::grid_info(grid *MaybeGrid, comm_view Comm) {
   MPI_Bcast(Cart_.Range().Begin().Data(), MAX_DIMS, MPI_INT, RootRank_, Comm);
   MPI_Bcast(Cart_.Range().End().Data(), MAX_DIMS, MPI_INT, RootRank_, Comm);
 
-  tuple<int> PeriodicInt;
   if (IsRoot) {
-    PeriodicInt = tuple<int>(MaybeGrid->Cart().Periodic());
+    Cart_.Periodic() = MaybeGrid->Cart().Periodic();
   }
-  MPI_Bcast(PeriodicInt.Data(), MAX_DIMS, MPI_INT, RootRank_, Comm);
-  Cart_.Periodic() = tuple<bool>(PeriodicInt);
+  MPI_Bcast(Cart_.Periodic().Data(), MAX_DIMS, MPI_C_BOOL, RootRank_, Comm);
 
-  int PeriodicStorageInt;
   if (IsRoot) {
-    PeriodicStorageInt = int(MaybeGrid->Cart().PeriodicStorage());
+    Cart_.PeriodicStorage() = MaybeGrid->Cart().PeriodicStorage();
   }
-  MPI_Bcast(&PeriodicStorageInt, 1, MPI_INT, RootRank_, Comm);
-  Cart_.PeriodicStorage() = periodic_storage(PeriodicStorageInt);
+  MPI_Bcast(&Cart_.PeriodicStorage(), 1, core::GetMPIDataType<periodic_storage>(), RootRank_, Comm);
 
   CellCart_ = core::CartPointToCell(Cart_);
 
