@@ -58,9 +58,15 @@ grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, con
 
 grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
   range &LocalRange, const cart &CellCart, const range &CellLocalRange):
-  grid(std::move(Context), std::move(Params), NumDims, Cart, LocalRange, core::ExtendLocalRange(
-  Cart, LocalRange, 2), CellCart, CellLocalRange, core::ExtendLocalRange(CellCart, CellLocalRange,
-  2))
+  grid(std::move(Context), std::move(Params), NumDims, Cart, LocalRange, CellCart, CellLocalRange,
+    core::ExtendLocalRange(CellCart, CellLocalRange, 2))
+{}
+
+grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
+  range &LocalRange, const cart &CellCart, const range &CellLocalRange, const range
+  &CellExtendedRange):
+  grid(std::move(Context), std::move(Params), NumDims, Cart, LocalRange, core::RangeCellToPointAll(
+    Cart, CellExtendedRange), CellCart, CellLocalRange, CellExtendedRange)
 {}
 
 grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const

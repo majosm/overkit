@@ -156,6 +156,19 @@ range RangePointToCell(const cart &Cart, const range &Range) {
 
 }
 
+range RangeCellToPointAll(const cart &Cart, const range &CellRange) {
+
+  range Range = MakeEmptyRange(Cart.Dimension());
+
+  for (int iDim = 0; iDim < Cart.Dimension(); ++iDim) {
+    Range.Begin(iDim) = CellRange.Begin(iDim);
+    Range.End(iDim) = CellRange.End(iDim)+1;
+  }
+
+  return Range;
+
+}
+
 cart CartIncludeExteriorPoint(const cart &Cart) {
 
   cart CartIncludingExteriorPoint(Cart.Dimension());

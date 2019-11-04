@@ -139,6 +139,9 @@ private:
   grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
     range &LocalRange, const cart &CellCart, const range &CellLocalRange);
   grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
+    range &LocalRange, const cart &CellCart, const range &CellLocalRange, const range
+    &CellExtendedRange);
+  grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const
     range &LocalRange, const range &ExtendedRange, const cart &CellCart, const range
     &CellLocalRange, const range &CellExtendedRange);
   grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, const cart &Cart, const

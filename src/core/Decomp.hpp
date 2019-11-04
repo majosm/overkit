@@ -30,7 +30,9 @@ array<int> DetectNeighbors(const cart &Cart, comm_view Comm, const range &LocalR
 range ExtendLocalRange(const cart &Cart, const range &LocalRange, int ExtendAmount);
 
 cart CartPointToCell(const cart &Cart);
-range RangePointToCell(const cart &Cart, const range &LocalRange);
+range RangePointToCell(const cart &Cart, const range &Range);
+
+range RangeCellToPointAll(const cart &Cart, const range &CellRange);
 
 cart CartIncludeExteriorPoint(const cart &Cart);
 range RangeIncludeExteriorPoint(const cart &Cart, const range &Range);
