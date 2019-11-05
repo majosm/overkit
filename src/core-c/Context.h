@@ -30,9 +30,9 @@ void ovkDestroyContext(ovk_context **Context);
 
 void ovkShareContext(ovk_context **Context, ovk_shared_context **SharedContext);
 void ovkResetSharedContext(ovk_shared_context **SharedContext);
-void ovkGetContextFromSharedC(const ovk_shared_context **SharedContext, const ovk_context
+void ovkGetContextFromSharedC(const ovk_shared_context *SharedContext, const ovk_context
   **Context);
-void ovkGetContextFromShared(ovk_shared_context **SharedContext, ovk_context **Context);
+void ovkGetContextFromShared(ovk_shared_context *SharedContext, ovk_context **Context);
 
 void ovkGetContextComm(const ovk_context *Context, MPI_Comm *Comm);
 void ovkGetContextCommSize(const ovk_context *Context, int *CommSize);

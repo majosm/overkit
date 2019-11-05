@@ -95,26 +95,24 @@ void ovkResetSharedContext(ovk_shared_context **SharedContext) {
 
 }
 
-void ovkGetContextFromSharedC(const ovk_shared_context **SharedContext, const ovk_context **Context)
+void ovkGetContextFromSharedC(const ovk_shared_context *SharedContext, const ovk_context **Context)
   {
 
   OVK_DEBUG_ASSERT(SharedContext, "Invalid shared context pointer.");
-  OVK_DEBUG_ASSERT(*SharedContext, "Invalid shared context pointer.");
   OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
 
   auto SharedContextCPPPtr = reinterpret_cast<const std::shared_ptr<const ovk::context> *>(
-    *SharedContext);
+    SharedContext);
   *Context = reinterpret_cast<const ovk_context *>(SharedContextCPPPtr->get());
 
 }
 
-void ovkGetContextFromShared(ovk_shared_context **SharedContext, ovk_context **Context) {
+void ovkGetContextFromShared(ovk_shared_context *SharedContext, ovk_context **Context) {
 
   OVK_DEBUG_ASSERT(SharedContext, "Invalid shared context pointer.");
-  OVK_DEBUG_ASSERT(*SharedContext, "Invalid shared context pointer.");
   OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
 
-  auto SharedContextCPPPtr = reinterpret_cast<std::shared_ptr<ovk::context> *>(*SharedContext);
+  auto SharedContextCPPPtr = reinterpret_cast<std::shared_ptr<ovk::context> *>(SharedContext);
   *Context = reinterpret_cast<ovk_context *>(SharedContextCPPPtr->get());
 
 }
