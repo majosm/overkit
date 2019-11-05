@@ -265,8 +265,8 @@ struct generate_subdivisions {
       int BestSplitDim = -1;
       range BestLeftCellRange;
       range BestRightCellRange;
-      double BestLeftUnoccupiedVolume;
-      double BestRightUnoccupiedVolume;
+      double BestLeftUnoccupiedVolume = std::numeric_limits<double>::max();
+      double BestRightUnoccupiedVolume = std::numeric_limits<double>::max();
       for (int iDim = 0; iDim < NumDims_; ++iDim) {
         int iSplit = (CellRange.Begin(iDim)+CellRange.End(iDim))/2;
         range LeftCellRange = CellRange;
