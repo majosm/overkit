@@ -75,12 +75,6 @@ context::~context() noexcept {
     // Barrier before cleaning up
     MPI_Barrier(Comm_);
 
-    // May want to move this somewhere else
-    std::string ProfileTimesString = Profiler_.WriteProfile();
-    if (Comm_.Rank() == 0) {
-      std::printf("%s", ProfileTimesString.c_str());
-    }
-
     Logger_.LogStatus(Comm_.Rank() == 0, 0, "Destroying context...");
 
   }
@@ -173,6 +167,12 @@ void context::EnableProfiling() {
 void context::DisableProfiling() {
 
   Profiler_.Disable();
+
+}
+
+std::string context::WriteProfile() const {
+
+  return Profiler_.WriteProfile();
 
 }
 

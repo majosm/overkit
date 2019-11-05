@@ -124,6 +124,7 @@ public:
   bool Profiling() const { return Profiler_.Enabled(); }
   void EnableProfiling();
   void DisableProfiling();
+  std::string WriteProfile() const;
 
   core::logger &core_Logger() const { return Logger_; }
   core::profiler &core_Profiler() const { return Profiler_; }

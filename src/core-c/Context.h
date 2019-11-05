@@ -10,6 +10,8 @@
 
 #include <mpi.h>
 
+#include <stdio.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -37,6 +39,9 @@ void ovkGetContextCommSize(const ovk_context *Context, int *CommSize);
 void ovkGetContextCommRank(const ovk_context *Context, int *CommRank);
 void ovkGetContextLogLevel(const ovk_context *Context, ovk_log_level *LogLevel);
 void ovkSetContextLogLevel(ovk_context *Context, ovk_log_level LogLevel);
+void ovkGetContextProfiling(const ovk_context *Context, bool *Profiling);
+void ovkSetContextProfiling(ovk_context *Context, bool Profiling);
+void ovkWriteProfile(const ovk_context *Context, FILE *File);
 
 void ovkCreateContextParams(ovk_context_params **Params);
 void ovkDestroyContextParams(ovk_context_params **Params);

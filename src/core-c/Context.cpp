@@ -10,6 +10,7 @@
 
 #include <mpi.h>
 
+#include <cstdio>
 #include <memory>
 #include <utility>
 
@@ -165,6 +166,44 @@ void ovkSetContextLogLevel(ovk_context *Context, ovk_log_level LogLevel) {
 
   auto &ContextCPP = *reinterpret_cast<ovk::context *>(Context);
   ContextCPP.SetLogLevel(ovk::log_level(LogLevel));
+
+}
+
+void ovkGetContextProfiling(const ovk_context *Context, bool *Profiling) {
+
+  OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
+  OVK_DEBUG_ASSERT(Profiling, "Invalid profiling pointer.");
+
+  auto &ContextCPP = *reinterpret_cast<const ovk::context *>(Context);
+  *Profiling = ContextCPP.Profiling();
+
+}
+
+void ovkSetContextProfiling(ovk_context *Context, bool Profiling) {
+
+  OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
+
+  auto &ContextCPP = *reinterpret_cast<ovk::context *>(Context);
+  if (Profiling) {
+    ContextCPP.EnableProfiling();
+  } else {
+    ContextCPP.DisableProfiling();
+  }
+
+}
+
+void ovkWriteProfile(const ovk_context *Context, FILE *File) {
+
+  OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
+
+  auto &ContextCPP = *reinterpret_cast<const ovk::context *>(Context);
+
+  std::string ProfileString = ContextCPP.WriteProfile();
+
+  if (ContextCPP.Comm().Rank() == 0) {
+    std::fprintf(File, "%s", ProfileString.c_str());
+    std::fflush(File);
+  }
 
 }
 
