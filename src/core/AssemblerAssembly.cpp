@@ -1062,7 +1062,7 @@ void assembler::DetectOverlap_() {
       long long NumCellsLeaf = (long long)(Max(std::pow(2., 12.-DepthAdjust), 1.));
       double MaxNodeUnoccupiedVolume = std::pow(2., -2.-DepthAdjust);
       double MaxNodeCellVolumeVariation = 0.5;
-      double BinScale = std::pow(2., -1.-ResolutionAdjust);
+      double BinScale = std::pow(2., -ResolutionAdjust);
       Data.OverlapAccel = core::overlap_accel(GeometryType, NumDims, Data.CellRange,
         Data.CoordsViews, Data.CellActiveMask, MaxOverlapTolerance, NumCellsLeaf,
         MaxNodeUnoccupiedVolume, MaxNodeCellVolumeVariation, BinScale);
