@@ -454,7 +454,8 @@ void assembler::DetectOverlap_() {
   map<int,array<range>> SubdivisionRangesForLocalGrid;
   int TotalSubdivisions = 0;
 
-  // Subdivide partitions to avoid excessive empty space in bounding boxes
+  // Subdivide partitions to avoid transferring excessive amounts of grid data and help eliminate
+  // empty space in bounding boxes
   for (int GridID : Domain.LocalGridIDs()) {
     const grid &Grid = Domain.Grid(GridID);
     const range &CellLocalRange = Grid.CellLocalRange();
