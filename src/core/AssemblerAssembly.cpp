@@ -894,7 +894,7 @@ void assembler::DetectOverlap_() {
       int iSubdivision = SubdivisionEntry.Key();
       local_subdivision_data &Data = SubdivisionEntry.Value();
       range SubdivCellExtendedRange = core::ExtendLocalRange(MGrid.CellCart(),
-        SubdivisionRanges(iSubdivision), 2);
+        SubdivisionRanges(iSubdivision), 1);
       range SubdivExtendedRange = core::RangeCellToPointAll(MGrid.Cart(), SubdivCellExtendedRange);
       Data.Coords.Resize({MAX_DIMS});
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
@@ -1000,7 +1000,7 @@ void assembler::DetectOverlap_() {
     for (int iSubdivision : Subdivisions) {
       subdivision_data &Data = SubdivisionData(iSubdivision);
       range SubdivCellExtendedRange = core::ExtendLocalRange(MGridInfo.CellCart(), Data.CellRange,
-        2);
+        1);
       range SubdivExtendedRange = core::RangeCellToPointAll(MGridInfo.Cart(),
         SubdivCellExtendedRange);
       Data.Coords.Resize({MAX_DIMS});
