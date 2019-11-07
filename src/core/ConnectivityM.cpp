@@ -38,8 +38,8 @@ connectivity_m_base::~connectivity_m_base() noexcept {
   if (Context_) {
     MPI_Barrier(Comm_);
     core::logger &Logger = Context_->core_Logger();
-    Logger.LogDebug(Comm_.Rank() == 0, 0, "Destroyed M side of connectivity (%s,%s).",
-      Grid_->Name(), DestinationGridInfo_.Name());
+    Logger.LogStatus(Comm_.Rank() == 0, "Destroyed M side of connectivity (%s,%s).", Grid_->Name(),
+      DestinationGridInfo_.Name());
   }
 
 }
@@ -62,7 +62,7 @@ connectivity_m::connectivity_m(std::shared_ptr<context> &&Context, const grid &G
   MPI_Barrier(Comm_);
 
   core::logger &Logger = Context_->core_Logger();
-  Logger.LogDebug(Comm_.Rank() == 0, 0, "Created M side of connectivity (%s,%s).", Grid_->Name(),
+  Logger.LogStatus(Comm_.Rank() == 0, "Created M side of connectivity (%s,%s).", Grid_->Name(),
     DestinationGridInfo_.Name());
 
 }

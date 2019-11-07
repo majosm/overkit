@@ -34,6 +34,7 @@ TEST_F(PartitionTests, Create) {
 
   auto Context = std::make_shared<ovk::context>(ovk::CreateContext(ovk::context::params()
     .SetComm(TestComm())
+    .SetStatusLoggingThreshold(0)
   ));
 
   ovk::comm CommOfSize9 = CreateSubsetComm(TestComm(), TestComm().Rank() < 9);

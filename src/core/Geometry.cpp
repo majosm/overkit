@@ -43,7 +43,7 @@ geometry_base::~geometry_base() noexcept {
   if (Context_) {
     MPI_Barrier(Comm_);
     core::logger &Logger = Context_->core_Logger();
-    Logger.LogDebug(Comm_.Rank() == 0, 0, "Destroyed geometry %s.", Grid_->Name());
+    Logger.LogStatus(Comm_.Rank() == 0, "Destroyed geometry %s.", Grid_->Name());
   }
 
 }
@@ -86,7 +86,7 @@ geometry::geometry(std::shared_ptr<context> &&Context, const grid &Grid, params 
   MPI_Barrier(Comm_);
 
   core::logger &Logger = Context_->core_Logger();
-  Logger.LogDebug(Comm_.Rank() == 0, 0, "Created geometry %s.", Grid.Name());
+  Logger.LogStatus(Comm_.Rank() == 0, "Created geometry %s.", Grid.Name());
 
 }
 
@@ -229,7 +229,9 @@ void geometry::OnCoordsEndEdit_() {
 
   CoordsEvent_.Trigger();
 
-  Logger.LogDebug(Comm_.Rank() == 0, 0, "Updating auxiliary data for geometry %s...", Grid.Name());
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
+  Logger.LogStatus(Comm_.Rank() == 0, "Updating auxiliary data for geometry %s...", Grid.Name());
+  auto Level2 = Logger.IncreaseStatusLevelAndIndent();
 
   core::geometry_manipulator GeometryManipulator(Type_, NumDims);
   GeometryManipulator.Apply(compute_cell_volumes(), Coords_, CellVolumes_);
@@ -267,8 +269,9 @@ void geometry::OnCoordsEndEdit_() {
 
   MPI_Barrier(Comm_);
 
-  Logger.LogDebug(Comm_.Rank() == 0, 0, "Done updating auxiliary data for geometry %s.",
-    Grid.Name());
+  Level2.Reset();
+  Logger.LogStatus(Comm_.Rank() == 0, "Done updating auxiliary data for geometry %s.", Grid.Name());
+  Level1.Reset();
 
   VolumesEvent_.Trigger();
   CellVolumesEvent_.Trigger();

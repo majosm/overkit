@@ -68,8 +68,7 @@ void Blobs() {
 
   auto Context = std::make_shared<ovk::context>(ovk::CreateContext(ovk::context::params()
     .SetComm(MPI_COMM_WORLD)
-    .SetLogLevel(ovk::log_level::ERRORS | ovk::log_level::WARNINGS | ovk::log_level::STATUS |
-      ovk::log_level::DEBUG)
+    .SetStatusLoggingThreshold(4)
   ));
 
   ovk::domain Domain = ovk::CreateDomain(Context, ovk::domain::params()

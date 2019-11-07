@@ -47,7 +47,7 @@ connectivity_component_base::~connectivity_component_base() noexcept {
     const core::domain_base &Domain = *Domain_;
     MPI_Barrier(Domain.Comm());
     core::logger &Logger = Context_->core_Logger();
-    Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Destroyed connectivity component %s.%s.",
+    Logger.LogStatus(Domain.Comm().Rank() == 0, "Destroyed connectivity component %s.%s.",
       Domain.Name(), *Name_);
   }
 
@@ -73,7 +73,7 @@ connectivity_component::connectivity_component(const core::domain_base &Domain, 
   });
 
   core::logger &Logger = Context_->core_Logger();
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Created connectivity component %s.%s.",
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Created connectivity component %s.%s.",
     Domain.Name(), *Name_);
 
 }
@@ -242,8 +242,9 @@ void connectivity_component::CreateConnectivity(const elem<int,2> &ConnectivityI
   const grid_info &MGridInfo = Domain.GridInfo(MGridID);
   const grid_info &NGridInfo = Domain.GridInfo(NGridID);
 
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Creating connectivity %s.(%s,%s)...",
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Creating connectivity %s.(%s,%s)...",
     Domain.Name(), MGridInfo.Name(), NGridInfo.Name());
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   const std::shared_ptr<context> &SharedContext = Domain.SharedContext();
 
@@ -263,7 +264,8 @@ void connectivity_component::CreateConnectivity(const elem<int,2> &ConnectivityI
 
   MPI_Barrier(Domain.Comm());
 
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Done creating connectivity %s.(%s,%s).",
+  Level1.Reset();
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Done creating connectivity %s.(%s,%s).",
     Domain.Name(), MGridInfo.Name(), NGridInfo.Name());
 
   ConnectivityEvent_.Trigger(ConnectivityID, connectivity_event_flags::CREATE, true);
@@ -301,10 +303,11 @@ void connectivity_component::CreateConnectivities(array_view<const elem<int,2>> 
       int NGridID = ConnectivityID(1);
       const grid_info &MGridInfo = Domain.GridInfo(MGridID);
       const grid_info &NGridInfo = Domain.GridInfo(NGridID);
-      Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Creating connectivity %s.(%s,%s)...",
+      Logger.LogStatus(Domain.Comm().Rank() == 0, "Creating connectivity %s.(%s,%s)...",
         Domain.Name(), MGridInfo.Name(), NGridInfo.Name());
     }
   }
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   const std::shared_ptr<context> &SharedContext = Domain.SharedContext();
 
@@ -331,13 +334,14 @@ void connectivity_component::CreateConnectivities(array_view<const elem<int,2>> 
 
   MPI_Barrier(Domain.Comm());
 
+  Level1.Reset();
   if (Logger.LoggingStatus()) {
     for (auto &ConnectivityID : ConnectivityIDs) {
       int MGridID = ConnectivityID(0);
       int NGridID = ConnectivityID(1);
       const grid_info &MGridInfo = Domain.GridInfo(MGridID);
       const grid_info &NGridInfo = Domain.GridInfo(NGridID);
-      Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Done creating connectivity %s.(%s,%s).",
+      Logger.LogStatus(Domain.Comm().Rank() == 0, "Done creating connectivity %s.(%s,%s).",
         Domain.Name(), MGridInfo.Name(), NGridInfo.Name());
     }
   }
@@ -394,8 +398,9 @@ void connectivity_component::DestroyConnectivity(const elem<int,2> &Connectivity
   const grid_info &MGridInfo = Domain.GridInfo(MGridID);
   const grid_info &NGridInfo = Domain.GridInfo(NGridID);
 
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Destroying connectivity %s.(%s,%s)...",
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Destroying connectivity %s.(%s,%s)...",
     Domain.Name(), MGridInfo.Name(), NGridInfo.Name());
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   LocalMs_.Erase(ConnectivityID);
   LocalNs_.Erase(ConnectivityID);
@@ -404,7 +409,8 @@ void connectivity_component::DestroyConnectivity(const elem<int,2> &Connectivity
 
   MPI_Barrier(Domain.Comm());
 
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Done destroying connectivity %s.(%s,%s).",
+  Level1.Reset();
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Done destroying connectivity %s.(%s,%s).",
     Domain.Name(), MGridInfo.Name(), NGridInfo.Name());
 
 }
@@ -473,10 +479,11 @@ void connectivity_component::DestroyConnectivities(array_view<const elem<int,2>>
       int NGridID = ConnectivityID(1);
       const grid_info &MGridInfo = Domain.GridInfo(MGridID);
       const grid_info &NGridInfo = Domain.GridInfo(NGridID);
-      Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Destroying connectivity %s.(%s,%s)...",
+      Logger.LogStatus(Domain.Comm().Rank() == 0, "Destroying connectivity %s.(%s,%s)...",
         Domain.Name(), MGridInfo.Name(), NGridInfo.Name());
     }
   }
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   for (auto &ConnectivityID : ConnectivityIDs) {
     LocalMs_.Erase(ConnectivityID);
@@ -489,13 +496,14 @@ void connectivity_component::DestroyConnectivities(array_view<const elem<int,2>>
 
   MPI_Barrier(Domain.Comm());
 
+  Level1.Reset();
   if (Logger.LoggingStatus()) {
     for (auto &ConnectivityID : ConnectivityIDs) {
       int MGridID = ConnectivityID(0);
       int NGridID = ConnectivityID(1);
       const grid_info &MGridInfo = Domain.GridInfo(MGridID);
       const grid_info &NGridInfo = Domain.GridInfo(NGridID);
-      Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Done destroying connectivity %s.(%s,%s).",
+      Logger.LogStatus(Domain.Comm().Rank() == 0, "Done destroying connectivity %s.(%s,%s).",
         Domain.Name(), MGridInfo.Name(), NGridInfo.Name());
     }
   }

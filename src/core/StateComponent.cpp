@@ -43,8 +43,8 @@ state_component_base::~state_component_base() noexcept {
     const core::domain_base &Domain = *Domain_;
     MPI_Barrier(Domain.Comm());
     core::logger &Logger = Context_->core_Logger();
-    Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Destroyed state component %s.%s.",
-      Domain.Name(), *Name_);
+    Logger.LogStatus(Domain.Comm().Rank() == 0, "Destroyed state component %s.%s.", Domain.Name(),
+      *Name_);
   }
 
 }
@@ -69,7 +69,7 @@ state_component::state_component(const core::domain_base &Domain, params Params)
   });
 
   core::logger &Logger = Context_->core_Logger();
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Created state component %s.%s.", Domain.Name(),
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Created state component %s.%s.", Domain.Name(),
     *Name_);
 
 }
@@ -199,8 +199,9 @@ void state_component::CreateState(int GridID, optional<state::params> MaybeParam
 
   const grid_info &GridInfo = Domain.GridInfo(GridID);
 
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Creating state %s.%s...", Domain.Name(),
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Creating state %s.%s...", Domain.Name(),
     GridInfo.Name());
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   const std::shared_ptr<context> &SharedContext = Domain.SharedContext();
 
@@ -219,7 +220,8 @@ void state_component::CreateState(int GridID, optional<state::params> MaybeParam
 
   MPI_Barrier(Domain.Comm());
 
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Done creating state %s.%s.", Domain.Name(),
+  Level1.Reset();
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Done creating state %s.%s.", Domain.Name(),
     GridInfo.Name());
 
   StateEvent_.Trigger(GridID, state_event_flags::CREATE, true);
@@ -257,10 +259,11 @@ void state_component::CreateStates(array_view<const int> GridIDs, array<optional
     for (int iCreate = 0; iCreate < NumCreates; ++iCreate) {
       int GridID = GridIDs(iCreate);
       const grid_info &GridInfo = Domain.GridInfo(GridID);
-      Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Creating state %s.%s...", Domain.Name(),
+      Logger.LogStatus(Domain.Comm().Rank() == 0, "Creating state %s.%s...", Domain.Name(),
         GridInfo.Name());
     }
   }
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   const std::shared_ptr<context> &SharedContext = Domain.SharedContext();
 
@@ -286,12 +289,13 @@ void state_component::CreateStates(array_view<const int> GridIDs, array<optional
 
   MPI_Barrier(Domain.Comm());
 
+  Level1.Reset();
   if (Logger.LoggingStatus()) {
     for (int iCreate = 0; iCreate < NumCreates; ++iCreate) {
       int GridID = GridIDs(iCreate);
       const grid_info &GridInfo = Domain.GridInfo(GridID);
-      Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Done creating state %s.%s.",
-        Domain.Name(), GridInfo.Name());
+      Logger.LogStatus(Domain.Comm().Rank() == 0, "Done creating state %s.%s.", Domain.Name(),
+        GridInfo.Name());
     }
   }
 
@@ -335,8 +339,9 @@ void state_component::DestroyState(int GridID) {
 
   const grid_info &GridInfo = Domain.GridInfo(GridID);
 
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Destroying state %s.%s...", Domain.Name(),
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Destroying state %s.%s...", Domain.Name(),
     GridInfo.Name());
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   Locals_.Erase(GridID);
 
@@ -344,7 +349,8 @@ void state_component::DestroyState(int GridID) {
 
   MPI_Barrier(Domain.Comm());
 
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Done destroying state %s.%s.", Domain.Name(),
+  Level1.Reset();
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Done destroying state %s.%s.", Domain.Name(),
     GridInfo.Name());
 
 }
@@ -399,10 +405,11 @@ void state_component::DestroyStates(array_view<const int> GridIDs) {
     for (int iDestroy = 0; iDestroy < NumDestroys; ++iDestroy) {
       int GridID = GridIDs(iDestroy);
       const grid_info &GridInfo = Domain.GridInfo(GridID);
-      Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Destroying state %s.%s...", Domain.Name(),
+      Logger.LogStatus(Domain.Comm().Rank() == 0, "Destroying state %s.%s...", Domain.Name(),
         GridInfo.Name());
     }
   }
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   for (int iDestroy = 0; iDestroy < NumDestroys; ++iDestroy) {
     int GridID = GridIDs(iDestroy);
@@ -416,11 +423,12 @@ void state_component::DestroyStates(array_view<const int> GridIDs) {
 
   MPI_Barrier(Domain.Comm());
 
+  Level1.Reset();
   if (Logger.LoggingStatus()) {
     for (int iDestroy = 0; iDestroy < NumDestroys; ++iDestroy) {
       int GridID = GridIDs(iDestroy);
       const grid_info &GridInfo = Domain.GridInfo(GridID);
-      Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Done destroying state %s.%s.", Domain.Name(),
+      Logger.LogStatus(Domain.Comm().Rank() == 0, "Done destroying state %s.%s.", Domain.Name(),
         GridInfo.Name());
     }
   }
@@ -435,7 +443,8 @@ void state_component::ClearStates() {
 
   core::logger &Logger = Context_->core_Logger();
 
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Clearing states...");
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Clearing states...");
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   int NumStates = StateCount();
 
@@ -474,7 +483,8 @@ void state_component::ClearStates() {
 
   MPI_Barrier(Domain.Comm());
 
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Done clearing states.");
+  Level1.Reset();
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Done clearing states.");
 
 }
 
@@ -515,6 +525,7 @@ bool state_component::EditingState(int GridID) const {
 edit_handle<state> state_component::EditState(int GridID) {
 
   const core::domain_base &Domain = *Domain_;
+  core::logger &Logger = Domain.Context().core_Logger();
 
   OVK_DEBUG_ASSERT(GridID >= 0, "Invalid grid ID.");
   OVK_DEBUG_ASSERT(Domain.GridExists(GridID), "Grid %i does not exist.", GridID);
@@ -529,10 +540,22 @@ edit_handle<state> state_component::EditState(int GridID) {
   editor &Editor = Local.Editor;
 
   if (!Editor.Active()) {
+    floating_ref<const core::domain_base> DomainRef = Domain_;
     floating_ref<const grid> GridRef = Domain.Grid(GridID).GetFloatingRef();
     MPI_Barrier(GridRef->Comm());
-    auto DeactivateFunc = [GridRef] { MPI_Barrier(GridRef->Comm()); };
+    auto DeactivateFunc = [DomainRef, GridRef] {
+      MPI_Barrier(GridRef->Comm());
+      core::logger &Logger = DomainRef->Context().core_Logger();
+      if (Logger.LoggingStatus()) {
+        Logger.LogStatus(GridRef->Comm().Rank() == 0, "Restored state %s.%s.", DomainRef->Name(),
+          GridRef->Name());
+      }
+    };
     Editor.Activate(std::move(DeactivateFunc));
+    if (Logger.LoggingStatus()) {
+      Logger.LogStatus(GridRef->Comm().Rank() == 0, "Editing state %s.%s.", Domain.Name(),
+        GridRef->Name());
+    }
   }
 
   return Editor.Edit(State);

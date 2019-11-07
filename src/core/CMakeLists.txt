@@ -42,7 +42,6 @@ set(SOURCES
   GeometryComponent.cpp
   Grid.cpp
   Halo.cpp
-  Logger.cpp
   Misc.cpp
   OverlapAccel.cpp
   OverlapComponent.cpp
@@ -129,7 +128,6 @@ set(INTERNAL_HEADERS
   Component.hpp
   Component.inl
   ConnectivityComponent.h
-  Context.h
   DataType.h
   DataTypeOps.hpp
   Debug.hpp

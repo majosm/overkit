@@ -38,8 +38,8 @@ overlap_m_base::~overlap_m_base() noexcept {
   if (Context_) {
     MPI_Barrier(Comm_);
     core::logger &Logger = Context_->core_Logger();
-    Logger.LogDebug(Comm_.Rank() == 0, 0, "Destroyed M side of overlap (%s,%s).",
-      Grid_->Name(), DestinationGridInfo_.Name());
+    Logger.LogStatus(Comm_.Rank() == 0, "Destroyed M side of overlap (%s,%s).", Grid_->Name(),
+      DestinationGridInfo_.Name());
   }
 
 }
@@ -60,7 +60,7 @@ overlap_m::overlap_m(std::shared_ptr<context> &&Context, const grid &Grid, grid_
   MPI_Barrier(Comm_);
 
   core::logger &Logger = Context_->core_Logger();
-  Logger.LogDebug(Comm_.Rank() == 0, 0, "Created M side of overlap (%s,%s).", Grid_->Name(),
+  Logger.LogStatus(Comm_.Rank() == 0, "Created M side of overlap (%s,%s).", Grid_->Name(),
     DestinationGridInfo_.Name());
 
 }

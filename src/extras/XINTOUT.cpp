@@ -407,7 +407,8 @@ void ReadXINTOUT(xintout &XINTOUT, const std::string &HOPath, const std::string 
 
   int NumLocalGrids = XINTOUT.NumLocalGrids;
 
-  Logger.LogStatus(Comm.Rank() == 0, 0, "Reading XINTOUT files '%s' and '%s'...", HOPath, XPath);
+  Logger.LogStatus(Comm.Rank() == 0, "Reading XINTOUT files '%s' and '%s'...", HOPath, XPath);
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   endian Endian;
   xintout_format Format;
@@ -452,7 +453,8 @@ void ReadXINTOUT(xintout &XINTOUT, const std::string &HOPath, const std::string 
 
   MPI_Barrier(Comm);
 
-  Logger.LogStatus(Comm.Rank() == 0, 0, "Done reading XINTOUT files.");
+  Level1.Reset();
+  Logger.LogStatus(Comm.Rank() == 0, "Done reading XINTOUT files.");
 
 }
 
@@ -993,10 +995,10 @@ void ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std:
     NumChunks, ChunkSize);
   bool HasChunk = Comm.Rank() % ChunkRankInterval == 0;
 
-  if (Logger.LoggingDebug()) {
+  if (Logger.LoggingStatus()) {
     std::string NumDonorsString = core::FormatNumber(NumDonors, "donors", "donor");
     std::string NumRanksString = core::FormatNumber(NumChunks, "I/O ranks", "I/O rank");
-    Logger.LogDebug(Comm.Rank() == 0, 0, "Grid %s has %s; using %s.", XINTOUTGrid.Name,
+    Logger.LogStatus(Comm.Rank() == 0, "Grid %s has %s; using %s.", XINTOUTGrid.Name,
       NumDonorsString, NumRanksString);
   }
 
@@ -1317,10 +1319,10 @@ void ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath, long lo
     NumChunks, ChunkSize);
   bool HasChunk = Comm.Rank() % ChunkRankInterval == 0;
 
-  if (Logger.LoggingDebug()) {
+  if (Logger.LoggingStatus()) {
     std::string NumReceiversString = core::FormatNumber(NumReceivers, "receivers", "receiver");
     std::string NumRanksString = core::FormatNumber(NumChunks, "I/O ranks", "I/O rank");
-    Logger.LogDebug(Comm.Rank() == 0, 0, "Grid %s has %s; using %s.", XINTOUTGrid.Name,
+    Logger.LogStatus(Comm.Rank() == 0, "Grid %s has %s; using %s.", XINTOUTGrid.Name,
       NumReceiversString, NumRanksString);
   }
 
@@ -1494,7 +1496,8 @@ void MatchDonorsAndReceivers(xintout &XINTOUT) {
   core::logger &Logger = XINTOUT.Context->core_Logger();
   core::profiler &Profiler = XINTOUT.Context->core_Profiler();
 
-  Logger.LogStatus(Comm.Rank() == 0, 0, "Matching donors and receivers...");
+  Logger.LogStatus(Comm.Rank() == 0, "Matching donors and receivers...");
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   int NumGrids = XINTOUT.NumGrids;
   int NumLocalGrids = XINTOUT.NumLocalGrids;
@@ -1879,7 +1882,8 @@ void MatchDonorsAndReceivers(xintout &XINTOUT) {
 
   MPI_Barrier(Comm);
 
-  Logger.LogStatus(Comm.Rank() == 0, 0, "Done matching donors and receivers.");
+  Level1.Reset();
+  Logger.LogStatus(Comm.Rank() == 0, "Done matching donors and receivers.");
 
 }
 
@@ -1892,7 +1896,8 @@ void DistributeConnectivityData(const xintout &XINTOUT, const array<const grid *
 
   core::logger &Logger = XINTOUT.Context->core_Logger();
 
-  Logger.LogStatus(Comm.Rank() == 0, 0, "Distributing connectivity data to ranks...");
+  Logger.LogStatus(Comm.Rank() == 0, "Distributing connectivity data to ranks...");
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   for (int iLocalGrid = 0; iLocalGrid < XINTOUT.NumLocalGrids; ++iLocalGrid) {
     const xintout_grid &XINTOUTGrid = XINTOUT.Grids(iLocalGrid);
@@ -1903,7 +1908,8 @@ void DistributeConnectivityData(const xintout &XINTOUT, const array<const grid *
 
   MPI_Barrier(Comm);
 
-  Logger.LogStatus(Comm.Rank() == 0, 0, "Done distributing connectivity data to ranks.");
+  Level1.Reset();
+  Logger.LogStatus(Comm.Rank() == 0, "Done distributing connectivity data to ranks.");
 
 }
 
@@ -2412,8 +2418,9 @@ void ImportConnectivityData(int NumGrids, int NumLocalGrids, const array<int> &L
 
   core::logger &Logger = Domain.Context().core_Logger();
 
-  Logger.LogStatus(Comm.Rank() == 0, 0, "Importing connectivity data into domain %s...",
+  Logger.LogStatus(Comm.Rank() == 0, "Importing connectivity data into domain %s...",
     Domain.Name());
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   OVK_DEBUG_ASSERT(ConnectivityComponentID >= 0, "Invalid connectivity component ID.");
   OVK_DEBUG_ASSERT(Domain.ComponentExists(ConnectivityComponentID), "Component %i does not "
@@ -2499,7 +2506,8 @@ void ImportConnectivityData(int NumGrids, int NumLocalGrids, const array<int> &L
 
   MPI_Barrier(Comm);
 
-  Logger.LogStatus(Comm.Rank() == 0, 0, "Done importing connectivity data into domain %s.",
+  Level1.Reset();
+  Logger.LogStatus(Comm.Rank() == 0, "Done importing connectivity data into domain %s.",
     Domain.Name());
 
 }

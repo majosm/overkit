@@ -23,6 +23,7 @@ TEST_F(ContextTests, Create) {
   {
     ovk::context Context = ovk::CreateContext(ovk::context::params()
       .SetComm(TestComm())
+      .SetStatusLoggingThreshold(0)
     );
   }
 
@@ -31,6 +32,7 @@ TEST_F(ContextTests, Create) {
     ovk::error Error;
     auto MaybeContext = ovk::CreateContext(ovk::context::params()
       .SetComm(TestComm())
+      .SetStatusLoggingThreshold(0)
     , Error);
     ASSERT_EQ(Error, ovk::error::NONE);
     ASSERT_TRUE(MaybeContext.Present());

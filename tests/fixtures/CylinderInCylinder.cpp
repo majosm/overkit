@@ -21,8 +21,7 @@ ovk::domain CylinderInCylinder(ovk::comm_view Comm, int Size, int OverlapAmount,
 
   auto Context = std::make_shared<ovk::context>(ovk::CreateContext(ovk::context::params()
     .SetComm(Comm)
-//     .SetLogLevel(ovk::log_level::ERRORS | ovk::log_level::WARNINGS | ovk::log_level::STATUS |
-//       ovk::log_level::DEBUG)
+    .SetStatusLoggingThreshold(0)
   ));
 
   ovk::domain Domain = ovk::CreateDomain(std::move(Context), ovk::domain::params()

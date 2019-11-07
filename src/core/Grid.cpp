@@ -39,7 +39,7 @@ grid_base::~grid_base() noexcept {
   if (Context_) {
     MPI_Barrier(Comm_);
     core::logger &Logger = Context_->core_Logger();
-    Logger.LogDebug(Comm_.Rank() == 0, 0, "Destroyed grid %s.", *Name_);
+    Logger.LogStatus(Comm_.Rank() == 0, "Destroyed grid %s.", *Name_);
   }
 
 }
@@ -93,14 +93,15 @@ grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, com
 
   core::logger &Logger = Context_->core_Logger();
 
-  if (Logger.LoggingDebug()) {
+  if (Logger.LoggingStatus()) {
 
     if (Comm_.Rank() == 0) {
       std::string ProcessesString = core::FormatNumber(Comm_.Size(), "processes", "process");
-      Logger.LogDebug(true, 0, "Created grid %s on %s.", *Name_, ProcessesString);
+      Logger.LogStatus(true, "Created grid %s on %s.", *Name_, ProcessesString);
     }
 
-    Logger.LogDebug(Comm_.Rank() == 0, 0, "Grid %s info:", *Name_);
+    Logger.LogStatus(Comm_.Rank() == 0, "Grid %s info:", *Name_);
+    auto Indent1 = Logger.IndentStatus();
 
     if (Comm_.Rank() == 0) {
       const cart &Cart = Partition_->Cart();
@@ -110,45 +111,53 @@ grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, com
         if (iDim != NumDims_-1) GlobalSizeString += " x ";
       }
       std::string TotalPointsString = core::FormatNumber(Cart.Range().Count(), "points", "point");
-      Logger.LogDebug(true, 1, "Size: %s (%s)", GlobalSizeString, TotalPointsString);
+      Logger.LogStatus(true, "Size: %s (%s)", GlobalSizeString, TotalPointsString);
     }
 
-    const range &LocalRange = Partition_->LocalRange();
-    const map<int,partition::neighbor_info> &Neighbors = Partition_->Neighbors();
+    auto Level1 = Logger.IncreaseStatusLevel();
 
-    const char *DimNames[3] = {"i", "j", "k"};
-    std::string LocalRangeString;
-    for (int iDim = 0; iDim < NumDims_; ++iDim) {
-      std::string LocalBeginString = core::FormatNumber(LocalRange.Begin(iDim));
-      std::string LocalEndString = core::FormatNumber(LocalRange.End(iDim));
-      LocalRangeString += std::string(DimNames[iDim]) + '=' + LocalBeginString + ':' +
-        LocalEndString;
-      if (iDim != NumDims_-1) LocalRangeString += ", ";
-    }
+    if (Logger.LoggingStatus()) {
 
-    std::string TotalLocalPointsString = core::FormatNumber(LocalRange.Count(), "points", "point");
+      const range &LocalRange = Partition_->LocalRange();
+      const map<int,partition::neighbor_info> &Neighbors = Partition_->Neighbors();
 
-    std::string NeighborRanksString;
-    for (int iNeighbor = 0; iNeighbor < Neighbors.Count(); ++iNeighbor) {
-      // List separated by commas, so don't add thousands separators
-      NeighborRanksString += std::to_string(Neighbors[iNeighbor].Key());
-      if (iNeighbor != Neighbors.Count()-1) NeighborRanksString += ", ";
-    }
-
-    Logger.LogDebug(Comm_.Rank() == 0, 1, "Decomposition:");
-
-    MPI_Barrier(Comm_);
-
-    for (int OtherRank = 0; OtherRank < Comm_.Size(); ++OtherRank) {
-      if (OtherRank == Comm_.Rank()) {
-        std::string RankString = core::FormatNumber(Comm_.Rank());
-        Logger.LogDebug(true, 2, "Rank %s (global rank @rank@) contains %s (%s).", RankString,
-          LocalRangeString, TotalLocalPointsString);
-        if (Neighbors.Count() > 0) {
-          Logger.LogDebug(true, 2, "Rank %s has neighbors: %s", RankString, NeighborRanksString);
-        }
+      const char *DimNames[3] = {"i", "j", "k"};
+      std::string LocalRangeString;
+      for (int iDim = 0; iDim < NumDims_; ++iDim) {
+        std::string LocalBeginString = core::FormatNumber(LocalRange.Begin(iDim));
+        std::string LocalEndString = core::FormatNumber(LocalRange.End(iDim));
+        LocalRangeString += std::string(DimNames[iDim]) + '=' + LocalBeginString + ':' +
+          LocalEndString;
+        if (iDim != NumDims_-1) LocalRangeString += ", ";
       }
+
+      std::string TotalLocalPointsString = core::FormatNumber(LocalRange.Count(), "points",
+        "point");
+
+      std::string NeighborRanksString;
+      for (int iNeighbor = 0; iNeighbor < Neighbors.Count(); ++iNeighbor) {
+        // List separated by commas, so don't add thousands separators
+        NeighborRanksString += std::to_string(Neighbors[iNeighbor].Key());
+        if (iNeighbor != Neighbors.Count()-1) NeighborRanksString += ", ";
+      }
+
+      Logger.LogStatus(Comm_.Rank() == 0, "Decomposition:");
+      auto Indent2 = Logger.IndentStatus();
+
       MPI_Barrier(Comm_);
+
+      for (int OtherRank = 0; OtherRank < Comm_.Size(); ++OtherRank) {
+        if (OtherRank == Comm_.Rank()) {
+          std::string RankString = core::FormatNumber(Comm_.Rank());
+          Logger.LogStatus(true, "Rank %s (global rank @rank@) contains %s (%s).", RankString,
+            LocalRangeString, TotalLocalPointsString);
+          if (Neighbors.Count() > 0) {
+            Logger.LogStatus(true, "Rank %s has neighbors: %s", RankString, NeighborRanksString);
+          }
+        }
+        MPI_Barrier(Comm_);
+      }
+
     }
 
   }

@@ -16,6 +16,7 @@ ovk::domain Interface2D(ovk::comm_view Comm, const ovk::box &Bounds, const ovk::
 
   auto Context = std::make_shared<ovk::context>(ovk::CreateContext(ovk::context::params()
     .SetComm(Comm)
+    .SetStatusLoggingThreshold(0)
   ));
 
   ovk::domain Domain = ovk::CreateDomain(std::move(Context), ovk::domain::params()
@@ -225,6 +226,7 @@ ovk::domain Interface3D(ovk::comm_view Comm, const ovk::box &Bounds, const ovk::
 
   auto Context = std::make_shared<ovk::context>(ovk::CreateContext(ovk::context::params()
     .SetComm(Comm)
+    .SetStatusLoggingThreshold(0)
   ));
 
   ovk::domain Domain = ovk::CreateDomain(std::move(Context), ovk::domain::params()

@@ -36,7 +36,8 @@ domain_base_1::domain_base_1(std::shared_ptr<context> &&Context, std::string &&N
   Comm_(DuplicateComm(Comm))
 {
   core::logger &Logger = Context_->core_Logger();
-  Logger.LogStatus(Comm_.Rank() == 0, 0, "Creating domain %s...", *Name_);
+  Logger.LogStatus(Comm_.Rank() == 0, "Creating domain %s...", *Name_);
+  Level1_ = Logger.IncreaseStatusLevelAndIndent();
 }
 
 domain_base_1::~domain_base_1() noexcept {
@@ -44,7 +45,8 @@ domain_base_1::~domain_base_1() noexcept {
   if (Context_) {
     MPI_Barrier(Comm_);
     core::logger &Logger = Context_->core_Logger();
-    Logger.LogStatus(Comm_.Rank() == 0, 0, "Done destroying domain %s.", *Name_);
+    Level1_.Reset();
+    Logger.LogStatus(Comm_.Rank() == 0, "Done destroying domain %s.", *Name_);
   }
 
 }
@@ -99,8 +101,9 @@ void domain_base::CreateGrid(int GridID, optional<grid::params> MaybeParams) {
     std::string GridName;
     if (IsRoot) GridName = MaybeParams.Get().Name();
     core::BroadcastStringAnySource(GridName, IsRoot, Comm_);
-    Logger.LogStatus(Comm_.Rank() == 0, 0, "Creating grid %s.%s...", *Name_, GridName);
+    Logger.LogStatus(Comm_.Rank() == 0, "Creating grid %s.%s...", *Name_, GridName);
   }
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   grid *MaybeGrid = nullptr;
 
@@ -114,9 +117,9 @@ void domain_base::CreateGrid(int GridID, optional<grid::params> MaybeParams) {
 
   MPI_Barrier(Comm_);
 
+  Level1.Reset();
   grid_record &Record = GridRecords_(GridID);
-  Logger.LogStatus(Comm_.Rank() == 0, 0, "Done creating grid %s.%s.", *Name_,
-    Record.GridInfo.Name());
+  Logger.LogStatus(Comm_.Rank() == 0, "Done creating grid %s.%s.", *Name_, Record.GridInfo.Name());
 
   GridEvent_.Trigger(GridID, grid_event_flags::CREATE, true);
 
@@ -163,9 +166,10 @@ void domain_base::CreateGrids(array_view<const int> GridIDs, array<optional<grid
       std::string GridName;
       if (IsRoot) GridName = MaybeParams(iCreate).Get().Name();
       core::BroadcastStringAnySource(GridName, IsRoot, Comm_);
-      Logger.LogStatus(Comm_.Rank() == 0, 0, "Creating grid %s.%s...", *Name_, GridName);
+      Logger.LogStatus(Comm_.Rank() == 0, "Creating grid %s.%s...", *Name_, GridName);
     }
   }
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   for (int iCreate = 0; iCreate < NumCreates; ++iCreate) {
     int GridID = GridIDs(iCreate);
@@ -187,11 +191,12 @@ void domain_base::CreateGrids(array_view<const int> GridIDs, array<optional<grid
 
   MPI_Barrier(Comm_);
 
+  Level1.Reset();
   if (Logger.LoggingStatus()) {
     for (int iCreate = 0; iCreate < NumCreates; ++iCreate) {
       int GridID = GridIDs(iCreate);
       grid_record &Record = GridRecords_(GridID);
-      Logger.LogStatus(Comm_.Rank() == 0, 0, "Done creating grid %s.%s.", *Name_,
+      Logger.LogStatus(Comm_.Rank() == 0, "Done creating grid %s.%s.", *Name_,
         Record.GridInfo.Name());
     }
   }
@@ -222,8 +227,9 @@ void domain_base::DestroyGrid(int GridID) {
   if (Logger.LoggingStatus()) {
     grid_record &Record = GridRecords_(GridID);
     GridName = Record.GridInfo.Name();
-    Logger.LogStatus(Comm_.Rank() == 0, 0, "Destroying grid %s.%s...", *Name_, GridName);
+    Logger.LogStatus(Comm_.Rank() == 0, "Destroying grid %s.%s...", *Name_, GridName);
   }
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   LocalGrids_.Erase(GridID);
 
@@ -231,8 +237,9 @@ void domain_base::DestroyGrid(int GridID) {
 
   MPI_Barrier(Comm_);
 
+  Level1.Reset();
   if (Logger.LoggingStatus()) {
-    Logger.LogStatus(Comm_.Rank() == 0, 0, "Done destroying grid %s.%s.", *Name_, GridName);
+    Logger.LogStatus(Comm_.Rank() == 0, "Done destroying grid %s.%s.", *Name_, GridName);
   }
 
 }
@@ -267,10 +274,10 @@ void domain_base::DestroyGrids(array_view<const int> GridIDs) {
       int GridID = GridIDs(iDestroy);
       grid_record &Record = GridRecords_(GridID);
       GridNames(iDestroy) = Record.GridInfo.Name();
-      Logger.LogStatus(Comm_.Rank() == 0, 0, "Destroying grid %s.%s...", *Name_,
-        GridNames(iDestroy));
+      Logger.LogStatus(Comm_.Rank() == 0, "Destroying grid %s.%s...", *Name_, GridNames(iDestroy));
     }
   }
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   for (int iDestroy = 0; iDestroy < NumDestroys; ++iDestroy) {
     int GridID = GridIDs(iDestroy);
@@ -284,9 +291,10 @@ void domain_base::DestroyGrids(array_view<const int> GridIDs) {
 
   MPI_Barrier(Comm_);
 
+  Level1.Reset();
   if (Logger.LoggingStatus()) {
     for (int iDestroy = 0; iDestroy < NumDestroys; ++iDestroy) {
-      Logger.LogStatus(Comm_.Rank() == 0, 0, "Done destroying grid %s.%s.", *Name_,
+      Logger.LogStatus(Comm_.Rank() == 0, "Done destroying grid %s.%s.", *Name_,
         GridNames(iDestroy));
     }
   }
@@ -334,12 +342,13 @@ domain::domain(std::shared_ptr<context> &&Context, params &&Params):
 
   MPI_Barrier(Comm_);
 
-  if (Comm_.Rank() == 0 && Logger.LoggingDebug()) {
+  if (Comm_.Rank() == 0 && Logger.LoggingStatus()) {
     std::string ProcessesString = core::FormatNumber(Comm_.Size(), "processes", "process");
-    Logger.LogDebug(true, 0, "Created %1iD domain %s on %s.", NumDims_, *Name_, ProcessesString);
+    Logger.LogStatus(true, "Created %1iD domain %s on %s.", NumDims_, *Name_, ProcessesString);
   }
 
-  Logger.LogStatus(Comm_.Rank() == 0, 0, "Done creating domain %s.", *Name_);
+  Level1_.Reset();
+  Logger.LogStatus(Comm_.Rank() == 0, "Done creating domain %s.", *Name_);
 
 }
 
@@ -348,7 +357,8 @@ domain::~domain() noexcept {
   if (Context_) {
     MPI_Barrier(Comm_);
     core::logger &Logger = Context_->core_Logger();
-    Logger.LogStatus(Comm_.Rank() == 0, 0, "Destroying domain %s...", *Name_);
+    Logger.LogStatus(Comm_.Rank() == 0, "Destroying domain %s...", *Name_);
+    Level1_ = Logger.IncreaseStatusLevelAndIndent();
   }
 
 }

@@ -153,7 +153,7 @@ void assembler::Bind(domain &Domain, bindings Bindings) {
   AssemblyData_ = assembly_data(Domain.Dimension(), Domain.Comm());
 
   core::logger &Logger = Context_->core_Logger();
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Bound assembler %s to domain %s.", *Name_,
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Bound assembler %s to domain %s.", *Name_,
     Domain.Name());
 
   for (int GridID : Domain.GridIDs()) {
@@ -193,7 +193,7 @@ void assembler::Unbind() {
   MPI_Barrier(Domain.Comm());
 
   core::logger &Logger = Context_->core_Logger();
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Unbound assembler %s.", *Name_);
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Unbound assembler %s.", *Name_);
 
 }
 
@@ -440,7 +440,8 @@ void assembler::Update_() {
   const domain &Domain = *Domain_;
   core::logger &Logger = Context_->core_Logger();
 
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Updating assembler %s...", *Name_);
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Updating assembler %s...", *Name_);
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   AddGridsToOptions_();
   RemoveGridsFromOptions_();
@@ -450,7 +451,8 @@ void assembler::Update_() {
   UpdateManifest_.RemoveGridsFromOptions.Clear();
   UpdateManifest_.RemoveAssemblyManifestEntries.Clear();
 
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Done updating assembler %s.", *Name_);
+  Level1.Reset();
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Done updating assembler %s.", *Name_);
 
 }
 

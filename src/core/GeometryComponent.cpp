@@ -43,7 +43,7 @@ geometry_component_base::~geometry_component_base() noexcept {
     const core::domain_base &Domain = *Domain_;
     MPI_Barrier(Domain.Comm());
     core::logger &Logger = Context_->core_Logger();
-    Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Destroyed geometry component %s.%s.",
+    Logger.LogStatus(Domain.Comm().Rank() == 0, "Destroyed geometry component %s.%s.",
       Domain.Name(), *Name_);
   }
 
@@ -69,7 +69,7 @@ geometry_component::geometry_component(const core::domain_base &Domain, params P
   });
 
   core::logger &Logger = Context_->core_Logger();
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Created geometry component %s.%s.", Domain.Name(),
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Created geometry component %s.%s.", Domain.Name(),
     *Name_);
 
 }
@@ -199,8 +199,9 @@ void geometry_component::CreateGeometry(int GridID, optional<geometry::params> M
 
   const grid_info &GridInfo = Domain.GridInfo(GridID);
 
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Creating geometry %s.%s...", Domain.Name(),
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Creating geometry %s.%s...", Domain.Name(),
     GridInfo.Name());
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   const std::shared_ptr<context> &SharedContext = Domain.SharedContext();
 
@@ -222,7 +223,8 @@ void geometry_component::CreateGeometry(int GridID, optional<geometry::params> M
 
   MPI_Barrier(Domain.Comm());
 
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Done creating geometry %s.%s.", Domain.Name(),
+  Level1.Reset();
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Done creating geometry %s.%s.", Domain.Name(),
     GridInfo.Name());
 
   GeometryEvent_.Trigger(GridID, geometry_event_flags::CREATE, true);
@@ -260,10 +262,11 @@ void geometry_component::CreateGeometries(array_view<const int> GridIDs, array<o
     for (int iCreate = 0; iCreate < NumCreates; ++iCreate) {
       int GridID = GridIDs(iCreate);
       const grid_info &GridInfo = Domain.GridInfo(GridID);
-      Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Creating geometry %s.%s...", Domain.Name(),
+      Logger.LogStatus(Domain.Comm().Rank() == 0, "Creating geometry %s.%s...", Domain.Name(),
         GridInfo.Name());
     }
   }
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   const std::shared_ptr<context> &SharedContext = Domain.SharedContext();
 
@@ -294,12 +297,13 @@ void geometry_component::CreateGeometries(array_view<const int> GridIDs, array<o
 
   MPI_Barrier(Domain.Comm());
 
+  Level1.Reset();
   if (Logger.LoggingStatus()) {
     for (int iCreate = 0; iCreate < NumCreates; ++iCreate) {
       int GridID = GridIDs(iCreate);
       const grid_info &GridInfo = Domain.GridInfo(GridID);
-      Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Done creating geometry %s.%s.",
-        Domain.Name(), GridInfo.Name());
+      Logger.LogStatus(Domain.Comm().Rank() == 0, "Done creating geometry %s.%s.", Domain.Name(),
+        GridInfo.Name());
     }
   }
 
@@ -343,8 +347,9 @@ void geometry_component::DestroyGeometry(int GridID) {
 
   const grid_info &GridInfo = Domain.GridInfo(GridID);
 
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Destroying geometry %s.%s...", Domain.Name(),
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Destroying geometry %s.%s...", Domain.Name(),
     GridInfo.Name());
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   Locals_.Erase(GridID);
 
@@ -352,7 +357,8 @@ void geometry_component::DestroyGeometry(int GridID) {
 
   MPI_Barrier(Domain.Comm());
 
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Done destroying geometry %s.%s.", Domain.Name(),
+  Level1.Reset();
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Done destroying geometry %s.%s.", Domain.Name(),
     GridInfo.Name());
 
 }
@@ -407,10 +413,11 @@ void geometry_component::DestroyGeometries(array_view<const int> GridIDs) {
     for (int iDestroy = 0; iDestroy < NumDestroys; ++iDestroy) {
       int GridID = GridIDs(iDestroy);
       const grid_info &GridInfo = Domain.GridInfo(GridID);
-      Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Destroying geometry %s.%s...", Domain.Name(),
+      Logger.LogStatus(Domain.Comm().Rank() == 0, "Destroying geometry %s.%s...", Domain.Name(),
         GridInfo.Name());
     }
   }
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   for (int iDestroy = 0; iDestroy < NumDestroys; ++iDestroy) {
     int GridID = GridIDs(iDestroy);
@@ -424,12 +431,13 @@ void geometry_component::DestroyGeometries(array_view<const int> GridIDs) {
 
   MPI_Barrier(Domain.Comm());
 
+  Level1.Reset();
   if (Logger.LoggingStatus()) {
     for (int iDestroy = 0; iDestroy < NumDestroys; ++iDestroy) {
       int GridID = GridIDs(iDestroy);
       const grid_info &GridInfo = Domain.GridInfo(GridID);
-      Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Done destroying geometry %s.%s.",
-        Domain.Name(), GridInfo.Name());
+      Logger.LogStatus(Domain.Comm().Rank() == 0, "Done destroying geometry %s.%s.", Domain.Name(),
+        GridInfo.Name());
     }
   }
 
@@ -443,7 +451,8 @@ void geometry_component::ClearGeometries() {
 
   core::logger &Logger = Context_->core_Logger();
 
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Clearing geometries...");
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Clearing geometries...");
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   int NumGeometries = GeometryCount();
 
@@ -482,7 +491,8 @@ void geometry_component::ClearGeometries() {
 
   MPI_Barrier(Domain.Comm());
 
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Done clearing geometries.");
+  Level1.Reset();
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Done clearing geometries.");
 
 }
 
@@ -532,6 +542,7 @@ bool geometry_component::EditingGeometry(int GridID) const {
 edit_handle<geometry> geometry_component::EditGeometry(int GridID) {
 
   const core::domain_base &Domain = *Domain_;
+  core::logger &Logger = Domain.Context().core_Logger();
 
   OVK_DEBUG_ASSERT(GridID >= 0, "Invalid grid ID.");
   OVK_DEBUG_ASSERT(Domain.GridExists(GridID), "Grid %i does not exist.", GridID);
@@ -546,10 +557,22 @@ edit_handle<geometry> geometry_component::EditGeometry(int GridID) {
   editor &Editor = Local.Editor;
 
   if (!Editor.Active()) {
+    floating_ref<const core::domain_base> DomainRef = Domain_;
     floating_ref<const grid> GridRef = Domain.Grid(GridID).GetFloatingRef();
     MPI_Barrier(GridRef->Comm());
-    auto DeactivateFunc = [GridRef] { MPI_Barrier(GridRef->Comm()); };
+    auto DeactivateFunc = [DomainRef, GridRef] {
+      MPI_Barrier(GridRef->Comm());
+      core::logger &Logger = DomainRef->Context().core_Logger();
+      if (Logger.LoggingStatus()) {
+        Logger.LogStatus(GridRef->Comm().Rank() == 0, "Restored geometry %s.%s.", DomainRef->Name(),
+          GridRef->Name());
+      }
+    };
     Editor.Activate(std::move(DeactivateFunc));
+    if (Logger.LoggingStatus()) {
+      Logger.LogStatus(GridRef->Comm().Rank() == 0, "Editing geometry %s.%s.", Domain.Name(),
+        GridRef->Name());
+    }
   }
 
   return Editor.Edit(Geometry);

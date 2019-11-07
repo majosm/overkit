@@ -147,6 +147,7 @@ TEST_F(HaloTests, Exchange) {
 
   auto Context = std::make_shared<ovk::context>(ovk::CreateContext(ovk::context::params()
     .SetComm(TestComm())
+    .SetStatusLoggingThreshold(0)
   ));
 
   // Extended range same as local range

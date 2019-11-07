@@ -20,18 +20,19 @@ namespace ovk {
 
 namespace context_internal {
 
-context_base::context_base(MPI_Comm Comm, log_level LogLevel):
+context_base::context_base(MPI_Comm Comm, bool LoggingErrors, bool LoggingWarnings, int
+  StatusLoggingThreshold):
   Exists_(true),
   Comm_(DuplicateComm(Comm)),
   Logger_(Comm_.Rank())
 {
 
-  if ((LogLevel & log_level::ERRORS) != log_level::NONE) Logger_.EnableErrorLogging();
-  if ((LogLevel & log_level::WARNINGS) != log_level::NONE) Logger_.EnableWarningLogging();
-  if ((LogLevel & log_level::STATUS) != log_level::NONE) Logger_.EnableStatusLogging();
-  if ((LogLevel & log_level::DEBUG) != log_level::NONE) Logger_.EnableDebugLogging();
+  if (LoggingErrors) Logger_.EnableErrors();
+  if (LoggingWarnings) Logger_.EnableWarnings();
+  Logger_.SetStatusThreshold(StatusLoggingThreshold);
 
-  Logger_.LogStatus(Comm_.Rank() == 0, 0, "Creating context...");
+  Logger_.LogStatus(Comm_.Rank() == 0, "Creating context...");
+  Level1_ = Logger_.IncreaseStatusLevelAndIndent();
 
 }
 
@@ -39,7 +40,8 @@ context_base::~context_base() noexcept {
 
   if (Exists_) {
     MPI_Barrier(Comm_);
-    Logger_.LogStatus(Comm_.Rank() == 0, 0, "Done destroying context.");
+    Level1_.Reset();
+    Logger_.LogStatus(Comm_.Rank() == 0, "Done destroying context.");
   }
 
 }
@@ -47,7 +49,8 @@ context_base::~context_base() noexcept {
 }
 
 context::context(params &&Params):
-  context_base(Params.Comm_, Params.LogLevel_),
+  context_base(Params.Comm_, Params.ErrorLogging_, Params.WarningLogging_,
+    Params.StatusLoggingThreshold_),
   Profiler_(Comm_)
 {
 
@@ -59,12 +62,13 @@ context::context(params &&Params):
 
   MPI_Barrier(Comm_);
 
-  if (Comm_.Rank() == 0 && Logger_.LoggingDebug()) {
+  if (Comm_.Rank() == 0 && Logger_.LoggingStatus()) {
     std::string ProcessesString = core::FormatNumber(Comm_.Size(), "processes", "process");
-    Logger_.LogDebug(true, 0, "Created context on %s.", ProcessesString);
+    Logger_.LogStatus(true, "Created context on %s.", ProcessesString);
   }
 
-  Logger_.LogStatus(Comm_.Rank() == 0, 0, "Done creating context.");
+  Level1_.Reset();
+  Logger_.LogStatus(Comm_.Rank() == 0, "Done creating context.");
 
 }
 
@@ -75,7 +79,8 @@ context::~context() noexcept {
     // Barrier before cleaning up
     MPI_Barrier(Comm_);
 
-    Logger_.LogStatus(Comm_.Rank() == 0, 0, "Destroying context...");
+    Logger_.LogStatus(Comm_.Rank() == 0, "Destroying context...");
+    Level1_ = Logger_.IncreaseStatusLevelAndIndent();
 
   }
 
@@ -120,41 +125,35 @@ optional<context> CreateContext(context::params Params, error &Error) {
 
 }
 
-log_level context::LogLevel() const {
+void context::EnableErrorLogging() {
 
-  log_level LogLevel = log_level::NONE;
-
-  if (Logger_.LoggingErrors()) LogLevel &= log_level::ERRORS;
-  if (Logger_.LoggingWarnings()) LogLevel &= log_level::WARNINGS;
-  if (Logger_.LoggingStatus()) LogLevel &= log_level::STATUS;
-  if (Logger_.LoggingDebug()) LogLevel &= log_level::DEBUG;
-
-  return LogLevel;
+  Logger_.EnableErrors();
 
 }
 
-void context::SetLogLevel(log_level LogLevel) {
+void context::DisableErrorLogging() {
 
-  if ((LogLevel & log_level::ERRORS) != log_level::NONE) {
-    Logger_.EnableErrorLogging();
-  } else {
-    Logger_.DisableErrorLogging();
-  }
-  if ((LogLevel & log_level::WARNINGS) != log_level::NONE) {
-    Logger_.EnableWarningLogging();
-  } else {
-    Logger_.DisableWarningLogging();
-  }
-  if ((LogLevel & log_level::STATUS) != log_level::NONE) {
-    Logger_.EnableStatusLogging();
-  } else {
-    Logger_.DisableStatusLogging();
-  }
-  if ((LogLevel & log_level::DEBUG) != log_level::NONE) {
-    Logger_.EnableDebugLogging();
-  } else {
-    Logger_.DisableDebugLogging();
-  }
+  Logger_.DisableErrors();
+
+}
+
+void context::EnableWarningLogging() {
+
+  Logger_.EnableWarnings();
+
+}
+
+void context::DisableWarningLogging() {
+
+  Logger_.DisableWarnings();
+
+}
+
+void context::SetStatusLoggingThreshold(int StatusLoggingThreshold) {
+
+  OVK_DEBUG_ASSERT(StatusLoggingThreshold >= 0, "Invalid status logging threshold.");
+
+  Logger_.SetStatusThreshold(StatusLoggingThreshold);
 
 }
 
@@ -186,11 +185,27 @@ context::params &context::params::SetComm(MPI_Comm Comm) {
 
 }
 
-context::params &context::params::SetLogLevel(log_level LogLevel) {
+context::params &context::params::SetErrorLogging(bool ErrorLogging) {
 
-  OVK_DEBUG_ASSERT(ValidLogLevel(LogLevel), "Invalid log level.");
+  ErrorLogging_ = ErrorLogging;
 
-  LogLevel_ = LogLevel;
+  return *this;
+
+}
+
+context::params &context::params::SetWarningLogging(bool WarningLogging) {
+
+  WarningLogging_ = WarningLogging;
+
+  return *this;
+
+}
+
+context::params &context::params::SetStatusLoggingThreshold(int StatusLoggingThreshold) {
+
+  OVK_DEBUG_ASSERT(StatusLoggingThreshold >= 0, "Invalid status logging threshold.");
+
+  StatusLoggingThreshold_ = StatusLoggingThreshold;
 
   return *this;
 

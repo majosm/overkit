@@ -47,6 +47,7 @@ std::shared_ptr<const ovk::partition> CreatePartition(ovk::comm_view CommOfSize4
 
   auto Context = std::make_shared<ovk::context>(ovk::CreateContext(ovk::context::params()
     .SetComm(CommOfSize4)
+    .SetStatusLoggingThreshold(0)
   ));
 
   ovk::periodic_storage PeriodicStorage = Duplicated ? ovk::periodic_storage::DUPLICATED :

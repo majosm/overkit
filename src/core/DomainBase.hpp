@@ -13,6 +13,7 @@
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Grid.hpp>
+#include <ovk/core/Logger.hpp>
 #include <ovk/core/Map.hpp>
 #include <ovk/core/Optional.hpp>
 #include <ovk/core/Requires.hpp>
@@ -79,6 +80,8 @@ protected:
   ~domain_base_1() noexcept;
 
   std::shared_ptr<context> Context_;
+
+  core::logger::status_level_and_indent_handle Level1_;
 
   core::string_wrapper Name_;
 

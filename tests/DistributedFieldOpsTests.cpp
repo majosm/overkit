@@ -42,6 +42,7 @@ std::shared_ptr<const ovk::partition> CreatePartition(int NumDims, ovk::comm_vie
 
   auto Context = std::make_shared<ovk::context>(ovk::CreateContext(ovk::context::params()
     .SetComm(Comm)
+    .SetStatusLoggingThreshold(0)
   ));
 
   ovk::tuple<bool> Periodic = {false,false,false};

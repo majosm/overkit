@@ -37,7 +37,7 @@ state_base::~state_base() noexcept {
   if (Context_) {
     MPI_Barrier(Comm_);
     core::logger &Logger = Context_->core_Logger();
-    Logger.LogDebug(Comm_.Rank() == 0, 0, "Destroyed state %s.", Grid_->Name());
+    Logger.LogStatus(Comm_.Rank() == 0, "Destroyed state %s.", Grid_->Name());
   }
 
 }
@@ -52,7 +52,7 @@ state::state(std::shared_ptr<context> &&Context, const grid &Grid, params &&Para
   MPI_Barrier(Comm_);
 
   core::logger &Logger = Context_->core_Logger();
-  Logger.LogDebug(Comm_.Rank() == 0, 0, "Created state %s.", Grid.Name());
+  Logger.LogStatus(Comm_.Rank() == 0, "Created state %s.", Grid.Name());
 
 }
 

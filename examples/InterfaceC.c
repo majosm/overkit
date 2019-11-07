@@ -78,7 +78,7 @@ static int Interface() {
   ovk_context_params *ContextParams;
   ovkCreateContextParams(&ContextParams);
   ovkSetContextParamComm(ContextParams, MPI_COMM_WORLD);
-  ovkSetContextParamLogLevel(ContextParams, OVK_LOG_ERRORS | OVK_LOG_WARNINGS | OVK_LOG_STATUS);
+  ovkSetContextParamStatusLoggingThreshold(ContextParams, 4);
 
   ovk_context *Context;
   ovk_error CreateError;

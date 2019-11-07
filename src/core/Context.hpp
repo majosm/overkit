@@ -5,7 +5,6 @@
 #define OVK_CORE_CONTEXT_HPP_INCLUDED
 
 #include <ovk/core/Comm.hpp>
-#include <ovk/core/Context.h>
 #include <ovk/core/Error.hpp>
 #include <ovk/core/FloatingRef.hpp>
 #include <ovk/core/Global.hpp>
@@ -21,41 +20,6 @@
 
 namespace ovk {
 
-enum class log_level : typename std::underlying_type<ovk_log_level>::type {
-  NONE = OVK_LOG_NONE,
-  ERRORS = OVK_LOG_ERRORS,
-  WARNINGS = OVK_LOG_WARNINGS,
-  STATUS = OVK_LOG_STATUS,
-  DEBUG = OVK_LOG_DEBUG,
-  ALL = OVK_LOG_ALL
-};
-
-inline bool ValidLogLevel(log_level LogLevel) {
-  return ovkValidLogLevel(ovk_log_level(LogLevel));
-}
-
-constexpr inline log_level operator|(log_level Left, log_level Right) {
-  return log_level(int(Left) | int(Right));
-}
-constexpr inline log_level operator&(log_level Left, log_level Right) {
-  return log_level(int(Left) & int(Right));
-}
-constexpr inline log_level operator^(log_level Left, log_level Right) {
-  return log_level(int(Left) ^ int(Right));
-}
-constexpr inline log_level operator~(log_level LogLevel) {
-  return log_level(~int(LogLevel));
-}
-inline log_level operator|=(log_level &Left, log_level Right) {
-  return Left = Left | Right;
-}
-inline log_level operator&=(log_level &Left, log_level Right) {
-  return Left = Left & Right;
-}
-inline log_level operator^=(log_level &Left, log_level Right) {
-  return Left = Left ^ Right;
-}
-
 namespace context_internal {
 
 // For doing stuff before creation and after destruction
@@ -63,7 +27,7 @@ class context_base {
 
 protected:
 
-  context_base(MPI_Comm Comm, log_level LogLevel);
+  context_base(MPI_Comm Comm, bool LoggingErrors, bool LoggingWarnings, int StatusLoggingThreshold);
 
   context_base(const context_base &Other) = delete;
   context_base(context_base &&Other) noexcept = default;
@@ -76,8 +40,8 @@ protected:
   core::moveabool Exists_;
 
   comm Comm_;
-  // TODO: Maybe mutability should be encapsulated inside?
   mutable core::logger Logger_;
+  core::logger::status_level_and_indent_handle Level1_;
 
 };
 
@@ -92,13 +56,19 @@ public:
     params() = default;
     MPI_Comm Comm() const { return Comm_; }
     params &SetComm(MPI_Comm Comm);
-    log_level LogLevel() const { return LogLevel_; }
-    params &SetLogLevel(log_level LogLevel);
+    bool ErrorLogging() const { return ErrorLogging_; }
+    params &SetErrorLogging(bool ErrorLogging);
+    bool WarningLogging() const { return WarningLogging_; }
+    params &SetWarningLogging(bool WarningLogging);
+    int StatusLoggingThreshold() const { return StatusLoggingThreshold_; }
+    params &SetStatusLoggingThreshold(int StatusLoggingThreshold);
     bool Profiling() const { return Profiling_; }
     params &SetProfiling(bool Profiling);
   private:
     MPI_Comm Comm_ = MPI_COMM_NULL;
-    log_level LogLevel_ = log_level::ERRORS | log_level::WARNINGS;
+    bool ErrorLogging_ = true;
+    bool WarningLogging_ = true;
+    int StatusLoggingThreshold_ = 1;
     bool Profiling_ = false;
     friend class context;
   };
@@ -118,8 +88,16 @@ public:
 
   const comm &Comm() const { return Comm_; }
 
-  log_level LogLevel() const;
-  void SetLogLevel(log_level LogLevel);
+  bool LoggingErrors() const { return Logger_.LoggingErrors(); }
+  void EnableErrorLogging();
+  void DisableErrorLogging();
+
+  bool LoggingWarnings() const { return Logger_.LoggingWarnings(); }
+  void EnableWarningLogging();
+  void DisableWarningLogging();
+
+  int StatusLoggingThreshold() const { return Logger_.StatusThreshold(); }
+  void SetStatusLoggingThreshold(int StatusLoggingThreshold);
 
   bool Profiling() const { return Profiler_.Enabled(); }
   void EnableProfiling();

@@ -46,8 +46,8 @@ overlap_component_base::~overlap_component_base() noexcept {
     const core::domain_base &Domain = *Domain_;
     MPI_Barrier(Domain.Comm());
     core::logger &Logger = Context_->core_Logger();
-    Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Destroyed overlap component %s.%s.",
-      Domain.Name(), *Name_);
+    Logger.LogStatus(Domain.Comm().Rank() == 0, "Destroyed overlap component %s.%s.", Domain.Name(),
+      *Name_);
   }
 
 }
@@ -72,7 +72,7 @@ overlap_component::overlap_component(const core::domain_base &Domain, params Par
   });
 
   core::logger &Logger = Context_->core_Logger();
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Created overlap component %s.%s.", Domain.Name(),
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Created overlap component %s.%s.", Domain.Name(),
     *Name_);
 
 }
@@ -240,8 +240,9 @@ void overlap_component::CreateOverlap(const elem<int,2> &OverlapID) {
   const grid_info &MGridInfo = Domain.GridInfo(MGridID);
   const grid_info &NGridInfo = Domain.GridInfo(NGridID);
 
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Creating overlap %s.(%s,%s)...", Domain.Name(),
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Creating overlap %s.(%s,%s)...", Domain.Name(),
     MGridInfo.Name(), NGridInfo.Name());
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   const std::shared_ptr<context> &SharedContext = Domain.SharedContext();
 
@@ -261,7 +262,8 @@ void overlap_component::CreateOverlap(const elem<int,2> &OverlapID) {
 
   MPI_Barrier(Domain.Comm());
 
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Done creating overlap %s.(%s,%s).", Domain.Name(),
+  Level1.Reset();
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Done creating overlap %s.(%s,%s).", Domain.Name(),
     MGridInfo.Name(), NGridInfo.Name());
 
   OverlapEvent_.Trigger(OverlapID, overlap_event_flags::CREATE, true);
@@ -299,10 +301,11 @@ void overlap_component::CreateOverlaps(array_view<const elem<int,2>> OverlapIDs)
       int NGridID = OverlapID(1);
       const grid_info &MGridInfo = Domain.GridInfo(MGridID);
       const grid_info &NGridInfo = Domain.GridInfo(NGridID);
-      Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Creating overlap %s.(%s,%s)...",
-        Domain.Name(), MGridInfo.Name(), NGridInfo.Name());
+      Logger.LogStatus(Domain.Comm().Rank() == 0, "Creating overlap %s.(%s,%s)...", Domain.Name(),
+        MGridInfo.Name(), NGridInfo.Name());
     }
   }
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   const std::shared_ptr<context> &SharedContext = Domain.SharedContext();
 
@@ -329,13 +332,14 @@ void overlap_component::CreateOverlaps(array_view<const elem<int,2>> OverlapIDs)
 
   MPI_Barrier(Domain.Comm());
 
+  Level1.Reset();
   if (Logger.LoggingStatus()) {
     for (auto &OverlapID : OverlapIDs) {
       int MGridID = OverlapID(0);
       int NGridID = OverlapID(1);
       const grid_info &MGridInfo = Domain.GridInfo(MGridID);
       const grid_info &NGridInfo = Domain.GridInfo(NGridID);
-      Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Done creating overlap %s.(%s,%s).",
+      Logger.LogStatus(Domain.Comm().Rank() == 0, "Done creating overlap %s.(%s,%s).",
         Domain.Name(), MGridInfo.Name(), NGridInfo.Name());
     }
   }
@@ -390,8 +394,9 @@ void overlap_component::DestroyOverlap(const elem<int,2> &OverlapID) {
   const grid_info &MGridInfo = Domain.GridInfo(MGridID);
   const grid_info &NGridInfo = Domain.GridInfo(NGridID);
 
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Destroying overlap %s.(%s,%s)...", Domain.Name(),
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Destroying overlap %s.(%s,%s)...", Domain.Name(),
     MGridInfo.Name(), NGridInfo.Name());
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   LocalMs_.Erase(OverlapID);
   LocalNs_.Erase(OverlapID);
@@ -400,8 +405,9 @@ void overlap_component::DestroyOverlap(const elem<int,2> &OverlapID) {
 
   MPI_Barrier(Domain.Comm());
 
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Done destroying overlap %s.(%s,%s).",
-    Domain.Name(), MGridInfo.Name(), NGridInfo.Name());
+  Level1.Reset();
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Done destroying overlap %s.(%s,%s).", Domain.Name(),
+    MGridInfo.Name(), NGridInfo.Name());
 
 }
 
@@ -468,10 +474,11 @@ void overlap_component::DestroyOverlaps(array_view<const elem<int,2>> OverlapIDs
       int NGridID = OverlapID(1);
       const grid_info &MGridInfo = Domain.GridInfo(MGridID);
       const grid_info &NGridInfo = Domain.GridInfo(NGridID);
-      Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Destroying overlap %s.(%s,%s)...",
-        Domain.Name(), MGridInfo.Name(), NGridInfo.Name());
+      Logger.LogStatus(Domain.Comm().Rank() == 0, "Destroying overlap %s.(%s,%s)...", Domain.Name(),
+        MGridInfo.Name(), NGridInfo.Name());
     }
   }
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   for (auto &OverlapID : OverlapIDs) {
     LocalMs_.Erase(OverlapID);
@@ -484,13 +491,14 @@ void overlap_component::DestroyOverlaps(array_view<const elem<int,2>> OverlapIDs
 
   MPI_Barrier(Domain.Comm());
 
+  Level1.Reset();
   if (Logger.LoggingStatus()) {
     for (auto &OverlapID : OverlapIDs) {
       int MGridID = OverlapID(0);
       int NGridID = OverlapID(1);
       const grid_info &MGridInfo = Domain.GridInfo(MGridID);
       const grid_info &NGridInfo = Domain.GridInfo(NGridID);
-      Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Done destroying overlap %s.(%s,%s).",
+      Logger.LogStatus(Domain.Comm().Rank() == 0, "Done destroying overlap %s.(%s,%s).",
         Domain.Name(), MGridInfo.Name(), NGridInfo.Name());
     }
   }

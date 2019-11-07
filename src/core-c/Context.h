@@ -6,7 +6,6 @@
 
 #include <ovk/core-c/Error.h>
 #include <ovk/core-c/Global.h>
-#include <ovk/core/Context.h>
 
 #include <mpi.h>
 
@@ -37,8 +36,12 @@ void ovkGetContextFromShared(ovk_shared_context *SharedContext, ovk_context **Co
 void ovkGetContextComm(const ovk_context *Context, MPI_Comm *Comm);
 void ovkGetContextCommSize(const ovk_context *Context, int *CommSize);
 void ovkGetContextCommRank(const ovk_context *Context, int *CommRank);
-void ovkGetContextLogLevel(const ovk_context *Context, ovk_log_level *LogLevel);
-void ovkSetContextLogLevel(ovk_context *Context, ovk_log_level LogLevel);
+void ovkGetContextErrorLogging(const ovk_context *Context, bool *LoggingErrors);
+void ovkSetContextErrorLogging(ovk_context *Context, bool LoggingErrors);
+void ovkGetContextWarningLogging(const ovk_context *Context, bool *LoggingWarnings);
+void ovkSetContextWarningLogging(ovk_context *Context, bool LoggingWarnings);
+void ovkGetContextStatusLoggingThreshold(const ovk_context *Context, int *StatusLoggingThreshold);
+void ovkSetContextStatusLoggingThreshold(ovk_context *Context, int StatusLoggingThreshold);
 void ovkGetContextProfiling(const ovk_context *Context, bool *Profiling);
 void ovkSetContextProfiling(ovk_context *Context, bool Profiling);
 void ovkWriteProfile(const ovk_context *Context, FILE *File);
@@ -47,8 +50,14 @@ void ovkCreateContextParams(ovk_context_params **Params);
 void ovkDestroyContextParams(ovk_context_params **Params);
 void ovkGetContextParamComm(const ovk_context_params *Params, MPI_Comm *Comm);
 void ovkSetContextParamComm(ovk_context_params *Params, MPI_Comm Comm);
-void ovkGetContextParamLogLevel(const ovk_context_params *Params, ovk_log_level *LogLevel);
-void ovkSetContextParamLogLevel(ovk_context_params *Params, ovk_log_level LogLevel);
+void ovkGetContextParamErrorLogging(const ovk_context_params *Params, bool *ErrorLogging);
+void ovkSetContextParamErrorLogging(ovk_context_params *Params, bool ErrorLogging);
+void ovkGetContextParamWarningLogging(const ovk_context_params *Params, bool *WarningLogging);
+void ovkSetContextParamWarningLogging(ovk_context_params *Params, bool WarningLogging);
+void ovkGetContextParamStatusLoggingThreshold(const ovk_context_params *Params, int
+  *StatusLoggingThreshold);
+void ovkSetContextParamStatusLoggingThreshold(ovk_context_params *Params, int
+  StatusLoggingThreshold);
 void ovkGetContextParamProfiling(const ovk_context_params *Params, bool *Profiling);
 void ovkSetContextParamProfiling(ovk_context_params *Params, bool Profiling);
 

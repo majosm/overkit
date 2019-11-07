@@ -128,7 +128,7 @@ void exchanger::Bind(const domain &Domain, bindings Bindings) {
   MPI_Barrier(Domain.Comm());
 
   core::logger &Logger = Context_->core_Logger();
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Bound exchanger %s to domain %s.", *Name_,
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Bound exchanger %s to domain %s.", *Name_,
     Domain.Name());
 
   for (auto &ConnectivityID : ConnectivityComponent.ConnectivityIDs()) {
@@ -161,7 +161,7 @@ void exchanger::Unbind() {
   MPI_Barrier(Domain.Comm());
 
   core::logger &Logger = Context_->core_Logger();
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Unbound exchanger %s.", *Name_);
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Unbound exchanger %s.", *Name_);
 
 }
 
@@ -228,7 +228,8 @@ void exchanger::Update_() {
   const domain &Domain = *Domain_;
   core::logger &Logger = Context_->core_Logger();
 
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Updating exchanger %s...", *Name_);
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Updating exchanger %s...", *Name_);
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   CreateLocals_();
   DestroyLocals_();
@@ -240,7 +241,8 @@ void exchanger::Update_() {
   UpdateManifest_.UpdateSourceDestRanks.Clear();
   UpdateManifest_.ResetExchanges.Clear();
 
-  Logger.LogStatus(Domain.Comm().Rank() == 0, 0, "Done updating exchanger %s.", *Name_);
+  Level1.Reset();
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Done updating exchanger %s.", *Name_);
 
 }
 

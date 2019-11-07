@@ -147,23 +147,68 @@ void ovkGetContextCommRank(const ovk_context *Context, int *CommRank) {
 
 }
 
-void ovkGetContextLogLevel(const ovk_context *Context, ovk_log_level *LogLevel) {
+void ovkGetContextErrorLogging(const ovk_context *Context, bool *LoggingErrors) {
 
   OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
-  OVK_DEBUG_ASSERT(LogLevel, "Invalid log level pointer.");
+  OVK_DEBUG_ASSERT(LoggingErrors, "Invalid logging errors pointer.");
 
   auto &ContextCPP = *reinterpret_cast<const ovk::context *>(Context);
-  *LogLevel = ovk_log_level(ContextCPP.LogLevel());
+  *LoggingErrors = ContextCPP.LoggingErrors();
 
 }
 
-void ovkSetContextLogLevel(ovk_context *Context, ovk_log_level LogLevel) {
+void ovkSetContextErrorLogging(ovk_context *Context, bool LoggingErrors) {
 
   OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
-  OVK_DEBUG_ASSERT(ovkValidLogLevel(LogLevel), "Invalid log level.");
 
   auto &ContextCPP = *reinterpret_cast<ovk::context *>(Context);
-  ContextCPP.SetLogLevel(ovk::log_level(LogLevel));
+  if (LoggingErrors) {
+    ContextCPP.EnableErrorLogging();
+  } else {
+    ContextCPP.DisableErrorLogging();
+  }
+
+}
+
+void ovkGetContextWarningLogging(const ovk_context *Context, bool *LoggingWarnings) {
+
+  OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
+  OVK_DEBUG_ASSERT(LoggingWarnings, "Invalid logging warnings pointer.");
+
+  auto &ContextCPP = *reinterpret_cast<const ovk::context *>(Context);
+  *LoggingWarnings = ContextCPP.LoggingWarnings();
+
+}
+
+void ovkSetContextWarningLogging(ovk_context *Context, bool LoggingWarnings) {
+
+  OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
+
+  auto &ContextCPP = *reinterpret_cast<ovk::context *>(Context);
+  if (LoggingWarnings) {
+    ContextCPP.EnableWarningLogging();
+  } else {
+    ContextCPP.DisableWarningLogging();
+  }
+
+}
+
+void ovkGetContextStatusLoggingThreshold(const ovk_context *Context, int *StatusLoggingThreshold) {
+
+  OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
+  OVK_DEBUG_ASSERT(StatusLoggingThreshold, "Invalid status logging threshold pointer.");
+
+  auto &ContextCPP = *reinterpret_cast<const ovk::context *>(Context);
+  *StatusLoggingThreshold = ContextCPP.StatusLoggingThreshold();
+
+}
+
+void ovkSetContextStatusLoggingThreshold(ovk_context *Context, int StatusLoggingThreshold) {
+
+  OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
+
+  auto &ContextCPP = *reinterpret_cast<ovk::context *>(Context);
+  ContextCPP.SetStatusLoggingThreshold(StatusLoggingThreshold);
 
 }
 
@@ -247,22 +292,62 @@ void ovkSetContextParamComm(ovk_context_params *Params, MPI_Comm Comm) {
 
 }
 
-void ovkGetContextParamLogLevel(const ovk_context_params *Params, ovk_log_level *LogLevel) {
+void ovkGetContextParamErrorLogging(const ovk_context_params *Params, bool *ErrorLogging) {
 
   OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
-  OVK_DEBUG_ASSERT(LogLevel, "Invalid log level pointer.");
+  OVK_DEBUG_ASSERT(ErrorLogging, "Invalid error logging pointer.");
 
   auto &ParamsCPP = *reinterpret_cast<const ovk::context::params *>(Params);
-  *LogLevel = ovk_log_level(ParamsCPP.LogLevel());
+  *ErrorLogging = ParamsCPP.ErrorLogging();
 
 }
 
-void ovkSetContextParamLogLevel(ovk_context_params *Params, ovk_log_level LogLevel) {
+void ovkSetContextParamErrorLogging(ovk_context_params *Params, bool ErrorLogging) {
 
   OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
 
   auto &ParamsCPP = *reinterpret_cast<ovk::context::params *>(Params);
-  ParamsCPP.SetLogLevel(ovk::log_level(LogLevel));
+  ParamsCPP.SetErrorLogging(ErrorLogging);
+
+}
+
+void ovkGetContextParamWarningLogging(const ovk_context_params *Params, bool *WarningLogging) {
+
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
+  OVK_DEBUG_ASSERT(WarningLogging, "Invalid warning logging pointer.");
+
+  auto &ParamsCPP = *reinterpret_cast<const ovk::context::params *>(Params);
+  *WarningLogging = ParamsCPP.WarningLogging();
+
+}
+
+void ovkSetContextParamWarningLogging(ovk_context_params *Params, bool WarningLogging) {
+
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
+
+  auto &ParamsCPP = *reinterpret_cast<ovk::context::params *>(Params);
+  ParamsCPP.SetWarningLogging(WarningLogging);
+
+}
+
+void ovkGetContextParamStatusLoggingThreshold(const ovk_context_params *Params, int
+  *StatusLoggingThreshold) {
+
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
+  OVK_DEBUG_ASSERT(StatusLoggingThreshold, "Invalid status logging threshold pointer.");
+
+  auto &ParamsCPP = *reinterpret_cast<const ovk::context::params *>(Params);
+  *StatusLoggingThreshold = ParamsCPP.StatusLoggingThreshold();
+
+}
+
+void ovkSetContextParamStatusLoggingThreshold(ovk_context_params *Params, int
+  StatusLoggingThreshold) {
+
+  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
+
+  auto &ParamsCPP = *reinterpret_cast<ovk::context::params *>(Params);
+  ParamsCPP.SetStatusLoggingThreshold(StatusLoggingThreshold);
 
 }
 
