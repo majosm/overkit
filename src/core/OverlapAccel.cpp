@@ -132,9 +132,7 @@ overlap_accel::overlap_accel(geometry_type GeometryType, int NumDims, const rang
     }
 
     int MaxDepth = 0;
-    while ((NumContainedCells/NumCellsLeaf >> MaxDepth) != 0) {
-      MaxDepth += 1;
-    }
+    while ((NumContainedCells/NumCellsLeaf >> MaxDepth) != 0) ++MaxDepth;
 
     Root_ = CreateNode_(Bounds_, CellBounds, CellVolumes, CellIndices, 0, MaxDepth, NumCellsLeaf,
       MaxNodeUnoccupiedVolume, MaxNodeCellVolumeVariation, BinScale);
