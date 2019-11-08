@@ -248,7 +248,8 @@ struct generate_subdivisions {
   template <typename T> array<range> operator()(const T &Manipulator, const range &CellRange) {
     return Subdivide_(Manipulator, CellRange);
   }
-  template <typename T> box ComputeBounds_(const T &Manipulator, const range &CellRange) const {
+  template <typename T> double SurfaceToVolumeRatio_(const T &Manipulator, const range &CellRange)
+    const {
     box Bounds = MakeEmptyBox(NumDims_);
     for (int k = CellRange.Begin(2); k < CellRange.End(2); ++k) {
       for (int j = CellRange.Begin(1); j < CellRange.End(1); ++j) {
@@ -260,20 +261,7 @@ struct generate_subdivisions {
         }
       }
     }
-    return Bounds;
-  }
-  double ComputeOccupiedVolume_(const range &CellRange) const {
-    double OccupiedVolume = 0.;
-    for (int k = CellRange.Begin(2); k < CellRange.End(2); ++k) {
-      for (int j = CellRange.Begin(1); j < CellRange.End(1); ++j) {
-        for (int i = CellRange.Begin(0); i < CellRange.End(0); ++i) {
-          tuple<int> Cell = {i,j,k};
-          if (!CellActiveMask_(Cell)) continue;
-          OccupiedVolume += CellVolumes_(Cell);
-        }
-      }
-    }
-    return OccupiedVolume;
+    return 2.*(1./Bounds.Size(0) + 1./Bounds.Size(1) + 1./Bounds.Size(2));
   }
   template <typename T> array<range> Subdivide_(const T &Manipulator, const range &CellRange) {
     array<range> SubdivisionRanges;
@@ -281,27 +269,21 @@ struct generate_subdivisions {
       int BestSplitDim = -1;
       range BestLeftCellRange;
       range BestRightCellRange;
-      double BestLeftUnoccupiedVolume = std::numeric_limits<double>::max();
-      double BestRightUnoccupiedVolume = std::numeric_limits<double>::max();
+      double BestMinSurfaceToVolumeRatio = 0.;
       for (int iDim = 0; iDim < NumDims_; ++iDim) {
         int iSplit = (CellRange.Begin(iDim)+CellRange.End(iDim))/2;
         range LeftCellRange = CellRange;
         LeftCellRange.End(iDim) = iSplit;
         range RightCellRange = CellRange;
         RightCellRange.Begin(iDim) = iSplit;
-        box LeftBounds = ComputeBounds_(Manipulator, LeftCellRange);
-        box RightBounds = ComputeBounds_(Manipulator, RightCellRange);
-        double LeftUnoccupiedVolume = Max(BoxVolume_(LeftBounds) - ComputeOccupiedVolume_(
-          LeftCellRange), 0.);
-        double RightUnoccupiedVolume = Max(BoxVolume_(RightBounds) - ComputeOccupiedVolume_(
-          RightCellRange), 0.);
-        if (BestSplitDim < 0 || (LeftUnoccupiedVolume+RightUnoccupiedVolume <
-          BestLeftUnoccupiedVolume+BestRightUnoccupiedVolume)) {
+        double LeftSurfaceToVolumeRatio = SurfaceToVolumeRatio_(Manipulator, LeftCellRange);
+        double RightSurfaceToVolumeRatio = SurfaceToVolumeRatio_(Manipulator, RightCellRange);
+        double MinSurfaceToVolumeRatio = Min(LeftSurfaceToVolumeRatio, RightSurfaceToVolumeRatio);
+        if (BestSplitDim < 0 || MinSurfaceToVolumeRatio > BestMinSurfaceToVolumeRatio) {
           BestSplitDim = iDim;
           BestLeftCellRange = LeftCellRange;
           BestRightCellRange = RightCellRange;
-          BestLeftUnoccupiedVolume = LeftUnoccupiedVolume;
-          BestRightUnoccupiedVolume = RightUnoccupiedVolume;
+          BestMinSurfaceToVolumeRatio = MinSurfaceToVolumeRatio;
         }
       }
       array<range> LeftSubdivisionRanges = Subdivide_(Manipulator, BestLeftCellRange);
@@ -328,13 +310,6 @@ struct generate_subdivisions {
       }
     }
     return SubdivisionRanges;
-  }
-  double BoxVolume_(const box &Box) {
-    double Volume = 1.;
-    for (int iDim = 0; iDim < NumDims_; ++iDim) {
-      Volume *= Box.Size(iDim);
-    }
-    return Volume;
   }
 };
 
