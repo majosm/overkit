@@ -17,6 +17,7 @@ namespace ovk {
 
 enum class error : typename std::underlying_type<ovk_error>::type {
   NONE = OVK_ERROR_NONE,
+  MPI_NOT_INITIALIZED = OVK_ERROR_MPI_NOT_INITIALIZED,
   FILE_OPEN = OVK_ERROR_FILE_OPEN,
   FILE_READ = OVK_ERROR_FILE_READ,
   FILE_WRITE = OVK_ERROR_FILE_WRITE
@@ -27,6 +28,8 @@ namespace error_internal {
 inline const char *ExceptionString(error Error) {
 
   switch (Error) {
+  case error::MPI_NOT_INITIALIZED:
+    return "ovk::error::MPI_NOT_INITIALIZED";
   case error::FILE_OPEN:
     return "ovk::error::FILE_OPEN";
   case error::FILE_READ:
@@ -56,6 +59,20 @@ private:
 
   error Error_;
 
+};
+
+class mpi_error : public exception {
+public:
+  explicit mpi_error(error Error):
+    exception(Error)
+  {}
+};
+
+class mpi_not_initialized_error : public mpi_error {
+public:
+  mpi_not_initialized_error():
+    mpi_error(error::MPI_NOT_INITIALIZED)
+  {}
 };
 
 class io_error : public exception {

@@ -88,15 +88,14 @@ context::~context() noexcept {
 
 context context::internal_Create(params &&Params) {
 
-  if (OVK_DEBUG) {
-    int MPIInitialized;
-    MPI_Initialized(&MPIInitialized);
-    // Can't use OVK_DEBUG_ASSERT here because it calls MPI_Abort
-    if (!MPIInitialized) {
-      std::fprintf(stderr, "ERROR: MPI not initialized.\n");
+  int MPIInitialized;
+  MPI_Initialized(&MPIInitialized);
+  if (!MPIInitialized) {
+    if (Params.ErrorLogging_) {
+      std::fprintf(stderr, "ovk :: [!] ERROR: MPI not initialized.\n");
       std::fflush(stderr);
-      exit(1);
     }
+    throw mpi_not_initialized_error();
   }
 
   return {std::move(Params)};

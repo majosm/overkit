@@ -14,6 +14,7 @@ extern "C" {
 
 typedef enum {
   OVK_ERROR_NONE = 0,
+  OVK_ERROR_MPI_NOT_INITIALIZED,
   OVK_ERROR_FILE_OPEN,
   OVK_ERROR_FILE_READ,
   OVK_ERROR_FILE_WRITE
@@ -23,6 +24,7 @@ static inline bool ovkValidError(ovk_error Error) {
 
   switch (Error) {
   case OVK_ERROR_NONE:
+  case OVK_ERROR_MPI_NOT_INITIALIZED:
   case OVK_ERROR_FILE_OPEN:
   case OVK_ERROR_FILE_READ:
   case OVK_ERROR_FILE_WRITE:

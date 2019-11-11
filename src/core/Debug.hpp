@@ -20,33 +20,46 @@ extern int &DebugFlag;
 
 #if OVK_DEBUG
 
-template <typename... Ts> void DebugExit(const char *File, int Line, const std::string &Format,
-  const Ts &... Args) {
+template <typename... Ts> void DebugExit(bool HasMPI, const char *File, int Line, const std::string
+  &Format, const Ts &... Args) {
 
   std::string Prefix = StringPrint("DEBUG ERROR (line %i of file '%s'): ", Line, File);
 
-  int Rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &Rank);
-
   std::string Message = StringPrint(Format, Args...);
-  Message = StringReplace(Message, "@rank@", FormatNumber(Rank));
+
+  if (HasMPI) {
+    int Rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &Rank);
+    Message = StringReplace(Message, "@rank@", FormatNumber(Rank));
+  }
 
   std::fprintf(stderr, "%s%s\n", Prefix.c_str(), Message.c_str());
   std::fflush(stderr);
 
-  MPI_Abort(MPI_COMM_WORLD, 1);
+  if (HasMPI) {
+    MPI_Abort(MPI_COMM_WORLD, 1);
+  } else {
+    exit(1);
+  }
 
 }
 
 #define OVK_DEBUG_ASSERT_CPP(Condition, ...) \
-  if (!(Condition)) ovk::core::DebugExit(__FILE__, __LINE__, __VA_ARGS__)
+  if (!(Condition)) ovk::core::DebugExit(true, __FILE__, __LINE__, __VA_ARGS__)
+
+#define OVK_DEBUG_ASSERT_NO_MPI_CPP(Condition, ...) \
+  if (!(Condition)) ovk::core::DebugExit(false, __FILE__, __LINE__, __VA_ARGS__)
 
 #undef OVK_DEBUG_ASSERT
 #define OVK_DEBUG_ASSERT OVK_DEBUG_ASSERT_CPP
 
+#undef OVK_DEBUG_ASSERT_NO_MPI
+#define OVK_DEBUG_ASSERT_NO_MPI OVK_DEBUG_ASSERT_NO_MPI_CPP
+
 #else
 
 #define OVK_DEBUG_ASSERT_CPP(...)
+#define OVK_DEBUG_ASSERT_NO_MPI_CPP(...)
 
 #endif
 

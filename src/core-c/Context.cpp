@@ -16,20 +16,17 @@
 
 void ovkCreateContext(ovk_context **Context, ovk_context_params **Params, ovk_error *Error) {
 
-  if (OVK_DEBUG) {
-    int MPIInitialized;
-    MPI_Initialized(&MPIInitialized);
-    // Can't use OVK_DEBUG_ASSERT here because it calls MPI_Abort
-    if (!MPIInitialized) {
-      std::fprintf(stderr, "ERROR: MPI not initialized.\n");
-      std::fflush(stderr);
-      exit(1);
-    }
+  int MPIInitialized;
+  MPI_Initialized(&MPIInitialized);
+  if (MPIInitialized) {
+    OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
+    OVK_DEBUG_ASSERT(*Params, "Invalid params pointer.");
+    OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
+  } else {
+    OVK_DEBUG_ASSERT_NO_MPI(Params, "Invalid params pointer.");
+    OVK_DEBUG_ASSERT_NO_MPI(*Params, "Invalid params pointer.");
+    OVK_DEBUG_ASSERT_NO_MPI(Context, "Invalid context pointer.");
   }
-
-  OVK_DEBUG_ASSERT(Context, "Invalid context pointer.");
-  OVK_DEBUG_ASSERT(Params, "Invalid params pointer.");
-  OVK_DEBUG_ASSERT(*Params, "Invalid params pointer.");
 
   auto ParamsCPPPtr = reinterpret_cast<ovk::context::params *>(*Params);
 
