@@ -1180,7 +1180,7 @@ void assembler::DetectOverlap_() {
       long long NumCellsLeaf = (long long)(Max(std::pow(2., 12.-DepthAdjust), 1.));
       double MaxNodeUnoccupiedVolume = std::pow(2., -2.-DepthAdjust);
       double MaxNodeCellVolumeVariation = 0.5;
-      double BinScale = std::pow(2., -ResolutionAdjust);
+      double BinScale = std::pow(2., -1.-ResolutionAdjust);
       elem<field_view<const double>,MAX_DIMS> MGridCoords = {
         Data.Coords(0),
         Data.Coords(1),
