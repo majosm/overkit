@@ -1447,6 +1447,8 @@ void assembler::DetectOverlap_() {
       NGridCoords, CellData, MGridSubdivisionData, Logger);
   }
 
+  Logger.SyncIndicator(Domain.Comm());
+
   struct overlap_m_data {
     long long NumOverlapping;
     array<int,2> Cells;
@@ -3820,6 +3822,8 @@ void assembler::GenerateConnectivityData_() {
     long long &NumOrphans = NumOrphansForGrid.Insert(GridID);
     NumOrphans = core::CountDistributedMask(OrphanMask);
   }
+
+  Logger.SyncIndicator(Domain.Comm());
 
   for (int GridID : Domain.LocalGridIDs()) {
     if (NumReceiversForGrid(GridID) == 0 && NumOrphansForGrid(GridID) == 0) continue;

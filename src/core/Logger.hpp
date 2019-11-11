@@ -10,6 +10,8 @@
 #include <string>
 #include <utility>
 
+#include <mpi.h>
+
 namespace ovk {
 namespace core {
 
@@ -90,23 +92,25 @@ public:
   logger &operator=(const logger &Other) = delete;
   logger &operator=(logger &&Other) noexcept = default;
 
+  logger &SyncIndicator(comm_view Comm);
+
   bool LoggingErrors() const { return LoggingErrors_; }
   logger &EnableErrors();
   logger &DisableErrors();
   template <typename... Ts> void LogError(bool WriteCondition, const std::string &Format, const
-    Ts &... Args) const;
+    Ts &... Args);
 
   bool LoggingWarnings() const { return LoggingWarnings_; }
   logger &EnableWarnings();
   logger &DisableWarnings();
   template <typename... Ts> void LogWarning(bool WriteCondition, const std::string &Format, const
-    Ts &... Args) const;
+    Ts &... Args);
 
   bool LoggingStatus() const { return StatusLevel_ <= StatusThreshold_; }
   int StatusThreshold() const { return StatusThreshold_; }
   logger &SetStatusThreshold(int StatusThreshold);
   template <typename... Ts> void LogStatus(bool WriteCondition, const std::string &Format, const Ts
-    &... Args) const;
+    &... Args);
   status_level_handle IncreaseStatusLevel(int IncreaseAmount=1);
   status_indent_handle IndentStatus(int IndentAmount=1);
   status_level_and_indent_handle IncreaseStatusLevelAndIndent(int IncreaseAmount=1);
@@ -115,11 +119,12 @@ public:
   logger &EnableDebug();
   logger &DisableDebug();
   template <typename... Ts> void LogDebug(bool WriteCondition, const std::string &Format, const Ts
-    &... Args) const;
+    &... Args);
 
 private:
 
   int Rank_;
+  bool Indicator_ = false;
 
   bool LoggingErrors_ = false;
   bool LoggingWarnings_ = false;

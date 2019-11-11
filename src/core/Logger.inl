@@ -27,7 +27,7 @@ inline logger &logger::DisableErrors() {
 }
 
 template <typename... Ts> void logger::LogError(bool WriteCondition, const std::string &Format,
-  const Ts &... Args) const {
+  const Ts &... Args) {
 
   if (LoggingErrors_ && WriteCondition) {
     std::string Prefix = "ovk :: [!] ERROR: ";
@@ -35,6 +35,7 @@ template <typename... Ts> void logger::LogError(bool WriteCondition, const std::
     Message = StringReplace(Message, "@rank@", FormatNumber(Rank_));
     std::fprintf(stderr, "%s%s\n", Prefix.c_str(), Message.c_str());
     std::fflush(stderr);
+    Indicator_ = true;
   }
 
 }
@@ -56,7 +57,7 @@ inline logger &logger::DisableWarnings() {
 }
 
 template <typename... Ts> void logger::LogWarning(bool WriteCondition, const std::string &Format,
-  const Ts &... Args) const {
+  const Ts &... Args) {
 
   if (LoggingWarnings_ && WriteCondition) {
     std::string Prefix = "ovk :: [!] WARNING: ";
@@ -64,7 +65,16 @@ template <typename... Ts> void logger::LogWarning(bool WriteCondition, const std
     Message = StringReplace(Message, "@rank@", FormatNumber(Rank_));
     std::fprintf(stderr, "%s%s\n", Prefix.c_str(), Message.c_str());
     std::fflush(stderr);
+    Indicator_ = true;
   }
+
+}
+
+inline logger &logger::SyncIndicator(comm_view Comm) {
+
+  MPI_Allreduce(MPI_IN_PLACE, &Indicator_, 1, MPI_C_BOOL, MPI_LOR, Comm);
+
+  return *this;
 
 }
 
@@ -77,10 +87,15 @@ inline logger &logger::SetStatusThreshold(int StatusThreshold) {
 }
 
 template <typename... Ts> void logger::LogStatus(bool WriteCondition, const std::string &Format,
-  const Ts &... Args) const {
+  const Ts &... Args) {
 
   if (StatusLevel_ <= StatusThreshold_ && WriteCondition) {
-    std::string Prefix = "ovk :: [ ] ";
+    std::string Prefix;
+    if (Indicator_) {
+      Prefix = "ovk :: [!] ";
+    } else {
+      Prefix = "ovk :: [ ] ";
+    }
     for (int iIndent = 0; iIndent+1 < StatusIndent_; ++iIndent) Prefix += "  ";
     if (StatusIndent_ > 0) Prefix += "* ";
     std::string Message = StringPrint(Format, Args...);
@@ -133,7 +148,7 @@ inline logger &logger::DisableDebug() {
 }
 
 template <typename... Ts> void logger::LogDebug(bool WriteCondition, const std::string &Format,
-  const Ts &... Args) const {
+  const Ts &... Args) {
 
   if (LoggingDebug_ && WriteCondition) {
     std::string Prefix = "ovk :: [&] ";

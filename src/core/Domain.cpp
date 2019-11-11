@@ -338,7 +338,7 @@ domain::domain(std::shared_ptr<context> &&Context, params &&Params):
   domain_base(std::move(Context), std::move(*Params.Name_), Params.NumDims_, Params.Comm_)
 {
 
-  const core::logger &Logger = Context_->core_Logger();
+  core::logger &Logger = Context_->core_Logger();
 
   MPI_Barrier(Comm_);
 

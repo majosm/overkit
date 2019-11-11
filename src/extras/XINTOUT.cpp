@@ -620,6 +620,8 @@ void ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath, endian &E
 
   }
 
+  Logger.SyncIndicator(Comm);
+
   core::SyncError(ReadGlobalInfoError, Comm);
   core::CheckError(ReadGlobalInfoError);
 
@@ -949,6 +951,8 @@ void ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath, co
     ReadGridInfoError = Exception.Error();
 
   }
+
+  Logger.SyncIndicator(Comm);
 
   core::SyncError(ReadGridInfoError, Comm);
   core::CheckError(ReadGridInfoError);
@@ -1285,6 +1289,8 @@ void ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std:
 
   }
 
+  Logger.SyncIndicator(Comm);
+
   core::SyncError(ReadDonorsError, Comm);
   core::CheckError(ReadDonorsError);
 
@@ -1481,6 +1487,8 @@ void ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath, long lo
     ReadReceiversError = Exception.Error();
 
   }
+
+  Logger.SyncIndicator(Comm);
 
   core::SyncError(ReadReceiversError, Comm);
   core::CheckError(ReadReceiversError);
