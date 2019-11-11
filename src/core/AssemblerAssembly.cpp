@@ -472,7 +472,8 @@ void assembler::DetectOverlap_() {
     const geometry &Geometry = GeometryComponent.Geometry(GridID);
     core::geometry_manipulator GeometryManipulator(Geometry.Type(), NumDims);
     array<range> &SubdivisionRanges = SubdivisionRangesForLocalGrid.Insert(GridID);
-    double MaxUnoccupiedVolume = 0.25;
+    double DepthAdjust = Options_.OverlapAccelDepthAdjust(GridID);
+    double MaxUnoccupiedVolume = std::pow(2., -2.-DepthAdjust);
     int MaxCells = 1 << 13;
     int MaxDepth = 8;
     SubdivisionRanges = GeometryManipulator.Apply(generate_subdivisions(NumDims, Geometry.Coords(),
