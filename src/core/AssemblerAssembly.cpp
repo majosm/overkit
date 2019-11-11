@@ -237,18 +237,24 @@ struct generate_subdivisions {
   array<field_view<const double>> Coords_;
   field_view<const bool> CellActiveMask_;
   field_view<const double> CellVolumes_;
-  int NumCellsLeaf_;
+  double MaxUnoccupiedVolume_;
+  int MaxCells_;
+  int MaxDepth_;
   generate_subdivisions(int NumDims, const array<distributed_field<double>> &Coords, const
-    distributed_field<bool> &CellActiveMask, const distributed_field<double> &CellVolumes, int
-    NumCellsLeaf):
+    distributed_field<bool> &CellActiveMask, const distributed_field<double> &CellVolumes,
+    double MaxUnoccupiedVolume, int MaxCells, int MaxDepth):
     NumDims_(NumDims),
     Coords_({MAX_DIMS}, {Coords(0), Coords(1), Coords(2)}),
     CellActiveMask_(CellActiveMask),
     CellVolumes_(CellVolumes),
-    NumCellsLeaf_(NumCellsLeaf)
+    MaxUnoccupiedVolume_(MaxUnoccupiedVolume),
+    MaxCells_(MaxCells),
+    MaxDepth_(MaxDepth)
   {}
   template <typename T> array<range> operator()(const T &Manipulator, const range &CellRange) {
-    return Subdivide_(Manipulator, CellRange);
+    box Bounds = ComputeBounds_(Manipulator, CellRange);
+    double UnoccupiedVolume = Max(BoxVolume_(Bounds) - ComputeOccupiedVolume_(CellRange), 0.);
+    return Subdivide_(Manipulator, Bounds, CellRange, UnoccupiedVolume, 0);
   }
   template <typename T> box ComputeBounds_(const T &Manipulator, const range &CellRange) const {
     box Bounds = MakeEmptyBox(NumDims_);
@@ -277,9 +283,12 @@ struct generate_subdivisions {
     }
     return OccupiedVolume;
   }
-  template <typename T> array<range> Subdivide_(const T &Manipulator, const range &CellRange) {
+  template <typename T> array<range> Subdivide_(const T &Manipulator, const box &BaseBounds, const
+    range &CellRange, double UnoccupiedVolume, int Depth) {
     array<range> SubdivisionRanges;
-    if (CellRange.Count() > NumCellsLeaf_) {
+    bool Leaf = Depth == MaxDepth_ || (UnoccupiedVolume <= MaxUnoccupiedVolume_ *
+      BoxVolume_(BaseBounds) && CellRange.Count() <= MaxCells_);
+    if (!Leaf) {
       int BestSplitDim = -1;
       range BestLeftCellRange;
       range BestRightCellRange;
@@ -306,8 +315,10 @@ struct generate_subdivisions {
           BestRightUnoccupiedVolume = RightUnoccupiedVolume;
         }
       }
-      array<range> LeftSubdivisionRanges = Subdivide_(Manipulator, BestLeftCellRange);
-      array<range> RightSubdivisionRanges = Subdivide_(Manipulator, BestRightCellRange);
+      array<range> LeftSubdivisionRanges = Subdivide_(Manipulator, BaseBounds, BestLeftCellRange,
+        BestLeftUnoccupiedVolume, Depth+1);
+      array<range> RightSubdivisionRanges = Subdivide_(Manipulator, BaseBounds, BestRightCellRange,
+        BestRightUnoccupiedVolume, Depth+1);
       SubdivisionRanges.Reserve(LeftSubdivisionRanges.Count() + RightSubdivisionRanges.Count());
       for (auto &SubdivisionRange : LeftSubdivisionRanges) {
         SubdivisionRanges.Append(SubdivisionRange);
@@ -461,9 +472,12 @@ void assembler::DetectOverlap_() {
     const geometry &Geometry = GeometryComponent.Geometry(GridID);
     core::geometry_manipulator GeometryManipulator(Geometry.Type(), NumDims);
     array<range> &SubdivisionRanges = SubdivisionRangesForLocalGrid.Insert(GridID);
-    int NumCellsLeaf = 1 << 13;
+    double MaxUnoccupiedVolume = 0.25;
+    int MaxCells = 1 << 13;
+    int MaxDepth = 8;
     SubdivisionRanges = GeometryManipulator.Apply(generate_subdivisions(NumDims, Geometry.Coords(),
-      CellActiveMask, Geometry.CellVolumes(), NumCellsLeaf), CellLocalRange);
+      CellActiveMask, Geometry.CellVolumes(), MaxUnoccupiedVolume, MaxCells, MaxDepth),
+      CellLocalRange);
     TotalSubdivisions += SubdivisionRanges.Count();
   }
 
