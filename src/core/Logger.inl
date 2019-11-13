@@ -122,12 +122,24 @@ inline logger::status_indent_handle logger::IndentStatus(int Amount) {
 
 }
 
-inline logger::status_level_and_indent_handle logger::IncreaseStatusLevelAndIndent(int Amount) {
+inline logger::status_level_and_indent_handle logger::IncreaseStatusLevelAndIndent(int
+  LevelAndIndentAmount) {
 
-  StatusLevel_ += Amount;
-  StatusIndent_ += Amount;
+  StatusLevel_ += LevelAndIndentAmount;
+  StatusIndent_ += LevelAndIndentAmount;
 
-  return status_level_and_indent_handle(StatusLevel_, StatusIndent_, Amount);
+  return status_level_and_indent_handle(StatusLevel_, StatusIndent_, LevelAndIndentAmount,
+    LevelAndIndentAmount);
+
+}
+
+inline logger::status_level_and_indent_handle logger::IncreaseStatusLevelAndIndent(int LevelAmount,
+  int IndentAmount) {
+
+  StatusLevel_ += LevelAmount;
+  StatusIndent_ += IndentAmount;
+
+  return status_level_and_indent_handle(StatusLevel_, StatusIndent_, LevelAmount, IndentAmount);
 
 }
 

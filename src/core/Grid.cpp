@@ -114,7 +114,7 @@ grid::grid(std::shared_ptr<context> &&Context, params &&Params, int NumDims, com
       Logger.LogStatus(true, "Size: %s (%s)", GlobalSizeString, TotalPointsString);
     }
 
-    auto Level1 = Logger.IncreaseStatusLevel();
+    auto Level1 = Logger.IncreaseStatusLevel(10);
 
     if (Logger.LoggingStatus()) {
 

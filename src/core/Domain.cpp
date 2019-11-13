@@ -45,7 +45,7 @@ domain_base_1::~domain_base_1() noexcept {
   if (Context_) {
     MPI_Barrier(Comm_);
     core::logger &Logger = Context_->core_Logger();
-    Level1_.Reset();
+    Suppress_.Reset();
     Logger.LogStatus(Comm_.Rank() == 0, "Done destroying domain %s.", *Name_);
   }
 
@@ -358,7 +358,7 @@ domain::~domain() noexcept {
     MPI_Barrier(Comm_);
     core::logger &Logger = Context_->core_Logger();
     Logger.LogStatus(Comm_.Rank() == 0, "Destroying domain %s...", *Name_);
-    Level1_ = Logger.IncreaseStatusLevelAndIndent();
+    Suppress_ = Logger.IncreaseStatusLevelAndIndent(100, 1);
   }
 
 }

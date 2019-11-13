@@ -82,6 +82,7 @@ protected:
   std::shared_ptr<context> Context_;
 
   core::logger::status_level_and_indent_handle Level1_;
+  core::logger::status_level_and_indent_handle Suppress_;
 
   core::string_wrapper Name_;
 

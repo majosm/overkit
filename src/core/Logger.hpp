@@ -17,6 +17,8 @@ namespace core {
 
 class logger {
 
+private:
+
   class increase_handle {
   public:
     increase_handle() = default;
@@ -45,24 +47,35 @@ class logger {
   protected:
     int *ValuePtr_ = nullptr;
     int Amount_ = 0;
-    explicit increase_handle(int &Value, int Amount):
+    increase_handle(int &Value, int Amount):
       ValuePtr_(&Value),
       Amount_(Amount)
     {}
-    friend class logger;
   };
 
 public:
 
   class status_level_handle : private increase_handle {
+  public:
+    status_level_handle() = default;
+    using increase_handle::Reset;
   private:
     using increase_handle::increase_handle;
+    status_level_handle(int &Value, int Amount):
+      increase_handle(Value, Amount)
+    {}
     friend class logger;
   };
 
   class status_indent_handle : private increase_handle {
+  public:
+    status_indent_handle() = default;
+    using increase_handle::Reset;
   private:
     using increase_handle::increase_handle;
+    status_indent_handle(int &Value, int Amount):
+      increase_handle(Value, Amount)
+    {}
     friend class logger;
   };
 
@@ -77,9 +90,9 @@ public:
   private:
     status_level_handle LevelHandle_;
     status_indent_handle IndentHandle_;
-    status_level_and_indent_handle(int &Level, int &Indent, int Amount):
-      LevelHandle_(Level, Amount),
-      IndentHandle_(Indent, Amount)
+    status_level_and_indent_handle(int &Level, int &Indent, int LevelAmount, int IndentAmount):
+      LevelHandle_(Level, LevelAmount),
+      IndentHandle_(Indent, IndentAmount)
     {}
     friend class logger;
   };
@@ -111,9 +124,10 @@ public:
   logger &SetStatusThreshold(int StatusThreshold);
   template <typename... Ts> void LogStatus(bool WriteCondition, const std::string &Format, const Ts
     &... Args);
-  status_level_handle IncreaseStatusLevel(int IncreaseAmount=1);
-  status_indent_handle IndentStatus(int IndentAmount=1);
-  status_level_and_indent_handle IncreaseStatusLevelAndIndent(int IncreaseAmount=1);
+  status_level_handle IncreaseStatusLevel(int Amount=1);
+  status_indent_handle IndentStatus(int Amount=1);
+  status_level_and_indent_handle IncreaseStatusLevelAndIndent(int LevelAndIndentAmount=1);
+  status_level_and_indent_handle IncreaseStatusLevelAndIndent(int LevelAmount, int IndentAmount);
 
   bool LoggingDebug() const { return LoggingDebug_; }
   logger &EnableDebug();

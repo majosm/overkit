@@ -86,8 +86,7 @@ void assembler::Assemble() {
 
   MPI_Barrier(Domain.Comm());
 
-  Logger.LogStatus(Domain.Comm().Rank() == 0, "Beginning assembly on domain %s (assembler %s)...",
-    Domain.Name(), *Name_);
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Beginning assembly on assembler %s...", *Name_);
   auto Level1 = Logger.IncreaseStatusLevelAndIndent();
 
   InitializeAssembly_();
@@ -111,8 +110,7 @@ void assembler::Assemble() {
   MPI_Barrier(Domain.Comm());
 
   Level1.Reset();
-  Logger.LogStatus(Domain.Comm().Rank() == 0, "Completed assembly on domain %s (assembler %s).",
-    Domain.Name(), *Name_);
+  Logger.LogStatus(Domain.Comm().Rank() == 0, "Completed assembly on assembler %s.", *Name_);
 
 }
 
@@ -123,6 +121,7 @@ assembler::assembly_data::assembly_data(int NumDims, comm_view Comm):
 void assembler::InitializeAssembly_() {
 
   domain &Domain = *Domain_;
+  core::logger &Logger = Domain.Context().core_Logger();
   auto &GeometryComponent = Domain.Component<geometry_component>(GeometryComponentID_);
   assembly_data &AssemblyData = *AssemblyData_;
 
@@ -134,6 +133,20 @@ void assembler::InitializeAssembly_() {
       Domain.GridInfo(GridID).Name());
     OVK_DEBUG_ASSERT(StateComponent.StateExists(GridID), "No state data for grid %s.",
       Domain.GridInfo(GridID).Name());
+  }
+
+  if (Logger.LoggingStatus()) {
+    long long TotalGridPoints = 0;
+    for (int GridID : Domain.LocalGridIDs()) {
+      const grid &Grid = Domain.Grid(GridID);
+      const range &LocalRange = Grid.LocalRange();
+      TotalGridPoints += LocalRange.Count();
+    }
+    MPI_Allreduce(MPI_IN_PLACE, &TotalGridPoints, 1, MPI_LONG_LONG, MPI_SUM, Domain.Comm());
+    std::string TotalGridPointsString = core::FormatNumber(TotalGridPoints, "points", "point");
+    std::string NumGridsString = core::FormatNumber(Domain.GridCount(), "grids", "grid");
+    Logger.LogStatus(Domain.Comm().Rank() == 0, "Domain %s contains %s distributed over %s.",
+      Domain.Name(), TotalGridPointsString, NumGridsString);
   }
 
   if (OVK_DEBUG) {
@@ -151,6 +164,8 @@ void assembler::InitializeAssembly_() {
     state_flags::OVERLAP_MINIMIZED |
     state_flags::RECEIVER |
     state_flags::ORPHAN;
+
+  auto Suppress = Logger.IncreaseStatusLevel(100);
 
   for (int GridID : Domain.LocalGridIDs()) {
     const grid &Grid = Domain.Grid(GridID);
@@ -181,6 +196,8 @@ void assembler::InitializeAssembly_() {
     GenerateDomainBoundaryMask(Grid, Flags, GridAuxData.DomainBoundaryMask);
     GenerateInternalBoundaryMask(Grid, Flags, GridAuxData.InternalBoundaryMask);
   }
+
+  Suppress.Reset();
 
 }
 
@@ -1578,8 +1595,12 @@ void assembler::DetectOverlap_() {
   auto OverlapComponentEditHandle = Domain.EditComponent<overlap_component>(OverlapComponentID_);
   overlap_component &OverlapComponent = *OverlapComponentEditHandle;
 
+  auto Suppress = Logger.IncreaseStatusLevel(100);
+
   OverlapComponent.ClearOverlaps();
   OverlapComponent.CreateOverlaps(OverlappingGridIDs);
+
+  Suppress.Reset();
 
   struct overlap_m_data {
     long long NumOverlapping;
@@ -1772,6 +1793,8 @@ void assembler::DetectOverlap_() {
     edit_handle<array<int>> SourceRanks;
   };
 
+  Suppress = Logger.IncreaseStatusLevel(100);
+
   elem_map<int,2,overlap_m_edit> OverlapMEdits;
   elem_map<int,2,overlap_n_edit> OverlapNEdits;
 
@@ -1784,6 +1807,8 @@ void assembler::DetectOverlap_() {
     overlap_n_edit &Edit = OverlapNEdits.Insert(OverlapID);
     Edit.Overlap = OverlapComponent.EditOverlapN(OverlapID);
   }
+
+  Suppress.Reset();
 
   for (int MGridID : Domain.LocalGridIDs()) {
     auto &NGridIDsAndRanks = OverlappingNGridIDsAndRanksForLocalMGrid(MGridID);
@@ -1923,8 +1948,12 @@ void assembler::DetectOverlap_() {
     }
   }
 
+  Suppress = Logger.IncreaseStatusLevel(100);
+
   OverlapMEdits.Clear();
   OverlapNEdits.Clear();
+
+  Suppress.Reset();
 
   OverlapDataForGridPair.Clear();
 
@@ -2029,6 +2058,8 @@ void assembler::DetectOverlap_() {
     }
   }
 
+  Suppress = Logger.IncreaseStatusLevel(100);
+
   for (int GridID : Domain.LocalGridIDs()) {
     const grid &Grid = Domain.Grid(GridID);
     long long NumExtended = Grid.ExtendedRange().Count();
@@ -2042,6 +2073,8 @@ void assembler::DetectOverlap_() {
       }
     }
   }
+
+  Suppress.Reset();
 
   StateComponentEditHandle.Restore();
 
@@ -2155,7 +2188,7 @@ void assembler::InferBoundaries_() {
   MPI_Barrier(Domain.Comm());
 
   Logger.LogStatus(Domain.Comm().Rank() == 0, "Inferring non-overlapping boundaries...");
-  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent(2);
 
   Profiler.StartSync(INFER_BOUNDARIES_TIME, Domain.Comm());
 
@@ -2165,12 +2198,7 @@ void assembler::InferBoundaries_() {
   auto StateComponentEditHandle = Domain.EditComponent<state_component>(StateComponentID_);
   state_component &StateComponent = *StateComponentEditHandle;
 
-  map<int,long long> NumInferredForGrid;
-  if (Logger.LoggingStatus()) {
-    for (int GridID : Domain.LocalGridIDs()) {
-      NumInferredForGrid.Insert(GridID, 0);
-    }
-  }
+  auto Suppress = Logger.IncreaseStatusLevel(100);
 
   for (int GridID : Domain.LocalGridIDs()) {
     if (!Options_.InferBoundaries(GridID)) continue;
@@ -2210,12 +2238,23 @@ void assembler::InferBoundaries_() {
     for (long long l = 0; l < NumExtended; ++l) {
       DomainBoundaryMask[l] = DomainBoundaryMask[l] || InferredBoundaryMask[l];
     }
-    if (Logger.LoggingStatus()) {
-      NumInferredForGrid.Insert(GridID, core::CountDistributedMask(InferredBoundaryMask));
-    }
   }
 
+  Suppress.Reset();
+
   if (Logger.LoggingStatus()) {
+    map<int,long long> NumInferredForGrid;
+    for (int GridID : Domain.LocalGridIDs()) {
+      const grid &Grid = Domain.Grid(GridID);
+      const state &State = StateComponent.State(GridID);
+      const distributed_field<state_flags> &StateFlags = State.Flags();
+      distributed_field<bool> InferredBoundaryMask(Grid.SharedPartition());
+      for (long long l = 0; l < InferredBoundaryMask.Count(); ++l) {
+        InferredBoundaryMask[l] = (StateFlags[l] & state_flags::INFERRED_DOMAIN_BOUNDARY) !=
+          state_flags::NONE;
+      }
+      NumInferredForGrid.Insert(GridID, core::CountDistributedMask(InferredBoundaryMask));
+    }
     for (int GridID : Domain.GridIDs()) {
       if (Domain.GridIsLocal(GridID)) {
         const grid &Grid = Domain.Grid(GridID);
@@ -2685,6 +2724,8 @@ void assembler::CutBoundaryHoles_() {
 
   Profiler.StartSync(CUT_BOUNDARY_HOLES_UPDATE_AUX_TIME, Domain.Comm());
 
+  auto Suppress = Logger.IncreaseStatusLevel(100);
+
   for (int GridID : LocalCutNGridIDs) {
     if (NumRemovedForGrid(GridID) == 0) continue;
     const grid &Grid = Domain.Grid(GridID);
@@ -2707,6 +2748,8 @@ void assembler::CutBoundaryHoles_() {
     GenerateDomainBoundaryMask(Grid, Flags, GridAuxData.DomainBoundaryMask);
     GenerateInternalBoundaryMask(Grid, Flags, GridAuxData.InternalBoundaryMask);
   }
+
+  Suppress.Reset();
 
   for (auto &OverlapID : LocalCutNPairIDs) {
     int NGridID = OverlapID(1);
@@ -2822,7 +2865,7 @@ void assembler::LocateOuterFringe_() {
   MPI_Barrier(Domain.Comm());
 
   Logger.LogStatus(Domain.Comm().Rank() == 0, "Locating outer fringe points...");
-  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent(2);
 
   Profiler.StartSync(LOCATE_OUTER_FRINGE_TIME, Domain.Comm());
 
@@ -2887,6 +2930,8 @@ void assembler::LocateOuterFringe_() {
     NumOuterFringe = core::CountDistributedMask(OuterFringeMasks(GridID));
   }
 
+  auto Suppress = Logger.IncreaseStatusLevel(100);
+
   for (int GridID : Domain.LocalGridIDs()) {
     if (Options_.FringeSize(GridID) == 0) continue;
     if (NumOuterFringeForGrid(GridID) == 0) continue;
@@ -2902,6 +2947,8 @@ void assembler::LocateOuterFringe_() {
       }
     }
   }
+
+  Suppress.Reset();
 
   Profiler.Stop(LOCATE_OUTER_FRINGE_TIME);
 
@@ -3361,6 +3408,8 @@ void assembler::DetectOccluded_() {
     NumOccluded = core::CountDistributedMask(OcclusionMasks(GridID));
   }
 
+  auto Suppress = Logger.IncreaseStatusLevel(100);
+
   for (int GridID : Domain.LocalGridIDs()) {
     if (NumOccludedForGrid(GridID) == 0) continue;
     const grid &Grid = Domain.Grid(GridID);
@@ -3375,6 +3424,8 @@ void assembler::DetectOccluded_() {
       }
     }
   }
+
+  Suppress.Reset();
 
   Profiler.Stop(OCCLUSION_ACCUMULATE_TIME);
   Profiler.Stop(OCCLUSION_TIME);
@@ -3413,7 +3464,7 @@ void assembler::MinimizeOverlap_() {
   MPI_Barrier(Domain.Comm());
 
   Logger.LogStatus(Domain.Comm().Rank() == 0, "Minimizing overlap...");
-  auto Level1 = Logger.IncreaseStatusLevelAndIndent();
+  auto Level1 = Logger.IncreaseStatusLevelAndIndent(2);
 
   Profiler.StartSync(MINIMIZE_OVERLAP_TIME, Domain.Comm());
 
@@ -3492,6 +3543,8 @@ void assembler::MinimizeOverlap_() {
     NumInnerFringe = core::CountDistributedMask(InnerFringeMasks(GridID));
   }
 
+  auto Suppress = Logger.IncreaseStatusLevel(100);
+
   for (int GridID : Domain.LocalGridIDs()) {
     if (NumRemovedForGrid(GridID) == 0 && NumInnerFringeForGrid(GridID) == 0) continue;
     const grid &Grid = Domain.Grid(GridID);
@@ -3525,6 +3578,8 @@ void assembler::MinimizeOverlap_() {
       }
     }
   }
+
+  Suppress.Reset();
 
   for (auto &OverlapID : OverlapComponent.LocalOverlapNIDs()) {
     int NGridID = OverlapID(1);
@@ -3931,6 +3986,8 @@ void assembler::GenerateConnectivityData_() {
 
   Logger.SyncIndicator(Domain.Comm());
 
+  auto Suppress = Logger.IncreaseStatusLevel(100);
+
   for (int GridID : Domain.LocalGridIDs()) {
     if (NumReceiversForGrid(GridID) == 0 && NumOrphansForGrid(GridID) == 0) continue;
     const grid &Grid = Domain.Grid(GridID);
@@ -3949,6 +4006,8 @@ void assembler::GenerateConnectivityData_() {
       }
     }
   }
+
+  Suppress.Reset();
 
   // Exchanging in reverse, from points to cells
 
@@ -4112,8 +4171,12 @@ void assembler::GenerateConnectivityData_() {
     ConnectivityComponentID_);
   connectivity_component &ConnectivityComponent = *ConnectivityComponentEditHandle;
 
+  Suppress = Logger.IncreaseStatusLevel(100);
+
   ConnectivityComponent.ClearConnectivities();
   ConnectivityComponent.CreateConnectivities(ConnectedGridIDs);
+
+  Suppress.Reset();
 
   struct connectivity_m_data {
     long long NumDonors = 0;
@@ -4339,6 +4402,8 @@ void assembler::GenerateConnectivityData_() {
     edit_handle<array<int>> SourceRanks;
   };
 
+  Suppress = Logger.IncreaseStatusLevel(100);
+
   elem_map<int,2,connectivity_m_edit> ConnectivityMEdits;
   elem_map<int,2,connectivity_n_edit> ConnectivityNEdits;
 
@@ -4404,6 +4469,8 @@ void assembler::GenerateConnectivityData_() {
     Edit.Sources = Edit.Connectivity->EditSources();
     Edit.SourceRanks = Edit.Connectivity->EditSourceRanks();
   }
+
+  Suppress.Reset();
 
   for (auto &ConnectivityID : ConnectivityComponent.LocalConnectivityMIDs()) {
     int MGridID = ConnectivityID(0);
@@ -4545,8 +4612,12 @@ void assembler::GenerateConnectivityData_() {
     }
   }
 
+  Suppress = Logger.IncreaseStatusLevel(100);
+
   ConnectivityMEdits.Clear();
   ConnectivityNEdits.Clear();
+
+  Suppress.Reset();
 
   Profiler.Stop(CONNECTIVITY_FILL_TIME);
   Profiler.Stop(CONNECTIVITY_TIME);
