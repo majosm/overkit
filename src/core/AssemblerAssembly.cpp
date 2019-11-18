@@ -252,17 +252,19 @@ struct generate_subdivisions {
   array<field_view<const double>> Coords_;
   field_view<const bool> CellActiveMask_;
   field_view<const double> CellVolumes_;
-  double MaxUnoccupiedVolume_;
+  int MinCells_;
   int MaxCells_;
+  double MaxUnoccupiedVolume_;
   generate_subdivisions(int NumDims, const array<distributed_field<double>> &Coords, const
     distributed_field<bool> &CellActiveMask, const distributed_field<double> &CellVolumes,
-    double MaxUnoccupiedVolume, int MaxCells):
+    int MinCells, int MaxCells, double MaxUnoccupiedVolume):
     NumDims_(NumDims),
     Coords_({MAX_DIMS}, {Coords(0), Coords(1), Coords(2)}),
     CellActiveMask_(CellActiveMask),
     CellVolumes_(CellVolumes),
-    MaxUnoccupiedVolume_(MaxUnoccupiedVolume),
-    MaxCells_(MaxCells)
+    MinCells_(MinCells),
+    MaxCells_(MaxCells),
+    MaxUnoccupiedVolume_(MaxUnoccupiedVolume)
   {}
   template <typename T> array<range> operator()(const T &Manipulator, const range &CellRange) {
     box Bounds = ComputeBounds_(Manipulator, CellRange);
@@ -300,8 +302,9 @@ struct generate_subdivisions {
   template <typename T> array<range> Subdivide_(const T &Manipulator, double BaseVolume, const
     range &CellRange, double UnoccupiedVolume) {
     array<range> SubdivisionRanges;
-    bool Leaf = CellRange.Count() <= MaxCells_ || UnoccupiedVolume <= MaxUnoccupiedVolume_ *
-      BaseVolume;
+    long long NumCells = CellRange.Count();
+    bool Leaf = NumCells <= MinCells_ || (NumCells <= MaxCells_ && UnoccupiedVolume <=
+      MaxUnoccupiedVolume_ * BaseVolume);
     if (!Leaf) {
       int BestSplitDim = -1;
       range BestLeftCellRange;
@@ -468,9 +471,11 @@ void assembler::DetectOverlap_() {
     core::geometry_manipulator GeometryManipulator(Geometry.Type(), NumDims);
     array<range> &SubdivisionRanges = SubdivisionRangesForLocalGrid.Insert(GridID);
     double MaxUnoccupiedVolume = 0.25;
-    int MaxCells = 1 << 10;
+    int MinCells = 1 << 3*NumDims;
+    int MaxCells = 1 << 5*NumDims;
     SubdivisionRanges = GeometryManipulator.Apply(generate_subdivisions(NumDims, Geometry.Coords(),
-      CellActiveMask, Geometry.CellVolumes(), MaxUnoccupiedVolume, MaxCells), CellLocalRange);
+      CellActiveMask, Geometry.CellVolumes(), MinCells, MaxCells, MaxUnoccupiedVolume),
+      CellLocalRange);
     TotalSubdivisions += SubdivisionRanges.Count();
   }
 
