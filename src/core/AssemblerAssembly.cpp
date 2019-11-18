@@ -266,8 +266,9 @@ struct generate_subdivisions {
   {}
   template <typename T> array<range> operator()(const T &Manipulator, const range &CellRange) {
     box Bounds = ComputeBounds_(Manipulator, CellRange);
-    double UnoccupiedVolume = Max(BoxVolume_(Bounds) - ComputeOccupiedVolume_(CellRange), 0.);
-    return Subdivide_(Manipulator, Bounds, CellRange, UnoccupiedVolume);
+    double BoundsVolume = BoxVolume_(Bounds);
+    double UnoccupiedVolume = Max(BoundsVolume - ComputeOccupiedVolume_(CellRange), 0.);
+    return Subdivide_(Manipulator, BoundsVolume, CellRange, UnoccupiedVolume);
   }
   template <typename T> box ComputeBounds_(const T &Manipulator, const range &CellRange) const {
     box Bounds = MakeEmptyBox(NumDims_);
@@ -296,11 +297,11 @@ struct generate_subdivisions {
     }
     return OccupiedVolume;
   }
-  template <typename T> array<range> Subdivide_(const T &Manipulator, const box &BaseBounds, const
+  template <typename T> array<range> Subdivide_(const T &Manipulator, double BaseVolume, const
     range &CellRange, double UnoccupiedVolume) {
     array<range> SubdivisionRanges;
     bool Leaf = CellRange.Count() <= MaxCells_ || UnoccupiedVolume <= MaxUnoccupiedVolume_ *
-      BoxVolume_(BaseBounds);
+      BaseVolume;
     if (!Leaf) {
       int BestSplitDim = -1;
       range BestLeftCellRange;
@@ -328,9 +329,9 @@ struct generate_subdivisions {
           BestRightUnoccupiedVolume = RightUnoccupiedVolume;
         }
       }
-      array<range> LeftSubdivisionRanges = Subdivide_(Manipulator, BaseBounds, BestLeftCellRange,
+      array<range> LeftSubdivisionRanges = Subdivide_(Manipulator, BaseVolume, BestLeftCellRange,
         BestLeftUnoccupiedVolume);
-      array<range> RightSubdivisionRanges = Subdivide_(Manipulator, BaseBounds, BestRightCellRange,
+      array<range> RightSubdivisionRanges = Subdivide_(Manipulator, BaseVolume, BestRightCellRange,
         BestRightUnoccupiedVolume);
       SubdivisionRanges.Reserve(LeftSubdivisionRanges.Count() + RightSubdivisionRanges.Count());
       for (auto &SubdivisionRange : LeftSubdivisionRanges) {
