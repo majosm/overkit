@@ -469,8 +469,7 @@ void assembler::DetectOverlap_() {
     double MaxUnoccupiedVolume = 0.25;
     int MaxCells = 1 << 10;
     SubdivisionRanges = GeometryManipulator.Apply(generate_subdivisions(NumDims, Geometry.Coords(),
-      CellActiveMask, Geometry.CellVolumes(), MaxUnoccupiedVolume, MaxCells),
-      CellLocalRange);
+      CellActiveMask, Geometry.CellVolumes(), MaxUnoccupiedVolume, MaxCells), CellLocalRange);
     TotalSubdivisions += SubdivisionRanges.Count();
   }
 
@@ -580,7 +579,7 @@ void assembler::DetectOverlap_() {
     MPI_Barrier(Domain.Comm());
     Logger.LogStatus(Domain.Comm().Rank() == 0, "Done retrieving remote hash bins.");
     Logger.LogStatus(Domain.Comm().Rank() == 0, "Establishing communication between potentially-"
-      "overlapping ranks...");
+      "overlapping processes...");
   }
   Level2 = Logger.IncreaseStatusLevelAndIndent();
 
@@ -768,7 +767,7 @@ void assembler::DetectOverlap_() {
   if (Logger.LoggingStatus()) {
     MPI_Barrier(Domain.Comm());
     Logger.LogStatus(Domain.Comm().Rank() == 0, "Done establishing communication between "
-      "potentially-overlapping ranks.");
+      "potentially-overlapping processes.");
     Logger.LogStatus(Domain.Comm().Rank() == 0, "Transferring geometry data...");
   }
   Level2 = Logger.IncreaseStatusLevelAndIndent();
