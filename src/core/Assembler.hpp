@@ -322,7 +322,6 @@ private:
   static constexpr int OVERLAP_BB_HASH_MAP_TIME = core::profiler::ASSEMBLER_OVERLAP_BB_HASH_MAP_TIME;
   static constexpr int OVERLAP_BB_HASH_RETRIEVE_TIME = core::profiler::ASSEMBLER_OVERLAP_BB_HASH_RETRIEVE_TIME;
   static constexpr int OVERLAP_CONNECT_TIME = core::profiler::ASSEMBLER_OVERLAP_CONNECT_TIME;
-  static constexpr int OVERLAP_TRANSFER_TIME = core::profiler::ASSEMBLER_OVERLAP_TRANSFER_TIME;
   static constexpr int OVERLAP_SEARCH_TIME = core::profiler::ASSEMBLER_OVERLAP_SEARCH_TIME;
   static constexpr int OVERLAP_SEARCH_BUILD_ACCEL_TIME = core::profiler::ASSEMBLER_OVERLAP_SEARCH_BUILD_ACCEL_TIME;
   static constexpr int OVERLAP_SEARCH_QUERY_ACCEL_TIME = core::profiler::ASSEMBLER_OVERLAP_SEARCH_QUERY_ACCEL_TIME;

@@ -768,13 +768,13 @@ void assembler::DetectOverlap_() {
     MPI_Barrier(Domain.Comm());
     Logger.LogStatus(Domain.Comm().Rank() == 0, "Done establishing communication between "
       "potentially-overlapping processes.");
-    Logger.LogStatus(Domain.Comm().Rank() == 0, "Transferring geometry data...");
+    Logger.LogStatus(Domain.Comm().Rank() == 0, "Searching for overlapping cells...");
   }
   Level2 = Logger.IncreaseStatusLevelAndIndent();
 
-  Profiler.StartSync(OVERLAP_TRANSFER_TIME, Domain.Comm());
+  Profiler.StartSync(OVERLAP_SEARCH_TIME, Domain.Comm());
 
-  elem_set<int,2> MGridDataSends;
+  elem_set<int,2> MGridSends;
 
   for (int MGridID : Domain.LocalGridIDs()) {
     auto &NGridIDsAndRanks = OverlappingNGridIDsAndRanksForLocalMGrid(MGridID);
@@ -782,13 +782,13 @@ void assembler::DetectOverlap_() {
       const set<int> &NGridRanks = NEntry.Value();
       for (int Rank : NGridRanks) {
         if (Rank != Domain.Comm().Rank()) {
-          MGridDataSends.Insert({MGridID,Rank});
+          MGridSends.Insert({MGridID,Rank});
         }
       }
     }
   }
 
-  elem_set<int,2> MGridDataRecvs;
+  elem_set<int,2> MGridRecvs;
 
   for (int NGridID : Domain.LocalGridIDs()) {
     auto &MGridIDsAndRanks = OverlappingMGridIDsAndRanksForLocalNGrid(NGridID);
@@ -797,39 +797,37 @@ void assembler::DetectOverlap_() {
       const set<int> &MGridRanks = MEntry.Value();
       for (int Rank : MGridRanks) {
         if (Rank != Domain.Comm().Rank()) {
-          MGridDataRecvs.Insert({MGridID,Rank});
+          MGridRecvs.Insert({MGridID,Rank});
         }
       }
     }
   }
 
-  elem_map<int,2,int> NumMGridSubdivisionsSendingToRank;
-  elem_map<int,2,array<int>> MGridSubdivisionsSendingToRank;
-  NumMGridSubdivisionsSendingToRank.Reserve(MGridDataSends.Count());
-  MGridSubdivisionsSendingToRank.Reserve(MGridDataSends.Count());
+  elem_map<int,2,int> NumMGridSubdivisionsSending;
+  NumMGridSubdivisionsSending.Reserve(MGridSends.Count());
 
-  elem_map<int,2,int> NumMGridSubdivisionsReceivingFromRank;
-  elem_map<int,2,set<int>> MGridSubdivisionsReceivingFromRank;
-  NumMGridSubdivisionsReceivingFromRank.Reserve(MGridDataRecvs.Count());
-  MGridSubdivisionsReceivingFromRank.Reserve(MGridDataRecvs.Count());
+  elem_map<int,2,int> NumMGridSubdivisionsReceiving;
+  NumMGridSubdivisionsReceiving.Reserve(MGridRecvs.Count());
 
-  MPIRequests.Reserve(MGridDataSends.Count() + MGridDataRecvs.Count());
+  MPIRequests.Reserve(MGridSends.Count() + MGridRecvs.Count());
 
-  for (auto &MGridIDAndRankPair : MGridDataSends) {
+  for (auto &MGridIDAndRankPair : MGridSends) {
     int Rank = MGridIDAndRankPair(1);
-    int &NumSending = NumMGridSubdivisionsSendingToRank.Insert(MGridIDAndRankPair, 0);
+    int &NumSending = NumMGridSubdivisionsSending.Insert(MGridIDAndRankPair, 0);
     MPI_Irecv(&NumSending, 1, MPI_INT, Rank, 0, Domain.Comm(), &MPIRequests.Append());
   }
+
+  elem_map<int,2,set<int>> MGridSubdivisionsReceiving;
+  MGridSubdivisionsReceiving.Reserve(MGridRecvs.Count());
 
   for (int NGridID : Domain.LocalGridIDs()) {
     auto &SubdivisionsFromMGridAndRank = OverlappingSubdivisionsForLocalNGrid(NGridID);
     for (auto &MGridAndRankEntry : SubdivisionsFromMGridAndRank) {
       auto &MGridIDAndRankPair = MGridAndRankEntry.Key();
+      set<int> &SubdivisionsReceiving = MGridSubdivisionsReceiving.Fetch(MGridIDAndRankPair);
       int Rank = MGridIDAndRankPair(1);
       if (Rank != Domain.Comm().Rank()) {
         const set<int> &Subdivisions = MGridAndRankEntry.Value();
-        set<int> &SubdivisionsReceiving = MGridSubdivisionsReceivingFromRank.Fetch(
-          MGridIDAndRankPair);
         for (int iSubdivision : Subdivisions) {
           SubdivisionsReceiving.Insert(iSubdivision);
         }
@@ -837,31 +835,34 @@ void assembler::DetectOverlap_() {
     }
   }
 
-  for (auto &MGridIDAndRankPair : MGridDataRecvs) {
+  for (auto &MGridIDAndRankPair : MGridRecvs) {
     int Rank = MGridIDAndRankPair(1);
-    const int &NumReceiving = NumMGridSubdivisionsReceivingFromRank.Insert(MGridIDAndRankPair,
-      MGridSubdivisionsReceivingFromRank(MGridIDAndRankPair).Count());
+    const int &NumReceiving = NumMGridSubdivisionsReceiving.Insert(MGridIDAndRankPair,
+      MGridSubdivisionsReceiving(MGridIDAndRankPair).Count());
     MPI_Isend(&NumReceiving, 1, MPI_INT, Rank, 0, Domain.Comm(), &MPIRequests.Append());
   }
 
   MPI_Waitall(MPIRequests.Count(), MPIRequests.Data(), MPI_STATUSES_IGNORE);
   MPIRequests.Clear();
 
-  MPIRequests.Reserve(MGridDataSends.Count() + MGridDataRecvs.Count());
+  elem_map<int,2,array<int>> MGridSubdivisionsSending;
+  MGridSubdivisionsSending.Reserve(MGridSends.Count());
 
-  for (auto &MGridIDAndRankPair : MGridDataSends) {
+  MPIRequests.Reserve(MGridSends.Count() + MGridRecvs.Count());
+
+  for (auto &MGridIDAndRankPair : MGridSends) {
     int Rank = MGridIDAndRankPair(1);
-    int NumSending = NumMGridSubdivisionsSendingToRank(MGridIDAndRankPair);
-    array<int> &Subdivisions = MGridSubdivisionsSendingToRank.Insert(MGridIDAndRankPair);
+    int NumSending = NumMGridSubdivisionsSending(MGridIDAndRankPair);
+    array<int> &Subdivisions = MGridSubdivisionsSending.Insert(MGridIDAndRankPair);
     Subdivisions.Resize({NumSending});
     MPI_Irecv(Subdivisions.Data(), NumSending, MPI_INT, Rank, 0, Domain.Comm(),
       &MPIRequests.Append());
   }
 
-  for (auto &MGridIDAndRankPair : MGridDataRecvs) {
+  for (auto &MGridIDAndRankPair : MGridRecvs) {
     int Rank = MGridIDAndRankPair(1);
-    int NumReceiving = NumMGridSubdivisionsReceivingFromRank(MGridIDAndRankPair);
-    const set<int> &Subdivisions = MGridSubdivisionsReceivingFromRank(MGridIDAndRankPair);
+    int NumReceiving = NumMGridSubdivisionsReceiving(MGridIDAndRankPair);
+    const set<int> &Subdivisions = MGridSubdivisionsReceiving(MGridIDAndRankPair);
     MPI_Isend(Subdivisions.Data(), NumReceiving, MPI_INT, Rank, 0, Domain.Comm(),
       &MPIRequests.Append());
   }
@@ -869,72 +870,52 @@ void assembler::DetectOverlap_() {
   MPI_Waitall(MPIRequests.Count(), MPIRequests.Data(), MPI_STATUSES_IGNORE);
   MPIRequests.Clear();
 
-  struct local_subdivision_data {
-    array<field<double>> Coords;
-    field<bool> CellActiveMask;
-  };
-
-  map<int,map<int,local_subdivision_data>> LocalMGridSubdivisionData;
-
-  for (int MGridID : Domain.LocalGridIDs()) {
-    LocalMGridSubdivisionData.Insert(MGridID);
+  int NumSubdivisionSends = 0;
+  for (auto &MGridAndRankEntry : MGridSubdivisionsSending) {
+    const array<int> &Subdivisions = MGridAndRankEntry.Value();
+    NumSubdivisionSends += Subdivisions.Count();
   }
 
-  for (auto &MGridAndRankEntry : MGridSubdivisionsSendingToRank) {
+  int NumSubdivisionRecvs = 0;
+  for (auto &MGridAndRankEntry : MGridSubdivisionsReceiving) {
+    const set<int> &Subdivisions = MGridAndRankEntry.Value();
+    NumSubdivisionRecvs += Subdivisions.Count();
+  }
+
+  elem_set<int,3> SubdivisionSends;
+  elem_set<int,3> SubdivisionRecvs;
+  SubdivisionSends.Reserve(NumSubdivisionSends);
+  SubdivisionRecvs.Reserve(NumSubdivisionRecvs);
+
+  for (auto &MGridAndRankEntry : MGridSubdivisionsSending) {
     int MGridID = MGridAndRankEntry.Key()(0);
-    const array<int> &SubdivisionsSending = MGridAndRankEntry.Value();
-    map<int,local_subdivision_data> &SubdivisionData = LocalMGridSubdivisionData(MGridID);
-    for (int iSubdivision : SubdivisionsSending) {
-      SubdivisionData.Insert(iSubdivision);
+    int Rank = MGridAndRankEntry.Key()(1);
+    const array<int> &Subdivisions = MGridAndRankEntry.Value();
+    for (int iSubdivision : Subdivisions) {
+      SubdivisionSends.Insert({MGridID,Rank,iSubdivision});
     }
   }
+
+  for (auto &MGridAndRankEntry : MGridSubdivisionsReceiving) {
+    int MGridID = MGridAndRankEntry.Key()(0);
+    int Rank = MGridAndRankEntry.Key()(1);
+    const set<int> &Subdivisions = MGridAndRankEntry.Value();
+    for (int iSubdivision : Subdivisions) {
+      SubdivisionRecvs.Insert({MGridID,Rank,iSubdivision});
+    }
+  }
+
+  elem_set<int,2> SubdivisionLocals;
 
   for (int NGridID : Domain.LocalGridIDs()) {
     auto &SubdivisionsFromMGridAndRank = OverlappingSubdivisionsForLocalNGrid(NGridID);
     for (auto &MGridAndRankEntry : SubdivisionsFromMGridAndRank) {
-      int MGridID = MGridAndRankEntry.Key()(0);
       int Rank = MGridAndRankEntry.Key()(1);
       if (Rank == Domain.Comm().Rank()) {
+        int MGridID = MGridAndRankEntry.Key()(0);
         const set<int> &Subdivisions = MGridAndRankEntry.Value();
-        auto &SubdivisionData = LocalMGridSubdivisionData(MGridID);
         for (int iSubdivision : Subdivisions) {
-          SubdivisionData.Fetch(iSubdivision);
-        }
-      }
-    }
-  }
-
-  for (int MGridID : Domain.LocalGridIDs()) {
-    const grid &MGrid = Domain.Grid(MGridID);
-    const local_grid_aux_data &GridAuxData = AssemblyData.LocalGridAuxData(MGridID);
-    const distributed_field<bool> &CellActiveMask = GridAuxData.CellActiveMask;
-    const geometry &Geometry = GeometryComponent.Geometry(MGridID);
-    const array<distributed_field<double>> &Coords = Geometry.Coords();
-    const array<range> &SubdivisionRanges = SubdivisionRangesForLocalGrid(MGridID);
-    auto &SubdivisionData = LocalMGridSubdivisionData(MGridID);
-    for (auto &SubdivisionEntry : SubdivisionData) {
-      int iSubdivision = SubdivisionEntry.Key();
-      local_subdivision_data &Data = SubdivisionEntry.Value();
-      range SubdivCellExtendedRange = core::ExtendLocalRange(MGrid.CellCart(),
-        SubdivisionRanges(iSubdivision), 1);
-      range SubdivExtendedRange = core::RangeCellToPointAll(MGrid.Cart(), SubdivCellExtendedRange);
-      Data.Coords.Resize({MAX_DIMS});
-      for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        Data.Coords(iDim).Resize(SubdivExtendedRange);
-        for (int k = SubdivExtendedRange.Begin(2); k < SubdivExtendedRange.End(2); ++k) {
-          for (int j = SubdivExtendedRange.Begin(1); j < SubdivExtendedRange.End(1); ++j) {
-            for (int i = SubdivExtendedRange.Begin(0); i < SubdivExtendedRange.End(0); ++i) {
-              Data.Coords(iDim)(i,j,k) = Coords(iDim)(i,j,k);
-            }
-          }
-        }
-      }
-      Data.CellActiveMask.Resize(SubdivCellExtendedRange);
-      for (int k = SubdivCellExtendedRange.Begin(2); k < SubdivCellExtendedRange.End(2); ++k) {
-        for (int j = SubdivCellExtendedRange.Begin(1); j < SubdivCellExtendedRange.End(1); ++j) {
-          for (int i = SubdivCellExtendedRange.Begin(0); i < SubdivCellExtendedRange.End(0); ++i) {
-            Data.CellActiveMask(i,j,k) = CellActiveMask(i,j,k);
-          }
+          SubdivisionLocals.Insert({MGridID,iSubdivision});
         }
       }
     }
@@ -946,142 +927,94 @@ void assembler::DetectOverlap_() {
     field<bool> CellActiveMask;
   };
 
-  elem_map<int,2,map<int,subdivision_data>> MGridSubdivisionData;
+  map<int,map<int,subdivision_data>> LocalSubdivisionData;
 
-  int NumSubdivisionDataRecvs = 0;
-  for (auto &MGridAndRankEntry : MGridSubdivisionsReceivingFromRank) {
-    const set<int> &Subdivisions = MGridAndRankEntry.Value();
-    NumSubdivisionDataRecvs += Subdivisions.Count();
+  for (int MGridID : Domain.LocalGridIDs()) {
+    LocalSubdivisionData.Insert(MGridID);
   }
 
-  int NumSubdivisionDataSends = 0;
-  for (auto &MGridAndRankEntry : MGridSubdivisionsSendingToRank) {
-    const array<int> &Subdivisions = MGridAndRankEntry.Value();
-    NumSubdivisionDataSends += Subdivisions.Count();
+  for (auto &Entry : SubdivisionSends) {
+    int MGridID = Entry(0);
+    int iSubdivision = Entry(2);
+    LocalSubdivisionData(MGridID).Fetch(iSubdivision);
   }
 
-  MPIRequests.Reserve(2*(NumSubdivisionDataSends+NumSubdivisionDataRecvs));
-
-  for (int NGridID : Domain.LocalGridIDs()) {
-    auto &SubdivisionsFromMGridAndRank = OverlappingSubdivisionsForLocalNGrid(NGridID);
-    for (auto &MGridAndRankEntry : SubdivisionsFromMGridAndRank) {
-      int MGridID = MGridAndRankEntry.Key()(0);
-      int Rank = MGridAndRankEntry.Key()(1);
-      const set<int> &Subdivisions = MGridAndRankEntry.Value();
-      auto &SubdivisionData = MGridSubdivisionData.Fetch({MGridID,Rank});
-      for (int iSubdivision : Subdivisions) {
-        SubdivisionData.Insert(iSubdivision);
-      }
-    }
+  for (auto &Entry : SubdivisionLocals) {
+    int MGridID = Entry(0);
+    int iSubdivision = Entry(1);
+    LocalSubdivisionData(MGridID).Fetch(iSubdivision);
   }
 
-  for (auto &MGridAndRankEntry : MGridSubdivisionsReceivingFromRank) {
-    int MGridID = MGridAndRankEntry.Key()(0);
-    int Rank = MGridAndRankEntry.Key()(1);
-    const set<int> &Subdivisions = MGridAndRankEntry.Value();
-    auto &SubdivisionData = MGridSubdivisionData({MGridID,Rank});
-    for (int iSubdivision : Subdivisions) {
-      subdivision_data &Data = SubdivisionData(iSubdivision);
-      MPI_Irecv(Data.CellRange.Begin().Data(), MAX_DIMS, MPI_INT, Rank, 0, Domain.Comm(),
-        &MPIRequests.Append());
-      MPI_Irecv(Data.CellRange.End().Data(), MAX_DIMS, MPI_INT, Rank, 0, Domain.Comm(),
-        &MPIRequests.Append());
-    }
-  }
+  auto GenerateSubdivisionDataRanges = [](const cart &Cart, const cart &CellCart, const range
+    &CellRange, range &CoordsRange, range &CellActiveMaskRange) {
+    CellActiveMaskRange = core::ExtendLocalRange(CellCart, CellRange, 1);
+    CoordsRange = core::RangeCellToPointAll(Cart, CellActiveMaskRange);
+  };
 
-  for (auto &MGridAndRankEntry : MGridSubdivisionsSendingToRank) {
-    int MGridID = MGridAndRankEntry.Key()(0);
-    int Rank = MGridAndRankEntry.Key()(1);
-    const array<int> &Subdivisions = MGridAndRankEntry.Value();
+  for (int MGridID : Domain.LocalGridIDs()) {
+    const grid &MGrid = Domain.Grid(MGridID);
+    const local_grid_aux_data &GridAuxData = AssemblyData.LocalGridAuxData(MGridID);
+    const distributed_field<bool> &CellActiveMask = GridAuxData.CellActiveMask;
+    const geometry &Geometry = GeometryComponent.Geometry(MGridID);
+    const array<distributed_field<double>> &Coords = Geometry.Coords();
     const array<range> &SubdivisionRanges = SubdivisionRangesForLocalGrid(MGridID);
-    for (int iSubdivision : Subdivisions) {
-      const range &CellRange = SubdivisionRanges(iSubdivision);
-      MPI_Isend(CellRange.Begin().Data(), MAX_DIMS, MPI_INT, Rank, 0, Domain.Comm(),
-        &MPIRequests.Append());
-      MPI_Isend(CellRange.End().Data(), MAX_DIMS, MPI_INT, Rank, 0, Domain.Comm(),
-        &MPIRequests.Append());
-    }
-  }
-
-  MPI_Waitall(MPIRequests.Count(), MPIRequests.Data(), MPI_STATUSES_IGNORE);
-  MPIRequests.Clear();
-
-  MPIRequests.Reserve((MAX_DIMS+1)*(NumSubdivisionDataSends+NumSubdivisionDataRecvs));
-
-  for (auto &MGridAndRankEntry : MGridSubdivisionsReceivingFromRank) {
-    int MGridID = MGridAndRankEntry.Key()(0);
-    int Rank = MGridAndRankEntry.Key()(1);
-    const grid_info &MGridInfo = Domain.GridInfo(MGridID);
-    const set<int> &Subdivisions = MGridAndRankEntry.Value();
-    auto &SubdivisionData = MGridSubdivisionData({MGridID,Rank});
-    for (int iSubdivision : Subdivisions) {
-      subdivision_data &Data = SubdivisionData(iSubdivision);
-      range SubdivCellExtendedRange = core::ExtendLocalRange(MGridInfo.CellCart(), Data.CellRange,
-        1);
-      range SubdivExtendedRange = core::RangeCellToPointAll(MGridInfo.Cart(),
-        SubdivCellExtendedRange);
+    auto &SubdivisionData = LocalSubdivisionData(MGridID);
+    for (auto &SubdivisionEntry : SubdivisionData) {
+      int iSubdivision = SubdivisionEntry.Key();
+      subdivision_data &Data = SubdivisionEntry.Value();
+      Data.CellRange = SubdivisionRanges(iSubdivision);
+      range CoordsRange, CellActiveMaskRange;
+      GenerateSubdivisionDataRanges(MGrid.Cart(), MGrid.CellCart(), Data.CellRange, CoordsRange,
+        CellActiveMaskRange);
       Data.Coords.Resize({MAX_DIMS});
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        Data.Coords(iDim).Resize(SubdivExtendedRange);
-        MPI_Irecv(Data.Coords(iDim).Data(), Data.Coords(iDim).Count(), MPI_DOUBLE, Rank, 0,
-          Domain.Comm(), &MPIRequests.Append());
+        Data.Coords(iDim).Resize(CoordsRange);
+        for (int k = CoordsRange.Begin(2); k < CoordsRange.End(2); ++k) {
+          for (int j = CoordsRange.Begin(1); j < CoordsRange.End(1); ++j) {
+            for (int i = CoordsRange.Begin(0); i < CoordsRange.End(0); ++i) {
+              Data.Coords(iDim)(i,j,k) = Coords(iDim)(i,j,k);
+            }
+          }
+        }
       }
-      Data.CellActiveMask.Resize(SubdivCellExtendedRange);
-      MPI_Irecv(Data.CellActiveMask.Data(), Data.CellActiveMask.Count(), MPI_C_BOOL, Rank, 0,
-        Domain.Comm(), &MPIRequests.Append());
+      Data.CellActiveMask.Resize(CellActiveMaskRange);
+      for (int k = CellActiveMaskRange.Begin(2); k < CellActiveMaskRange.End(2); ++k) {
+        for (int j = CellActiveMaskRange.Begin(1); j < CellActiveMaskRange.End(1); ++j) {
+          for (int i = CellActiveMaskRange.Begin(0); i < CellActiveMaskRange.End(0); ++i) {
+            Data.CellActiveMask(i,j,k) = CellActiveMask(i,j,k);
+          }
+        }
+      }
     }
   }
 
-  for (auto &MGridAndRankEntry : MGridSubdivisionsSendingToRank) {
-    int MGridID = MGridAndRankEntry.Key()(0);
-    int Rank = MGridAndRankEntry.Key()(1);
-    const array<int> &Subdivisions = MGridAndRankEntry.Value();
-    auto &SubdivisionData = LocalMGridSubdivisionData(MGridID);
-    for (int iSubdivision : Subdivisions) {
-      const local_subdivision_data &Data = SubdivisionData(iSubdivision);
-      for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        MPI_Isend(Data.Coords(iDim).Data(), Data.Coords(iDim).Count(), MPI_DOUBLE, Rank, 0,
-          Domain.Comm(), &MPIRequests.Append());
-      }
-      MPI_Isend(Data.CellActiveMask.Data(), Data.CellActiveMask.Count(), MPI_C_BOOL, Rank, 0,
-        Domain.Comm(), &MPIRequests.Append());
-    }
+  elem_map<int,3,range> RemoteSubdivisionRanges;
+  RemoteSubdivisionRanges.Reserve(SubdivisionRecvs.Count());
+
+  MPIRequests.Reserve(2*(SubdivisionSends.Count()+SubdivisionRecvs.Count()));
+
+  for (auto &Entry : SubdivisionRecvs) {
+    int Rank = Entry(1);
+    range &CellRange = RemoteSubdivisionRanges.Insert(Entry);
+    MPI_Irecv(CellRange.Begin().Data(), MAX_DIMS, MPI_INT, Rank, 0, Domain.Comm(),
+      &MPIRequests.Append());
+    MPI_Irecv(CellRange.End().Data(), MAX_DIMS, MPI_INT, Rank, 0, Domain.Comm(),
+      &MPIRequests.Append());
+  }
+
+  for (auto &Entry : SubdivisionSends) {
+    int MGridID = Entry(0);
+    int Rank = Entry(1);
+    int iSubdivision = Entry(2);
+    const range &CellRange = SubdivisionRangesForLocalGrid(MGridID)(iSubdivision);
+    MPI_Isend(CellRange.Begin().Data(), MAX_DIMS, MPI_INT, Rank, 0, Domain.Comm(),
+      &MPIRequests.Append());
+    MPI_Isend(CellRange.End().Data(), MAX_DIMS, MPI_INT, Rank, 0, Domain.Comm(),
+      &MPIRequests.Append());
   }
 
   MPI_Waitall(MPIRequests.Count(), MPIRequests.Data(), MPI_STATUSES_IGNORE);
   MPIRequests.Clear();
-
-  for (auto &MGridAndRankEntry : MGridSubdivisionData) {
-    int Rank = MGridAndRankEntry.Key()(1);
-    if (Rank == Domain.Comm().Rank()) {
-      int MGridID = MGridAndRankEntry.Key()(0);
-      auto &LocalSubdivisionData = LocalMGridSubdivisionData(MGridID);
-      auto &SubdivisionData = MGridAndRankEntry.Value();
-      const array<range> &SubdivisionRanges = SubdivisionRangesForLocalGrid(MGridID);
-      for (auto &SubdivisionEntry : SubdivisionData) {
-        int iSubdivision = SubdivisionEntry.Key();
-        local_subdivision_data &LocalData = LocalSubdivisionData(iSubdivision);
-        subdivision_data &Data = SubdivisionEntry.Value();
-        Data.CellRange = SubdivisionRanges(iSubdivision);
-        Data.Coords = std::move(LocalData.Coords);
-        Data.CellActiveMask = std::move(LocalData.CellActiveMask);
-      }
-    }
-  }
-
-  LocalMGridSubdivisionData.Clear();
-
-  Profiler.Stop(OVERLAP_TRANSFER_TIME);
-
-  Level2.Reset();
-  if (Logger.LoggingStatus()) {
-    MPI_Barrier(Domain.Comm());
-    Logger.LogStatus(Domain.Comm().Rank() == 0, "Done transferring geometry data.");
-    Logger.LogStatus(Domain.Comm().Rank() == 0, "Searching for overlapping cells...");
-  }
-  Level2 = Logger.IncreaseStatusLevelAndIndent();
-
-  Profiler.StartSync(OVERLAP_SEARCH_TIME, Domain.Comm());
 
   map<int,elem_map<int,2,map<int,long long>>> NumSubdivisionQueryPointsForLocalNGrid;
 
@@ -1190,16 +1123,144 @@ void assembler::DetectOverlap_() {
     }
   }
 
-  for (auto &MGridAndRankEntry : MGridSubdivisionData) {
-    auto &MGridIDAndRankPair = MGridAndRankEntry.Key();
-    int MGridID = MGridIDAndRankPair(0);
+  array<MPI_Request> SignalMPISendRequests({SubdivisionRecvs.Count()}, MPI_REQUEST_NULL);
+  array<MPI_Request> SignalMPIRecvRequests({SubdivisionSends.Count()}, MPI_REQUEST_NULL);
+  array<bool> SignalDummySendData({SubdivisionRecvs.Count()}, false);
+  array<bool> SignalDummyRecvData({SubdivisionSends.Count()});
+
+  constexpr int MAX_SIMULTANEOUS_TRANSFERS = 10;
+
+  array<int> TransferredSubdivisionRecvIndices({MAX_SIMULTANEOUS_TRANSFERS}, -1);
+  array<subdivision_data> TransferredSubdivisionData({MAX_SIMULTANEOUS_TRANSFERS});
+
+  array<bool,2> TransferSendFinished({{SubdivisionSends.Count(),4}}, false);
+  array<bool,2> TransferRecvFinished({{MAX_SIMULTANEOUS_TRANSFERS,4}}, true);
+
+  array<MPI_Request,2> TransferMPISendRequests({{SubdivisionSends.Count(),4}}, MPI_REQUEST_NULL);
+  array<MPI_Request,2> TransferMPIRecvRequests({{MAX_SIMULTANEOUS_TRANSFERS,4}}, MPI_REQUEST_NULL);
+
+  int iNextRecv = 0;
+  int iNextLocal = 0;
+
+  for (int iSend = 0; iSend < SubdivisionSends.Count(); ++iSend) {
+    int Rank = SubdivisionSends[iSend](1);
+    MPI_Irecv(SignalDummyRecvData.Data(iSend), 1, MPI_C_BOOL, Rank, 1, Domain.Comm(),
+      SignalMPIRecvRequests.Data(iSend));
+  }
+
+  for (int iTransfer = 0; iTransfer < MAX_SIMULTANEOUS_TRANSFERS; ++iTransfer) {
+    if (iNextRecv == SubdivisionRecvs.Count()) break;
+    TransferredSubdivisionRecvIndices(iTransfer) = iNextRecv;
+    for (int iData = 0; iData < 4; ++iData) {
+      TransferRecvFinished(iTransfer,iData) = false;
+    }
+    auto &Entry = RemoteSubdivisionRanges[iNextRecv];
+    int MGridID = Entry.Key()(0);
+    int Rank = Entry.Key()(1);
     const grid_info &MGridInfo = Domain.GridInfo(MGridID);
-    field_indexer MGridCellGlobalIndexer(MGridInfo.CellGlobalRange());
-    geometry_type GeometryType = GeometryComponent.GeometryInfo(MGridID).Type();
-    auto &SubdivisionData = MGridAndRankEntry.Value();
-    for (auto &SubdivisionDataEntry : SubdivisionData) {
-      int iSubdivision = SubdivisionDataEntry.Key();
-      subdivision_data &Data = SubdivisionDataEntry.Value();
+    subdivision_data &Data = TransferredSubdivisionData(iTransfer);
+    Data.CellRange = Entry.Value();
+    range CoordsRange, CellActiveMaskRange;
+    GenerateSubdivisionDataRanges(MGridInfo.Cart(), MGridInfo.CellCart(), Data.CellRange,
+      CoordsRange, CellActiveMaskRange);
+    Data.Coords.Resize({MAX_DIMS});
+    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+      Data.Coords(iDim).Resize(CoordsRange);
+      MPI_Irecv(Data.Coords(iDim).Data(), Data.Coords(iDim).Count(), MPI_DOUBLE, Rank, 0,
+        Domain.Comm(), TransferMPIRecvRequests.Data(iTransfer,iDim));
+    }
+    Data.CellActiveMask.Resize(CellActiveMaskRange);
+    MPI_Irecv(Data.CellActiveMask.Data(), Data.CellActiveMask.Count(), MPI_C_BOOL, Rank, 0,
+      Domain.Comm(), TransferMPIRecvRequests.Data(iTransfer,3));
+    MPI_Isend(SignalDummySendData.Data(iNextRecv), 1, MPI_C_BOOL, Rank, 1, Domain.Comm(),
+      SignalMPISendRequests.Data(iNextRecv));
+    ++iNextRecv;
+  }
+
+  int NumTestOutput;
+  int MaxTestOutput = Max(4*int(SubdivisionSends.Count()), 4*MAX_SIMULTANEOUS_TRANSFERS);
+  array<int> MPITestOutput({MaxTestOutput});
+
+  bool SendsDone = SubdivisionSends.Count() == 0;
+  bool RecvsDone = SubdivisionRecvs.Count() == 0;
+  bool LocalsDone = SubdivisionLocals.Count() == 0;
+  while (!SendsDone || !RecvsDone || !LocalsDone) {
+    if (!SendsDone) {
+      MPI_Testsome(SignalMPIRecvRequests.Count(), SignalMPIRecvRequests.Data(), &NumTestOutput,
+        MPITestOutput.Data(), MPI_STATUSES_IGNORE);
+      if (NumTestOutput != MPI_UNDEFINED && NumTestOutput > 0) {
+        for (int iOutput = 0; iOutput < NumTestOutput; ++iOutput) {
+          int iSend = MPITestOutput(iOutput);
+          const elem<int,3> &SendInfo = SubdivisionSends[iSend];
+          int MGridID = SendInfo(0);
+          int Rank = SendInfo(1);
+          int iSubdivision = SendInfo(2);
+          const subdivision_data &Data = LocalSubdivisionData(MGridID)(iSubdivision);
+          for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+            MPI_Isend(Data.Coords(iDim).Data(), Data.Coords(iDim).Count(), MPI_DOUBLE, Rank, 0,
+              Domain.Comm(), TransferMPISendRequests.Data(iSend,iDim));
+          }
+          MPI_Isend(Data.CellActiveMask.Data(), Data.CellActiveMask.Count(), MPI_C_BOOL, Rank, 0,
+            Domain.Comm(), TransferMPISendRequests.Data(iSend,3));
+        }
+      }
+      MPI_Testsome(TransferMPISendRequests.Count(), TransferMPISendRequests.Data(), &NumTestOutput,
+        MPITestOutput.Data(), MPI_STATUSES_IGNORE);
+      if (NumTestOutput != MPI_UNDEFINED && NumTestOutput > 0) {
+        for (int iOutput = 0; iOutput < NumTestOutput; ++iOutput) {
+          int iSendData = MPITestOutput(iOutput);
+          TransferSendFinished[iSendData] = true;
+        }
+        SendsDone = ArrayAll(TransferSendFinished);
+      }
+    }
+    if (!RecvsDone) {
+      MPI_Testsome(TransferMPIRecvRequests.Count(), TransferMPIRecvRequests.Data(), &NumTestOutput,
+        MPITestOutput.Data(), MPI_STATUSES_IGNORE);
+      if (NumTestOutput != MPI_UNDEFINED && NumTestOutput > 0) {
+        for (int iOutput = 0; iOutput < NumTestOutput; ++iOutput) {
+          int iRecvData = MPITestOutput(iOutput);
+          TransferRecvFinished[iRecvData] = true;
+        }
+      }
+    }
+    int iTransfer = MAX_SIMULTANEOUS_TRANSFERS;
+    if (!RecvsDone) {
+      iTransfer = 0;
+      while (iTransfer < MAX_SIMULTANEOUS_TRANSFERS) {
+        if (TransferredSubdivisionRecvIndices(iTransfer) >= 0) {
+          bool Finished = true;
+          for (int iData = 0; iData < 4; ++iData) {
+            Finished = Finished && TransferRecvFinished(iTransfer,iData);
+          }
+          if (Finished) break;
+        }
+        ++iTransfer;
+      }
+    }
+    if (iTransfer < MAX_SIMULTANEOUS_TRANSFERS || !LocalsDone) {
+      int MGridID;
+      int Rank;
+      int iSubdivision;
+      const subdivision_data *DataPtr;
+      if (iTransfer < MAX_SIMULTANEOUS_TRANSFERS) {
+        int iRecv = TransferredSubdivisionRecvIndices(iTransfer);
+        auto &Entry = SubdivisionRecvs[iRecv];
+        MGridID = Entry(0);
+        Rank = Entry(1);
+        iSubdivision = Entry(2);
+        DataPtr = &TransferredSubdivisionData(iTransfer);
+      } else {
+        const elem<int,2> &MGridIDAndSubdivisionPair = SubdivisionLocals[iNextLocal];
+        MGridID = MGridIDAndSubdivisionPair(0);
+        Rank = Domain.Comm().Rank();
+        iSubdivision = MGridIDAndSubdivisionPair(1);
+        DataPtr = &LocalSubdivisionData(MGridID)(iSubdivision);
+      }
+      const subdivision_data &Data = *DataPtr;
+      const grid_info &MGridInfo = Domain.GridInfo(MGridID);
+      field_indexer MGridCellGlobalIndexer(MGridInfo.CellGlobalRange());
+      geometry_type GeometryType = GeometryComponent.GeometryInfo(MGridID).Type();
       double DepthAdjust = Options_.OverlapAccelDepthAdjust(MGridID);
       double ResolutionAdjust = Options_.OverlapAccelResolutionAdjust(MGridID);
       double MaxOverlapTolerance = MaxOverlapTolerances(MGridID);
@@ -1227,20 +1288,62 @@ void assembler::DetectOverlap_() {
         const geometry &Geometry = GeometryComponent.Geometry(NGridID);
         auto &Coords = Geometry.Coords();
         auto &OverlapDataForMGridAndRank = SubdivisionOverlapDataForLocalNGrid(NGridID);
-        auto MGridAndRankIter = OverlapDataForMGridAndRank.Find(MGridIDAndRankPair);
+        auto MGridAndRankIter = OverlapDataForMGridAndRank.Find({MGridID,Rank});
         if (MGridAndRankIter == OverlapDataForMGridAndRank.End()) continue;
         auto &SubdivisionOverlapData = MGridAndRankIter->Value();
         auto SubdivisionIter = SubdivisionOverlapData.Find(iSubdivision);
         if (SubdivisionIter == SubdivisionOverlapData.End()) continue;
         subdivision_overlap_data &OverlapData = SubdivisionIter->Value();
         double OverlapTolerance = Options_.OverlapTolerance(IDPair);
-        GeometryManipulator.Apply(generate_overlap_data(), MGridInfo.Name(), MGridCellGlobalIndexer,
-          MGridCoords, NGrid.Name(), LocalIndexer, Coords, OverlapAccel, OverlapTolerance,
-          OverlapData, Logger);
+        GeometryManipulator.Apply(generate_overlap_data(), MGridInfo.Name(),
+          MGridCellGlobalIndexer, MGridCoords, NGrid.Name(), LocalIndexer, Coords, OverlapAccel,
+          OverlapTolerance, OverlapData, Logger);
       }
       Profiler.Stop(OVERLAP_SEARCH_QUERY_ACCEL_TIME);
     }
+    if (iTransfer < MAX_SIMULTANEOUS_TRANSFERS) {
+      if (iNextRecv < SubdivisionRecvs.Count()) {
+        TransferredSubdivisionRecvIndices(iTransfer) = iNextRecv;
+        for (int iData = 0; iData < 4; ++iData) {
+          TransferRecvFinished(iTransfer,iData) = false;
+        }
+        auto &Entry = RemoteSubdivisionRanges[iNextRecv];
+        int MGridID = Entry.Key()(0);
+        int Rank = Entry.Key()(1);
+        const grid_info &MGridInfo = Domain.GridInfo(MGridID);
+        subdivision_data &Data = TransferredSubdivisionData(iTransfer);
+        Data.CellRange = Entry.Value();
+        range CoordsRange, CellActiveMaskRange;
+        GenerateSubdivisionDataRanges(MGridInfo.Cart(), MGridInfo.CellCart(), Data.CellRange,
+          CoordsRange, CellActiveMaskRange);
+        for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+          Data.Coords(iDim).Resize(CoordsRange);
+          MPI_Irecv(Data.Coords(iDim).Data(), Data.Coords(iDim).Count(), MPI_DOUBLE, Rank, 0,
+            Domain.Comm(), TransferMPIRecvRequests.Data(iTransfer,iDim));
+        }
+        Data.CellActiveMask.Resize(CellActiveMaskRange);
+        MPI_Irecv(Data.CellActiveMask.Data(), Data.CellActiveMask.Count(), MPI_C_BOOL, Rank, 0,
+          Domain.Comm(), TransferMPIRecvRequests.Data(iTransfer,3));
+        MPI_Isend(SignalDummySendData.Data(iNextRecv), 1, MPI_C_BOOL, Rank, 1, Domain.Comm(),
+          SignalMPISendRequests.Data(iNextRecv));
+        ++iNextRecv;
+      } else {
+        TransferredSubdivisionRecvIndices(iTransfer) = -1;
+        RecvsDone = ArrayAll(TransferredSubdivisionRecvIndices, [](int iRecv) {
+          return iRecv < 0;
+        });
+        if (RecvsDone) {
+          MPI_Waitall(SignalMPISendRequests.Count(), SignalMPISendRequests.Data(),
+            MPI_STATUSES_IGNORE);
+        }
+      }
+    } else if (!LocalsDone) {
+      ++iNextLocal;
+      LocalsDone = iNextLocal == SubdivisionLocals.Count();
+    }
   }
+
+  TransferredSubdivisionData.Clear();
 
   Logger.SyncIndicator(Domain.Comm());
 
@@ -1342,11 +1445,11 @@ void assembler::DetectOverlap_() {
     Ranges.CellCoverRange = MakeCellCoverRange(MGrid.Cart(), MGrid.CellLocalRange());
   }
 
-  MGridRanges.Reserve(MGridRanges.Count()+MGridDataRecvs.Count());
+  MGridRanges.Reserve(MGridRanges.Count()+MGridRecvs.Count());
 
-  MPIRequests.Reserve(4*(MGridDataSends.Count()+MGridDataRecvs.Count()));
+  MPIRequests.Reserve(4*(MGridSends.Count()+MGridRecvs.Count()));
 
-  for (auto &MGridIDAndRankPair : MGridDataRecvs) {
+  for (auto &MGridIDAndRankPair : MGridRecvs) {
     int Rank = MGridIDAndRankPair(1);
     m_grid_ranges &Ranges = MGridRanges.Insert(MGridIDAndRankPair);
     MPI_Irecv(Ranges.CellLocalRange.Begin().Data(), MAX_DIMS, MPI_INT, Rank, 0, Domain.Comm(),
@@ -1359,7 +1462,7 @@ void assembler::DetectOverlap_() {
       &MPIRequests.Append());
   }
 
-  for (auto &MGridIDAndRankPair : MGridDataSends) {
+  for (auto &MGridIDAndRankPair : MGridSends) {
     int MGridID = MGridIDAndRankPair(0);
     int Rank = MGridIDAndRankPair(1);
     const m_grid_ranges &Ranges = MGridRanges({MGridID,Domain.Comm().Rank()});
