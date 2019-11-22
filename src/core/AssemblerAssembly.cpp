@@ -279,7 +279,7 @@ struct generate_subdivisions {
     box Bounds = ComputeBounds_(Manipulator, CellRange);
     double BoundsVolume = BoxVolume_(Bounds);
     double UnoccupiedVolume = Max(BoundsVolume - ComputeOccupiedVolume_(CellRange), 0.);
-    return Subdivide_(Manipulator, BoundsVolume, CellRange, UnoccupiedVolume, MaxDepth, 0);
+    return Subdivide_(Manipulator, BoundsVolume, CellRange, Bounds, UnoccupiedVolume, MaxDepth, 0);
   }
   template <typename T> box ComputeBounds_(const T &Manipulator, const range &CellRange) const {
     box Bounds = MakeEmptyBox(NumDims_);
@@ -308,8 +308,8 @@ struct generate_subdivisions {
     }
     return OccupiedVolume;
   }
-  template <typename T> array<range> Subdivide_(const T &Manipulator, double BaseVolume, const
-    range &CellRange, double UnoccupiedVolume, int MaxDepth, int Depth) {
+  template <typename T> array<range> Subdivide_(const T &Manipulator, double BaseVolume, const range
+    &CellRange, const box &Bounds, double UnoccupiedVolume, int MaxDepth, int Depth) {
     array<range> SubdivisionRanges;
     long long NumCells = CellRange.Count();
     bool Leaf = Depth == MaxDepth || (NumCells <= MaxCells_ && UnoccupiedVolume <=
@@ -318,9 +318,25 @@ struct generate_subdivisions {
       int BestSplitDim = -1;
       range BestLeftCellRange;
       range BestRightCellRange;
+      box BestLeftBounds;
+      box BestRightBounds;
       double BestLeftUnoccupiedVolume = std::numeric_limits<double>::max();
       double BestRightUnoccupiedVolume = std::numeric_limits<double>::max();
-      for (int iDim = 0; iDim < NumDims_; ++iDim) {
+      // Prefer splitting in dimension with most cells unless differences in occupied volume
+      // are significant
+      tuple<int> NumCellsPerDim = CellRange.Size();
+      tuple<int> DimsOrder = {0,1,2};
+      if (NumCellsPerDim(DimsOrder(0)) < NumCellsPerDim(DimsOrder(1))) {
+        std::swap(DimsOrder(0), DimsOrder(1));
+      }
+      if (NumCellsPerDim(DimsOrder(0)) < NumCellsPerDim(DimsOrder(2))) {
+        std::swap(DimsOrder(0), DimsOrder(2));
+      }
+      if (NumCellsPerDim(DimsOrder(1)) < NumCellsPerDim(DimsOrder(2))) {
+        std::swap(DimsOrder(1), DimsOrder(2));
+      }
+      for (int iOrder = 0; iOrder < NumDims_; ++iOrder) {
+        int iDim = DimsOrder(iOrder);
         int iSplit = (CellRange.Begin(iDim)+CellRange.End(iDim))/2;
         range LeftCellRange = CellRange;
         LeftCellRange.End(iDim) = iSplit;
@@ -333,18 +349,20 @@ struct generate_subdivisions {
         double RightUnoccupiedVolume = Max(BoxVolume_(RightBounds) - ComputeOccupiedVolume_(
           RightCellRange), 0.);
         if (BestSplitDim < 0 || (LeftUnoccupiedVolume+RightUnoccupiedVolume <
-          BestLeftUnoccupiedVolume+BestRightUnoccupiedVolume)) {
+          0.95*(BestLeftUnoccupiedVolume+BestRightUnoccupiedVolume))) {
           BestSplitDim = iDim;
           BestLeftCellRange = LeftCellRange;
           BestRightCellRange = RightCellRange;
+          BestLeftBounds = LeftBounds;
+          BestRightBounds = RightBounds;
           BestLeftUnoccupiedVolume = LeftUnoccupiedVolume;
           BestRightUnoccupiedVolume = RightUnoccupiedVolume;
         }
       }
       array<range> LeftSubdivisionRanges = Subdivide_(Manipulator, BaseVolume, BestLeftCellRange,
-        BestLeftUnoccupiedVolume, MaxDepth, Depth+1);
+        BestLeftBounds, BestLeftUnoccupiedVolume, MaxDepth, Depth+1);
       array<range> RightSubdivisionRanges = Subdivide_(Manipulator, BaseVolume, BestRightCellRange,
-        BestRightUnoccupiedVolume, MaxDepth, Depth+1);
+        BestRightBounds, BestRightUnoccupiedVolume, MaxDepth, Depth+1);
       SubdivisionRanges.Reserve(LeftSubdivisionRanges.Count() + RightSubdivisionRanges.Count());
       for (auto &SubdivisionRange : LeftSubdivisionRanges) {
         SubdivisionRanges.Append(SubdivisionRange);
