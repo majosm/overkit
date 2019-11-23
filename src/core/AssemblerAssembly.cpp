@@ -550,7 +550,7 @@ void assembler::DetectOverlap_() {
   Level2 = Logger.IncreaseStatusLevelAndIndent();
 
   Profiler.StartSync(OVERLAP_BB_TIME, Domain.Comm());
-  Profiler.StartSync(OVERLAP_BB_CREATE_HASH_TIME, Domain.Comm());
+  Profiler.Start(OVERLAP_BB_CREATE_HASH_TIME);
 
   bounding_box_hash &BoundingBoxHash = AssemblyData.BoundingBoxHash;
   BoundingBoxHash = bounding_box_hash(NumDims, Domain.Comm(), TotalSubdivisions, SubdivisionBoxes,
