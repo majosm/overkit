@@ -16,11 +16,16 @@ set(LOCAL_TARGETS)
 #--------------
 
 set(SOURCES
+  CommandArgs.cpp
+  CommandArgsC.cpp
   Debug.cpp
   Decomp.cpp
 )
 
 set(HEADERS
+  CommandArgs.h
+  CommandArgs.hpp
+  CommandArgsC.h
   Constants.h
   Constants.hpp
   Debug.h

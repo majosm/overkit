@@ -16,8 +16,22 @@
 
 #define CreateCartesianDecompDims examples_CreateCartesianDecompDims
 #define CartesianDecomp examples_CartesianDecomp
+#define command_args examples_command_args
+#define command_args_parser examples_command_args_parser
+#define command_args_error examples_command_args_error
+#define CreateCommandArgsParser examples_CreateCommandArgsParser
+#define DestroyCommandArgsParser examples_DestroyCommandArgsParser
+#define SetCommandArgsParserHelpUsage examples_SetCommandArgsParserHelpUsage
+#define SetCommandArgsParserHelpDescription examples_SetCommandArgsParserHelpDescription
+#define AddCommandArgsParserOption examples_AddCommandArgsParserOption
+#define COMMAND_ARGS_VALUE_TYPE_BOOL EXAMPLES_COMMAND_ARGS_VALUE_TYPE_BOOL
+#define COMMAND_ARGS_VALUE_TYPE_INT EXAMPLES_COMMAND_ARGS_VALUE_TYPE_INT
+#define ParseCommandArgs examples_ParseCommandArgs
+#define DestroyCommandArgs examples_DestroyCommandArgs
+#define GetCommandOptionIfPresent examples_GetCommandOptionIfPresent
 
-static int Interface();
+static int GetCommandLineArguments(int argc, char **argv, bool *Help, int *N);
+static int Interface(int N);
 
 int main(int argc, char **argv) {
 
@@ -26,17 +40,78 @@ int main(int argc, char **argv) {
   int WorldRank;
   MPI_Comm_rank(MPI_COMM_WORLD, &WorldRank);
 
-  int Error = Interface();
-  if (Error) {
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (WorldRank == 0) {
-      printf(stderr, "Error occurred.\n"); fflush(stderr);
-    }
+  int Error;
+
+  bool Help;
+  int N;
+
+  Error = GetCommandLineArguments(argc, argv, &Help, &N);
+  if (Error) goto check_error;
+
+  if (!Help) {
+    Error = Interface(N);
+    if (Error) goto check_error;
   }
+
+  check_error:
+    if (Error) {
+      MPI_Barrier(MPI_COMM_WORLD);
+      if (WorldRank == 0) {
+        fprintf(stderr, "Error occurred.\n"); fflush(stderr);
+      }
+    }
 
   MPI_Finalize();
 
   return 0;
+
+}
+
+int GetCommandLineArguments(int argc, char **argv, bool *Help, int *N) {
+
+  int WorldRank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &WorldRank);
+
+  int Error = 0;
+
+  command_args_error CommandArgsError;
+
+  command_args_parser *CommandArgsParser;
+  CreateCommandArgsParser(&CommandArgsParser, WorldRank == 0);
+  SetCommandArgsParserHelpUsage(CommandArgsParser, "InterfaceC [<options> ...]");
+  SetCommandArgsParserHelpDescription(CommandArgsParser, "Generates an overset mesh consisting of "
+    "two grids overlapping along an interface.");
+  AddCommandArgsParserOption(CommandArgsParser, "size", 'N', COMMAND_ARGS_VALUE_TYPE_INT,
+    "Characteristic size of grids [ Default: 64 ]");
+
+  command_args *CommandArgs;
+  ParseCommandArgs(CommandArgsParser, argc, argv, &CommandArgs, &CommandArgsError);
+  if (CommandArgsError) {
+    Error = 1;
+    goto cleanup1;
+  }
+
+  *Help = false;
+  GetCommandOptionIfPresent(CommandArgs, "help", COMMAND_ARGS_VALUE_TYPE_BOOL, Help,
+    &CommandArgsError);
+  if (CommandArgsError) {
+    Error = 1;
+    goto cleanup2;
+  }
+
+  *N = 64;
+  GetCommandOptionIfPresent(CommandArgs, "size", COMMAND_ARGS_VALUE_TYPE_INT, N, &CommandArgsError);
+  if (CommandArgsError) {
+    Error = 1;
+    goto cleanup2;
+  }
+
+  cleanup2:
+    DestroyCommandArgs(&CommandArgs);
+  cleanup1:
+    DestroyCommandArgsParser(&CommandArgsParser);
+
+  return Error;
 
 }
 
@@ -71,7 +146,7 @@ static void DestroyGridData(grid_data *Data) {
 
 }
 
-static int Interface() {
+static int Interface(int N) {
 
   int iDim, iCoef;
   int j;
@@ -102,7 +177,7 @@ static int Interface() {
   ovk_domain *Domain;
   ovkCreateDomain(&Domain, SharedContext, &DomainParams);
 
-  int Size[] = {64,64,1};
+  int Size[] = {N,N,1};
 
   int GridIDs[] = {1, 2};
   ovk_grid_params *MaybeGridParams[] = {NULL, NULL};

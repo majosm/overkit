@@ -4,6 +4,7 @@
 #ifndef OVK_EXAMPLES_COMMON_HPP_LOADED
 #define OVK_EXAMPLES_COMMON_HPP_LOADED
 
+#include <support/CommandArgs.hpp>
 #include <support/Constants.hpp>
 #include <support/Decomp.hpp>
 
@@ -20,6 +21,9 @@
 namespace examples {
 
 constexpr double PI = support::PI;
+
+using support::command_args;
+using support::command_args_parser;
 
 void DecomposeDomain(ovk::array_view<const long long> NumPointsPerGrid, int NumProcs,
   ovk::array_view<int> GridProcRanges) {

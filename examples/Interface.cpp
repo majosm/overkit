@@ -17,9 +17,12 @@
 
 using examples::CreateCartesianDecompDims;
 using examples::CartesianDecomp;
+using examples::command_args;
+using examples::command_args_parser;
 
 namespace {
-void Interface();
+void GetCommandLineArguments(int argc, char **argv, bool &Help, int &N);
+void Interface(int N);
 }
 
 int main(int argc, char **argv) {
@@ -30,7 +33,12 @@ int main(int argc, char **argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &WorldRank);
 
   try {
-    Interface();
+    bool Help;
+    int N;
+    GetCommandLineArguments(argc, argv, Help, N);
+    if (!Help) {
+      Interface(N);
+    }
   } catch (const std::exception &Exception) {
     MPI_Barrier(MPI_COMM_WORLD);
     if (WorldRank == 0) {
@@ -51,6 +59,24 @@ int main(int argc, char **argv) {
 
 namespace {
 
+void GetCommandLineArguments(int argc, char **argv, bool &Help, int &N) {
+
+  int WorldRank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &WorldRank);
+
+  command_args_parser CommandArgsParser(WorldRank == 0);
+  CommandArgsParser.SetHelpUsage("Interface [<options> ...]");
+  CommandArgsParser.SetHelpDescription("Generates an overset mesh consisting of two grids "
+    "overlapping along an interface.");
+  CommandArgsParser.AddOption<int>("size", 'N', "Characteristic size of grids [ Default: 64 ]");
+
+  command_args CommandArgs = CommandArgsParser.Parse({{argc}, argv});
+
+  Help = CommandArgs.GetOptionValue<bool>("help", false);
+  N = CommandArgs.GetOptionValue<int>("size", 64);
+
+}
+
 struct grid_data {
   MPI_Comm Comm = MPI_COMM_NULL;
   std::array<int,3> Size = {{0,0,1}};
@@ -65,7 +91,7 @@ struct grid_data {
   }
 };
 
-void Interface() {
+void Interface(int N) {
 
   int NumWorldProcs, WorldRank;
   MPI_Comm_size(MPI_COMM_WORLD, &NumWorldProcs);
@@ -81,7 +107,7 @@ void Interface() {
     .SetComm(MPI_COMM_WORLD)
   );
 
-  std::array<int,3> Size = {{64,64,1}};
+  std::array<int,3> Size = {{N,N,1}};
 
   std::array<int,2> GridIDs = {{1, 2}};
 

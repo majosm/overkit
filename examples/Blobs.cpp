@@ -20,9 +20,12 @@ using examples::DecomposeDomain;
 using examples::CreateCartesianDecompDims;
 using examples::CartesianDecomp;
 using examples::PI;
+using examples::command_args;
+using examples::command_args_parser;
 
 namespace {
-void Blobs();
+void GetCommandLineArguments(int argc, char **argv, bool &Help, int &N);
+void Blobs(int N);
 }
 
 int main(int argc, char **argv) {
@@ -33,7 +36,12 @@ int main(int argc, char **argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &WorldRank);
 
   try {
-    Blobs();
+    bool Help;
+    int N;
+    GetCommandLineArguments(argc, argv, Help, N);
+    if (!Help) {
+      Blobs(N);
+    }
   } catch (const std::exception &Exception) {
     MPI_Barrier(MPI_COMM_WORLD);
     if (WorldRank == 0) {
@@ -54,6 +62,24 @@ int main(int argc, char **argv) {
 
 namespace {
 
+void GetCommandLineArguments(int argc, char **argv, bool &Help, int &N) {
+
+  int WorldRank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &WorldRank);
+
+  command_args_parser CommandArgsParser(WorldRank == 0);
+  CommandArgsParser.SetHelpUsage("Blobs [<options> ...]");
+  CommandArgsParser.SetHelpDescription("Generates an overset mesh representing a rectangular "
+    "domain with several blob-like holes in it.");
+  CommandArgsParser.AddOption<int>("size", 'N', "Characteristic size of grids [ Default: 81 ]");
+
+  command_args CommandArgs = CommandArgsParser.Parse({{argc}, argv});
+
+  Help = CommandArgs.GetOptionValue<bool>("help", false);
+  N = CommandArgs.GetOptionValue<int>("size", 81);
+
+}
+
 struct grid_data {
   MPI_Comm Comm = MPI_COMM_NULL;
   std::array<int,3> Size = {{0,0,1}};
@@ -69,7 +95,7 @@ struct grid_data {
   }
 };
 
-void Blobs() {
+void Blobs(int N) {
 
   int NumWorldProcs, WorldRank;
   MPI_Comm_size(MPI_COMM_WORLD, &NumWorldProcs);
@@ -84,8 +110,6 @@ void Blobs() {
     .SetDimension(2)
     .SetComm(MPI_COMM_WORLD)
   );
-
-  constexpr int N = 81;
 
   std::array<int,3> BackgroundSize = {{N,N,1}};
   std::array<int,3> BlobSize = {{N,2*N-1,1}};

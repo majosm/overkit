@@ -21,10 +21,12 @@
 using examples::DecomposeDomain;
 using examples::CreateCartesianDecompDims;
 using examples::CartesianDecomp;
-using examples::PI;
+using examples::command_args;
+using examples::command_args_parser;
 
 namespace {
-void BoxInBox();
+void GetCommandLineArguments(int argc, char **argv, bool &Help, int &N);
+void BoxInBox(int N);
 }
 
 int main(int argc, char **argv) {
@@ -35,7 +37,12 @@ int main(int argc, char **argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &WorldRank);
 
   try {
-    BoxInBox();
+    bool Help;
+    int N;
+    GetCommandLineArguments(argc, argv, Help, N);
+    if (!Help) {
+      BoxInBox(N);
+    }
   } catch (const std::exception &Exception) {
     MPI_Barrier(MPI_COMM_WORLD);
     if (WorldRank == 0) {
@@ -56,6 +63,24 @@ int main(int argc, char **argv) {
 
 namespace {
 
+void GetCommandLineArguments(int argc, char **argv, bool &Help, int &N) {
+
+  int WorldRank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &WorldRank);
+
+  command_args_parser CommandArgsParser(WorldRank == 0);
+  CommandArgsParser.SetHelpUsage("BoxInBox [<options> ...]");
+  CommandArgsParser.SetHelpDescription("Generates an overset mesh consisting of a uniform grid "
+    "with another uniform grid inside it.");
+  CommandArgsParser.AddOption<int>("size", 'N', "Characteristic size of grids [ Default: 81 ]");
+
+  command_args CommandArgs = CommandArgsParser.Parse({{argc}, argv});
+
+  Help = CommandArgs.GetOptionValue<bool>("help", false);
+  N = CommandArgs.GetOptionValue<int>("size", 81);
+
+}
+
 struct grid_data {
   MPI_Comm Comm = MPI_COMM_NULL;
   std::array<int,3> Size = {{0,0,1}};
@@ -71,7 +96,7 @@ struct grid_data {
   }
 };
 
-void BoxInBox() {
+void BoxInBox(int N) {
 
   int NumWorldProcs, WorldRank;
   MPI_Comm_size(MPI_COMM_WORLD, &NumWorldProcs);
@@ -86,8 +111,6 @@ void BoxInBox() {
     .SetDimension(2)
     .SetComm(MPI_COMM_WORLD)
   );
-
-  constexpr int N = 81;
 
   std::array<int,3> BackgroundSize = {{N,N,1}};
   std::array<int,3> ForegroundSize = {{N,N,1}};
