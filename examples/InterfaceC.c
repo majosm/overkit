@@ -23,9 +23,15 @@ int main(int argc, char **argv) {
 
   MPI_Init(&argc, &argv);
 
+  int WorldRank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &WorldRank);
+
   int Error = Interface();
   if (Error) {
-    printf("Error occurred.\n"); fflush(stdout);
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (WorldRank == 0) {
+      printf(stderr, "Error occurred.\n"); fflush(stderr);
+    }
   }
 
   MPI_Finalize();

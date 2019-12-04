@@ -29,12 +29,21 @@ int main(int argc, char **argv) {
 
   MPI_Init(&argc, &argv);
 
+  int WorldRank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &WorldRank);
+
   try {
     Blobs();
   } catch (const std::exception &Exception) {
-    std::printf("Encountered error:\n%s\n", Exception.what()); std::fflush(stdout);
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (WorldRank == 0) {
+      std::fprintf(stderr, "Encountered error:\n%s\n", Exception.what()); std::fflush(stderr);
+    }
   } catch (...) {
-    std::printf("Unknown error occurred.\n"); std::fflush(stdout);
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (WorldRank == 0) {
+      std::fprintf(stderr, "Unknown error occurred.\n"); std::fflush(stderr);
+    }
   }
 
   MPI_Finalize();
