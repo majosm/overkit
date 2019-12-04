@@ -21,11 +21,11 @@ void ovkImportXINTOUT(ovk_domain *Domain, int ConnectivityComponentID, const cha
   OVK_DEBUG_ASSERT(XPath, "Invalid X path pointer.");
 
   auto &DomainCPP = *reinterpret_cast<ovk::domain *>(Domain);
-  ovk::error ErrorCPP;
+  ovk::captured_error ErrorCPP;
   ovk::ImportXINTOUT(DomainCPP, ConnectivityComponentID, HOPath, XPath, ReadGranularityAdjust,
     MPIInfo, ErrorCPP);
 
-  *Error = ovk_error(ErrorCPP);
+  *Error = ovk_error(ErrorCPP.Code());
 
 }
 
@@ -38,11 +38,11 @@ void ovkExportXINTOUT(const ovk_domain *Domain, int ConnectivityComponentID, con
   OVK_DEBUG_ASSERT(XPath, "Invalid X path pointer.");
 
   auto &DomainCPP = *reinterpret_cast<const ovk::domain *>(Domain);
-  ovk::error ErrorCPP;
+  ovk::captured_error ErrorCPP;
   ovk::ExportXINTOUT(DomainCPP, ConnectivityComponentID, HOPath, XPath, ovk::xintout_format(Format),
     ovk::endian(Endian), WriteGranularityAdjust, MPIInfo, ErrorCPP);
 
-  *Error = ovk_error(ErrorCPP);
+  *Error = ovk_error(ErrorCPP.Code());
 
 }
 

@@ -295,14 +295,14 @@ void ImportXINTOUT(domain &Domain, int ConnectivityComponentID, const std::strin
 }
 
 void ImportXINTOUT(domain &Domain, int ConnectivityComponentID, const std::string &HOPath, const
-  std::string &XPath, int ReadGranularityAdjust, MPI_Info MPIInfo, error &Error) {
+  std::string &XPath, int ReadGranularityAdjust, MPI_Info MPIInfo, captured_error &Error) {
 
-  Error = error::NONE;
+  Error.Reset();
 
   try {
     ImportXINTOUT(Domain, ConnectivityComponentID, HOPath, XPath, ReadGranularityAdjust, MPIInfo);
-  } catch (const exception &Exception) {
-    Error = Exception.Error();
+  } catch (const error &ImportError) {
+    Error = ImportError.Capture();
   }
 
 }
@@ -317,15 +317,15 @@ void ExportXINTOUT(const domain &Domain, int ConnectivityComponentID, const std:
 
 void ExportXINTOUT(const domain &Domain, int ConnectivityComponentID, const std::string &HOPath,
   const std::string &XPath, xintout_format Format, endian Endian, int WriteGranularityAdjust,
-  MPI_Info MPIInfo, error &Error) {
+  MPI_Info MPIInfo, captured_error &Error) {
 
-  Error = error::NONE;
+  Error.Reset();
 
   try {
     ExportXINTOUT(Domain, ConnectivityComponentID, HOPath, XPath, Format, Endian,
       WriteGranularityAdjust, MPIInfo);
-  } catch (const exception &Exception) {
-    Error = Exception.Error();
+  } catch (const error &ExportError) {
+    Error = ExportError.Capture();
   }
 
 }
@@ -415,7 +415,7 @@ void ReadXINTOUT(xintout &XINTOUT, const std::string &HOPath, const std::string 
   bool WithIBlank;
   ReadGlobalInfo(XINTOUT, HOPath, Endian, Format, WithIBlank);
 
-  error ReadError = error::NONE;
+  captured_error Error;
 
   try {
 
@@ -442,14 +442,13 @@ void ReadXINTOUT(xintout &XINTOUT, const std::string &HOPath, const std::string 
 
     }
 
-  } catch (exception &Exception) {
+  } catch (const error &ReadError) {
 
-    ReadError = Exception.Error();
+    Error = ReadError.Capture();
 
   }
 
-  core::SyncError(ReadError, Comm);
-  core::CheckError(ReadError);
+  Error.Check(Comm);
 
   MPI_Barrier(Comm);
 
@@ -468,7 +467,7 @@ void ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath, endian &E
   core::logger &Logger = XINTOUT.Context->core_Logger();
   core::profiler &Profiler = XINTOUT.Context->core_Profiler();
 
-  error ReadGlobalInfoError = error::NONE;
+  captured_error Error;
 
   try {
 
@@ -486,7 +485,7 @@ void ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath, endian &E
       Profiler.Stop(IMPORT_READ_MPI_IO_OPEN_TIME);
       if (MPIError != MPI_SUCCESS) {
         Logger.LogError(true, "Unable to open file '%s'.", HOPath);
-        throw file_open_error();
+        throw file_open_error(HOPath);
       }
       auto CloseHO = core::OnScopeExit([&]() {
         Profiler.Start(IMPORT_READ_MPI_IO_CLOSE_TIME);
@@ -497,7 +496,7 @@ void ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath, endian &E
       bool Success = DetectFormat(HOFile, Endian, Format, Profiler);
       if (!Success) {
         Logger.LogError(true, "Unable to detect format of XINTOUT file '%s'.", HOPath);
-        throw file_read_error();
+        throw file_read_error(HOPath);
       }
 
       int RecordWrapperSize = Format == xintout_format::STANDARD ? sizeof(int) : 0;
@@ -510,12 +509,12 @@ void ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath, endian &E
       MPI_Get_count(&Status, MPI_INT, &ReadSize);
       if (ReadSize < 1) {
         Logger.LogError(true, "Unable to read header of XINTOUT file '%s'.", HOPath);
-        throw file_read_error();
+        throw file_read_error(HOPath);
       }
       if (NumGridsInFile != NumGrids) {
         Logger.LogError(Comm.Rank() == 0, "XINTOUT file '%s' has incorrect number of grids.",
           HOPath);
-        throw file_read_error();
+        throw file_read_error(HOPath);
       }
 
       MPI_Offset HOGridOffset = 0;
@@ -538,7 +537,7 @@ void ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath, endian &E
         MPI_Get_count(&Status, MPI_INT, &ReadSize);
         if (ReadSize < 7) {
           Logger.LogError(true, "Unable to read grid 1 header of XINTOUT file '%s'.", HOPath);
-          throw file_read_error();
+          throw file_read_error(HOPath);
         }
         NumDonors = Data[1];
         NumReceivers = Data[0];
@@ -554,14 +553,14 @@ void ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath, endian &E
         MPI_Get_count(&Status, MPI_LONG_LONG, &ReadSize);
         if (ReadSize < 4) {
           Logger.LogError(true, "Unable to read grid 1 header of XINTOUT file '%s'.", HOPath);
-          throw file_read_error();
+          throw file_read_error(HOPath);
         }
         HOGridOffset += 4*sizeof(long long);
         File_read_at_endian(HOFile, HOGridOffset, IntData, 3, MPI_INT, Endian, &Status, Profiler);
         MPI_Get_count(&Status, MPI_INT, &ReadSize);
         if (ReadSize < 3) {
           Logger.LogError(true, "Unable to read grid 1 header of XINTOUT file '%s'.", HOPath);
-          throw file_read_error();
+          throw file_read_error(HOPath);
         }
         HOGridOffset += 3*sizeof(int);
         NumDonors = LongLongData[1];
@@ -605,7 +604,7 @@ void ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath, endian &E
           } else {
             Logger.LogError(true, "Unable to detect whether XINTOUT file '%s' contains IBlank.",
               HOPath);
-            throw file_read_error();
+            throw file_read_error(HOPath);
           }
         }
       } else {
@@ -614,16 +613,15 @@ void ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath, endian &E
 
     }
 
-  } catch (const exception &Exception) {
+  } catch (const error &ReadGlobalInfoError) {
 
-    ReadGlobalInfoError = Exception.Error();
+    Error = ReadGlobalInfoError.Capture();
 
   }
 
   Logger.SyncIndicator(Comm);
 
-  core::SyncError(ReadGlobalInfoError, Comm);
-  core::CheckError(ReadGlobalInfoError);
+  Error.Check(Comm);
 
   int EndianInt;
   if (Comm.Rank() == 0) EndianInt = Endian == endian::BIG ? 1 : 0;
@@ -691,7 +689,7 @@ void ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath, co
   core::logger &Logger = XINTOUTGrid.Context->core_Logger();
   core::profiler &Profiler = XINTOUTGrid.Context->core_Profiler();
 
-  error ReadGridInfoError = error::NONE;
+  captured_error Error;
 
   try {
 
@@ -711,7 +709,7 @@ void ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath, co
       Profiler.Stop(IMPORT_READ_MPI_IO_OPEN_TIME);
       if (MPIError != MPI_SUCCESS) {
         Logger.LogError(true, "Unable to open file '%s'.", HOPath);
-        throw file_open_error();
+        throw file_open_error(HOPath);
       }
       auto CloseHO = core::OnScopeExit([&]() {
         Profiler.Start(IMPORT_READ_MPI_IO_CLOSE_TIME);
@@ -726,7 +724,7 @@ void ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath, co
       Profiler.Stop(IMPORT_READ_MPI_IO_OPEN_TIME);
       if (MPIError != MPI_SUCCESS) {
         Logger.LogError(true, "Unable to open file '%s'.", XPath);
-        throw file_open_error();
+        throw file_open_error(HOPath);
       }
       auto CloseX = core::OnScopeExit([&]() {
         Profiler.Start(IMPORT_READ_MPI_IO_CLOSE_TIME);
@@ -766,7 +764,7 @@ void ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath, co
           if (ReadSize < 7) {
             Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", OtherGridID,
               HOPath);
-            throw file_read_error();
+            throw file_read_error(HOPath);
           }
           NumDonors = Data[1];
           NumReceivers = Data[0];
@@ -783,7 +781,7 @@ void ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath, co
           if (ReadSize < 4) {
             Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", OtherGridID,
               HOPath);
-            throw file_read_error();
+            throw file_read_error(HOPath);
           }
           HOGridOffset += 4*sizeof(long long);
           File_read_at_endian(HOFile, HOGridOffset, IntData, 3, MPI_INT, Endian, &Status, Profiler);
@@ -791,7 +789,7 @@ void ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath, co
           if (ReadSize < 3) {
             Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", OtherGridID,
               HOPath);
-            throw file_read_error();
+            throw file_read_error(HOPath);
           }
           HOGridOffset += 3*sizeof(int);
           File_read_at_endian(HOFile, HOGridOffset, LongLongData+4, 1, MPI_LONG_LONG, Endian, &Status,
@@ -800,7 +798,7 @@ void ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath, co
           if (ReadSize < 1) {
             Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", OtherGridID,
               HOPath);
-            throw file_read_error();
+            throw file_read_error(HOPath);
           }
           HOGridOffset += sizeof(long long);
           NumDonors = LongLongData[1];
@@ -846,7 +844,7 @@ void ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath, co
           if (ReadSize < 1) {
             Logger.LogError(true, "Unable to read grid %i data from XINTOUT file '%s'.", OtherGridID,
               XPath);
-            throw file_read_error();
+            throw file_read_error(XPath);
           }
           NumInterpCoefs = RecordWrapper/sizeof(double);
         }
@@ -869,7 +867,7 @@ void ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath, co
         if (ReadSize < 7) {
           Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", GridID,
             HOPath);
-          throw file_read_error();
+          throw file_read_error(HOPath);
         }
         NumDonors = Data[1];
         NumReceivers = Data[0];
@@ -888,7 +886,7 @@ void ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath, co
         if (ReadSize < 4) {
           Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", GridID,
             HOPath);
-          throw file_read_error();
+          throw file_read_error(HOPath);
         }
         HOGridOffset += 4*sizeof(long long);
         File_read_at_endian(HOFile, HOGridOffset, IntData, 3, MPI_INT, Endian, &Status, Profiler);
@@ -896,7 +894,7 @@ void ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath, co
         if (ReadSize < 3) {
           Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", GridID,
             HOPath);
-          throw file_read_error();
+          throw file_read_error(HOPath);
         }
         HOGridOffset += 3*sizeof(int);
         File_read_at_endian(HOFile, HOGridOffset, LongLongData+4, 1, MPI_LONG_LONG, Endian, &Status,
@@ -905,7 +903,7 @@ void ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath, co
         if (ReadSize < 1) {
           Logger.LogError(true, "Unable to read grid %i header of XINTOUT file '%s'.", GridID,
             HOPath);
-          throw file_read_error();
+          throw file_read_error(HOPath);
         }
         HOGridOffset += sizeof(long long);
         NumDonors = LongLongData[1];
@@ -922,7 +920,7 @@ void ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath, co
       if (GridSize[0] != XINTOUTGrid.GlobalSize[0] || GridSize[1] != XINTOUTGrid.GlobalSize[1] ||
         GridSize[2] != XINTOUTGrid.GlobalSize[2]) {
         Logger.LogError(true, "Grid %i of XINTOUT file '%s' has incorrect size.", GridID, HOPath);
-        throw file_read_error();
+        throw file_read_error(HOPath);
       }
 
       HOGridOffset += RecordWrapperSize;
@@ -946,16 +944,15 @@ void ReadGridInfo(const xintout_grid &XINTOUTGrid, const std::string &HOPath, co
 
     }
 
-  } catch (const exception &Exception) {
+  } catch (const error &ReadGridInfoError) {
 
-    ReadGridInfoError = Exception.Error();
+    Error = ReadGridInfoError.Capture();
 
   }
 
   Logger.SyncIndicator(Comm);
 
-  core::SyncError(ReadGridInfoError, Comm);
-  core::CheckError(ReadGridInfoError);
+  Error.Check(Comm);
 
   MPI_Bcast(&NumDonors, 1, MPI_LONG_LONG, 0, Comm);
   MPI_Bcast(&NumReceivers, 1, MPI_LONG_LONG, 0, Comm);
@@ -1011,7 +1008,7 @@ void ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std:
 
   comm ChunkComm = CreateSubsetComm(Comm, HasChunk);
 
-  error ReadDonorsError = error::NONE;
+  captured_error Error;
 
   try {
 
@@ -1023,15 +1020,15 @@ void ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std:
       long long LocalEnd = Min(ChunkSize*(ChunkComm.Rank()+1), NumDonors);
       long long NumLocalDonors = LocalEnd - LocalBegin;
 
-      error ChunkSizeError = error::NONE;
+      captured_error ChunkSizeError;
       if (NumLocalDonors*sizeof(double) > std::numeric_limits<int>::max()) {
-        ChunkSizeError = error::FILE_READ;
+        ChunkSizeError = file_read_error();
       }
-      core::SyncError(ChunkSizeError, ChunkComm);
-      if (ChunkSizeError != error::NONE) {
+      ChunkSizeError.Sync(ChunkComm);
+      if (ChunkSizeError) {
         Logger.LogError(ChunkComm.Rank() == 0, "Donor chunk size too big; increase number of "
           "processes or read granularity.");
-        core::ThrowError(ChunkSizeError);
+        ChunkSizeError.Throw();
       }
         
       Chunk.Begin = LocalBegin;
@@ -1051,7 +1048,7 @@ void ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std:
       Profiler.Stop(IMPORT_READ_MPI_IO_OPEN_TIME);
       if (MPIError != MPI_SUCCESS) {
         Logger.LogError(true, "Unable to open file '%s'.", HOPath);
-        throw file_open_error();
+        throw file_open_error(HOPath);
       }
       auto CloseHO = core::OnScopeExit([&]() {
         Profiler.StartSync(IMPORT_READ_MPI_IO_CLOSE_TIME, ChunkComm);
@@ -1066,7 +1063,7 @@ void ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std:
       Profiler.Stop(IMPORT_READ_MPI_IO_OPEN_TIME);
       if (MPIError != MPI_SUCCESS) {
         Logger.LogError(true, "Unable to open file '%s'.", XPath);
-        throw file_open_error();
+        throw file_open_error(XPath);
       }
       auto CloseX = core::OnScopeExit([&]() {
         Profiler.StartSync(IMPORT_READ_MPI_IO_CLOSE_TIME, ChunkComm);
@@ -1104,13 +1101,13 @@ void ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std:
         File_read_all_endian(XFile, Sizes.Data(iDim,0), int(NumLocalDonors), MPI_INT, Endian,
           &Status, Profiler, ChunkComm);
         MPI_Get_count(&Status, MPI_INT, &ReadSize);
-        error ReadSizesError = error::NONE;
-        if (ReadSize < NumLocalDonors) ReadSizesError = error::FILE_READ;
-        core::SyncError(ReadSizesError, ChunkComm);
-        if (ReadSizesError != error::NONE) {
+        captured_error ReadSizesError;
+        if (ReadSize < NumLocalDonors) ReadSizesError = file_read_error(XPath);
+        ReadSizesError.Sync(ChunkComm);
+        if (ReadSizesError) {
           Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i donor sizes from XINTOUT "
             "file '%s'.", GridID, XPath);
-          core::ThrowError(ReadSizesError);
+          ReadSizesError.Throw();
         }
         DatasetOffset += NumDonors*sizeof(int);
       }
@@ -1153,13 +1150,13 @@ void ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std:
         File_read_all_endian(HOFile, Data.Extents.Data(0,iDim,0), int(NumLocalDonors), MPI_INT,
           Endian, &Status, Profiler, ChunkComm);
         MPI_Get_count(&Status, MPI_INT, &ReadSize);
-        error ReadCellsError = error::NONE;
-        if (ReadSize < NumLocalDonors) ReadCellsError = error::FILE_READ;
-        core::SyncError(ReadCellsError, ChunkComm);
-        if (ReadCellsError != error::NONE) {
+        captured_error ReadCellsError;
+        if (ReadSize < NumLocalDonors) ReadCellsError = file_read_error(HOPath);
+        ReadCellsError.Sync(ChunkComm);
+        if (ReadCellsError) {
           Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i donor cells from XINTOUT "
             "file '%s'.", GridID, HOPath);
-          core::ThrowError(ReadCellsError);
+          ReadCellsError.Throw();
         }
         DatasetOffset += NumDonors*sizeof(int);
       }
@@ -1200,13 +1197,13 @@ void ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std:
         File_read_all_endian(HOFile, Data.Coords.Data(iDim,0), int(NumLocalDonors), MPI_DOUBLE,
           Endian, &Status, Profiler, ChunkComm);
         MPI_Get_count(&Status, MPI_DOUBLE, &ReadSize);
-        error ReadCoordsError = error::NONE;
-        if (ReadSize < NumLocalDonors) ReadCoordsError = error::FILE_READ;
-        core::SyncError(ReadCoordsError, ChunkComm);
-        if (ReadCoordsError != error::NONE) {
+        captured_error ReadCoordsError;
+        if (ReadSize < NumLocalDonors) ReadCoordsError = file_read_error(HOPath);
+        ReadCoordsError.Sync(ChunkComm);
+        if (ReadCoordsError) {
           Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i donor Coords from XINTOUT "
             "file '%s'.", GridID, HOPath);
-          core::ThrowError(ReadCoordsError);
+          ReadCoordsError.Throw();
         }
         DatasetOffset += NumDonors*sizeof(double);
       }
@@ -1219,18 +1216,17 @@ void ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std:
         }
       }
 
-      ChunkSizeError = error::NONE;
       for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
         if (NumLocalInterpCoefs[iDim]*sizeof(double) > std::numeric_limits<int>::max()) {
-          ChunkSizeError = error::FILE_READ;
+          ChunkSizeError = file_read_error();
           break;
         }
       }
-      core::SyncError(ChunkSizeError, ChunkComm);
-      if (ChunkSizeError != error::NONE) {
+      ChunkSizeError.Sync(ChunkComm);
+      if (ChunkSizeError) {
         Logger.LogError(ChunkComm.Rank() == 0, "Donor chunk size too big; increase number of "
           "processes or read granularity.");
-        core::ThrowError(ChunkSizeError);
+        ChunkSizeError.Throw();
       }
 
       tuple<long long> NumInterpCoefs;
@@ -1255,13 +1251,13 @@ void ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std:
         File_read_all_endian(XFile, Buffer, int(NumLocalInterpCoefs[iDim]), MPI_DOUBLE, Endian,
           &Status, Profiler, ChunkComm);
         MPI_Get_count(&Status, MPI_DOUBLE, &ReadSize);
-        error ReadInterpCoefsError = error::NONE;
-        if (ReadSize < NumLocalInterpCoefs[iDim]) ReadInterpCoefsError = error::FILE_READ;
-        core::SyncError(ReadInterpCoefsError, ChunkComm);
-        if (ReadInterpCoefsError != error::NONE) {
+        captured_error ReadInterpCoefsError;
+        if (ReadSize < NumLocalInterpCoefs[iDim]) ReadInterpCoefsError = file_read_error(XPath);
+        ReadInterpCoefsError.Sync(ChunkComm);
+        if (ReadInterpCoefsError) {
           Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i donor interpolation "
             "coefficients from XINTOUT file '%s'.", GridID, XPath);
-          core::ThrowError(ReadInterpCoefsError);
+          ReadInterpCoefsError.Throw();
         }
         Buffer += NumLocalInterpCoefs[iDim];
         DatasetOffset += NumInterpCoefs[iDim]*sizeof(double);
@@ -1283,16 +1279,15 @@ void ReadDonors(xintout_grid &XINTOUTGrid, const std::string &HOPath, const std:
 
     }
 
-  } catch (const exception &Exception) {
+  } catch (const error &ReadDonorsError) {
 
-    ReadDonorsError = Exception.Error();
+    Error = ReadDonorsError.Capture();
 
   }
 
   Logger.SyncIndicator(Comm);
 
-  core::SyncError(ReadDonorsError, Comm);
-  core::CheckError(ReadDonorsError);
+  Error.Check(Comm);
 
 }
 
@@ -1337,7 +1332,7 @@ void ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath, long lo
 
   comm ChunkComm = CreateSubsetComm(Comm, HasChunk);
 
-  error ReadReceiversError = error::NONE;
+  captured_error Error;
 
   try {
 
@@ -1349,15 +1344,15 @@ void ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath, long lo
       long long LocalEnd = Min(ChunkSize*(ChunkComm.Rank()+1), NumReceivers);
       long long NumLocalReceivers = LocalEnd - LocalBegin;
 
-      error ChunkSizeError = error::NONE;
+      captured_error ChunkSizeError;
       if (NumLocalReceivers*sizeof(long long) > std::numeric_limits<int>::max()) {
-        ChunkSizeError = error::FILE_READ;
+        ChunkSizeError = file_read_error();
       }
-      core::SyncError(ChunkSizeError, ChunkComm);
-      if (ChunkSizeError != error::NONE) {
+      ChunkSizeError.Sync(ChunkComm);
+      if (ChunkSizeError) {
         Logger.LogError(ChunkComm.Rank() == 0, "Receiver chunk size too big; increase number of "
           "processes or read granularity.");
-        core::ThrowError(ChunkSizeError);
+        ChunkSizeError.Throw();
       }
 
       Chunk.Begin = LocalBegin;
@@ -1381,7 +1376,7 @@ void ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath, long lo
       Profiler.Stop(IMPORT_READ_MPI_IO_OPEN_TIME);
       if (MPIError != MPI_SUCCESS) {
         Logger.LogError(true, "Unable to open file '%s'.", HOPath);
-        throw file_open_error();
+        throw file_open_error(HOPath);
       }
       auto CloseHO = core::OnScopeExit([&]() {
         Profiler.StartSync(IMPORT_READ_MPI_IO_CLOSE_TIME, ChunkComm);
@@ -1417,13 +1412,13 @@ void ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath, long lo
         File_read_all_endian(HOFile, Data.Points.Data(iDim,0), int(NumLocalReceivers), MPI_INT,
           Endian, &Status, Profiler, ChunkComm);
         MPI_Get_count(&Status, MPI_INT, &ReadSize);
-        error ReadPointsError = error::NONE;
-        if (ReadSize < NumLocalReceivers) ReadPointsError = error::FILE_READ;
-        core::SyncError(ReadPointsError, ChunkComm);
-        if (ReadPointsError != error::NONE) {
+        captured_error ReadPointsError;
+        if (ReadSize < NumLocalReceivers) ReadPointsError = file_read_error(HOPath);
+        ReadPointsError.Sync(ChunkComm);
+        if (ReadPointsError) {
           Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i receiver points from "
             "XINTOUT file '%s'.", GridID, HOPath);
-          core::ThrowError(ReadPointsError);
+          ReadPointsError.Throw();
         }
         DatasetOffset += NumReceivers*sizeof(int);
       }
@@ -1455,13 +1450,13 @@ void ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath, long lo
       File_read_all_endian(HOFile, ConnectionIDsBytes.Data(), int(NumLocalReceivers),
         ConnectionIDType, Endian, &Status, Profiler, ChunkComm);
       MPI_Get_count(&Status, ConnectionIDType, &ReadSize);
-      error ReadConnectionIDsError = error::NONE;
-      if (ReadSize < NumLocalReceivers) ReadConnectionIDsError = error::FILE_READ;
-      core::SyncError(ReadConnectionIDsError, ChunkComm);
-      if (ReadConnectionIDsError != error::NONE) {
+      captured_error ReadConnectionIDsError;
+      if (ReadSize < NumLocalReceivers) ReadConnectionIDsError = file_read_error(HOPath);
+      ReadConnectionIDsError.Sync(ChunkComm);
+      if (ReadConnectionIDsError) {
         Logger.LogError(ChunkComm.Rank() == 0, "Unable to read grid %i receiver connection IDs "
           "from XINTOUT file '%s'.", GridID, HOPath);
-        core::ThrowError(ReadConnectionIDsError);
+        ReadConnectionIDsError.Throw();
       }
 
       if (Format == xintout_format::STANDARD) {
@@ -1482,16 +1477,15 @@ void ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath, long lo
 
     }
 
-  } catch (const exception &Exception) {
+  } catch (const error &ReadReceiversError) {
 
-    ReadReceiversError = Exception.Error();
+    Error = ReadReceiversError.Capture();
 
   }
 
   Logger.SyncIndicator(Comm);
 
-  core::SyncError(ReadReceiversError, Comm);
-  core::CheckError(ReadReceiversError);
+  Error.Check(Comm);
 
 }
 

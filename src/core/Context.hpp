@@ -121,7 +121,7 @@ private:
 };
 
 context CreateContext(context::params Params);
-optional<context> CreateContext(context::params Params, error &Error);
+optional<context> CreateContext(context::params Params, captured_error &Error);
 
 }
 

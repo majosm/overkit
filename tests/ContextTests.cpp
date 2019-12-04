@@ -29,12 +29,12 @@ TEST_F(ContextTests, Create) {
 
   // Explicit error handling
   {
-    ovk::error Error;
+    ovk::captured_error Error;
     auto MaybeContext = ovk::CreateContext(ovk::context::params()
       .SetComm(TestComm())
       .SetStatusLoggingThreshold(0)
     , Error);
-    ASSERT_EQ(Error, ovk::error::NONE);
+    ASSERT_FALSE(Error);
     ASSERT_TRUE(MaybeContext.Present());
   }
 

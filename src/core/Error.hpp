@@ -5,8 +5,13 @@
 #define OVK_CORE_ERROR_HPP_INCLUDED
 
 #include <ovk/core/Comm.hpp>
+#include <ovk/core/CommunicationOps.hpp>
+#include <ovk/core/DataType.hpp>
+#include <ovk/core/Debug.hpp>
 #include <ovk/core/Error.h>
+#include <ovk/core/Exception.hpp>
 #include <ovk/core/Global.hpp>
+#include <ovk/core/Requires.hpp>
 
 #include <mpi.h>
 
@@ -15,7 +20,7 @@
 
 namespace ovk {
 
-enum class error : typename std::underlying_type<ovk_error>::type {
+enum class error_code : typename std::underlying_type<ovk_error>::type {
   NONE = OVK_ERROR_NONE,
   MPI_NOT_INITIALIZED = OVK_ERROR_MPI_NOT_INITIALIZED,
   FILE_OPEN = OVK_ERROR_FILE_OPEN,
@@ -23,90 +28,133 @@ enum class error : typename std::underlying_type<ovk_error>::type {
   FILE_WRITE = OVK_ERROR_FILE_WRITE
 };
 
-namespace error_internal {
+class error;
 
-inline const char *ExceptionString(error Error) {
-
-  switch (Error) {
-  case error::MPI_NOT_INITIALIZED:
-    return "ovk::error::MPI_NOT_INITIALIZED";
-  case error::FILE_OPEN:
-    return "ovk::error::FILE_OPEN";
-  case error::FILE_READ:
-    return "ovk::error::FILE_READ";
-  case error::FILE_WRITE:
-    return "ovk::error::FILE_WRITE";
-  default:
-    return "";
-  }
-
+namespace core {
+template <> struct exception_traits<error> {
+  using code_type = error_code;
+  using code_underlying_type = typename std::underlying_type<error_code>::type;
+  static constexpr error_code SuccessCode = error_code::NONE;
+  static captured_exception<error> CaptureFromCode(error_code Code);
+  static error_code GetCode(const error &Error);
+  static void SyncAuxData(error &Error, int Root, comm_view Comm);
+};
 }
 
-}
+using captured_error = core::captured_exception<error>;
 
-class exception : public std::runtime_error {
-
+class error : public std::runtime_error {
 public:
-
-  explicit exception(error Error):
-    runtime_error(error_internal::ExceptionString(Error)),
-    Error_(Error)
+  error(error_code Code, const char *ErrorString):
+    runtime_error(ErrorString),
+    Code_(Code)
   {}
-
-  error Error() const noexcept { return Error_; }
-
-private:
-
-  error Error_;
-
+  virtual ~error() noexcept {}
+  error_code Code() const { return Code_; }
+  virtual captured_error Capture() const = 0;
+  virtual void SyncAuxData(int Root, comm_view Comm) {}
+protected:
+  error_code Code_;
 };
 
-class mpi_error : public exception {
+class mpi_error : public error {
 public:
-  explicit mpi_error(error Error):
-    exception(Error)
+  mpi_error(error_code ErrorCode, const char *ErrorString):
+    error(ErrorCode, ErrorString)
   {}
 };
 
 class mpi_not_initialized_error : public mpi_error {
 public:
   mpi_not_initialized_error():
-    mpi_error(error::MPI_NOT_INITIALIZED)
+    mpi_error(error_code::MPI_NOT_INITIALIZED, "ovk::mpi_not_initialized_error")
   {}
+  virtual captured_error Capture() const override { return *this; }
 };
 
-class io_error : public exception {
+class io_error : public error {
 public:
-  explicit io_error(error Error):
-    exception(Error)
+  io_error(error_code ErrorCode, const char *ErrorString):
+    error(ErrorCode, ErrorString)
   {}
 };
 
 class file_open_error : public io_error {
 public:
   file_open_error():
-    io_error(error::FILE_OPEN)
+    io_error(error_code::FILE_OPEN, "ovk::file_open_error")
   {}
+  file_open_error(std::string FilePath):
+    file_open_error()
+  {
+    FilePath_ = std::move(FilePath);
+  }
+  virtual captured_error Capture() const override { return *this; }
+  virtual void SyncAuxData(int Root, comm_view Comm) override {
+    core::BroadcastString(FilePath_, Root, Comm);
+  }
+protected:
+  std::string FilePath_;
 };
 
 class file_read_error : public io_error {
 public:
   file_read_error():
-    io_error(error::FILE_READ)
+    io_error(error_code::FILE_READ, "ovk::file_read_error")
   {}
+  file_read_error(std::string FilePath):
+    file_read_error()
+  {
+    FilePath_ = std::move(FilePath);
+  }
+  virtual captured_error Capture() const override { return *this; }
+  virtual void SyncAuxData(int Root, comm_view Comm) override {
+    core::BroadcastString(FilePath_, Root, Comm);
+  }
+protected:
+  std::string FilePath_;
 };
 
 class file_write_error : public io_error {
 public:
   file_write_error():
-    io_error(error::FILE_WRITE)
+    io_error(error_code::FILE_WRITE, "ovk::file_write_error")
   {}
+  file_write_error(std::string FilePath):
+    file_write_error()
+  {
+    FilePath_ = std::move(FilePath);
+  }
+  virtual captured_error Capture() const override { return *this; }
+  virtual void SyncAuxData(int Root, comm_view Comm) override {
+    core::BroadcastString(FilePath_, Root, Comm);
+  }
+protected:
+  std::string FilePath_;
 };
 
 namespace core {
-void SyncError(error &Error, comm_view Comm);
-void CheckError(error Error);
-void ThrowError(error Error);
+inline captured_exception<error> exception_traits<error>::CaptureFromCode(error_code Code) {
+  switch (Code) {
+  case error_code::MPI_NOT_INITIALIZED:
+    return mpi_not_initialized_error();
+  case error_code::FILE_OPEN:
+    return file_open_error();
+  case error_code::FILE_READ:
+    return file_read_error();
+  case error_code::FILE_WRITE:
+    return file_write_error();
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+    return {};
+  }
+}
+inline error_code exception_traits<error>::GetCode(const error &Error) {
+  return Error.Code();
+}
+inline void exception_traits<error>::SyncAuxData(error &Error, int Root, comm_view Comm) {
+  Error.SyncAuxData(Root, Comm);
+}
 }
 
 }

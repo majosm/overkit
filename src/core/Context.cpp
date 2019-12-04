@@ -108,16 +108,16 @@ context CreateContext(context::params Params) {
 
 }
 
-optional<context> CreateContext(context::params Params, error &Error) {
+optional<context> CreateContext(context::params Params, captured_error &Error) {
 
-  Error = error::NONE;
+  Error.Reset();
 
   optional<context> MaybeContext;
 
   try {
     MaybeContext = CreateContext(std::move(Params));
-  } catch (const exception &Exception) {
-    Error = Exception.Error();
+  } catch (const error &CreateError) {
+    Error = CreateError.Capture();
   }
 
   return MaybeContext;

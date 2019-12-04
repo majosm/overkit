@@ -30,13 +30,12 @@ void ovkCreateContext(ovk_context **Context, ovk_context_params **Params, ovk_er
 
   auto ParamsCPPPtr = reinterpret_cast<ovk::context::params *>(*Params);
 
-  ovk::error ErrorCPP;
-  ovk::optional<ovk::context> MaybeContextCPP = ovk::CreateContext(std::move(*ParamsCPPPtr),
-    ErrorCPP);
+  ovk::captured_error ErrorCPP;
+  auto MaybeContextCPP = ovk::CreateContext(std::move(*ParamsCPPPtr), ErrorCPP);
 
   delete ParamsCPPPtr;
 
-  if (ErrorCPP == ovk::error::NONE) {
+  if (!ErrorCPP) {
     auto ContextCPPPtr = new ovk::context(MaybeContextCPP.Release());
     *Context = reinterpret_cast<ovk_context *>(ContextCPPPtr);
   } else {
@@ -44,7 +43,7 @@ void ovkCreateContext(ovk_context **Context, ovk_context_params **Params, ovk_er
   }
 
   *Params = nullptr;
-  *Error = ovk_error(ErrorCPP);
+  *Error = ovk_error(ErrorCPP.Code());
 
 }
 

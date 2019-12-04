@@ -37,7 +37,6 @@ set(SOURCES
   DistributedFieldOps.cpp
   DistributedRegionHash.cpp
   Domain.cpp
-  Error.cpp
   Exchanger.cpp
   Geometry.cpp
   GeometryComponent.cpp
@@ -148,6 +147,7 @@ set(INTERNAL_HEADERS
   Elem.inl
   Error.h
   Event.inl
+  Exception.hpp
   Exchanger.h
   FieldOps.hpp
   FloatingRef.inl

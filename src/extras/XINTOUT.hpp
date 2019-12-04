@@ -28,14 +28,14 @@ inline bool ValidXINTOUTFormat(xintout_format Format) {
 void ImportXINTOUT(domain &Domain, int ConnectivityComponentID, const std::string &HOPath, const
   std::string &XPath, int ReadGranularityAdjust, MPI_Info MPIInfo);
 void ImportXINTOUT(domain &Domain, int ConnectivityComponentID, const std::string &HOPath, const
-  std::string &XPath, int ReadGranularityAdjust, MPI_Info MPIInfo, error &Error);
+  std::string &XPath, int ReadGranularityAdjust, MPI_Info MPIInfo, captured_error &Error);
 
 void ExportXINTOUT(const domain &Domain, int ConnectivityComponentID, const std::string &HOPath,
   const std::string &XPath, xintout_format Format, endian Endian, int WriteGranularityAdjust,
   MPI_Info MPIInfo);
 void ExportXINTOUT(const domain &Domain, int ConnectivityComponentID, const std::string &HOPath,
   const std::string &XPath, xintout_format Format, endian Endian, int WriteGranularityAdjust,
-  MPI_Info MPIInfo, error &Error);
+  MPI_Info MPIInfo, captured_error &Error);
 
 }
 
