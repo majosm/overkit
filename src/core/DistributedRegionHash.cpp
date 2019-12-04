@@ -200,7 +200,7 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
     }
     AvgProcLength /= double(NumDims_);
 
-    ProcToBinMultiplier = Max(int(10.*AvgProcLength/AvgBinRegionLength),1);
+    ProcToBinMultiplier = Max(int(2.*AvgProcLength/AvgBinRegionLength),1);
 
   }
 
