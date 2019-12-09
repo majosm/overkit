@@ -4,7 +4,7 @@ namespace core {
 template <typename T> template <typename F, OVK_FUNCDEF_REQUIRES(IsCallableWith<F, T *>())>
   handle<T>::handle(T Handle, F Delete) {
 
-  if (Handle == handle_traits<T>::NullValue) return;
+  if (Handle == handle_traits<T>::NullValue()) return;
 
   auto CleanUpHandle = core::OnScopeExit([&] {
     Delete(&Handle);
@@ -29,13 +29,13 @@ template <typename T> handle<T>::operator bool() const {
 
 template <typename T> handle<T>::operator T() const {
 
-  return Ptr_ ? *Ptr_ : handle_traits<T>::NullValue;
+  return Ptr_ ? *Ptr_ : handle_traits<T>::NullValue();
 
 }
 
 template <typename T> T handle<T>::Get() const {
 
-  return Ptr_ ? *Ptr_ : handle_traits<T>::NullValue;
+  return Ptr_ ? *Ptr_ : handle_traits<T>::NullValue();
 
 }
 

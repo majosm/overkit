@@ -16,7 +16,7 @@ namespace ovk {
 namespace core {
 
 template <typename T> struct handle_traits {
-  constexpr static const T NullValue = T();
+  static constexpr T NullValue() { return {}; }
 };
 
 template <typename T> class handle {
