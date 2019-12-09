@@ -95,11 +95,13 @@ public:
   distributed_region_hash(int NumDims, comm_view Comm);
   distributed_region_hash(int NumDims, comm_view Comm, int NumLocalRegions, array_view<const
     region_type> LocalRegions);
-  template <typename ArrayType, OVK_FUNCDECL_REQUIRES(std::is_trivially_copyable<array_value_type<
-    ArrayType>>::value && std::is_trivially_destructible<array_value_type<ArrayType>>::value)>
-    distributed_region_hash(int NumDims, comm_view Comm, int NumLocalRegions, array_view<const
-    region_type> LocalRegions, const ArrayType &LocalRegionAuxData, MPI_Datatype
-    AuxDataMPIType=GetMPIDataType<array_value_type<ArrayType>>());
+  // is_trivially_copyable not yet supported on Intel 17
+//   template <typename ArrayType, OVK_FUNCDECL_REQUIRES(std::is_trivially_copyable<array_value_type<
+//     ArrayType>>::value && std::is_trivially_destructible<array_value_type<ArrayType>>::value)>
+  template <typename ArrayType, OVK_FUNCDECL_REQUIRES(std::is_trivially_destructible<
+    array_value_type<ArrayType>>::value)> distributed_region_hash(int NumDims, comm_view Comm, int
+    NumLocalRegions, array_view<const region_type> LocalRegions, const ArrayType
+    &LocalRegionAuxData, MPI_Datatype AuxDataMPIType=GetMPIDataType<array_value_type<ArrayType>>());
 
   // Can't define these here due to issues with GCC < 6.3 and Intel < 17
 //   distributed_region_hash(const distributed_region_hash &Other) = delete;
@@ -153,11 +155,15 @@ private:
 
 };
 
+// is_trivially_copyable not yet supported on Intel 17
+// template <typename CoordType> template <typename ArrayType, OVK_FUNCDEF_REQUIRES(
+//   std::is_trivially_copyable<array_value_type<ArrayType>>::value && std::is_trivially_destructible<
+//   array_value_type<ArrayType>>::value)> distributed_region_hash<CoordType>::distributed_region_hash(
 template <typename CoordType> template <typename ArrayType, OVK_FUNCDEF_REQUIRES(
-  std::is_trivially_copyable<array_value_type<ArrayType>>::value && std::is_trivially_destructible<
-  array_value_type<ArrayType>>::value)> distributed_region_hash<CoordType>::distributed_region_hash(
-  int NumDims, comm_view Comm, int NumLocalRegions, array_view<const region_type> LocalRegions,
-  const ArrayType &LocalRegionAuxData, MPI_Datatype AuxDataMPIType):
+  std::is_trivially_destructible<array_value_type<ArrayType>>::value)> distributed_region_hash<
+  CoordType>::distributed_region_hash(int NumDims, comm_view Comm, int NumLocalRegions,
+  array_view<const region_type> LocalRegions, const ArrayType &LocalRegionAuxData, MPI_Datatype
+  AuxDataMPIType):
   distributed_region_hash(NumDims, Comm, NumLocalRegions, LocalRegions, GetBytePointers_(
     LocalRegionAuxData), sizeof(array_value_type<ArrayType>), AuxDataMPIType)
 {}
