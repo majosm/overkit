@@ -13,13 +13,13 @@
 #include <ovk/core/Array.hpp>
 #include <ovk/core/Cart.hpp>
 #include <ovk/core/Comm.hpp>
+#include <ovk/core/CommunicationOps.hpp>
 #include <ovk/core/ConnectivityComponent.hpp>
 #include <ovk/core/ConnectivityM.hpp>
 #include <ovk/core/ConnectivityN.hpp>
 #include <ovk/core/Domain.hpp>
 #include <ovk/core/FieldOps.hpp>
 #include <ovk/core/Grid.hpp>
-#include <ovk/core/Misc.hpp>
 #include <ovk/core/Range.hpp>
 #include <ovk/core/ScalarOps.hpp>
 #include <ovk/core/Tuple.hpp>

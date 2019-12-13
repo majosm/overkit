@@ -1,11 +1,10 @@
 // Copyright (c) 2019 Matthew J. Smith and Overkit contributors
 // License: MIT (http://opensource.org/licenses/MIT)
 
-#ifndef OVK_CORE_MISC_HPP_INCLUDED
-#define OVK_CORE_MISC_HPP_INCLUDED
+#ifndef OVK_CORE_COMMUNICATION_OPS_HPP_INCLUDED
+#define OVK_CORE_COMMUNICATION_OPS_HPP_INCLUDED
 
 #include <ovk/core/Array.hpp>
-#include <ovk/core/ArrayTraits.hpp>
 #include <ovk/core/ArrayView.hpp>
 #include <ovk/core/Comm.hpp>
 #include <ovk/core/Global.hpp>
@@ -57,11 +56,12 @@ private:
 // Given known list of ranks on one end of communication, generate list of ranks on other end
 array<int> DynamicHandshake(comm_view Comm, array_view<const int> Ranks);
 
+// Run a section of code sequentially over each rank
 template <typename F, OVK_FUNCDECL_REQUIRES(IsCallableWith<F &&>())> auto Serialize(comm_view Comm,
   F &&Func) -> decltype(std::forward<F>(Func)());
 
 }}
 
-#include <ovk/core/Misc.inl>
+#include <ovk/core/CommunicationOps.inl>
 
 #endif

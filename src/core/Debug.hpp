@@ -6,12 +6,14 @@
 
 #include <ovk/core/Debug.h>
 
+#include <ovk/core/Comm.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/TextProcessing.hpp>
 
 #include <mpi.h>
 
 #include <string>
+#include <utility>
 
 namespace ovk {
 namespace core {

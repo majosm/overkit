@@ -24,6 +24,7 @@ set(SOURCES
   CollectMap.cpp
   CollectRow.cpp
   Comm.cpp
+  CommunicationOps.cpp
   ConnectivityComponent.cpp
   ConnectivityM.cpp
   ConnectivityN.cpp
@@ -42,7 +43,6 @@ set(SOURCES
   GeometryComponent.cpp
   Grid.cpp
   Halo.cpp
-  Misc.cpp
   OverlapAccel.cpp
   OverlapComponent.cpp
   OverlapM.cpp
@@ -92,7 +92,6 @@ set(PUBLIC_HEADERS
   Indexer.hpp
   Interval.hpp
   Map.hpp
-  Misc.hpp
   Optional.hpp
   OverlapComponent.hpp
   OverlapM.hpp
@@ -125,6 +124,8 @@ set(INTERNAL_HEADERS
   CollectNone.hpp
   CollectNotAll.hpp
   Comm.inl
+  CommunicationOps.hpp
+  CommunicationOps.inl
   Component.hpp
   Component.inl
   ConnectivityComponent.h
@@ -172,7 +173,6 @@ set(INTERNAL_HEADERS
   Logger.inl
   Math.hpp
   Math.inl
-  Misc.inl
   Moveabool.hpp
   Optional.inl
   OverlapAccel.hpp

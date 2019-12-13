@@ -7,13 +7,13 @@
 #include "ovk/core/ArrayView.hpp"
 #include "ovk/core/Cart.hpp"
 #include "ovk/core/Comm.hpp"
+#include "ovk/core/CommunicationOps.hpp"
 #include "ovk/core/DistributedRegionHash.hpp"
 #include "ovk/core/Elem.hpp"
 #include "ovk/core/ElemSet.hpp"
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Interval.hpp"
 #include "ovk/core/Map.hpp"
-#include "ovk/core/Misc.hpp"
 #include "ovk/core/Range.hpp"
 
 #include <mpi.h>

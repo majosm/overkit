@@ -6,6 +6,7 @@
 #include "ovk/core/Array.hpp"
 #include "ovk/core/Cart.hpp"
 #include "ovk/core/Comm.hpp"
+#include "ovk/core/CommunicationOps.hpp"
 #include "ovk/core/Context.hpp"
 #include "ovk/core/DataType.hpp"
 #include "ovk/core/Debug.hpp"
@@ -17,7 +18,6 @@
 #include "ovk/core/Global.hpp"
 #include "ovk/core/Grid.hpp"
 #include "ovk/core/Logger.hpp"
-#include "ovk/core/Misc.hpp"
 #include "ovk/core/Partition.hpp"
 #include "ovk/core/Request.hpp"
 
