@@ -28,7 +28,7 @@ public:
 
   template <typename T, OVK_FUNCTION_REQUIRES(!std::is_same<remove_cvref<T>, disperse>::value)>
     disperse(T &&Disperse):
-    Disperse_(new model<T>(std::forward<T>(Disperse)))
+    Disperse_(new model<remove_cvref<T>>(std::forward<T>(Disperse)))
   {}
 
   disperse(const disperse &Other) = delete;
@@ -36,7 +36,7 @@ public:
 
   template <typename T, OVK_FUNCTION_REQUIRES(!std::is_same<remove_cvref<T>, disperse>::value)>
     disperse &operator=(T &&Disperse) {
-    Disperse_.reset(new model<T>(std::forward<T>(Disperse)));
+    Disperse_.reset(new model<remove_cvref<T>>(std::forward<T>(Disperse)));
     return *this;
   }
 

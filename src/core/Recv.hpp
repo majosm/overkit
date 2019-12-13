@@ -29,7 +29,7 @@ public:
 
   template <typename T, OVK_FUNCTION_REQUIRES(!std::is_same<remove_cvref<T>, recv>::value)>
     recv(T &&Recv):
-    Recv_(new model<T>(std::forward<T>(Recv)))
+    Recv_(new model<remove_cvref<T>>(std::forward<T>(Recv)))
   {}
 
   recv(const recv &Other) = delete;
@@ -37,7 +37,7 @@ public:
 
   template <typename T, OVK_FUNCTION_REQUIRES(!std::is_same<remove_cvref<T>, recv>::value)>
     recv &operator=(T &&Recv) {
-    Recv_.reset(new model<T>(std::forward<T>(Recv)));
+    Recv_.reset(new model<remove_cvref<T>>(std::forward<T>(Recv)));
     return *this;
   }
 

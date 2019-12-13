@@ -29,7 +29,7 @@ public:
 
   template <typename T, OVK_FUNCTION_REQUIRES(!std::is_same<remove_cvref<T>, send>::value)>
     send(T &&Send):
-    Send_(new model<T>(std::forward<T>(Send)))
+    Send_(new model<remove_cvref<T>>(std::forward<T>(Send)))
   {}
 
   send(const send &Other) = delete;
@@ -37,7 +37,7 @@ public:
 
   template <typename T, OVK_FUNCTION_REQUIRES(!std::is_same<remove_cvref<T>, send>::value)>
     send &operator=(T &&Send) {
-    Send_.reset(new model<T>(std::forward<T>(Send)));
+    Send_.reset(new model<remove_cvref<T>>(std::forward<T>(Send)));
     return *this;
   }
 

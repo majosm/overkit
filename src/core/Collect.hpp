@@ -34,7 +34,7 @@ public:
 
   template <typename T, OVK_FUNCTION_REQUIRES(!std::is_same<remove_cvref<T>, collect>::value)>
     collect(T &&Collect):
-    Collect_(new model<T>(std::forward<T>(Collect)))
+    Collect_(new model<remove_cvref<T>>(std::forward<T>(Collect)))
   {}
 
   collect(const collect &Other) = delete;
@@ -42,7 +42,7 @@ public:
 
   template <typename T, OVK_FUNCTION_REQUIRES(!std::is_same<remove_cvref<T>, collect>::value)>
     collect &operator=(T &&Collect) {
-    Collect_.reset(new model<T>(std::forward<T>(Collect)));
+    Collect_.reset(new model<remove_cvref<T>>(std::forward<T>(Collect)));
     return *this;
   }
 

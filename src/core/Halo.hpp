@@ -81,7 +81,7 @@ class halo_exchanger {
 public:
 
   template <typename T> halo_exchanger(T &&HaloExchanger):
-    HaloExchanger_(new model<T>(std::forward<T>(HaloExchanger)))
+    HaloExchanger_(new model<remove_cvref<T>>(std::forward<T>(HaloExchanger)))
   {}
 
   bool Active() const { return HaloExchanger_->Active(); }

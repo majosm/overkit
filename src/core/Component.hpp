@@ -23,7 +23,7 @@ public:
 
   template <typename T, OVK_FUNCTION_REQUIRES(!std::is_same<remove_cvref<T>, component>::value)>
     component(T &&Component):
-    Component_(new model<T>(std::forward<T>(Component)))
+    Component_(new model<remove_cvref<T>>(std::forward<T>(Component)))
   {}
 
   component(const component &Other) = delete;
@@ -31,7 +31,7 @@ public:
 
   template <typename T, OVK_FUNCTION_REQUIRES(!std::is_same<remove_cvref<T>, component>::value)>
     component &operator=(T &&Component) {
-    Component_.reset(new model<T>(std::forward<T>(Component)));
+    Component_.reset(new model<remove_cvref<T>>(std::forward<T>(Component)));
     return *this;
   }
 

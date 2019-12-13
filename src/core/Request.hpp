@@ -25,7 +25,7 @@ public:
 
   template <typename T, OVK_FUNCTION_REQUIRES(!std::is_same<core::remove_cvref<T>, request>::value)>
     request(T &&Request):
-    Request_(new model<T>(std::forward<T>(Request)))
+    Request_(new model<core::remove_cvref<T>>(std::forward<T>(Request)))
   {}
 
   ~request() noexcept {
@@ -37,7 +37,7 @@ public:
 
   template <typename T, OVK_FUNCTION_REQUIRES(!std::is_same<core::remove_cvref<T>, request>::value)>
     request &operator=(T &&Request) {
-    Request_.reset(new model<T>(std::forward<T>(Request)));
+    Request_.reset(new model<core::remove_cvref<T>>(std::forward<T>(Request)));
     return *this;
   }
 
