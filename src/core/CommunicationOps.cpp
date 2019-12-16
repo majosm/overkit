@@ -7,6 +7,7 @@
 #include "ovk/core/ArrayView.hpp"
 #include "ovk/core/Comm.hpp"
 #include "ovk/core/Global.hpp"
+#include "ovk/core/Profiler.hpp"
 #include "ovk/core/Set.hpp"
 
 #include <mpi.h>
@@ -193,6 +194,41 @@ array<int> DynamicHandshake(comm_view Comm_, array_view<const int> Ranks) {
   MPI_Waitall(RecvRequests.Count(), RecvRequests.Data(), MPI_STATUSES_IGNORE);
 
   return {MatchedRanksSet};
+
+}
+
+hang_detector::hang_detector(comm_view Comm, double Timeout):
+  Comm_(DuplicateComm(Comm)),
+  Signal_(Comm_),
+  Timeout_(Timeout)
+{}
+
+void hang_detector::operator()() {
+
+  timer Timer;
+
+  Signal_.Start();
+  Timer.Start();
+
+  bool Done = false;
+  while (!Done) {
+    Done = Signal_.Check();
+    if (Timer.Elapsed() > Timeout_) break;
+  }
+
+  if (!Done) {
+    // Can't actually serialize printing, so we have to fake it
+    int Rank, NumProcs;
+    MPI_Comm_rank(Comm_, &Rank);
+    MPI_Comm_size(Comm_, &NumProcs);
+    Timer.Stop();
+    Timer.Start();
+    while (Timer.Elapsed() < 0.01*Rank) {}
+    std::fprintf(stderr, "Hang detected: process %i reporting in.\n", Rank);
+    std::fflush(stderr);
+    while (Timer.Elapsed() < 0.01*NumProcs+1.) {}
+    MPI_Abort(Comm_, 1);
+  }
 
 }
 

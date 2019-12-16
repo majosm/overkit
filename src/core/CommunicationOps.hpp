@@ -60,6 +60,23 @@ array<int> DynamicHandshake(comm_view Comm, array_view<const int> Ranks);
 template <typename F, OVK_FUNCDECL_REQUIRES(IsCallableWith<F &&>())> auto Serialize(comm_view Comm,
   F &&Func) -> decltype(std::forward<F>(Func)());
 
+// Help identify processes that have gotten stuck somewhere
+class hang_detector {
+
+public:
+
+  hang_detector(comm_view Comm, double Timeout=10.);
+
+  void operator()();
+
+private:
+
+  comm Comm_;
+  signal Signal_;
+  double Timeout_;
+
+};
+
 }}
 
 #include <ovk/core/CommunicationOps.inl>
