@@ -39,10 +39,13 @@ public:
   component &operator=(component &&Other) noexcept = default;
 
   explicit operator bool() { return static_cast<bool>(Component_); }
-  bool Empty() const { return Component_ == nullptr; }
+
+  bool Present() const { return static_cast<bool>(Component_); }
 
   template <typename T> const T &Get() const;
   template <typename T> T &Get();
+
+  void Reset() { Component_.reset(); }
 
   template <typename T> T Release();
 
