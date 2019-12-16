@@ -3838,7 +3838,6 @@ void assembler::MinimizeOverlap_() {
 
   Profiler.Stop(MINIMIZE_OVERLAP_TIME);
 
-
   if (Logger.LoggingStatus()) {
     MPI_Barrier(Domain.Comm());
     for (int GridID : Domain.GridIDs()) {
@@ -3985,7 +3984,7 @@ void assembler::GenerateConnectivityData_() {
     }
   }
 
-  Profiler.Start(CONNECTIVITY_DONOR_EDGE_DISTANCE_COMPUTE_DISTANCES_TIME);
+  Profiler.Stop(CONNECTIVITY_DONOR_EDGE_DISTANCE_COMPUTE_DISTANCES_TIME);
   Profiler.StartSync(CONNECTIVITY_DONOR_EDGE_DISTANCE_CREATE_EXCHANGE_TIME, Domain.Comm());
 
   struct exchange_m {
