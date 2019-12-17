@@ -101,7 +101,8 @@ private:
 
 template <typename T> constexpr bool MapContiguousDefault() {
   // 16 seems like a good number *shrug*
-  return sizeof(T) <= 16;
+  return sizeof(T) <= 16 && std::is_nothrow_move_constructible<T>::value &&
+    std::is_nothrow_move_assignable<T>::value;
 }
 
 template <typename KeyType, typename ValueType, bool Contiguous_=MapContiguousDefault<ValueType>()>
