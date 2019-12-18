@@ -112,7 +112,7 @@ void Blobs(int N) {
   );
 
   std::array<int,3> BackgroundSize = {{N,N,1}};
-  std::array<int,3> BlobSize = {{N,2*N-1,1}};
+  std::array<int,3> BlobSize = {{N/2,N,1}};
 
   long long NumBackgroundPoints = BackgroundSize[0]*BackgroundSize[1];
   long long NumBlobPoints = BlobSize[0]*BlobSize[1];
@@ -174,6 +174,7 @@ void Blobs(int N) {
     int NumGridProcs;
     MPI_Comm_size(Blob1Comm, &NumGridProcs);
     std::array<int,3> CartDims = CreateCartesianDecompDims(NumGridProcs, 2, {{0,0,1}});
+    if (CartDims[1] < CartDims[0]) std::swap(CartDims[0], CartDims[1]);
     std::array<int,3> CartPeriods = {{0,1,0}};
     MPI_Cart_create(Blob1Comm, 2, CartDims.data(), CartPeriods.data(), 1, &Data.Comm);
     MPI_Comm_free(&Blob1Comm);
@@ -201,6 +202,7 @@ void Blobs(int N) {
     int NumGridProcs;
     MPI_Comm_size(Blob2Comm, &NumGridProcs);
     std::array<int,3> CartDims = CreateCartesianDecompDims(NumGridProcs, 2, {{0,0,1}});
+    if (CartDims[1] < CartDims[0]) std::swap(CartDims[0], CartDims[1]);
     std::array<int,3> CartPeriods = {{0,1,0}};
     MPI_Cart_create(Blob2Comm, 2, CartDims.data(), CartPeriods.data(), 1, &Data.Comm);
     MPI_Comm_free(&Blob2Comm);
@@ -228,6 +230,7 @@ void Blobs(int N) {
     int NumGridProcs;
     MPI_Comm_size(Blob3Comm, &NumGridProcs);
     std::array<int,3> CartDims = CreateCartesianDecompDims(NumGridProcs, 2, {{0,0,1}});
+    if (CartDims[1] < CartDims[0]) std::swap(CartDims[0], CartDims[1]);
     std::array<int,3> CartPeriods = {{0,1,0}};
     MPI_Cart_create(Blob3Comm, 2, CartDims.data(), CartPeriods.data(), 1, &Data.Comm);
     MPI_Comm_free(&Blob3Comm);
@@ -359,6 +362,8 @@ void Blobs(int N) {
 
     constexpr double SeparationScale = 0.8;
 
+    constexpr double Shift = 4.;
+
     if (Blob1IsLocal) {
       const grid_data &Data = Blob1Data;
       const std::array<int,6> &LocalRange = Data.LocalRange;
@@ -373,7 +378,10 @@ void Blobs(int N) {
           double Theta = 2.*PI*V;
           double RMin = 0.1*(1.+0.2*std::sin(3.*Theta) + 0.1*std::sin(2.*Theta+PI/4.));
           double RMax = 0.5 + RMin;
-          double Radius = RMin * std::pow(RMax/RMin, U);
+          double RShift = (1. - std::pow(2., Shift))*RMin;
+          double RMinRel = RMin - RShift;
+          double RMaxRel = RMax - RShift;
+          double Radius = RMinRel * std::pow(RMaxRel/RMinRel, U) + RShift;
           Coords(0)(i,j,0) = -0.425*SeparationScale + Radius*std::cos(Theta);
           Coords(1)(i,j,0) = -0.025*SeparationScale + Radius*std::sin(Theta);
         }
@@ -402,7 +410,10 @@ void Blobs(int N) {
           double Theta = 2.*PI*V;
           double RMin = 0.1*(1.+0.2*std::sin(4.*Theta+PI/4.) + 0.1*std::sin(2.*Theta));
           double RMax = 0.5 + RMin;
-          double Radius = RMin * std::pow(RMax/RMin, U);
+          double RShift = (1. - std::pow(2., Shift))*RMin;
+          double RMinRel = RMin - RShift;
+          double RMaxRel = RMax - RShift;
+          double Radius = RMinRel * std::pow(RMaxRel/RMinRel, U) + RShift;
           Coords(0)(i,j,0) = 0.075*SeparationScale + Radius*std::cos(Theta);
           Coords(1)(i,j,0) = 0.425*SeparationScale + Radius*std::sin(Theta);
         }
@@ -431,7 +442,10 @@ void Blobs(int N) {
           double Theta = 2.*PI*V;
           double RMin = 0.1*(1.+0.2*std::sin(5.*Theta+PI/4.) + 0.1*std::sin(3.*Theta));
           double RMax = 0.5 + RMin;
-          double Radius = RMin * std::pow(RMax/RMin, U);
+          double RShift = (1. - std::pow(2., Shift))*RMin;
+          double RMinRel = RMin - RShift;
+          double RMaxRel = RMax - RShift;
+          double Radius = RMinRel * std::pow(RMaxRel/RMinRel, U) + RShift;
           Coords(0)(i,j,0) = 0.375*SeparationScale + Radius*std::cos(Theta);
           Coords(1)(i,j,0) = -0.375*SeparationScale + Radius*std::sin(Theta);
         }
