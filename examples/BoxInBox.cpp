@@ -21,12 +21,13 @@
 using examples::DecomposeDomain;
 using examples::CreateCartesianDecompDims;
 using examples::CartesianDecomp;
+using examples::PI;
 using examples::command_args;
 using examples::command_args_parser;
 
 namespace {
-void GetCommandLineArguments(int argc, char **argv, bool &Help, int &N);
-void BoxInBox(int N);
+void GetCommandLineArguments(int argc, char **argv, bool &Help, int &N, double &RotateAngle);
+void BoxInBox(int N, double RotateAngle);
 }
 
 int main(int argc, char **argv) {
@@ -39,9 +40,10 @@ int main(int argc, char **argv) {
   try {
     bool Help;
     int N;
-    GetCommandLineArguments(argc, argv, Help, N);
+    double RotateAngle;
+    GetCommandLineArguments(argc, argv, Help, N, RotateAngle);
     if (!Help) {
-      BoxInBox(N);
+      BoxInBox(N, RotateAngle);
     }
   } catch (const std::exception &Exception) {
     MPI_Barrier(MPI_COMM_WORLD);
@@ -63,7 +65,7 @@ int main(int argc, char **argv) {
 
 namespace {
 
-void GetCommandLineArguments(int argc, char **argv, bool &Help, int &N) {
+void GetCommandLineArguments(int argc, char **argv, bool &Help, int &N, double &RotateAngle) {
 
   int WorldRank;
   MPI_Comm_rank(MPI_COMM_WORLD, &WorldRank);
@@ -73,11 +75,15 @@ void GetCommandLineArguments(int argc, char **argv, bool &Help, int &N) {
   CommandArgsParser.SetHelpDescription("Generates an overset mesh consisting of a uniform grid "
     "with another uniform grid inside it.");
   CommandArgsParser.AddOption<int>("size", 'N', "Characteristic size of grids [ Default: 81 ]");
+  CommandArgsParser.AddOption<double>("rotate", 'r', "Angle by which to rotate foreground box [ Default: 0. ]");
 
   command_args CommandArgs = CommandArgsParser.Parse({{argc}, argv});
 
   Help = CommandArgs.GetOptionValue<bool>("help", false);
   N = CommandArgs.GetOptionValue<int>("size", 81);
+
+  double RotateAngleDegrees = CommandArgs.GetOptionValue<double>("rotate", 0.);
+  RotateAngle = (RotateAngleDegrees*PI)/180.;
 
 }
 
@@ -96,7 +102,7 @@ struct grid_data {
   }
 };
 
-void BoxInBox(int N) {
+void BoxInBox(int N, double RotateAngle) {
 
   int NumWorldProcs, WorldRank;
   MPI_Comm_size(MPI_COMM_WORLD, &NumWorldProcs);
@@ -248,7 +254,8 @@ void BoxInBox(int N) {
     }
     if (ForegroundIsLocal) {
       MaybeGeometryParams[1] = ovk::geometry::params()
-        .SetType(ovk::geometry_type::UNIFORM);
+        .SetType(RotateAngle != 0. ? ovk::geometry_type::ORIENTED_UNIFORM :
+          ovk::geometry_type::UNIFORM);
     }
 
     GeometryComponent.CreateGeometries(GridIDs, MaybeGeometryParams);
@@ -273,6 +280,10 @@ void BoxInBox(int N) {
     }
 
     if (ForegroundIsLocal) {
+      std::array<std::array<double,2>,2> RotationMatrix = {{
+        {{std::cos(RotateAngle), -std::sin(RotateAngle)}},
+        {{std::sin(RotateAngle), std::cos(RotateAngle)}}
+      }};
       const grid_data &Data = ForegroundData;
       const std::array<int,6> &LocalRange = Data.LocalRange;
       auto GeometryHandle = GeometryComponent.EditGeometry(FOREGROUND_ID);
@@ -283,8 +294,8 @@ void BoxInBox(int N) {
         for (int i = LocalRange[0]; i < LocalRange[3]; ++i) {
           double U = double(i)/double(ForegroundSize[0]-1);
           double V = double(j)/double(ForegroundSize[1]-1);
-          Coords(0)(i,j,0) = (U-0.5);
-          Coords(1)(i,j,0) = (V-0.5);
+          Coords(0)(i,j,0) = RotationMatrix[0][0]*(U-0.5)+RotationMatrix[0][1]*(V-0.5);
+          Coords(1)(i,j,0) = RotationMatrix[1][0]*(U-0.5)+RotationMatrix[1][1]*(V-0.5);
         }
       }
     }
