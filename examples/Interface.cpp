@@ -312,7 +312,7 @@ void Interface(int N) {
           Coords(1,iDonor) = 0.;
           InterpCoefs(0,0,iDonor) = 1.;
           InterpCoefs(1,0,iDonor) = 1.;
-          Destinations(0,iDonor) = RightSize[0]-1;
+          Destinations(0,iDonor) = LeftSize[0]-1;
           Destinations(1,iDonor) = j;
           ++iDonor;
         }
