@@ -123,8 +123,8 @@ inline optional<elem<double,2>> IsoQuad4NodeNonUniformInverse(const array_view<c
     elem<double,2> Error = Coords - IsoQuad4NodeNonUniform(NodeCoords, ShapeI, ShapeJ);
     Converged = SmallEnough(Error);
     if (Converged) break;
-    elem<double,2> InterpDerivI = LagrangeInterpLinearDeriv(LocalCoords(0));
-    elem<double,2> InterpDerivJ = LagrangeInterpLinearDeriv(LocalCoords(1));
+    elem<double,2> ShapeDerivI = LagrangeInterpLinearDeriv(LocalCoords(0));
+    elem<double,2> ShapeDerivJ = LagrangeInterpLinearDeriv(LocalCoords(1));
     elem<double,2> JacobianI = {0., 0.};
     elem<double,2> JacobianJ = {0., 0.};
     int iNode = 0;
@@ -132,8 +132,8 @@ inline optional<elem<double,2>> IsoQuad4NodeNonUniformInverse(const array_view<c
       for (int i = 0; i < 2; ++i) {
         for (int iDim = 0; iDim < 2; ++iDim) {
           double Coord = NodeCoords(iNode)(iDim);
-          JacobianI(iDim) += InterpDerivI(i) * ShapeJ(j) * Coord;
-          JacobianJ(iDim) += ShapeI(i) * InterpDerivJ(j) * Coord;
+          JacobianI(iDim) += ShapeDerivI(i) * ShapeJ(j) * Coord;
+          JacobianJ(iDim) += ShapeI(i) * ShapeDerivJ(j) * Coord;
         }
         ++iNode;
       }
@@ -205,8 +205,8 @@ inline optional<elem<double,2>> IsoQuad16NodeInverse(const array_view<const elem
     elem<double,2> Error = Coords - IsoQuad16Node(NodeCoords, ShapeI, ShapeJ);
     Converged = SmallEnough(Error);
     if (Converged) break;
-    elem<double,4> InterpDerivI = LagrangeInterpCubicDeriv(LocalCoords(0));
-    elem<double,4> InterpDerivJ = LagrangeInterpCubicDeriv(LocalCoords(1));
+    elem<double,4> ShapeDerivI = LagrangeInterpCubicDeriv(LocalCoords(0));
+    elem<double,4> ShapeDerivJ = LagrangeInterpCubicDeriv(LocalCoords(1));
     elem<double,2> JacobianI = {0., 0.};
     elem<double,2> JacobianJ = {0., 0.};
     int iNode = 0;
@@ -214,8 +214,8 @@ inline optional<elem<double,2>> IsoQuad16NodeInverse(const array_view<const elem
       for (int i = 0; i < 4; ++i) {
         for (int iDim = 0; iDim < 2; ++iDim) {
           double Coord = NodeCoords(iNode)(iDim);
-          JacobianI(iDim) += InterpDerivI(i) * ShapeJ(j) * Coord;
-          JacobianJ(iDim) += ShapeI(i) * InterpDerivJ(j) * Coord;
+          JacobianI(iDim) += ShapeDerivI(i) * ShapeJ(j) * Coord;
+          JacobianJ(iDim) += ShapeI(i) * ShapeDerivJ(j) * Coord;
         }
         ++iNode;
       }

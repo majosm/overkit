@@ -140,9 +140,9 @@ inline optional<elem<double,3>> IsoHex8NodeNonUniformInverse(const array_view<co
     elem<double,3> Error = Coords - IsoHex8NodeNonUniform(NodeCoords, ShapeI, ShapeJ, ShapeK);
     Converged = SmallEnough(Error);
     if (Converged) break;
-    elem<double,2> InterpDerivI = LagrangeInterpLinearDeriv(LocalCoords(0));
-    elem<double,2> InterpDerivJ = LagrangeInterpLinearDeriv(LocalCoords(1));
-    elem<double,2> InterpDerivK = LagrangeInterpLinearDeriv(LocalCoords(2));
+    elem<double,2> ShapeDerivI = LagrangeInterpLinearDeriv(LocalCoords(0));
+    elem<double,2> ShapeDerivJ = LagrangeInterpLinearDeriv(LocalCoords(1));
+    elem<double,2> ShapeDerivK = LagrangeInterpLinearDeriv(LocalCoords(2));
     elem<double,3> JacobianI = {0., 0., 0.};
     elem<double,3> JacobianJ = {0., 0., 0.};
     elem<double,3> JacobianK = {0., 0., 0.};
@@ -152,9 +152,9 @@ inline optional<elem<double,3>> IsoHex8NodeNonUniformInverse(const array_view<co
         for (int i = 0; i < 2; ++i) {
           for (int iDim = 0; iDim < 3; ++iDim) {
             double Coord = NodeCoords(iNode)(iDim);
-            JacobianI(iDim) += InterpDerivI(i) * ShapeJ(j) * ShapeK(k) * Coord;
-            JacobianJ(iDim) += ShapeI(i) * InterpDerivJ(j) * ShapeK(k) * Coord;
-            JacobianK(iDim) += ShapeI(i) * ShapeJ(j) * InterpDerivK(k) * Coord;
+            JacobianI(iDim) += ShapeDerivI(i) * ShapeJ(j) * ShapeK(k) * Coord;
+            JacobianJ(iDim) += ShapeI(i) * ShapeDerivJ(j) * ShapeK(k) * Coord;
+            JacobianK(iDim) += ShapeI(i) * ShapeJ(j) * ShapeDerivK(k) * Coord;
           }
           ++iNode;
         }
@@ -233,9 +233,9 @@ inline optional<elem<double,3>> IsoHex64NodeInverse(const array_view<const elem<
     elem<double,3> Error = Coords - IsoHex64Node(NodeCoords, ShapeI, ShapeJ, ShapeK);
     Converged = SmallEnough(Error);
     if (Converged) break;
-    elem<double,4> InterpDerivI = LagrangeInterpCubicDeriv(LocalCoords(0));
-    elem<double,4> InterpDerivJ = LagrangeInterpCubicDeriv(LocalCoords(1));
-    elem<double,4> InterpDerivK = LagrangeInterpCubicDeriv(LocalCoords(2));
+    elem<double,4> ShapeDerivI = LagrangeInterpCubicDeriv(LocalCoords(0));
+    elem<double,4> ShapeDerivJ = LagrangeInterpCubicDeriv(LocalCoords(1));
+    elem<double,4> ShapeDerivK = LagrangeInterpCubicDeriv(LocalCoords(2));
     elem<double,3> JacobianI = {0., 0., 0.};
     elem<double,3> JacobianJ = {0., 0., 0.};
     elem<double,3> JacobianK = {0., 0., 0.};
@@ -245,9 +245,9 @@ inline optional<elem<double,3>> IsoHex64NodeInverse(const array_view<const elem<
         for (int i = 0; i < 4; ++i) {
           for (int iDim = 0; iDim < 3; ++iDim) {
             double Coord = NodeCoords(iNode)(iDim);
-            JacobianI(iDim) += InterpDerivI(i) * ShapeJ(j) * ShapeK(k) * Coord;
-            JacobianJ(iDim) += ShapeI(i) * InterpDerivJ(j) * ShapeK(k) * Coord;
-            JacobianK(iDim) += ShapeI(i) * ShapeJ(j) * InterpDerivK(k) * Coord;
+            JacobianI(iDim) += ShapeDerivI(i) * ShapeJ(j) * ShapeK(k) * Coord;
+            JacobianJ(iDim) += ShapeI(i) * ShapeDerivJ(j) * ShapeK(k) * Coord;
+            JacobianK(iDim) += ShapeI(i) * ShapeJ(j) * ShapeDerivK(k) * Coord;
           }
           ++iNode;
         }
