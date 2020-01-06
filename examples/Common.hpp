@@ -24,6 +24,8 @@ constexpr double PI = support::PI;
 
 using support::command_args;
 using support::command_args_parser;
+using support::command_args_error;
+using support::command_args_error_code;
 
 void DecomposeDomain(ovk::array_view<const long long> NumPointsPerGrid, int NumProcs,
   ovk::array_view<int> GridProcRanges) {
