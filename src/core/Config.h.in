@@ -17,5 +17,6 @@
 // External configuration
 #cmakedefine OVK_HAVE_MPI_IBARRIER
 #cmakedefine OVK_HAVE_OPENMP
+#cmakedefine OVK_HAVE_HDF5
 
 #endif

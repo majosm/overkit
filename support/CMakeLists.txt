@@ -86,6 +86,15 @@ endif()
 # C math library
 target_link_libraries(support PRIVATE ${C_MATH_LIBRARY})
 
+# HDF5
+if(HAVE_HDF5)
+  target_include_directories(support SYSTEM PUBLIC ${HDF5_INCLUDE_DIRS})
+  target_link_libraries(support PUBLIC ${HDF5_LIBRARIES})
+else()
+  message(WARNING "Not building with HDF5; will not be able to write any XDMF output files in examples, etc.")
+  set(GLOBAL_WARNING_FLAG TRUE CACHE INTERNAL "")
+endif()
+
 #----------------
 # Header targets
 #----------------

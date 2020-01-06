@@ -206,6 +206,18 @@ if(NOT C_MATH_LIBRARY)
   message(FATAL_ERROR "Could not find C math library.")
 endif()
 
+#------
+# HDF5
+#------
+
+set(HDF5_PREFER_PARALLEL TRUE)
+find_package(HDF5 COMPONENTS C)
+if(HDF5_FOUND AND HDF5_IS_PARALLEL)
+  set(HAVE_HDF5 TRUE CACHE INTERNAL "")
+else()
+  set(HAVE_HDF5 FALSE CACHE INTERNAL "")
+endif()
+
 #=======================
 # Project configuration
 #=======================
