@@ -18,28 +18,19 @@ set(LOCAL_TARGETS)
 set(SOURCES
   Global.cpp
 )
-if(XPACC)
-list(APPEND SOURCES
-  XINTOUT.cpp
-)
-endif()
 
 set(PUBLIC_HEADERS
   Global.hpp
 )
-if(XPACC)
-list(APPEND PUBLIC_HEADERS
-  XINTOUT.hpp
-)
-endif()
 
 set(INTERNAL_HEADERS
   Global.h
 )
+
 if(XPACC)
-list(APPEND INTERNAL_HEADERS
-  XINTOUT.h
-)
+  list(APPEND SOURCES XINTOUT.cpp)
+  list(APPEND PUBLIC_HEADERS XINTOUT.hpp)
+  list(APPEND INTERNAL_HEADERS XINTOUT.h)
 endif()
 
 #-----------------
