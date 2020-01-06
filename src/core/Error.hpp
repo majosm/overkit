@@ -84,7 +84,7 @@ public:
   file_open_error():
     io_error(error_code::FILE_OPEN, "ovk::file_open_error")
   {}
-  file_open_error(std::string FilePath):
+  explicit file_open_error(std::string FilePath):
     file_open_error()
   {
     FilePath_ = std::move(FilePath);
@@ -102,7 +102,7 @@ public:
   file_read_error():
     io_error(error_code::FILE_READ, "ovk::file_read_error")
   {}
-  file_read_error(std::string FilePath):
+  explicit file_read_error(std::string FilePath):
     file_read_error()
   {
     FilePath_ = std::move(FilePath);
@@ -120,7 +120,7 @@ public:
   file_write_error():
     io_error(error_code::FILE_WRITE, "ovk::file_write_error")
   {}
-  file_write_error(std::string FilePath):
+  explicit file_write_error(std::string FilePath):
     file_write_error()
   {
     FilePath_ = std::move(FilePath);
