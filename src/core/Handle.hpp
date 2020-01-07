@@ -22,6 +22,8 @@ public:
 
   handle() = default;
   template <typename F, OVK_FUNCDECL_REQUIRES(IsCallableWith<F, T *>())> handle(T Handle, F Delete);
+  template <typename F, OVK_FUNCDECL_REQUIRES(!IsCallableWith<F, T *>() && IsCallableWith<F, T>())>
+    handle(T Handle, F Delete);
 
   explicit operator bool() const;
 

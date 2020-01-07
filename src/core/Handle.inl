@@ -19,6 +19,24 @@ template <typename T> template <typename F, OVK_FUNCDEF_REQUIRES(IsCallableWith<
 
 }
 
+template <typename T> template <typename F, OVK_FUNCDEF_REQUIRES(!IsCallableWith<F, T *>() &&
+  IsCallableWith<F, T>())> handle<T>::handle(T Handle, F Delete) {
+
+  auto CleanUpHandle = core::OnScopeExit([&] {
+    Delete(Handle);
+  });
+
+  T *HandlePtr = new T(Handle);
+
+  CleanUpHandle.Dismiss();
+
+  Ptr_ = std::shared_ptr<T>(HandlePtr, [Delete](T *HandlePtr) {
+    Delete(*HandlePtr);
+    delete HandlePtr;
+  });
+
+}
+
 template <typename T> handle<T>::operator bool() const {
 
   return Ptr_ != nullptr;
