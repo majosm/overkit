@@ -4,8 +4,6 @@ namespace core {
 template <typename T> template <typename F, OVK_FUNCDEF_REQUIRES(IsCallableWith<F, T *>())>
   handle<T>::handle(T Handle, F Delete) {
 
-  if (Handle == handle_traits<T>::NullValue()) return;
-
   auto CleanUpHandle = core::OnScopeExit([&] {
     Delete(&Handle);
   });
@@ -29,13 +27,17 @@ template <typename T> handle<T>::operator bool() const {
 
 template <typename T> handle<T>::operator T() const {
 
-  return Ptr_ ? *Ptr_ : handle_traits<T>::NullValue();
+  OVK_DEBUG_ASSERT(Ptr_, "Invalid handle.");
+
+  return *Ptr_;
 
 }
 
 template <typename T> T handle<T>::Get() const {
 
-  return Ptr_ ? *Ptr_ : handle_traits<T>::NullValue();
+  OVK_DEBUG_ASSERT(Ptr_, "Invalid handle.");
+
+  return *Ptr_;
 
 }
 
@@ -47,13 +49,13 @@ template <typename T> void handle<T>::Reset() {
 
 template <typename T> bool operator==(const handle<T> &Left, const handle<T> &Right) {
 
-  return Left.Get() == Right.Get();
+  return (!Left && !Right) || ((Left && Right) && Left.Get() == Right.Get());
 
 }
 
 template <typename T> bool operator!=(const handle<T> &Left, const handle<T> &Right) {
 
-  return Left.Get() != Right.Get();
+  return !(Left == Right);
 
 }
 

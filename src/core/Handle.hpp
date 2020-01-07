@@ -4,6 +4,7 @@
 #ifndef OVK_CORE_HANDLE_HPP_INCLUDED
 #define OVK_CORE_HANDLE_HPP_INCLUDED
 
+#include <ovk/core/Debug.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Requires.hpp>
 #include <ovk/core/ScopeGuard.hpp>
@@ -14,10 +15,6 @@
 
 namespace ovk {
 namespace core {
-
-template <typename T> struct handle_traits {
-  static constexpr T NullValue() { return {}; }
-};
 
 template <typename T> class handle {
 
