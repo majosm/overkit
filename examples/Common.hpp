@@ -7,6 +7,7 @@
 #include <support/CommandArgs.hpp>
 #include <support/Constants.hpp>
 #include <support/Decomp.hpp>
+#include <support/XDMF.hpp>
 
 #include <ovk/core/ArrayView.hpp>
 #include <ovk/core/Cart.hpp>
@@ -53,6 +54,17 @@ std::array<int,6> CartesianDecomp(int NumDims, const std::array<int,3> &Size, MP
     LocalRange.End(1), LocalRange.End(2)}};
 
 }
+
+#ifdef OVK_HAVE_XDMF
+using support::xdmf;
+using support::xdmf_grid_meta;
+using support::xdmf_attribute_meta;
+using support::xdmf_attribute_type;
+using support::xdmf_error;
+using support::xdmf_error_code;
+using support::CreateXDMF;
+using support::OpenXDMF;
+#endif
 
 }
 

@@ -7,6 +7,7 @@
 #include <support/CommandArgsC.h>
 #include <support/Constants.h>
 #include <support/Decomp.h>
+#include <support/XDMFC.h>
 
 #include <mpi.h>
 
@@ -68,6 +69,24 @@ void examples_CartesianDecomp(int NumDims, const int *Size, MPI_Comm CartComm, i
   support_CartesianDecomp(NumDims, Zero, Size, CartComm, LocalRange, LocalRange+3);
 
 }
+
+#ifdef OVK_HAVE_XDMF
+#define examples_xdmf support_xdmf
+#define examples_xdmf_grid_meta support_xdmf_grid_meta
+#define examples_xdmf_attribute_meta support_xdmf_attribute_meta
+#define examples_xdmf_attribute_type support_xdmf_attribute_type
+#define EXAMPLES_XDMF_ATTRIBUTE_TYPE_INT SUPPORT_XDMF_ATTRIBUTE_TYPE_INT
+#define EXAMPLES_XDMF_ATTRIBUTE_TYPE_LONG_LONG SUPPORT_XDMF_ATTRIBUTE_TYPE_LONG_LONG
+#define EXAMPLES_XDMF_ATTRIBUTE_TYPE_DOUBLE SUPPORT_XDMF_ATTRIBUTE_TYPE_DOUBLE
+#define examples_xdmf_error support_xdmf_error
+#define examples_CreateXDMFGridMeta support_CreateXDMFGridMeta
+#define examples_CreateXDMFAttributeMeta support_CreateXDMFAttributeMeta
+#define examples_CreateXDMF support_CreateXDMF
+#define examples_OpenXDMF support_OpenXDMF
+#define examples_CloseXDMF support_CloseXDMF
+#define examples_WriteXDMFGeometry support_WriteXDMFGeometry
+#define examples_WriteXDMFAttribute support_WriteXDMFAttribute
+#endif
 
 #ifdef __cplusplus
 }

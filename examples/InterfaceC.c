@@ -29,6 +29,22 @@
 #define ParseCommandArgs examples_ParseCommandArgs
 #define DestroyCommandArgs examples_DestroyCommandArgs
 #define GetCommandOptionIfPresent examples_GetCommandOptionIfPresent
+#ifdef OVK_HAVE_XDMF
+#define xdmf examples_xdmf
+#define xdmf_grid_meta examples_xdmf_grid_meta
+#define xdmf_attribute_meta examples_xdmf_attribute_meta
+#define xdmf_attribute_type examples_xdmf_attribute_type
+#define XDMF_ATTRIBUTE_TYPE_INT EXAMPLES_XDMF_ATTRIBUTE_TYPE_INT
+#define XDMF_ATTRIBUTE_TYPE_DOUBLE EXAMPLES_XDMF_ATTRIBUTE_TYPE_DOUBLE
+#define xdmf_error examples_xdmf_error
+#define CreateXDMFGridMeta examples_CreateXDMFGridMeta
+#define CreateXDMFAttributeMeta examples_CreateXDMFAttributeMeta
+#define CreateXDMF examples_CreateXDMF
+#define OpenXDMF examples_OpenXDMF
+#define CloseXDMF examples_CloseXDMF
+#define WriteXDMFGeometry examples_WriteXDMFGeometry
+#define WriteXDMFAttribute examples_WriteXDMFAttribute
+#endif
 
 static int GetCommandLineArguments(int argc, char **argv, bool *Help, int *N);
 static int Interface(int N);
@@ -146,10 +162,63 @@ static void DestroyGridData(grid_data *Data) {
 
 }
 
+static int *CreateOutputState(const ovk_domain *Domain, int ConnectivityComponentID, int GridID) {
+
+  const ovk_connectivity_component *ConnectivityComponent;
+  ovkGetComponent(Domain, ConnectivityComponentID, OVK_COMPONENT_TYPE_CONNECTIVITY,
+    &ConnectivityComponent);
+  const ovk_grid *Grid;
+  ovkGetGrid(Domain, GridID, &Grid);
+  long long NumLocalPoints;
+  ovkGetGridLocalCount(Grid, &NumLocalPoints);
+  int LocalRange[6];
+  ovkGetGridLocalRange(Grid, LocalRange, LocalRange+3);
+
+  int *OutputState = malloc(NumLocalPoints*sizeof(int));
+
+  long long iPoint;
+  for (iPoint = 0; iPoint < NumLocalPoints; ++iPoint) {
+    OutputState[iPoint] = 0;
+  }
+  int NumLocalConnectivityNs = ovkLocalConnectivityNCount(ConnectivityComponent);
+  int *LocalConnectivityNMGridIDs = malloc(NumLocalConnectivityNs*sizeof(int));
+  int *LocalConnectivityNNGridIDs = malloc(NumLocalConnectivityNs*sizeof(int));
+  ovkGetLocalConnectivityNIDs(ConnectivityComponent, LocalConnectivityNMGridIDs,
+    LocalConnectivityNNGridIDs);
+  long long iConnectivityN;
+  for (iConnectivityN = 0; iConnectivityN < NumLocalConnectivityNs; ++iConnectivityN) {
+    int MGridID = LocalConnectivityNMGridIDs[iConnectivityN];
+    int NGridID = LocalConnectivityNNGridIDs[iConnectivityN];
+    if (NGridID != GridID) continue;
+    const ovk_connectivity_n *ConnectivityN;
+    ovkGetConnectivityN(ConnectivityComponent, MGridID, NGridID, &ConnectivityN);
+    long long NumReceivers = ovkGetConnectivityNSize(ConnectivityN);
+    const int *Points[3];
+    int iDim;
+    for (iDim = 0; iDim < 3; ++iDim) {
+      ovkGetConnectivityNPoints(ConnectivityN, iDim, &Points[iDim]);
+    }
+    long long iReceiver;
+    for (iReceiver = 0; iReceiver < NumReceivers; ++iReceiver) {
+      int i = Points[0][iReceiver];
+      int j = Points[1][iReceiver];
+      int k = Points[2][iReceiver];
+      long long l = (i-LocalRange[0]) + (LocalRange[3]-LocalRange[0])*((j-LocalRange[1]) +
+        (LocalRange[4]-LocalRange[1])*(k-LocalRange[2]));
+      OutputState[l] = -MGridID;
+    }
+  }
+  free(LocalConnectivityNMGridIDs);
+  free(LocalConnectivityNNGridIDs);
+
+  return OutputState;
+
+}
+
 static int Interface(int N) {
 
   int iDim, iCoef;
-  int j;
+  int i, j, l;
   long long iDonor, iReceiver;
 
   int NumWorldProcs, WorldRank;
@@ -525,6 +594,77 @@ static int Interface(int N) {
 
   }
 
+#ifdef OVK_HAVE_XDMF
+  xdmf_grid_meta *XDMFGrids[2];
+  CreateXDMFGridMeta(&XDMFGrids[0], "Left", LeftSize);
+  CreateXDMFGridMeta(&XDMFGrids[1], "Right", RightSize);
+
+  xdmf_attribute_meta *XDMFAttributes[3];
+  CreateXDMFAttributeMeta(&XDMFAttributes[0], "State", XDMF_ATTRIBUTE_TYPE_INT);
+  CreateXDMFAttributeMeta(&XDMFAttributes[1], "BeforeExchange", XDMF_ATTRIBUTE_TYPE_DOUBLE);
+  CreateXDMFAttributeMeta(&XDMFAttributes[2], "AfterExchange", XDMF_ATTRIBUTE_TYPE_DOUBLE);
+
+  xdmf *XDMF;
+  xdmf_error XDMFError;
+  CreateXDMF(&XDMF, "InterfaceC.xmf", 2, MPI_COMM_WORLD, 2, XDMFGrids, 3, XDMFAttributes,
+    &XDMFError);
+  CloseXDMF(&XDMF);
+
+  if (LeftIsLocal) {
+    const grid_data *Data = &LeftData;
+    OpenXDMF(&XDMF, "InterfaceC.xmf", Data->Comm, &XDMFError);
+    double *Coords[2];
+    Coords[0] = malloc(Data->NumLocalPoints*sizeof(double));
+    Coords[1] = malloc(Data->NumLocalPoints*sizeof(double));
+    for (j = Data->LocalRange[1]; j < Data->LocalRange[4]; ++j) {
+      for (i = Data->LocalRange[0]; i < Data->LocalRange[3]; ++i) {
+        long long l = (i-Data->LocalRange[0]) + (Data->LocalRange[3]-Data->LocalRange[0])*
+          (j-Data->LocalRange[1]);
+        double U = (double)i/(double)(Size[0]-1);
+        double V = (double)j/(double)(LeftSize[1]-1);
+        Coords[0][l] = 2.*(U-0.5);
+        Coords[1][l] = 2.*(V-0.5);
+      }
+    }
+    int *OutputState = CreateOutputState(Domain, CONNECTIVITY_ID, 1);
+    for (int iDim = 0; iDim < 2; ++iDim) {
+      WriteXDMFGeometry(XDMF, "Left", iDim, Coords[iDim], Data->LocalRange, Data->LocalRange+3);
+    }
+    WriteXDMFAttribute(XDMF, "Left", "State", OutputState, Data->LocalRange, Data->LocalRange+3);
+    free(OutputState);
+    free(Coords[0]);
+    free(Coords[1]);
+    CloseXDMF(&XDMF);
+  }
+
+  if (RightIsLocal) {
+    const grid_data *Data = &RightData;
+    OpenXDMF(&XDMF, "InterfaceC.xmf", Data->Comm, &XDMFError);
+    double *Coords[2];
+    Coords[0] = malloc(Data->NumLocalPoints*sizeof(double));
+    Coords[1] = malloc(Data->NumLocalPoints*sizeof(double));
+    for (j = Data->LocalRange[1]; j < Data->LocalRange[4]; ++j) {
+      for (i = Data->LocalRange[0]; i < Data->LocalRange[3]; ++i) {
+        long long l = (i-Data->LocalRange[0]) + (Data->LocalRange[3]-Data->LocalRange[0])*
+          (j-Data->LocalRange[1]);
+        double U = (double)(i+LeftSize[0]-2)/(double)(Size[0]-1);
+        double V = (double)j/(double)(RightSize[1]-1);
+        Coords[0][l] = 2.*(U-0.5);
+        Coords[1][l] = 2.*(V-0.5);
+      }
+    }
+    int *OutputState = CreateOutputState(Domain, CONNECTIVITY_ID, 2);
+    for (int iDim = 0; iDim < 2; ++iDim) {
+      WriteXDMFGeometry(XDMF, "Right", iDim, Coords[iDim], Data->LocalRange, Data->LocalRange+3);
+    }
+    WriteXDMFAttribute(XDMF, "Right", "State", OutputState, Data->LocalRange, Data->LocalRange+3);
+    free(OutputState);
+    free(Coords[0]);
+    free(Coords[1]);
+    CloseXDMF(&XDMF);
+  }
+#endif
+
   ovk_exchanger *Exchanger;
   ovkCreateExchanger(&Exchanger, SharedContext, NULL);
 
@@ -578,15 +718,71 @@ static int Interface(int N) {
   if (LeftIsLocal) {
     grid_data *Data = &LeftData;
     LeftFieldValues = malloc(Data->NumExtendedPoints*sizeof(double));
-    memset(LeftFieldValues, -1., Data->NumExtendedPoints);
+    for (j = Data->ExtendedRange[1]; j < Data->ExtendedRange[4]; ++j) {
+      for (i = Data->ExtendedRange[0]; i < Data->ExtendedRange[3]; ++i) {
+        l = (Data->ExtendedRange[4]-Data->ExtendedRange[1])*(i-Data->ExtendedRange[0]) +
+          (j-Data->ExtendedRange[1]);
+        double U = (double)i/(double)(LeftSize[0]-1);
+        double V = (double)j/(double)(LeftSize[1]-1);
+        LeftFieldValues[l] = U*V;
+      }
+    }
   }
 
   double *RightFieldValues;
   if (RightIsLocal) {
     grid_data *Data = &RightData;
     RightFieldValues = malloc(Data->NumExtendedPoints*sizeof(double));
-    memset(RightFieldValues, 1., Data->NumExtendedPoints);
+    for (j = Data->ExtendedRange[1]; j < Data->ExtendedRange[4]; ++j) {
+      for (i = Data->ExtendedRange[0]; i < Data->ExtendedRange[3]; ++i) {
+        l = (Data->ExtendedRange[4]-Data->ExtendedRange[1])*(i-Data->ExtendedRange[0]) +
+          (j-Data->ExtendedRange[1]);
+        double U = (double)i/(double)(RightSize[0]-1);
+        double V = (double)j/(double)(RightSize[1]-1);
+        RightFieldValues[l] = (1.-U)*(1.-V);
+      }
+    }
   }
+
+#ifdef OVK_HAVE_XDMF
+  if (LeftIsLocal) {
+    const grid_data *Data = &LeftData;
+    OpenXDMF(&XDMF, "InterfaceC.xmf", Data->Comm, &XDMFError);
+    double *ValuesTransposed = malloc(Data->NumLocalPoints*sizeof(double));
+    for (j = Data->LocalRange[1]; j < Data->LocalRange[4]; ++j) {
+      for (i = Data->LocalRange[0]; i < Data->LocalRange[3]; ++i) {
+        long long l_s = (Data->ExtendedRange[4]-Data->ExtendedRange[1])*(i-Data->ExtendedRange[0]) +
+          (j-Data->ExtendedRange[1]);
+        long long l_d = (i-Data->LocalRange[0]) + (Data->LocalRange[3]-Data->LocalRange[0])*
+          (j-Data->LocalRange[1]);
+        ValuesTransposed[l_d] = LeftFieldValues[l_s];
+      }
+    }
+    WriteXDMFAttribute(XDMF, "Left", "BeforeExchange", ValuesTransposed, Data->LocalRange,
+      Data->LocalRange+3);
+    free(ValuesTransposed);
+    CloseXDMF(&XDMF);
+  }
+
+  if (RightIsLocal) {
+    const grid_data *Data = &RightData;
+    OpenXDMF(&XDMF, "InterfaceC.xmf", Data->Comm, &XDMFError);
+    double *ValuesTransposed = malloc(Data->NumLocalPoints*sizeof(double));
+    for (j = Data->LocalRange[1]; j < Data->LocalRange[4]; ++j) {
+      for (i = Data->LocalRange[0]; i < Data->LocalRange[3]; ++i) {
+        long long l_s = (Data->ExtendedRange[4]-Data->ExtendedRange[1])*(i-Data->ExtendedRange[0]) +
+          (j-Data->ExtendedRange[1]);
+        long long l_d = (i-Data->LocalRange[0]) + (Data->LocalRange[3]-Data->LocalRange[0])*
+          (j-Data->LocalRange[1]);
+        ValuesTransposed[l_d] = RightFieldValues[l_s];
+      }
+    }
+    WriteXDMFAttribute(XDMF, "Right", "BeforeExchange", ValuesTransposed, Data->LocalRange,
+      Data->LocalRange+3);
+    free(ValuesTransposed);
+    CloseXDMF(&XDMF);
+  }
+#endif
 
   ovk_request **Requests = malloc(4*sizeof(ovk_request *));
   int NumRequests = 0;
@@ -624,6 +820,46 @@ static int Interface(int N) {
   if (RightIsLocal) {
     ovkExchangerDisperse(Exchanger, 1, 2, 1, &RightReceiverValues, &RightFieldValues);
   }
+
+#ifdef OVK_HAVE_XDMF
+  if (LeftIsLocal) {
+    const grid_data *Data = &LeftData;
+    OpenXDMF(&XDMF, "InterfaceC.xmf", Data->Comm, &XDMFError);
+    double *ValuesTransposed = malloc(Data->NumLocalPoints*sizeof(double));
+    for (j = Data->LocalRange[1]; j < Data->LocalRange[4]; ++j) {
+      for (i = Data->LocalRange[0]; i < Data->LocalRange[3]; ++i) {
+        long long l_s = (Data->ExtendedRange[4]-Data->ExtendedRange[1])*(i-Data->ExtendedRange[0]) +
+          (j-Data->ExtendedRange[1]);
+        long long l_d = (i-Data->LocalRange[0]) + (Data->LocalRange[3]-Data->LocalRange[0])*
+          (j-Data->LocalRange[1]);
+        ValuesTransposed[l_d] = LeftFieldValues[l_s];
+      }
+    }
+    WriteXDMFAttribute(XDMF, "Left", "AfterExchange", ValuesTransposed, Data->LocalRange,
+      Data->LocalRange+3);
+    free(ValuesTransposed);
+    CloseXDMF(&XDMF);
+  }
+
+  if (RightIsLocal) {
+    const grid_data *Data = &RightData;
+    OpenXDMF(&XDMF, "InterfaceC.xmf", Data->Comm, &XDMFError);
+    double *ValuesTransposed = malloc(Data->NumLocalPoints*sizeof(double));
+    for (j = Data->LocalRange[1]; j < Data->LocalRange[4]; ++j) {
+      for (i = Data->LocalRange[0]; i < Data->LocalRange[3]; ++i) {
+        long long l_s = (Data->ExtendedRange[4]-Data->ExtendedRange[1])*(i-Data->ExtendedRange[0]) +
+          (j-Data->ExtendedRange[1]);
+        long long l_d = (i-Data->LocalRange[0]) + (Data->LocalRange[3]-Data->LocalRange[0])*
+          (j-Data->LocalRange[1]);
+        ValuesTransposed[l_d] = RightFieldValues[l_s];
+      }
+    }
+    WriteXDMFAttribute(XDMF, "Right", "AfterExchange", ValuesTransposed, Data->LocalRange,
+      Data->LocalRange+3);
+    free(ValuesTransposed);
+    CloseXDMF(&XDMF);
+  }
+#endif
 
   if (LeftIsLocal) {
     free(LeftDonorValues);

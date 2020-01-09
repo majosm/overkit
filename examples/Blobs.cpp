@@ -22,6 +22,14 @@ using examples::CartesianDecomp;
 using examples::PI;
 using examples::command_args;
 using examples::command_args_parser;
+#ifdef OVK_HAVE_XDMF
+using examples::xdmf;
+using examples::xdmf_grid_meta;
+using examples::xdmf_attribute_meta;
+using examples::xdmf_attribute_type;
+using examples::CreateXDMF;
+using examples::OpenXDMF;
+#endif
 
 namespace {
 void GetCommandLineArguments(int argc, char **argv, bool &Help, int &N);
@@ -487,6 +495,103 @@ void Blobs(int N) {
   }
 
   Assembler.Assemble();
+
+#ifdef OVK_HAVE_XDMF
+  std::array<xdmf_grid_meta,4> XDMFGrids = {{
+    {"Background", BackgroundSize},
+    {"Blob1", BlobSize},
+    {"Blob2", BlobSize},
+    {"Blob3", BlobSize},
+  }};
+
+  std::array<xdmf_attribute_meta,1> XDMFAttributes = {{
+    {"State", xdmf_attribute_type::INT}
+  }};
+
+  CreateXDMF("Blobs.xmf", 2, MPI_COMM_WORLD, std::move(XDMFGrids), std::move(XDMFAttributes));
+
+  auto CreateOutputState = [&Domain, STATE_ID, CONNECTIVITY_ID](int GridID) -> ovk::field<int> {
+    auto &StateComponent = Domain.Component<ovk::state_component>(STATE_ID);
+    auto &ConnectivityComponent = Domain.Component<ovk::connectivity_component>(CONNECTIVITY_ID);
+    const ovk::grid &Grid = Domain.Grid(GridID);
+    const ovk::state &State = StateComponent.State(GridID);
+    const ovk::distributed_field<ovk::state_flags> &Flags = State.Flags();
+    const ovk::range &LocalRange = Grid.LocalRange();
+    ovk::field<int> OutputState(LocalRange, 1);
+    for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
+      for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
+        for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
+          ovk::tuple<int> Point = {i,j,k};
+          if ((Flags(Point) & ovk::state_flags::ACTIVE) == ovk::state_flags::NONE) {
+            OutputState(Point) = 0;
+          }
+        }
+      }
+    }
+    for (auto &ConnectivityID : ConnectivityComponent.LocalConnectivityNIDs()) {
+      int MGridID = ConnectivityID(0);
+      int NGridID = ConnectivityID(1);
+      if (NGridID != GridID) continue;
+      const ovk::connectivity_n &ConnectivityN = ConnectivityComponent.ConnectivityN(ConnectivityID);
+      const ovk::array<int,2> &Points = ConnectivityN.Points();
+      for (long long iReceiver = 0; iReceiver < ConnectivityN.Size(); ++iReceiver) {
+        ovk::tuple<int> Point = {
+          Points(0,iReceiver),
+          Points(1,iReceiver),
+          Points(2,iReceiver)
+        };
+        OutputState(Point) = -MGridID;
+      }
+    }
+    return OutputState;
+  };
+
+  auto &GeometryComponent = Domain.Component<ovk::geometry_component>(GEOMETRY_ID);
+
+  if (BackgroundIsLocal) {
+    xdmf XDMF = OpenXDMF("Blobs.xmf", BackgroundData.Comm);
+    const ovk::geometry &Geometry = GeometryComponent.Geometry(BACKGROUND_ID);
+    const ovk::array<ovk::distributed_field<double>> &Coords = Geometry.Coords();
+    ovk::field<int> OutputState = CreateOutputState(BACKGROUND_ID);
+    for (int iDim = 0; iDim < 2; ++iDim) {
+      XDMF.WriteGeometry("Background", iDim, Coords(iDim), Coords(iDim).LocalRange());
+    }
+    XDMF.WriteAttribute("Background", "State", OutputState);
+  }
+
+  if (Blob1IsLocal) {
+    xdmf XDMF = OpenXDMF("Blobs.xmf", Blob1Data.Comm);
+    const ovk::geometry &Geometry = GeometryComponent.Geometry(BLOB_1_ID);
+    const ovk::array<ovk::distributed_field<double>> &Coords = Geometry.Coords();
+    ovk::field<int> OutputState = CreateOutputState(BLOB_1_ID);
+    for (int iDim = 0; iDim < 2; ++iDim) {
+      XDMF.WriteGeometry("Blob1", iDim, Coords(iDim), Coords(iDim).LocalRange());
+    }
+    XDMF.WriteAttribute("Blob1", "State", OutputState);
+  }
+
+  if (Blob2IsLocal) {
+    xdmf XDMF = OpenXDMF("Blobs.xmf", Blob2Data.Comm);
+    const ovk::geometry &Geometry = GeometryComponent.Geometry(BLOB_2_ID);
+    const ovk::array<ovk::distributed_field<double>> &Coords = Geometry.Coords();
+    ovk::field<int> OutputState = CreateOutputState(BLOB_2_ID);
+    for (int iDim = 0; iDim < 2; ++iDim) {
+      XDMF.WriteGeometry("Blob2", iDim, Coords(iDim), Coords(iDim).LocalRange());
+    }
+    XDMF.WriteAttribute("Blob2", "State", OutputState);
+  }
+
+  if (Blob3IsLocal) {
+    xdmf XDMF = OpenXDMF("Blobs.xmf", Blob3Data.Comm);
+    const ovk::geometry &Geometry = GeometryComponent.Geometry(BLOB_3_ID);
+    const ovk::array<ovk::distributed_field<double>> &Coords = Geometry.Coords();
+    ovk::field<int> OutputState = CreateOutputState(BLOB_3_ID);
+    for (int iDim = 0; iDim < 2; ++iDim) {
+      XDMF.WriteGeometry("Blob3", iDim, Coords(iDim), Coords(iDim).LocalRange());
+    }
+    XDMF.WriteAttribute("Blob3", "State", OutputState);
+  }
+#endif
 
 }
 

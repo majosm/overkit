@@ -19,6 +19,14 @@ using examples::CreateCartesianDecompDims;
 using examples::CartesianDecomp;
 using examples::command_args;
 using examples::command_args_parser;
+#ifdef OVK_HAVE_XDMF
+using examples::xdmf;
+using examples::xdmf_grid_meta;
+using examples::xdmf_attribute_meta;
+using examples::xdmf_attribute_type;
+using examples::CreateXDMF;
+using examples::OpenXDMF;
+#endif
 
 namespace {
 void GetCommandLineArguments(int argc, char **argv, bool &Help, int &N);
@@ -344,6 +352,87 @@ void Interface(int N) {
 
   }
 
+#ifdef OVK_HAVE_XDMF
+  std::array<xdmf_grid_meta,2> XDMFGrids = {{
+    {"Left", LeftSize},
+    {"Right", RightSize}
+  }};
+
+  std::array<xdmf_attribute_meta,3> XDMFAttributes = {{
+    {"State", xdmf_attribute_type::INT},
+    {"BeforeExchange", xdmf_attribute_type::DOUBLE},
+    {"AfterExchange", xdmf_attribute_type::DOUBLE}
+  }};
+
+  CreateXDMF("Interface.xmf", 2, MPI_COMM_WORLD, std::move(XDMFGrids), std::move(XDMFAttributes));
+
+  auto CreateOutputState = [&Domain, CONNECTIVITY_ID](int GridID) -> ovk::field<int> {
+    auto &ConnectivityComponent = Domain.Component<ovk::connectivity_component>(CONNECTIVITY_ID);
+    const ovk::grid &Grid = Domain.Grid(GridID);
+    ovk::field<int> OutputState(Grid.LocalRange(), 1);
+    for (auto &ConnectivityID : ConnectivityComponent.LocalConnectivityNIDs()) {
+      int MGridID = ConnectivityID(0);
+      int NGridID = ConnectivityID(1);
+      if (NGridID != GridID) continue;
+      const ovk::connectivity_n &ConnectivityN = ConnectivityComponent.ConnectivityN(ConnectivityID);
+      const ovk::array<int,2> &Points = ConnectivityN.Points();
+      for (long long iReceiver = 0; iReceiver < ConnectivityN.Size(); ++iReceiver) {
+        ovk::tuple<int> Point = {
+          Points(0,iReceiver),
+          Points(1,iReceiver),
+          Points(2,iReceiver)
+        };
+        OutputState(Point) = -MGridID;
+      }
+    }
+    return OutputState;
+  };
+
+  if (LeftIsLocal) {
+    const grid_data &Data = LeftData;
+    const std::array<int,6> &LocalRange = Data.LocalRange;
+    xdmf XDMF = OpenXDMF("Interface.xmf", Data.Comm);
+    ovk::array<ovk::field<double>> Coords({2});
+    Coords(0).Resize({&LocalRange[0], &LocalRange[3]});
+    Coords(1).Resize({&LocalRange[0], &LocalRange[3]});
+    for (int j = LocalRange[1]; j < LocalRange[4]; ++j) {
+      for (int i = LocalRange[0]; i < LocalRange[3]; ++i) {
+        double U = double(i)/double(Size[0]-1);
+        double V = double(j)/double(LeftSize[1]-1);
+        Coords(0)(i,j,0) = 2.*(U-0.5);
+        Coords(1)(i,j,0) = 2.*(V-0.5);
+      }
+    }
+    ovk::field<int> OutputState = CreateOutputState(1);
+    for (int iDim = 0; iDim < 2; ++iDim) {
+      XDMF.WriteGeometry("Left", iDim, Coords(iDim));
+    }
+    XDMF.WriteAttribute("Left", "State", OutputState);
+  }
+
+  if (RightIsLocal) {
+    const grid_data &Data = RightData;
+    const std::array<int,6> &LocalRange = Data.LocalRange;
+    xdmf XDMF = OpenXDMF("Interface.xmf", Data.Comm);
+    ovk::array<ovk::field<double>> Coords({2});
+    Coords(0).Resize({&LocalRange[0], &LocalRange[3]});
+    Coords(1).Resize({&LocalRange[0], &LocalRange[3]});
+    for (int j = LocalRange[1]; j < LocalRange[4]; ++j) {
+      for (int i = LocalRange[0]; i < LocalRange[3]; ++i) {
+        double U = double(i+LeftSize[0]-2)/double(Size[0]-1);
+        double V = double(j)/double(RightSize[1]-1);
+        Coords(0)(i,j,0) = 2.*(U-0.5);
+        Coords(1)(i,j,0) = 2.*(V-0.5);
+      }
+    }
+    ovk::field<int> OutputState = CreateOutputState(2);
+    for (int iDim = 0; iDim < 2; ++iDim) {
+      XDMF.WriteGeometry("Right", iDim, Coords(iDim));
+    }
+    XDMF.WriteAttribute("Right", "State", OutputState);
+  }
+#endif
+
   ovk::exchanger Exchanger = ovk::CreateExchanger(Context);
 
   Exchanger.Bind(Domain, ovk::exchanger::bindings()
@@ -384,13 +473,69 @@ void Interface(int N) {
 
   std::vector<double> LeftFieldValues;
   if (LeftIsLocal) {
-    LeftFieldValues.resize(LeftData.NumExtendedPoints, -1.);
+    const grid_data &Data = LeftData;
+    const std::array<int,6> &ExtendedRange = Data.ExtendedRange;
+    LeftFieldValues.resize(Data.NumExtendedPoints);
+    for (int j = ExtendedRange[1]; j < ExtendedRange[4]; ++j) {
+      for (int i = ExtendedRange[0]; i < ExtendedRange[3]; ++i) {
+        long long l = (ExtendedRange[4]-ExtendedRange[1])*(i-ExtendedRange[0]) +
+          (j-ExtendedRange[1]);
+        double U = double(i)/double(LeftSize[0]-1);
+        double V = double(j)/double(LeftSize[1]-1);
+        LeftFieldValues[l] = U*V;
+      }
+    }
   }
 
   std::vector<double> RightFieldValues;
   if (RightIsLocal) {
-    RightFieldValues.resize(RightData.NumExtendedPoints, 1.);
+    const grid_data &Data = RightData;
+    const std::array<int,6> &ExtendedRange = Data.ExtendedRange;
+    RightFieldValues.resize(Data.NumExtendedPoints);
+    for (int j = ExtendedRange[1]; j < ExtendedRange[4]; ++j) {
+      for (int i = ExtendedRange[0]; i < ExtendedRange[3]; ++i) {
+        long long l = (ExtendedRange[4]-ExtendedRange[1])*(i-ExtendedRange[0]) +
+          (j-ExtendedRange[1]);
+        double U = double(i)/double(RightSize[0]-1);
+        double V = double(j)/double(RightSize[1]-1);
+        RightFieldValues[l] = (1.-U)*(1.-V);
+      }
+    }
   }
+
+#ifdef OVK_HAVE_XDMF
+  if (LeftIsLocal) {
+    const grid_data &Data = LeftData;
+    const std::array<int,6> &LocalRange = Data.LocalRange;
+    const std::array<int,6> &ExtendedRange = Data.ExtendedRange;
+    xdmf XDMF = OpenXDMF("Interface.xmf", Data.Comm);
+    ovk::field<double> ValuesTransposed({&LocalRange[0], &LocalRange[3]});
+    for (int j = LocalRange[1]; j < LocalRange[4]; ++j) {
+      for (int i = LocalRange[0]; i < LocalRange[3]; ++i) {
+        long long l = (ExtendedRange[4]-ExtendedRange[1])*(i-ExtendedRange[0]) +
+          (j-ExtendedRange[1]);
+        ValuesTransposed(i,j,0) = LeftFieldValues[l];
+      }
+    }
+    XDMF.WriteAttribute("Left", "BeforeExchange", ValuesTransposed);
+  }
+
+  if (RightIsLocal) {
+    const grid_data &Data = RightData;
+    const std::array<int,6> &LocalRange = Data.LocalRange;
+    const std::array<int,6> &ExtendedRange = Data.ExtendedRange;
+    xdmf XDMF = OpenXDMF("Interface.xmf", Data.Comm);
+    ovk::field<double> ValuesTransposed({&LocalRange[0], &LocalRange[3]});
+    for (int j = LocalRange[1]; j < LocalRange[4]; ++j) {
+      for (int i = LocalRange[0]; i < LocalRange[3]; ++i) {
+        long long l = (ExtendedRange[4]-ExtendedRange[1])*(i-ExtendedRange[0]) +
+          (j-ExtendedRange[1]);
+        ValuesTransposed(i,j,0) = RightFieldValues[l];
+      }
+    }
+    XDMF.WriteAttribute("Right", "BeforeExchange", ValuesTransposed);
+  }
+#endif
 
   std::vector<ovk::request> Requests;
 
@@ -435,6 +580,40 @@ void Interface(int N) {
     double *FieldValues = RightFieldValues.data();
     Exchanger.Disperse({1,2}, 1, &ReceiverValues, &FieldValues);
   }
+
+#ifdef OVK_HAVE_XDMF
+  if (LeftIsLocal) {
+    const grid_data &Data = LeftData;
+    const std::array<int,6> &LocalRange = Data.LocalRange;
+    const std::array<int,6> &ExtendedRange = Data.ExtendedRange;
+    xdmf XDMF = OpenXDMF("Interface.xmf", Data.Comm);
+    ovk::field<double> ValuesTransposed({&LocalRange[0], &LocalRange[3]});
+    for (int j = LocalRange[1]; j < LocalRange[4]; ++j) {
+      for (int i = LocalRange[0]; i < LocalRange[3]; ++i) {
+        long long l = (ExtendedRange[4]-ExtendedRange[1])*(i-ExtendedRange[0]) +
+          (j-ExtendedRange[1]);
+        ValuesTransposed(i,j,0) = LeftFieldValues[l];
+      }
+    }
+    XDMF.WriteAttribute("Left", "AfterExchange", ValuesTransposed);
+  }
+
+  if (RightIsLocal) {
+    const grid_data &Data = RightData;
+    const std::array<int,6> &LocalRange = Data.LocalRange;
+    const std::array<int,6> &ExtendedRange = Data.ExtendedRange;
+    xdmf XDMF = OpenXDMF("Interface.xmf", Data.Comm);
+    ovk::field<double> ValuesTransposed({&LocalRange[0], &LocalRange[3]});
+    for (int j = LocalRange[1]; j < LocalRange[4]; ++j) {
+      for (int i = LocalRange[0]; i < LocalRange[3]; ++i) {
+        long long l = (ExtendedRange[4]-ExtendedRange[1])*(i-ExtendedRange[0]) +
+          (j-ExtendedRange[1]);
+        ValuesTransposed(i,j,0) = RightFieldValues[l];
+      }
+    }
+    XDMF.WriteAttribute("Right", "AfterExchange", ValuesTransposed);
+  }
+#endif
 
 }
 
