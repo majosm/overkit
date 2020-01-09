@@ -65,6 +65,16 @@ template <typename T> void handle<T>::Reset() {
 
 }
 
+template <typename T, typename F, OVK_FUNCDEF_REQUIRES(IsCallableWith<F, T *>())> handle<T>
+  MakeHandle(T Handle, F Delete) {
+  return {std::move(Handle), std::move(Delete)};
+}
+
+template <typename T, typename F, OVK_FUNCDEF_REQUIRES(!IsCallableWith<F, T *>() &&
+  IsCallableWith<F, T>())> handle<T> MakeHandle(T Handle, F Delete) {
+  return {std::move(Handle), std::move(Delete)};
+}
+
 template <typename T> bool operator==(const handle<T> &Left, const handle<T> &Right) {
 
   return (!Left && !Right) || ((Left && Right) && Left.Get() == Right.Get());

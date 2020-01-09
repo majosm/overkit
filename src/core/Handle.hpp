@@ -39,6 +39,11 @@ private:
 
 };
 
+template <typename T, typename F, OVK_FUNCDECL_REQUIRES(IsCallableWith<F, T *>())> handle<T>
+  MakeHandle(T Handle, F Delete);
+template <typename T, typename F, OVK_FUNCDECL_REQUIRES(!IsCallableWith<F, T *>() &&
+  IsCallableWith<F, T>())> handle<T> MakeHandle(T Handle, F Delete);
+
 template <typename T> bool operator==(const handle<T> &Left, const handle<T> &Right);
 template <typename T> bool operator!=(const handle<T> &Left, const handle<T> &Right);
 
