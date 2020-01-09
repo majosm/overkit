@@ -32,7 +32,15 @@ set(HEADERS
   Debug.hpp
   Decomp.h
   Decomp.hpp
+  XDMF.h
+  XDMF.hpp
+  XDMFC.h
 )
+
+# XDMF I/O requires HDF5
+if(HAVE_HDF5)
+  list(APPEND SOURCES XDMF.cpp XDMFC.cpp)
+endif()
 
 #----------------
 # Library target
@@ -42,6 +50,7 @@ add_library(support ${SOURCES})
 list(APPEND LOCAL_TARGETS support)
 
 # Generate/copy headers to build tree before compiling
+add_dependencies(support pugixml-headers)
 add_dependencies(support support-headers)
 
 #-------------------
@@ -114,6 +123,13 @@ set_source_files_properties(${BUILT_HEADERS} PROPERTIES GENERATED TRUE)
 
 add_custom_target(support-headers ALL DEPENDS ${BUILT_HEADERS})
 list(APPEND LOCAL_TARGETS support-headers)
+
+#================
+# Subdirectories
+#================
+
+# pugixml for XML parsing
+add_subdirectory(pugixml)
 
 #==============
 # Finalization
