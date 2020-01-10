@@ -40,9 +40,9 @@ TEST_F(XINTOUTTests, ImportStandard2D) {
     ovk::domain Domain = Interface2D(Comm, {{-1.,-1.,0.}, {1.,1.,0.}}, {32,32,1}, {false, false,
       false}, ovk::periodic_storage::UNIQUE);
 
-    Domain.CreateComponent<ovk::connectivity_component>(1);
+    Domain.CreateComponent<ovk::connectivity_component>(4);
 
-    ovk::ImportXINTOUT(Domain, 1, "data/XINTOUTTests/XINTOUT_Standard2D.HO.2D",
+    ovk::ImportXINTOUT(Domain, 4, "data/XINTOUTTests/XINTOUT_Standard2D.HO.2D",
       "data/XINTOUTTests/XINTOUT_Standard2D.X.2D", 0, MPI_INFO_NULL);
 
     bool Grid1IsLocal = Domain.GridIsLocal(1);
@@ -51,10 +51,10 @@ TEST_F(XINTOUTTests, ImportStandard2D) {
     ovk::exchanger Exchanger = ovk::CreateExchanger(Domain.SharedContext());
 
     Exchanger.Bind(Domain, ovk::exchanger::bindings()
-      .SetConnectivityComponentID(1)
+      .SetConnectivityComponentID(4)
     );
 
-    auto &ConnectivityComponent = Domain.Component<ovk::connectivity_component>(1);
+    auto &ConnectivityComponent = Domain.Component<ovk::connectivity_component>(4);
 
     if (Grid1IsLocal) {
 
@@ -219,9 +219,9 @@ TEST_F(XINTOUTTests, ImportStandard3D) {
     ovk::domain Domain = Interface3D(Comm, {{-1.,-1.,-1}, {1.,1.,1.}}, {32,32,32}, {false, false,
       false}, ovk::periodic_storage::UNIQUE);
 
-    Domain.CreateComponent<ovk::connectivity_component>(1);
+    Domain.CreateComponent<ovk::connectivity_component>(4);
 
-    ovk::ImportXINTOUT(Domain, 1, "data/XINTOUTTests/XINTOUT_Standard3D.HO.2D",
+    ovk::ImportXINTOUT(Domain, 4, "data/XINTOUTTests/XINTOUT_Standard3D.HO.2D",
       "data/XINTOUTTests/XINTOUT_Standard3D.X.2D", 0, MPI_INFO_NULL);
 
     bool Grid1IsLocal = Domain.GridIsLocal(1);
@@ -230,10 +230,10 @@ TEST_F(XINTOUTTests, ImportStandard3D) {
     ovk::exchanger Exchanger = ovk::CreateExchanger(Domain.SharedContext());
 
     Exchanger.Bind(Domain, ovk::exchanger::bindings()
-      .SetConnectivityComponentID(1)
+      .SetConnectivityComponentID(4)
     );
 
-    auto &ConnectivityComponent = Domain.Component<ovk::connectivity_component>(1);
+    auto &ConnectivityComponent = Domain.Component<ovk::connectivity_component>(4);
 
     if (Grid1IsLocal) {
 
@@ -405,9 +405,9 @@ TEST_F(XINTOUTTests, ImportExtended2D) {
     ovk::domain Domain = Interface2D(Comm, {{-1.,-1.,0.}, {1.,1.,0.}}, {32,32,1}, {false, false,
       false}, ovk::periodic_storage::UNIQUE);
 
-    Domain.CreateComponent<ovk::connectivity_component>(1);
+    Domain.CreateComponent<ovk::connectivity_component>(4);
 
-    ovk::ImportXINTOUT(Domain, 1, "data/XINTOUTTests/XINTOUT_Extended2D.HO.2D",
+    ovk::ImportXINTOUT(Domain, 4, "data/XINTOUTTests/XINTOUT_Extended2D.HO.2D",
       "data/XINTOUTTests/XINTOUT_Extended2D.X.2D", 0, MPI_INFO_NULL);
 
     bool Grid1IsLocal = Domain.GridIsLocal(1);
@@ -416,10 +416,10 @@ TEST_F(XINTOUTTests, ImportExtended2D) {
     ovk::exchanger Exchanger = ovk::CreateExchanger(Domain.SharedContext());
 
     Exchanger.Bind(Domain, ovk::exchanger::bindings()
-      .SetConnectivityComponentID(1)
+      .SetConnectivityComponentID(4)
     );
 
-    auto &ConnectivityComponent = Domain.Component<ovk::connectivity_component>(1);
+    auto &ConnectivityComponent = Domain.Component<ovk::connectivity_component>(4);
 
     if (Grid1IsLocal) {
 
@@ -584,9 +584,9 @@ TEST_F(XINTOUTTests, ImportExtended3D) {
     ovk::domain Domain = Interface3D(Comm, {{-1.,-1.,-1}, {1.,1.,1.}}, {32,32,32}, {false, false,
       false}, ovk::periodic_storage::UNIQUE);
 
-    Domain.CreateComponent<ovk::connectivity_component>(1);
+    Domain.CreateComponent<ovk::connectivity_component>(4);
 
-    ovk::ImportXINTOUT(Domain, 1, "data/XINTOUTTests/XINTOUT_Extended3D.HO.2D",
+    ovk::ImportXINTOUT(Domain, 4, "data/XINTOUTTests/XINTOUT_Extended3D.HO.2D",
       "data/XINTOUTTests/XINTOUT_Extended3D.X.2D", 0, MPI_INFO_NULL);
 
     bool Grid1IsLocal = Domain.GridIsLocal(1);
@@ -595,10 +595,10 @@ TEST_F(XINTOUTTests, ImportExtended3D) {
     ovk::exchanger Exchanger = ovk::CreateExchanger(Domain.SharedContext());
 
     Exchanger.Bind(Domain, ovk::exchanger::bindings()
-      .SetConnectivityComponentID(1)
+      .SetConnectivityComponentID(4)
     );
 
-    auto &ConnectivityComponent = Domain.Component<ovk::connectivity_component>(1);
+    auto &ConnectivityComponent = Domain.Component<ovk::connectivity_component>(4);
 
     if (Grid1IsLocal) {
 

@@ -52,7 +52,7 @@ TEST_F(ExchangerTests, Exchange2D) {
     ovk::exchanger Exchanger = ovk::CreateExchanger(Domain.SharedContext());
 
     Exchanger.Bind(Domain, ovk::exchanger::bindings()
-      .SetConnectivityComponentID(1)
+      .SetConnectivityComponentID(4)
     );
 
     ovk::field<double> LowerFieldValues;
@@ -276,7 +276,7 @@ TEST_F(ExchangerTests, Exchange3D) {
     ovk::exchanger Exchanger = ovk::CreateExchanger(Domain.SharedContext());
 
     Exchanger.Bind(Domain, ovk::exchanger::bindings()
-      .SetConnectivityComponentID(1)
+      .SetConnectivityComponentID(4)
     );
 
     ovk::field<double> LowerFieldValues;

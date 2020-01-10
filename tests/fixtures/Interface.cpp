@@ -4,6 +4,7 @@
 #include "tests/fixtures/Interface.hpp"
 
 #include "support/Decomp.hpp"
+#include "support/XDMF.hpp"
 
 #include <overkit.hpp>
 
@@ -40,31 +41,118 @@ ovk::domain Interface2D(ovk::comm_view Comm, const ovk::box &Bounds, const ovk::
   ovk::array<int> GridIDs({2}, {1, 2});
   ovk::array<ovk::optional<ovk::grid::params>> MaybeGridParams({2});
 
+  ovk::tuple<int> LowerSize = {Size(0), (Size(1)+2)/2, Size(2)};
+  ovk::tuple<int> UpperSize = {Size(0), Size(1)+2-(Size(1)+2)/2, Size(2)};
+
   if (LowerIsLocal) {
-    ovk::tuple<int> GridSize = {Size(0), (Size(1)+2)/2, Size(2)};
-    ovk::range LocalRange = support::CartesianDecomp(2, {GridSize}, LowerComm);
+    ovk::range LocalRange = support::CartesianDecomp(2, {LowerSize}, LowerComm);
     MaybeGridParams(0) = Domain.MakeGridParams()
       .SetName("Lower")
       .SetComm(LowerComm)
-      .SetGlobalRange({GridSize})
+      .SetGlobalRange({LowerSize})
       .SetLocalRange(LocalRange)
       .SetPeriodic(Periodic)
       .SetPeriodicStorage(PeriodicStorage);
   }
 
   if (UpperIsLocal) {
-    ovk::tuple<int> GridSize = {Size(0), Size(1)+2-(Size(1)+2)/2, Size(2)};
-    ovk::range LocalRange = support::CartesianDecomp(2, {GridSize}, UpperComm);
+    ovk::range LocalRange = support::CartesianDecomp(2, {UpperSize}, UpperComm);
     MaybeGridParams(1) = Domain.MakeGridParams()
       .SetName("Upper")
       .SetComm(UpperComm)
-      .SetGlobalRange({GridSize})
+      .SetGlobalRange({UpperSize})
       .SetLocalRange(LocalRange)
       .SetPeriodic(Periodic)
       .SetPeriodicStorage(PeriodicStorage);
   }
 
   Domain.CreateGrids(GridIDs, MaybeGridParams);
+
+  Domain.CreateComponent<ovk::geometry_component>(1);
+
+  {
+
+    auto GeometryComponentHandle = Domain.EditComponent<ovk::geometry_component>(1);
+    ovk::geometry_component &GeometryComponent = *GeometryComponentHandle;
+
+    ovk::array<ovk::optional<ovk::geometry::params>> MaybeGeometryParams({2});
+
+    if (LowerIsLocal) {
+      MaybeGeometryParams(0) = ovk::geometry::params()
+        .SetType(ovk::geometry_type::UNIFORM);
+    }
+
+    if (UpperIsLocal) {
+      MaybeGeometryParams(1) = ovk::geometry::params()
+        .SetType(ovk::geometry_type::UNIFORM);
+    }
+
+    GeometryComponent.CreateGeometries(GridIDs, MaybeGeometryParams);
+
+    if (LowerIsLocal) {
+      const ovk::grid &Grid = Domain.Grid(1);
+      const ovk::range &LocalRange = Grid.LocalRange();
+      auto GeometryHandle = GeometryComponent.EditGeometry(1);
+      ovk::geometry &Geometry = *GeometryHandle;
+      auto CoordsHandle = Geometry.EditCoords();
+      ovk::array<ovk::distributed_field<double>> &Coords = *CoordsHandle;
+      for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
+        for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
+          double U = double(i)/double(LowerSize(0)-1);
+          double V = double(j)/double(Size(1)-1);
+          Coords(0)(i,j,0) = 2.*(U-0.5);
+          Coords(1)(i,j,0) = 2.*(V-0.5);
+        }
+      }
+    }
+
+    if (UpperIsLocal) {
+      const ovk::grid &Grid = Domain.Grid(2);
+      const ovk::range &LocalRange = Grid.LocalRange();
+      auto GeometryHandle = GeometryComponent.EditGeometry(2);
+      ovk::geometry &Geometry = *GeometryHandle;
+      auto CoordsHandle = Geometry.EditCoords();
+      ovk::array<ovk::distributed_field<double>> &Coords = *CoordsHandle;
+      for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
+        for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
+          double U = double(i)/double(UpperSize(0)-1);
+          double V = double(j+LowerSize(1)-2)/double(Size(1)-1);
+          Coords(0)(i,j,0) = 2.*(U-0.5);
+          Coords(1)(i,j,0) = 2.*(V-0.5);
+        }
+      }
+    }
+
+  }
+
+// #ifdef OVK_HAVE_XDMF
+//   auto &GeometryComponent = Domain.Component<ovk::geometry_component>(1);
+
+//   ovk::elem<support::xdmf_grid_meta,2> XDMFGrids = {
+//     {"Lower", LowerSize},
+//     {"Upper", UpperSize}
+//   };
+
+//   support::CreateXDMF("Interface2D.xmf", 2, Comm, std::move(XDMFGrids), {});
+
+//   if (LowerIsLocal) {
+//     const ovk::grid &Grid = Domain.Grid(1);
+//     auto &Coords = GeometryComponent.Geometry(1).Coords();
+//     support::xdmf XDMF = support::OpenXDMF("Interface2D.xmf", Grid.Comm());
+//     for (int iDim = 0; iDim < 2; ++iDim) {
+//       XDMF.WriteGeometry("Lower", iDim, Coords(iDim), Grid.LocalRange());
+//     }
+//   }
+
+//   if (UpperIsLocal) {
+//     const ovk::grid &Grid = Domain.Grid(2);
+//     auto &Coords = GeometryComponent.Geometry(2).Coords();
+//     support::xdmf XDMF = support::OpenXDMF("Interface2D.xmf", Grid.Comm());
+//     for (int iDim = 0; iDim < 2; ++iDim) {
+//       XDMF.WriteGeometry("Upper", iDim, Coords(iDim), Grid.LocalRange());
+//     }
+//   }
+// #endif
 
   return Domain;
 
@@ -80,9 +168,9 @@ ovk::domain Interface2DManualConnectivity(ovk::comm_view Comm, const ovk::box &B
 
   ovk::tuple<int> LowerSize = Domain.GridInfo(1).GlobalRange().Size();
 
-  Domain.CreateComponent<ovk::connectivity_component>(1);
+  Domain.CreateComponent<ovk::connectivity_component>(4);
 
-  auto ConnectivityComponentEditHandle = Domain.EditComponent<ovk::connectivity_component>(1);
+  auto ConnectivityComponentEditHandle = Domain.EditComponent<ovk::connectivity_component>(4);
   ovk::connectivity_component &ConnectivityComponent = *ConnectivityComponentEditHandle;
 
   ovk::array<ovk::elem<int,2>> ConnectivityIDs({2}, {{1,2}, {2,1}});
@@ -250,31 +338,126 @@ ovk::domain Interface3D(ovk::comm_view Comm, const ovk::box &Bounds, const ovk::
   ovk::array<int> GridIDs({2}, {1, 2});
   ovk::array<ovk::optional<ovk::grid::params>> MaybeGridParams({2});
 
+  ovk::tuple<int> LowerSize = {Size(0), Size(1), (Size(2)+2)/2};
+  ovk::tuple<int> UpperSize = {Size(0), Size(1), Size(2)+2-(Size(2)+2)/2};
+
   if (LowerIsLocal) {
-    ovk::tuple<int> GridSize = {Size(0), Size(1), (Size(2)+2)/2};
-    ovk::range LocalRange = support::CartesianDecomp(3, {GridSize}, LowerComm);
+    ovk::range LocalRange = support::CartesianDecomp(3, {LowerSize}, LowerComm);
     MaybeGridParams(0) = Domain.MakeGridParams()
       .SetName("Lower")
       .SetComm(LowerComm)
-      .SetGlobalRange({GridSize})
+      .SetGlobalRange({LowerSize})
       .SetLocalRange(LocalRange)
       .SetPeriodic(Periodic)
       .SetPeriodicStorage(PeriodicStorage);
   }
 
   if (UpperIsLocal) {
-    ovk::tuple<int> GridSize = {Size(0), Size(1), Size(2)+2-(Size(2)+2)/2};
-    ovk::range LocalRange = support::CartesianDecomp(3, {GridSize}, UpperComm);
+    ovk::range LocalRange = support::CartesianDecomp(3, {UpperSize}, UpperComm);
     MaybeGridParams(1) = Domain.MakeGridParams()
       .SetName("Upper")
       .SetComm(UpperComm)
-      .SetGlobalRange({GridSize})
+      .SetGlobalRange({UpperSize})
       .SetLocalRange(LocalRange)
       .SetPeriodic(Periodic)
       .SetPeriodicStorage(PeriodicStorage);
   }
 
   Domain.CreateGrids(GridIDs, MaybeGridParams);
+
+  Domain.CreateComponent<ovk::geometry_component>(1);
+
+  {
+
+    auto GeometryComponentHandle = Domain.EditComponent<ovk::geometry_component>(1);
+    ovk::geometry_component &GeometryComponent = *GeometryComponentHandle;
+
+    ovk::array<ovk::optional<ovk::geometry::params>> MaybeGeometryParams({2});
+
+    if (LowerIsLocal) {
+      MaybeGeometryParams(0) = ovk::geometry::params()
+        .SetType(ovk::geometry_type::UNIFORM);
+    }
+
+    if (UpperIsLocal) {
+      MaybeGeometryParams(1) = ovk::geometry::params()
+        .SetType(ovk::geometry_type::UNIFORM);
+    }
+
+    GeometryComponent.CreateGeometries(GridIDs, MaybeGeometryParams);
+
+    if (LowerIsLocal) {
+      const ovk::grid &Grid = Domain.Grid(1);
+      const ovk::range &LocalRange = Grid.LocalRange();
+      auto GeometryHandle = GeometryComponent.EditGeometry(1);
+      ovk::geometry &Geometry = *GeometryHandle;
+      auto CoordsHandle = Geometry.EditCoords();
+      ovk::array<ovk::distributed_field<double>> &Coords = *CoordsHandle;
+      for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
+        for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
+          for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
+            double U = double(i)/double(LowerSize(0)-1);
+            double V = double(j)/double(LowerSize(1)-1);
+            double W = double(k)/double(Size(2)-1);
+            Coords(0)(i,j,k) = 2.*(U-0.5);
+            Coords(1)(i,j,k) = 2.*(V-0.5);
+            Coords(2)(i,j,k) = 2.*(W-0.5);
+          }
+        }
+      }
+    }
+
+    if (UpperIsLocal) {
+      const ovk::grid &Grid = Domain.Grid(2);
+      const ovk::range &LocalRange = Grid.LocalRange();
+      auto GeometryHandle = GeometryComponent.EditGeometry(2);
+      ovk::geometry &Geometry = *GeometryHandle;
+      auto CoordsHandle = Geometry.EditCoords();
+      ovk::array<ovk::distributed_field<double>> &Coords = *CoordsHandle;
+      for (int k = LocalRange.Begin(2); k < LocalRange.End(2); ++k) {
+        for (int j = LocalRange.Begin(1); j < LocalRange.End(1); ++j) {
+          for (int i = LocalRange.Begin(0); i < LocalRange.End(0); ++i) {
+            double U = double(i)/double(UpperSize(0)-1);
+            double V = double(j)/double(UpperSize(1)-1);
+            double W = double(k+LowerSize(2)-2)/double(Size(2)-1);
+            Coords(0)(i,j,k) = 2.*(U-0.5);
+            Coords(1)(i,j,k) = 2.*(V-0.5);
+            Coords(2)(i,j,k) = 2.*(W-0.5);
+          }
+        }
+      }
+    }
+
+  }
+
+// #ifdef OVK_HAVE_XDMF
+//   auto &GeometryComponent = Domain.Component<ovk::geometry_component>(1);
+
+//   ovk::elem<support::xdmf_grid_meta,2> XDMFGrids = {
+//     {"Lower", LowerSize},
+//     {"Upper", UpperSize}
+//   };
+
+//   support::CreateXDMF("Interface3D.xmf", 3, Comm, std::move(XDMFGrids), {});
+
+//   if (LowerIsLocal) {
+//     const ovk::grid &Grid = Domain.Grid(1);
+//     auto &Coords = GeometryComponent.Geometry(1).Coords();
+//     support::xdmf XDMF = support::OpenXDMF("Interface3D.xmf", Grid.Comm());
+//     for (int iDim = 0; iDim < 3; ++iDim) {
+//       XDMF.WriteGeometry("Lower", iDim, Coords(iDim), Grid.LocalRange());
+//     }
+//   }
+
+//   if (UpperIsLocal) {
+//     const ovk::grid &Grid = Domain.Grid(2);
+//     auto &Coords = GeometryComponent.Geometry(2).Coords();
+//     support::xdmf XDMF = support::OpenXDMF("Interface3D.xmf", Grid.Comm());
+//     for (int iDim = 0; iDim < 3; ++iDim) {
+//       XDMF.WriteGeometry("Upper", iDim, Coords(iDim), Grid.LocalRange());
+//     }
+//   }
+// #endif
 
   return Domain;
 
@@ -290,9 +473,9 @@ ovk::domain Interface3DManualConnectivity(ovk::comm_view Comm, const ovk::box &B
 
   ovk::tuple<int> LowerSize = Domain.GridInfo(1).GlobalRange().Size();
 
-  Domain.CreateComponent<ovk::connectivity_component>(1);
+  Domain.CreateComponent<ovk::connectivity_component>(4);
 
-  auto ConnectivityComponentEditHandle = Domain.EditComponent<ovk::connectivity_component>(1);
+  auto ConnectivityComponentEditHandle = Domain.EditComponent<ovk::connectivity_component>(4);
   ovk::connectivity_component &ConnectivityComponent = *ConnectivityComponentEditHandle;
 
   ovk::array<ovk::elem<int,2>> ConnectivityIDs({2}, {{1,2}, {2,1}});
