@@ -56,7 +56,7 @@ public:
 
   value_type Release();
 
-  void Clear();
+  void Reset();
 
 private:
 

@@ -466,7 +466,7 @@ TEST_F(OptionalTests, Release) {
 
 }
 
-TEST_F(OptionalTests, Clear) {
+TEST_F(OptionalTests, Reset) {
 
   if (TestComm().Rank() != 0) return;
 
@@ -474,7 +474,7 @@ TEST_F(OptionalTests, Clear) {
   using helper = ovk::core::test_helper<optional>;
 
   optional Optional(1);
-  Optional.Clear();
+  Optional.Reset();
   auto &Present = helper::GetPresent(Optional);
   EXPECT_FALSE(Present);
 

@@ -191,7 +191,7 @@ template <typename T> auto optional<T>::Release() -> value_type {
 
 }
 
-template <typename T> void optional<T>::Clear() {
+template <typename T> void optional<T>::Reset() {
 
   if (Present_) {
     ValueStorage_.Destroy();
