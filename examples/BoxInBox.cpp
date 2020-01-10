@@ -83,14 +83,15 @@ void GetCommandLineArguments(int argc, char **argv, bool &Help, int &N, double &
   CommandArgsParser.SetHelpDescription("Generates an overset mesh consisting of a uniform grid "
     "with another uniform grid inside it.");
   CommandArgsParser.AddOption<int>("size", 'N', "Characteristic size of grids [ Default: 81 ]");
-  CommandArgsParser.AddOption<double>("rotate", 'r', "Angle by which to rotate foreground box [ Default: 0. ]");
+  CommandArgsParser.AddOption<double>("rotate", 'r', "Angle in degrees by which to rotate"
+    " foreground box [ Default: 5. ]");
 
   command_args CommandArgs = CommandArgsParser.Parse({{argc}, argv});
 
   Help = CommandArgs.GetOptionValue<bool>("help", false);
   N = CommandArgs.GetOptionValue<int>("size", 81);
 
-  double RotateAngleDegrees = CommandArgs.GetOptionValue<double>("rotate", 0.);
+  double RotateAngleDegrees = CommandArgs.GetOptionValue<double>("rotate", 5.);
   RotateAngle = (RotateAngleDegrees*PI)/180.;
 
 }
