@@ -191,7 +191,7 @@ recv CreateRecv(std::shared_ptr<context> Context, comm_view Comm, const recv_map
     Recv = recv_impl<bool>(std::move(Context), Comm, RecvMap, Count, Tag);
     break;
   case data_type::BYTE:
-    Recv = recv_impl<unsigned char>(std::move(Context), Comm, RecvMap, Count, Tag);
+    Recv = recv_impl<byte>(std::move(Context), Comm, RecvMap, Count, Tag);
     break;
   case data_type::INT:
     Recv = recv_impl<int>(std::move(Context), Comm, RecvMap, Count, Tag);

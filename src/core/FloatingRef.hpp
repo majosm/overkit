@@ -72,7 +72,7 @@ public:
 
 private:
 
-  using byte_ptr = core::mimic_cvref<T, unsigned char> *;
+  using byte_ptr = core::mimic_cvref<T, byte> *;
 
   void * const *ReferenceLoc_ = nullptr;
   std::ptrdiff_t Offset_ = 0;

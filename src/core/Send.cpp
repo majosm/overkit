@@ -185,7 +185,7 @@ send CreateSend(std::shared_ptr<context> Context, comm_view Comm, const send_map
     Send = send_impl<bool>(std::move(Context), Comm, SendMap, Count, Tag);
     break;
   case data_type::BYTE:
-    Send = send_impl<unsigned char>(std::move(Context), Comm, SendMap, Count, Tag);
+    Send = send_impl<byte>(std::move(Context), Comm, SendMap, Count, Tag);
     break;
   case data_type::INT:
     Send = send_impl<int>(std::move(Context), Comm, SendMap, Count, Tag);

@@ -45,8 +45,8 @@ private:
 #ifdef OVK_HAVE_MPI_IBARRIER
   MPI_Request Request_ = MPI_REQUEST_NULL;
 #else
-  unsigned char SendBuffer_[2] = {0, 0};
-  unsigned char RecvBuffer_[1] = {0};
+  byte SendBuffer_[2] = {0, 0};
+  byte RecvBuffer_[1] = {0};
   MPI_Request Requests_[2] = {MPI_REQUEST_NULL, MPI_REQUEST_NULL};
   int NumCompleted_ = 0;
 #endif

@@ -26,6 +26,8 @@ enum {
   OVK_ALL_GRIDS = -1
 };
 
+typedef unsigned char byte;
+
 typedef enum {
   OVK_ROW_MAJOR,
   OVK_COLUMN_MAJOR

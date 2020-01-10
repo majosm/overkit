@@ -44,8 +44,8 @@ collect CreateCollectNoneCol(std::shared_ptr<context> &&Context, comm_view Comm,
       FieldValuesRange);
     break;
   case data_type::BYTE:
-    Collect = collect_none_col<unsigned char>(std::move(Context), Comm, Cart, LocalRange,
-      CollectMap, Count, FieldValuesRange);
+    Collect = collect_none_col<byte>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+      FieldValuesRange);
     break;
   case data_type::INT:
     Collect = collect_none_col<int>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
@@ -102,8 +102,8 @@ collect CreateCollectAnyCol(std::shared_ptr<context> &&Context, comm_view Comm, 
       FieldValuesRange);
     break;
   case data_type::BYTE:
-    Collect = collect_any_col<unsigned char>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
-      Count, FieldValuesRange);
+    Collect = collect_any_col<byte>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+      FieldValuesRange);
     break;
   case data_type::INT:
     Collect = collect_any_col<int>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
@@ -160,8 +160,8 @@ collect CreateCollectNotAllCol(std::shared_ptr<context> &&Context, comm_view Com
       Count, FieldValuesRange);
     break;
   case data_type::BYTE:
-    Collect = collect_not_all_col<unsigned char>(std::move(Context), Comm, Cart, LocalRange,
-      CollectMap, Count, FieldValuesRange);
+    Collect = collect_not_all_col<byte>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
+      Count, FieldValuesRange);
     break;
   case data_type::INT:
     Collect = collect_not_all_col<int>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
@@ -218,8 +218,8 @@ collect CreateCollectAllCol(std::shared_ptr<context> &&Context, comm_view Comm, 
       FieldValuesRange);
     break;
   case data_type::BYTE:
-    Collect = collect_all_col<unsigned char>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
-      Count, FieldValuesRange);
+    Collect = collect_all_col<byte>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+      FieldValuesRange);
     break;
   case data_type::INT:
     Collect = collect_all_col<int>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
@@ -276,8 +276,8 @@ collect CreateCollectMinCol(std::shared_ptr<context> &&Context, comm_view Comm, 
       FieldValuesRange);
     break;
   case data_type::BYTE:
-    Collect = collect_min_col<unsigned char>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
-      Count, FieldValuesRange);
+    Collect = collect_min_col<byte>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+      FieldValuesRange);
     break;
   case data_type::INT:
     Collect = collect_min_col<int>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
@@ -334,8 +334,8 @@ collect CreateCollectMaxCol(std::shared_ptr<context> &&Context, comm_view Comm, 
       FieldValuesRange);
     break;
   case data_type::BYTE:
-    Collect = collect_max_col<unsigned char>(std::move(Context), Comm, Cart, LocalRange, CollectMap,
-      Count, FieldValuesRange);
+    Collect = collect_max_col<byte>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,
+      FieldValuesRange);
     break;
   case data_type::INT:
     Collect = collect_max_col<int>(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count,

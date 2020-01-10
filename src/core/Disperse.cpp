@@ -39,7 +39,7 @@ disperse CreateDisperseOverwrite(std::shared_ptr<context> Context, const dispers
         FieldValuesRange);
       break;
     case data_type::BYTE:
-      Disperse = disperse_overwrite_row<unsigned char>(std::move(Context), DisperseMap, Count,
+      Disperse = disperse_overwrite_row<byte>(std::move(Context), DisperseMap, Count,
         FieldValuesRange);
       break;
     case data_type::INT:
@@ -86,7 +86,7 @@ disperse CreateDisperseOverwrite(std::shared_ptr<context> Context, const dispers
         FieldValuesRange);
       break;
     case data_type::BYTE:
-      Disperse = disperse_overwrite_col<unsigned char>(std::move(Context), DisperseMap, Count,
+      Disperse = disperse_overwrite_col<byte>(std::move(Context), DisperseMap, Count,
         FieldValuesRange);
       break;
     case data_type::INT:
@@ -155,7 +155,7 @@ disperse CreateDisperseAppend(std::shared_ptr<context> Context, const disperse_m
         FieldValuesRange);
       break;
     case data_type::BYTE:
-      Disperse = disperse_append_row<unsigned char>(std::move(Context), DisperseMap, Count,
+      Disperse = disperse_append_row<byte>(std::move(Context), DisperseMap, Count,
         FieldValuesRange);
       break;
     case data_type::INT:
@@ -201,7 +201,7 @@ disperse CreateDisperseAppend(std::shared_ptr<context> Context, const disperse_m
         FieldValuesRange);
       break;
     case data_type::BYTE:
-      Disperse = disperse_append_col<unsigned char>(std::move(Context), DisperseMap, Count,
+      Disperse = disperse_append_col<byte>(std::move(Context), DisperseMap, Count,
         FieldValuesRange);
       break;
     case data_type::INT:

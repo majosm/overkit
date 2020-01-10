@@ -69,8 +69,8 @@ static inline bool ovkValidDataType(ovk_data_type DataType) {
 static inline int ovkDataTypeSize(ovk_data_type DataType) {
 
   switch (DataType) {
-    case OVK_BOOL: return sizeof(unsigned char);
-    case OVK_BYTE: return sizeof(unsigned char);
+    case OVK_BOOL: return sizeof(byte);
+    case OVK_BYTE: return sizeof(byte);
     case OVK_INT: return sizeof(int);
     case OVK_LONG: return sizeof(long);
     case OVK_LONG_LONG: return sizeof(long long);

@@ -97,7 +97,7 @@ template <typename T> using mpi_compatible_type = typename data_type_traits<T>::
 
 template <> struct data_type_traits<bool> {
   static constexpr data_type Type = data_type::BOOL;
-  using mpi_convert_type = unsigned char;
+  using mpi_convert_type = byte;
   static MPI_Datatype MPIType() { return MPI_UNSIGNED_CHAR; }
 };
 

@@ -643,7 +643,7 @@ void ReadGlobalInfo(const xintout &XINTOUT, const std::string &HOPath, endian &E
 bool DetectFormat(MPI_File HOFile, endian &Endian, xintout_format &Format, core::profiler &Profiler)
   {
 
-  unsigned char InitialBytes[sizeof(int)];
+  byte InitialBytes[sizeof(int)];
   MPI_Status Status;
   Profiler.Start(IMPORT_READ_MPI_IO_READ_TIME);
   int MPIError = MPI_File_read_at(HOFile, 0, InitialBytes, sizeof(int), MPI_BYTE, &Status);
@@ -1440,7 +1440,7 @@ void ReadReceivers(xintout_grid &XINTOUTGrid, const std::string &HOPath, long lo
         ConnectionIDType = MPI_LONG_LONG;
       }
 
-      array<unsigned char> ConnectionIDsBytes({NumLocalReceivers*ConnectionIDSize});
+      array<byte> ConnectionIDsBytes({NumLocalReceivers*ConnectionIDSize});
 
       DatasetOffset = HOConnectionIDsOffset;
       ReadOffset = DatasetOffset+LocalBegin*ConnectionIDSize;
@@ -2763,7 +2763,7 @@ int File_read_at_endian(MPI_File File, MPI_Offset Offset, void *Buffer, int Coun
 
 endian MachineEndian() {
 
-  unsigned char EndianTest[] = {1,0};
+  byte EndianTest[] = {1,0};
 
   if(*reinterpret_cast<short *>(&EndianTest[0]) == 1) {
     return endian::LITTLE;
@@ -2775,10 +2775,9 @@ endian MachineEndian() {
 
 void SwapEndian(void *Data, int ElementSize, int NumElements) {
 
-  array_view<unsigned char> DataBytes(static_cast<unsigned char *>(Data),
-    {NumElements*ElementSize});
+  array_view<byte> DataBytes(static_cast<byte *>(Data), {NumElements*ElementSize});
 
-  array<unsigned char> Element({ElementSize});
+  array<byte> Element({ElementSize});
 
   for (int i = 0; i < NumElements; ++i) {
     for (int j = 0; j < ElementSize; ++j) {

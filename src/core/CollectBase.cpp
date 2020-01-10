@@ -279,8 +279,8 @@ template <typename T, array_layout Layout> void collect_base_for_type<T, Layout>
 
 template class collect_base_for_type<bool, array_layout::ROW_MAJOR>;
 template class collect_base_for_type<bool, array_layout::COLUMN_MAJOR>;
-template class collect_base_for_type<unsigned char, array_layout::ROW_MAJOR>;
-template class collect_base_for_type<unsigned char, array_layout::COLUMN_MAJOR>;
+template class collect_base_for_type<byte, array_layout::ROW_MAJOR>;
+template class collect_base_for_type<byte, array_layout::COLUMN_MAJOR>;
 template class collect_base_for_type<int, array_layout::ROW_MAJOR>;
 template class collect_base_for_type<int, array_layout::COLUMN_MAJOR>;
 template class collect_base_for_type<long, array_layout::ROW_MAJOR>;

@@ -144,8 +144,8 @@ array<int> DynamicHandshake(comm_view Comm_, array_view<const int> Ranks) {
   // Duplicate comm to avoid matching with any sends/recvs before and after
   comm Comm = DuplicateComm(Comm_);
 
-  unsigned char SendData = 0;
-  unsigned char RecvData;
+  byte SendData = 0;
+  byte RecvData;
 
   int Rank = Comm.Rank();
 
