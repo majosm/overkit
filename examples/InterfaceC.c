@@ -162,6 +162,7 @@ static void DestroyGridData(grid_data *Data) {
 
 }
 
+#ifdef OVK_HAVE_XDMF
 static int *CreateOutputState(const ovk_domain *Domain, int ConnectivityComponentID, int GridID) {
 
   const ovk_connectivity_component *ConnectivityComponent;
@@ -214,6 +215,7 @@ static int *CreateOutputState(const ovk_domain *Domain, int ConnectivityComponen
   return OutputState;
 
 }
+#endif
 
 static int Interface(int N) {
 
