@@ -464,14 +464,14 @@ add_subdirectory(support)
 # Utility programs
 add_subdirectory(utils)
 
-# Test code
-if(TESTS)
-  add_subdirectory(tests)
-endif()
-
 # Example programs
 if(EXAMPLES)
   add_subdirectory(examples)
+endif()
+
+# Test code
+if(TESTS)
+  add_subdirectory(tests)
 endif()
 
 #==============================

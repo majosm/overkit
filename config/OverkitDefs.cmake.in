@@ -11,9 +11,9 @@ set(OverkitParallel_HEADERS @OverkitParallel_CMAKE_HEADERS@)
 
 # Build option detection
 set(OverkitParallel_OPTION_SHARED_LIBS @OverkitParallel_CMAKE_OPTION_SHARED_LIBS@)
+set(OverkitParallel_OPTION_EXAMPLES @OverkitParallel_CMAKE_OPTION_EXAMPLES@)
 set(OverkitParallel_OPTION_TESTS @OverkitParallel_CMAKE_OPTION_TESTS@)
 set(OverkitParallel_OPTION_COVERAGE @OverkitParallel_CMAKE_OPTION_COVERAGE@)
-set(OverkitParallel_OPTION_EXAMPLES @OverkitParallel_CMAKE_OPTION_EXAMPLES@)
 set(OverkitParallel_OPTION_PROFILE @OverkitParallel_CMAKE_OPTION_PROFILE@)
 set(OverkitParallel_OPTION_OPENMP @OverkitParallel_CMAKE_OPTION_OPENMP@)
 set(OverkitParallel_OPTION_XPACC @OverkitParallel_CMAKE_OPTION_XPACC@)
