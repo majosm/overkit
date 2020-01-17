@@ -7,6 +7,12 @@
 
 set(LOCAL_TARGETS)
 
+# Warn if no HDF5
+if(NOT HAVE_HDF5)
+  message(WARNING "Not building with HDF5; will not be able to write XDMF output files in examples.")
+  set(GLOBAL_WARNING_FLAG TRUE CACHE INTERNAL "")
+endif()
+
 #==========
 # Examples
 #==========
