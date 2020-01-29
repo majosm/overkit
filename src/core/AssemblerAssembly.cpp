@@ -409,21 +409,16 @@ struct generate_overlap_data {
         NGridCoords(1)(Point),
         NGridCoords(2)(Point)
       };
-      auto MaybeCell = OverlapAccel.FindCell(PointCoords, OverlapTolerance);
+      optional<tuple<int>> MaybeCell;
+      optional<tuple<double>> MaybeCellCoords;
+      OverlapAccel.FindCell(PointCoords, OverlapTolerance, MaybeCell, MaybeCellCoords);
       if (MaybeCell) {
         const tuple<int> &Cell = *MaybeCell;
+        const tuple<double> &CellCoords = *MaybeCellCoords;
         OverlapData.Cells(iQueryPoint) = MGridCellGlobalIndexer.ToIndex(Cell);
-        auto MaybeLocalCoords = Manipulator.CoordsInCell(MGridCoords, Cell, PointCoords);
-        if (MaybeLocalCoords) {
-          const tuple<double> &LocalCoords = *MaybeLocalCoords;
-          OverlapData.Coords(0,iQueryPoint) = LocalCoords(0);
-          OverlapData.Coords(1,iQueryPoint) = LocalCoords(1);
-          OverlapData.Coords(2,iQueryPoint) = LocalCoords(2);
-        } else {
-          Logger.LogWarning(true, "Failed to compute local coordinates of point (%i,%i,%i) of "
-            "grid %s inside cell (%i,%i,%i) of grid %s.", Point(0), Point(1), Point(2),
-            NGridName, Cell(0), Cell(1), Cell(2), MGridName);
-        }
+        OverlapData.Coords(0,iQueryPoint) = CellCoords(0);
+        OverlapData.Coords(1,iQueryPoint) = CellCoords(1);
+        OverlapData.Coords(2,iQueryPoint) = CellCoords(2);
       }
     }
   }
@@ -1374,6 +1369,78 @@ void assembler::DetectOverlap_() {
 
   elem_map<int,2,overlap_data> OverlapDataForGridPair;
 
+  // Slightly awkward way of ensuring same cells are picked independently of decomposition
+  // when there are multiple possibilities
+  // TODO: Find out if there's a cleaner way to do this
+  auto BetterCell = [NumDims](const tuple<double> &OldCellCoords, const tuple<double>
+    &NewCellCoords, long long iOldCell, long long iNewCell) -> bool {
+
+    bool Result = false;
+
+    auto Inside = [NumDims](const tuple<double> &CellCoords) -> bool {
+      bool Result = true;
+      for (int iDim = 0; iDim < NumDims; ++iDim) {
+        if (CellCoords(iDim) < 0. || CellCoords(iDim) > 1.) {
+          Result = false;
+          break;
+        }
+      }
+      return Result;
+    };
+
+    bool OldInside = Inside(OldCellCoords);
+    bool NewInside = Inside(NewCellCoords);
+
+    if (OldInside) {
+
+      if (NewInside) {
+        auto MaxCenterDistance = [NumDims](const tuple<double> &CellCoords) -> double {
+          double Result = 0.;
+          for (int iDim = 0; iDim < NumDims; ++iDim) {
+            Result = Max(Result, std::abs(CellCoords(iDim)-0.5));
+          }
+          return Result;
+        };
+        double OldMaxCenterDistance = MaxCenterDistance(OldCellCoords);
+        double NewMaxCenterDistance = MaxCenterDistance(NewCellCoords);
+        Result = NewMaxCenterDistance < OldMaxCenterDistance || (NewMaxCenterDistance ==
+          OldMaxCenterDistance && iNewCell < iOldCell);
+      }
+
+    } else {
+
+      if (NewInside) {
+
+        Result = true;
+
+      } else {
+
+        auto OutsideDistanceSq = [NumDims](const tuple<double> &CellCoords) -> double {
+          double Result = 0.;
+          for (int iDim = 0; iDim < NumDims; ++iDim) {
+            double ClampOffset = 0.;
+            if (CellCoords(iDim) > 1.) {
+              ClampOffset = 1.-CellCoords(iDim);
+            } else if (CellCoords(iDim) < 0.) {
+              ClampOffset = -CellCoords(iDim);
+            }
+            Result += ClampOffset*ClampOffset;
+          }
+          return Result;
+        };
+        double OldOutsideDistanceSq = OutsideDistanceSq(OldCellCoords);
+        double NewOutsideDistanceSq = OutsideDistanceSq(NewCellCoords);
+        Result = NewOutsideDistanceSq < OldOutsideDistanceSq || (NewOutsideDistanceSq ==
+          OldOutsideDistanceSq && iNewCell < iOldCell);
+
+      }
+
+    }
+
+    return Result;
+
+  };
+
   for (int NGridID : Domain.LocalGridIDs()) {
     const grid &NGrid = Domain.Grid(NGridID);
     const range &LocalRange = NGrid.LocalRange();
@@ -1412,6 +1479,7 @@ void assembler::DetectOverlap_() {
       if (NumOverlapping == 0) continue;
       overlap_data &AggregatedOverlapData = OverlapDataForGridPair.Insert({MGridID,NGridID},
         NumOverlapping);
+      array<bool> Filled({NumOverlapping}, false);
       OverlapMask.Fill(false);
       for (int Rank : MGridRanks) {
         auto &SubdivisionOverlapData = OverlapDataForMGridAndRank({MGridID,Rank});
@@ -1420,20 +1488,48 @@ void assembler::DetectOverlap_() {
           for (long long iQueryPoint = 0; iQueryPoint < OverlapData.Points.Count(); ++iQueryPoint) {
             long long iPoint = OverlapData.Points(iQueryPoint);
             long long iCell = OverlapData.Cells(iQueryPoint);
-            if (!OverlapMask[iPoint] && iCell != NO_CELL) {
+            if (iCell != NO_CELL) {
               long long iOverlapping = NumOverlappingBefore[iPoint];
               tuple<int> Point = LocalIndexer.ToTuple(iPoint);
               tuple<int> Cell = MGridCellGlobalIndexer.ToTuple(iCell);
-              AggregatedOverlapData.Cells(0,iOverlapping) = Cell(0);
-              AggregatedOverlapData.Cells(1,iOverlapping) = Cell(1);
-              AggregatedOverlapData.Cells(2,iOverlapping) = Cell(2);
-              AggregatedOverlapData.Coords(0,iOverlapping) = OverlapData.Coords(0,iQueryPoint);
-              AggregatedOverlapData.Coords(1,iOverlapping) = OverlapData.Coords(1,iQueryPoint);
-              AggregatedOverlapData.Coords(2,iOverlapping) = OverlapData.Coords(2,iQueryPoint);
-              AggregatedOverlapData.Points(0,iOverlapping) = Point(0);
-              AggregatedOverlapData.Points(1,iOverlapping) = Point(1);
-              AggregatedOverlapData.Points(2,iOverlapping) = Point(2);
-              OverlapMask[iPoint] = true;
+              if (!Filled(iOverlapping)) {
+                AggregatedOverlapData.Cells(0,iOverlapping) = Cell(0);
+                AggregatedOverlapData.Cells(1,iOverlapping) = Cell(1);
+                AggregatedOverlapData.Cells(2,iOverlapping) = Cell(2);
+                AggregatedOverlapData.Coords(0,iOverlapping) = OverlapData.Coords(0,iQueryPoint);
+                AggregatedOverlapData.Coords(1,iOverlapping) = OverlapData.Coords(1,iQueryPoint);
+                AggregatedOverlapData.Coords(2,iOverlapping) = OverlapData.Coords(2,iQueryPoint);
+                AggregatedOverlapData.Points(0,iOverlapping) = Point(0);
+                AggregatedOverlapData.Points(1,iOverlapping) = Point(1);
+                AggregatedOverlapData.Points(2,iOverlapping) = Point(2);
+                Filled(iOverlapping) = true;
+                OverlapMask[iPoint] = true;
+              } else {
+                tuple<double> OldCellCoords = {
+                  AggregatedOverlapData.Coords(0,iOverlapping),
+                  AggregatedOverlapData.Coords(1,iOverlapping),
+                  AggregatedOverlapData.Coords(2,iOverlapping)
+                };
+                tuple<double> NewCellCoords = {
+                  OverlapData.Coords(0,iQueryPoint),
+                  OverlapData.Coords(1,iQueryPoint),
+                  OverlapData.Coords(2,iQueryPoint)
+                };
+                tuple<int> OldCell = {
+                  AggregatedOverlapData.Cells(0,iOverlapping),
+                  AggregatedOverlapData.Cells(1,iOverlapping),
+                  AggregatedOverlapData.Cells(2,iOverlapping)
+                };
+                long long iOldCell = MGridCellGlobalIndexer.ToIndex(OldCell);
+                if (BetterCell(OldCellCoords, NewCellCoords, iOldCell, iCell)) {
+                  AggregatedOverlapData.Cells(0,iOverlapping) = Cell(0);
+                  AggregatedOverlapData.Cells(1,iOverlapping) = Cell(1);
+                  AggregatedOverlapData.Cells(2,iOverlapping) = Cell(2);
+                  AggregatedOverlapData.Coords(0,iOverlapping) = NewCellCoords(0);
+                  AggregatedOverlapData.Coords(1,iOverlapping) = NewCellCoords(1);
+                  AggregatedOverlapData.Coords(2,iOverlapping) = NewCellCoords(2);
+                }
+              }
             }
           }
         }

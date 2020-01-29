@@ -279,16 +279,12 @@ overlap_accel::node overlap_accel::CreateNode_(const box &AccelBounds, const fie
 
 }
 
-optional<tuple<int>> overlap_accel::FindCell(const tuple<double> &PointCoords, double Tolerance)
-  const {
-
-  optional<tuple<int>> MaybeCell;
+void overlap_accel::FindCell(const tuple<double> &PointCoords, double Tolerance,
+  optional<tuple<int>> &MaybeCell, optional<tuple<double>> &MaybeCellCoords) const {
 
   if (Bounds_.Contains(PointCoords)) {
-    MaybeCell = FindCellInNode_(*Root_, PointCoords, Tolerance);
+    FindCellInNode_(*Root_, PointCoords, Tolerance, MaybeCell, MaybeCellCoords);
   }
-
-  return MaybeCell;
 
 }
 
@@ -297,62 +293,95 @@ struct find_cell_in_bin {
   template <typename T> void operator()(const T &Manipulator, int NumDims, const array<field_view<
     const double>> &Coords, const array_view<const long long> &BinCells, const array<long long>
     &NodeContainedCells, const field_indexer &CellIndexer, const tuple<double> &PointCoords, double
-    Tolerance, optional<tuple<int>> &MaybeCell) const {
+    Tolerance, optional<tuple<int>> &MaybeCell, optional<tuple<double>> &MaybeCellCoords) const {
 
-    // Try to find overlap without tolerance first
+    bool BestInside = false;
+    double BestMaxCenterDistance = std::numeric_limits<double>::max();
+    double BestOutsideDistanceSq = std::numeric_limits<double>::max();
+
     for (long long iContainedCell : BinCells) {
+
       long long iCell = NodeContainedCells(iContainedCell);
       tuple<int> Cell = CellIndexer.ToTuple(iCell);
-      if (Manipulator.OverlapsCell(Coords, 0., Cell, PointCoords)) {
-        MaybeCell = Cell;
-        break;
-      }
-    }
 
-    // If that fails, try to project onto edge of nearest cell
-    if (!MaybeCell) {
-      double BestDisplacementSq = std::numeric_limits<double>::max();
-      for (long long iContainedCell : BinCells) {
-        long long iCell = NodeContainedCells(iContainedCell);
-        tuple<int> Cell = CellIndexer.ToTuple(iCell);
-        if (!Manipulator.OverlapsCell(Coords, Tolerance, Cell, PointCoords)) continue;
-        auto MaybeCellCoords = Manipulator.CoordsInCell(Coords, Cell, PointCoords);
-        if (!MaybeCellCoords) continue;
-        const tuple<double> &CellCoords = *MaybeCellCoords;
-        double DisplacementSq = 0.;
-        for (int iDim = 0; iDim < NumDims; ++iDim) {
-          double ClampOffset = 0.;
-          if (CellCoords(iDim) > 1.) {
-            ClampOffset = 1.-CellCoords(iDim);
-          } else if (CellCoords(iDim) < 0.) {
-            ClampOffset = -CellCoords(iDim);
-          }
-          DisplacementSq += ClampOffset*ClampOffset;
-        }
-        if (DisplacementSq < BestDisplacementSq) {
-          MaybeCell = Cell;
-          BestDisplacementSq = DisplacementSq;
+      if (!Manipulator.OverlapsCell(Coords, Tolerance, Cell, PointCoords)) continue;
+
+      auto MaybeCellCoords_ = Manipulator.CoordsInCell(Coords, Cell, PointCoords);
+      if (!MaybeCellCoords_) continue;
+      const tuple<double> &CellCoords = *MaybeCellCoords_;
+
+      bool Inside = true;
+      for (int iDim = 0; iDim < NumDims; ++iDim) {
+        if (CellCoords(iDim) < 0. || CellCoords(iDim) > 1.) {
+          Inside = false;
+          break;
         }
       }
+
+      if (BestInside) {
+
+        if (Inside) {
+          double MaxCenterDistance = 0.;
+          for (int iDim = 0; iDim < NumDims; ++iDim) {
+            MaxCenterDistance = Max(MaxCenterDistance, std::abs(CellCoords(iDim)-0.5));
+          }
+          if (MaxCenterDistance < BestMaxCenterDistance) {
+            MaybeCell = Cell;
+            MaybeCellCoords = CellCoords;
+            BestMaxCenterDistance = MaxCenterDistance;
+          }
+        }
+
+      } else {
+
+        if (Inside) {
+          MaybeCell = Cell;
+          MaybeCellCoords = CellCoords;
+          BestInside = true;
+          BestMaxCenterDistance = 0.;
+          for (int iDim = 0; iDim < NumDims; ++iDim) {
+            BestMaxCenterDistance = Max(BestMaxCenterDistance, std::abs(CellCoords(iDim)-0.5));
+          }
+
+        } else {
+
+          double OutsideDistanceSq = 0.;
+          for (int iDim = 0; iDim < NumDims; ++iDim) {
+            double ClampOffset = 0.;
+            if (CellCoords(iDim) > 1.) {
+              ClampOffset = 1.-CellCoords(iDim);
+            } else if (CellCoords(iDim) < 0.) {
+              ClampOffset = -CellCoords(iDim);
+            }
+            OutsideDistanceSq += ClampOffset*ClampOffset;
+          }
+          if (OutsideDistanceSq < BestOutsideDistanceSq) {
+            MaybeCell = Cell;
+            MaybeCellCoords = CellCoords;
+            BestOutsideDistanceSq = OutsideDistanceSq;
+          }
+
+        }
+
+      }
+
     }
 
   }
 };
 }
 
-optional<tuple<int>> overlap_accel::FindCellInNode_(const node &Node, const tuple<double>
-  &PointCoords, double Tolerance) const {
-
-  optional<tuple<int>> MaybeCell;
+void overlap_accel::FindCellInNode_(const node &Node, const tuple<double> &PointCoords, double
+  Tolerance, optional<tuple<int>> &MaybeCell, optional<tuple<double>> &MaybeCellCoords) const {
 
   bool LeafNode = Node.Hash != nullptr;
 
   if (!LeafNode) {
 
     if (PointCoords(Node.SplitDim) <= Node.Split) {
-      MaybeCell = FindCellInNode_(*Node.LeftChild, PointCoords, Tolerance);
+      FindCellInNode_(*Node.LeftChild, PointCoords, Tolerance, MaybeCell, MaybeCellCoords);
     } else {
-      MaybeCell = FindCellInNode_(*Node.RightChild, PointCoords, Tolerance);
+      FindCellInNode_(*Node.RightChild, PointCoords, Tolerance, MaybeCell, MaybeCellCoords);
     }
 
   } else {
@@ -362,12 +391,10 @@ optional<tuple<int>> overlap_accel::FindCellInNode_(const node &Node, const tupl
     if (iBin >= 0) {
       array_view<const long long> BinCells = Node.Hash->RetrieveBin(iBin);
       GeometryManipulator_.Apply(find_cell_in_bin(), NumDims_, Coords_, BinCells, Node.CellIndices,
-        CellIndexer_, PointCoords, Tolerance, MaybeCell);
+        CellIndexer_, PointCoords, Tolerance, MaybeCell, MaybeCellCoords);
     }
 
   }
-
-  return MaybeCell;
 
 }
 

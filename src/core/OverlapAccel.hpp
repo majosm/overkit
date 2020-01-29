@@ -31,7 +31,8 @@ public:
     long long NumCellsLeaf, double MaxNodeUnoccupiedVolume, double MaxNodeCellVolumeVariation,
     double BinScale);
 
-  optional<tuple<int>> FindCell(const tuple<double> &PointCoords, double Tolerance) const;
+  void FindCell(const tuple<double> &PointCoords, double Tolerance, optional<tuple<int>> &MaybeCell,
+    optional<tuple<double>> &MaybeCellCoords) const;
 
 private:
 
@@ -64,8 +65,8 @@ private:
     &CellVolumes, const array<long long> &ContainedCellIndices, int Depth, int MaxDepth, long long
     NumCellsLeaf, double MaxUnoccupiedVolume, double MaxCellVolumeVariation, double BinScale) const;
 
-  optional<tuple<int>> FindCellInNode_(const node &Node, const tuple<double> &PointCoords, double
-    Tolerance) const;
+  void FindCellInNode_(const node &Node, const tuple<double> &PointCoords, double Tolerance,
+    optional<tuple<int>> &MaybeCell, optional<tuple<double>> &MaybeCellCoords) const;
 
 };
 
