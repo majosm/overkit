@@ -168,6 +168,7 @@ set(INTERNAL_HEADERS
   Handle.inl
   Halo.hpp
   Halo.inl
+  HashableRegionTraits.hpp
   IntegerSequence.hpp
   IteratorTraits.hpp
   Logger.hpp
@@ -187,7 +188,6 @@ set(INTERNAL_HEADERS
   RecvMap.hpp
   RegionHash.hpp
   RegionHash.inl
-  RegionTraits.hpp
   Requires.hpp
   ScopeGuard.hpp
   ScopeGuard.inl

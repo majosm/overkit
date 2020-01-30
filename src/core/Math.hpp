@@ -6,6 +6,7 @@
 
 #include <ovk/core/Elem.hpp>
 #include <ovk/core/Global.hpp>
+#include <ovk/core/Tuple.hpp>
 
 #include <cmath>
 
@@ -28,6 +29,11 @@ elem<double,2> LagrangeInterpLinear(double U);
 elem<double,2> LagrangeInterpLinearDeriv(double U);
 elem<double,4> LagrangeInterpCubic(double U);
 elem<double,4> LagrangeInterpCubicDeriv(double U);
+
+tuple<int> MapToUniformGridCell(int NumDims, const tuple<int> &Origin, const tuple<int> &CellSize,
+  const tuple<int> &Point);
+tuple<int> MapToUniformGridCell(int NumDims, const tuple<double> &Origin, const tuple<double>
+  &CellSize, const tuple<double> &Point);
 
 }}
 

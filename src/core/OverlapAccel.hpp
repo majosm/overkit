@@ -36,7 +36,7 @@ public:
 
 private:
 
-  using bounding_box_hash = region_hash<double>;
+  using bounding_box_hash = region_hash<box>;
 
   struct node {
     int SplitDim;

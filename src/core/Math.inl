@@ -120,4 +120,33 @@ inline elem<double,4> LagrangeInterpCubicDeriv(double U) {
 
 }
 
+inline tuple<int> MapToUniformGridCell(int NumDims, const tuple<int> &Origin, const tuple<int>
+  &CellSize, const tuple<int> &Point) {
+
+  tuple<int> Cell = MakeUniformTuple<int>(NumDims, 0);
+
+  for (int iDim = 0; iDim < NumDims; ++iDim) {
+    int Offset = Point(iDim) - Origin(iDim);
+    // Division rounding down
+    Cell(iDim) = Offset/CellSize(iDim) - (Offset % CellSize(iDim) < 0);
+  }
+
+  return Cell;
+
+}
+
+inline tuple<int> MapToUniformGridCell(int NumDims, const tuple<double> &Origin, const tuple<double>
+  &CellSize, const tuple<double> &Point) {
+
+  tuple<int> Cell = MakeUniformTuple<int>(NumDims, 0);
+
+  for (int iDim = 0; iDim < NumDims; ++iDim) {
+    double Offset = Point(iDim) - Origin(iDim);
+    Cell(iDim) = int(std::floor(Offset/CellSize(iDim)));
+  }
+
+  return Cell;
+
+}
+
 }}

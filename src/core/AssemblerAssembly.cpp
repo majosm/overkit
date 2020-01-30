@@ -365,7 +365,7 @@ struct generate_subdivisions {
   }
 };
 
-struct generate_bounding_boxes {
+struct generate_subdivision_boxes {
   template <typename T> array<box> operator()(const T &Manipulator, const cart &CellCart, const
     array<distributed_field<double>> &Coords, const distributed_field<bool> &CellActiveMask, double
     Tolerance, const array<range> &SubdivisionRanges) const {
@@ -479,15 +479,8 @@ void assembler::DetectOverlap_() {
     }
   }
 
-  elem<int,2> DummyIntPair;
-  core::handle<MPI_Datatype> IntPairMPIDatatype = core::CreateStructMPIDatatype(
-    sizeof(DummyIntPair), {{reinterpret_cast<byte *>(&DummyIntPair[0])-reinterpret_cast<byte *>(
-    &DummyIntPair),2,MPI_INT}});
-
-  array<box> SubdivisionBoxes;
-  array<elem<int,2>> SubdivisionGridIDsAndIndices;
-  SubdivisionBoxes.Reserve(TotalSubdivisions);
-  SubdivisionGridIDsAndIndices.Reserve(TotalSubdivisions);
+  array<bounding_box> SubdivisionBoundingBoxes;
+  SubdivisionBoundingBoxes.Reserve(TotalSubdivisions);
 
   for (int GridID : Domain.LocalGridIDs()) {
     const grid &Grid = Domain.Grid(GridID);
@@ -496,11 +489,13 @@ void assembler::DetectOverlap_() {
     const geometry &Geometry = GeometryComponent.Geometry(GridID);
     core::geometry_manipulator GeometryManipulator(Geometry.Type(), NumDims);
     const array<range> &SubdivisionRanges = SubdivisionRangesForLocalGrid(GridID);
-    array<box> Boxes = GeometryManipulator.Apply(generate_bounding_boxes(), Grid.CellCart(),
+    array<box> Boxes = GeometryManipulator.Apply(generate_subdivision_boxes(), Grid.CellCart(),
       Geometry.Coords(), CellActiveMask, MaxOverlapTolerances(GridID), SubdivisionRanges);
     for (int iSubdivision = 0; iSubdivision < SubdivisionRanges.Count(); ++iSubdivision) {
-      SubdivisionBoxes.Append(Boxes(iSubdivision));
-      SubdivisionGridIDsAndIndices.Append(GridID,iSubdivision);
+      bounding_box &BoundingBox = SubdivisionBoundingBoxes.Append();
+      BoundingBox.Box = Boxes(iSubdivision);
+      BoundingBox.GridID = GridID;
+      BoundingBox.SubdivisionIndex = iSubdivision;
     }
   }
 
@@ -518,8 +513,7 @@ void assembler::DetectOverlap_() {
   Profiler.Start(OVERLAP_BB_CREATE_HASH_TIME);
 
   bounding_box_hash &BoundingBoxHash = AssemblyData.BoundingBoxHash;
-  BoundingBoxHash = bounding_box_hash(NumDims, Domain.Comm(), TotalSubdivisions, SubdivisionBoxes,
-    SubdivisionGridIDsAndIndices, IntPairMPIDatatype);
+  BoundingBoxHash = bounding_box_hash(NumDims, Domain.Comm(), SubdivisionBoundingBoxes);
 
   Profiler.Stop(OVERLAP_BB_CREATE_HASH_TIME);
 
@@ -620,11 +614,12 @@ void assembler::DetectOverlap_() {
           };
           for (int iRegion : RegionIndices) {
             const bounding_box_hash_region_data &RegionData = Bins.RegionData(iRegion);
-            const box &Bounds = RegionData.Region();
             int Rank = RegionData.Rank();
-            int MGridID = RegionData.AuxData<elem<int,2>>()(0);
-            int iSubdivision = RegionData.AuxData<elem<int,2>>()(1);
-            if (Options_.Overlappable({MGridID,NGridID}) && Bounds.Contains(PointCoords)) {
+            const bounding_box &BoundingBox = RegionData.Region();
+            const box &Box = BoundingBox.Box;
+            int MGridID = BoundingBox.GridID;
+            int iSubdivision = BoundingBox.SubdivisionIndex;
+            if (Options_.Overlappable({MGridID,NGridID}) && Box.Contains(PointCoords)) {
               SubdivisionsFromMGridAndRank.Fetch({MGridID,Rank}).Insert(iSubdivision);
             }
           }
@@ -1051,11 +1046,12 @@ void assembler::DetectOverlap_() {
           };
           for (int iRegion : RegionIndices) {
             const bounding_box_hash_region_data &RegionData = Bins.RegionData(iRegion);
-            const box &Bounds = RegionData.Region();
             int Rank = RegionData.Rank();
-            int MGridID = RegionData.AuxData<elem<int,2>>()(0);
-            int iSubdivision = RegionData.AuxData<elem<int,2>>()(1);
-            if (Options_.Overlappable({MGridID,NGridID}) && Bounds.Contains(PointCoords)) {
+            const bounding_box &BoundingBox = RegionData.Region();
+            const box &Box = BoundingBox.Box;
+            int MGridID = BoundingBox.GridID;
+            int iSubdivision = BoundingBox.SubdivisionIndex;
+            if (Options_.Overlappable({MGridID,NGridID}) && Box.Contains(PointCoords)) {
               ++(NumQueryPointsForMGridAndRank.Fetch({MGridID,Rank}).Fetch(iSubdivision));
             }
           }
@@ -1115,11 +1111,12 @@ void assembler::DetectOverlap_() {
           };
           for (int iRegion : RegionIndices) {
             const bounding_box_hash_region_data &RegionData = Bins.RegionData(iRegion);
-            const box &Bounds = RegionData.Region();
             int Rank = RegionData.Rank();
-            int MGridID = RegionData.AuxData<elem<int,2>>()(0);
-            int iSubdivision = RegionData.AuxData<elem<int,2>>()(1);
-            if (Options_.Overlappable({MGridID,NGridID}) && Bounds.Contains(PointCoords)) {
+            const bounding_box &BoundingBox = RegionData.Region();
+            const box &Box = BoundingBox.Box;
+            int MGridID = BoundingBox.GridID;
+            int iSubdivision = BoundingBox.SubdivisionIndex;
+            if (Options_.Overlappable({MGridID,NGridID}) && Box.Contains(PointCoords)) {
               subdivision_overlap_data &OverlapData = OverlapDataForMGridAndRank({MGridID,Rank})(
                 iSubdivision);
               OverlapData.Points.Append(LocalIndexer.ToIndex(Point));

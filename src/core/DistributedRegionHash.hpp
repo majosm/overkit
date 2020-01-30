@@ -11,14 +11,17 @@
 #include <ovk/core/CommunicationOps.hpp>
 #include <ovk/core/DataType.hpp>
 #include <ovk/core/Elem.hpp>
+#include <ovk/core/ElemSet.hpp>
 #include <ovk/core/Field.hpp>
 #include <ovk/core/Global.hpp>
+#include <ovk/core/HashableRegionTraits.hpp>
 #include <ovk/core/Indexer.hpp>
 #include <ovk/core/Interval.hpp>
 #include <ovk/core/Map.hpp>
+#include <ovk/core/Math.hpp>
+#include <ovk/core/MPISerializableTraits.hpp>
 #include <ovk/core/Range.hpp>
 #include <ovk/core/Requires.hpp>
-#include <ovk/core/RegionTraits.hpp>
 #include <ovk/core/Set.hpp>
 #include <ovk/core/Tuple.hpp>
 
@@ -34,38 +37,32 @@
 namespace ovk {
 namespace core {
 
-template <typename CoordType> class distributed_region_hash;
+template <typename RegionType> class distributed_region_hash;
 
-template <typename CoordType> class distributed_region_data {
+template <typename RegionType> class distributed_region_data {
 
 public:
 
-  using region_type = typename std::conditional<std::is_same<CoordType, double>::value, box,
-    range>::type;
+  using region_type = RegionType;
 
   const region_type &Region() const { return Region_; }
 
   int Rank() const { return Rank_; }
 
-  template <typename T> const T &AuxData() const {
-    return *reinterpret_cast<const T *>(AuxData_.Data());
-  }
-
 private:
 
   region_type Region_;
   int Rank_;
-  array<byte> AuxData_;
 
-  friend class distributed_region_hash<CoordType>;
+  friend class distributed_region_hash<RegionType>;
 
 };
 
-template <typename CoordType> class distributed_region_hash_retrieved_bins {
+template <typename RegionType> class distributed_region_hash_retrieved_bins {
 
 public:
 
-  using region_data = distributed_region_data<CoordType>;
+  using region_data = distributed_region_data<RegionType>;
 
   const region_data &RegionData(int iRegion) const { return RegionData_(iRegion); }
 
@@ -80,35 +77,32 @@ private:
   map<int,interval<long long>> BinRegionIndicesIntervals_;
   array<int> BinRegionIndices_;
 
-  friend class distributed_region_hash<CoordType>;
+  friend class distributed_region_hash<RegionType>;
 
 };
 
-template <typename CoordType> class distributed_region_hash {
+template <typename RegionType> class distributed_region_hash {
 
 public:
 
-  static_assert(std::is_same<CoordType, int>::value || std::is_same<CoordType, double>::value,
+  static_assert(IsHashableRegion<RegionType>(), "Invalid region type (not hashable).");
+  static_assert(IsMPISerializable<RegionType>(), "Invalid region type (not MPI-serializable).");
+
+  using region_type = RegionType;
+  using region_traits = hashable_region_traits<region_type>;
+  using coord_type = typename region_traits::coord_type;
+  using mpi_traits = mpi_serializable_traits<region_type>;
+
+  static_assert(std::is_same<coord_type, int>::value || std::is_same<coord_type, double>::value,
     "Coord type must be int or double.");
 
-  using coord_type = CoordType;
-  using region_type = typename std::conditional<std::is_same<coord_type, double>::value, box,
-    range>::type;
-  using traits = region_traits<region_type>;
+  using extents_type = interval<coord_type,MAX_DIMS>;
 
-  using region_data = distributed_region_data<coord_type>;
-  using retrieved_bins = distributed_region_hash_retrieved_bins<coord_type>;
+  using region_data = distributed_region_data<region_type>;
+  using retrieved_bins = distributed_region_hash_retrieved_bins<region_type>;
 
   distributed_region_hash(int NumDims, comm_view Comm);
-  distributed_region_hash(int NumDims, comm_view Comm, int NumLocalRegions, array_view<const
-    region_type> LocalRegions);
-  // is_trivially_copyable not yet supported on Intel 17
-//   template <typename ArrayType, OVK_FUNCDECL_REQUIRES(std::is_trivially_copyable<array_value_type<
-//     ArrayType>>::value && std::is_trivially_destructible<array_value_type<ArrayType>>::value)>
-  template <typename ArrayType, OVK_FUNCDECL_REQUIRES(std::is_trivially_destructible<
-    array_value_type<ArrayType>>::value)> distributed_region_hash(int NumDims, comm_view Comm, int
-    NumLocalRegions, array_view<const region_type> LocalRegions, const ArrayType
-    &LocalRegionAuxData, MPI_Datatype AuxDataMPIType=GetMPIDataType<array_value_type<ArrayType>>());
+  distributed_region_hash(int NumDims, comm_view Comm, array_view<const region_type> LocalRegions);
 
   distributed_region_hash(const distributed_region_hash &Other) = delete;
   distributed_region_hash(distributed_region_hash &&Other) noexcept = default;
@@ -126,7 +120,7 @@ private:
 
   comm_view Comm_;
 
-  region_type GlobalExtents_;
+  extents_type GlobalExtents_;
 
   range ProcRange_;
   range_indexer<int> ProcIndexer_;
@@ -134,58 +128,29 @@ private:
 
   array<int> ProcToBinMultipliers_;
 
-  long long AuxDataNumBytes_;
-  MPI_Datatype AuxDataMPIType_;
-
   array<region_data> RegionData_;
   range BinRange_;
   field<int> NumRegionsPerBin_;
   field<long long> BinRegionIndicesStarts_;
   array<int> BinRegionIndices_;
 
-  distributed_region_hash(int NumDims, comm_view Comm, int NumLocalRegions, array_view<const
-    region_type> LocalRegions, const array<const byte *> &LocalRegionAuxData, long long
-    AuxDataNumBytes, MPI_Datatype AuxDataMPIType);
+  template <typename T> struct coord_type_tag {};
 
-  template <typename ArrayType> static array<const byte *> GetBytePointers_(const ArrayType &Array);
+  static interval<int,MAX_DIMS> MakeEmptyExtents_(int NumDims, coord_type_tag<int>);
+  static interval<double,MAX_DIMS> MakeEmptyExtents_(int NumDims, coord_type_tag<double>);
 
-  static tuple<int> BinDecomp_(int NumDims, const region_type &GlobalExtents, int MaxBins);
+  static interval<int,MAX_DIMS> UnionExtents_(const interval<int,MAX_DIMS> &Left, const
+    interval<int,MAX_DIMS> &Right);
+  static interval<double,MAX_DIMS> UnionExtents_(const interval<double,MAX_DIMS> &Left, const
+    interval<double,MAX_DIMS> &Right);
 
-  static tuple<int> GetBinSize_(const range &GlobalExtents, const tuple<int> &NumBins);
-  static tuple<double> GetBinSize_(const box &GlobalExtents, const tuple<int> &NumBins);
+  static tuple<int> BinDecomp_(int NumDims, const extents_type &Extents, int MaxBins);
 
-  static tuple<int> MapToUniformCell_(int NumDims, const tuple<int> &Origin, const tuple<int>
-    &CellSize, const tuple<int> &Point);
-  static tuple<int> MapToUniformCell_(int NumDims, const tuple<double> &Origin, const tuple<double>
-    &CellSize, const tuple<double> &Point);
+  static tuple<int> GetBinSize_(const interval<int,MAX_DIMS> &Extents, const tuple<int> &NumBins);
+  static tuple<double> GetBinSize_(const interval<double,MAX_DIMS> &Extents, const tuple<int>
+    &NumBins);
 
 };
-
-// is_trivially_copyable not yet supported on Intel 17
-// template <typename CoordType> template <typename ArrayType, OVK_FUNCDEF_REQUIRES(
-//   std::is_trivially_copyable<array_value_type<ArrayType>>::value && std::is_trivially_destructible<
-//   array_value_type<ArrayType>>::value)> distributed_region_hash<CoordType>::distributed_region_hash(
-template <typename CoordType> template <typename ArrayType, OVK_FUNCDEF_REQUIRES(
-  std::is_trivially_destructible<array_value_type<ArrayType>>::value)> distributed_region_hash<
-  CoordType>::distributed_region_hash(int NumDims, comm_view Comm, int NumLocalRegions,
-  array_view<const region_type> LocalRegions, const ArrayType &LocalRegionAuxData, MPI_Datatype
-  AuxDataMPIType):
-  distributed_region_hash(NumDims, Comm, NumLocalRegions, LocalRegions, GetBytePointers_(
-    LocalRegionAuxData), sizeof(array_value_type<ArrayType>), AuxDataMPIType)
-{}
-
-template <typename CoordType> template <typename ArrayType> array<const byte *>
-  distributed_region_hash<CoordType>::GetBytePointers_(const ArrayType &Array) {
-
-  array<const byte *> BytePointers({Array.Count()});
-
-  for (int iValue = 0; iValue < Array.Count(); ++iValue) {
-    BytePointers(iValue) = reinterpret_cast<const byte *>(ArrayData(Array)+iValue);
-  }
-
-  return BytePointers;
-
-}
 
 }}
 

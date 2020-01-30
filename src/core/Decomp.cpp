@@ -22,7 +22,7 @@ namespace ovk {
 namespace core {
 
 decomp_hash CreateDecompHash(int NumDims, comm_view Comm, const range &LocalRange) {
-  return {NumDims, Comm, 1, array<range>({1}, {LocalRange}), array<int>({1}, {1})};
+  return {NumDims, Comm, array<range>({1}, {LocalRange})};
 }
 
 array<int> DetectNeighbors(const cart &Cart, comm_view Comm, const range &LocalRange, const

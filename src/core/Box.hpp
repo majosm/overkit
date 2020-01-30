@@ -5,9 +5,13 @@
 #define OVK_CORE_BOX_HPP_INCLUDED
 
 #include <ovk/core/ArrayTraits.hpp>
+#include <ovk/core/ElemSet.hpp>
 #include <ovk/core/Global.hpp>
+#include <ovk/core/HashableRegionTraits.hpp>
+#include <ovk/core/Indexer.hpp>
 #include <ovk/core/Interval.hpp>
-#include <ovk/core/RegionTraits.hpp>
+#include <ovk/core/Math.hpp>
+#include <ovk/core/Range.hpp>
 #include <ovk/core/ScalarOps.hpp>
 #include <ovk/core/Tuple.hpp>
 
@@ -26,22 +30,28 @@ inline box GrowBox(const box &Box, const tuple<double> &Amount);
 inline box ScaleBox(const box &Box, const tuple<double> &Factor);
 
 namespace core {
-template <> struct region_traits<box> {
+template <> struct hashable_region_traits<box> {
   using coord_type = double;
-  static box MakeEmptyRegion(int NumDims) {
-    return MakeEmptyBox(NumDims);
-  }
-  static box UnionRegions(const box &Left, const box &Right) {
-    return UnionBoxes(Left, Right);
-  }
-  static box IntersectRegions(const box &Left, const box &Right) {
-    return IntersectBoxes(Left, Right);
-  }
-  static tuple<double> GetRegionLowerCorner(const box &Region) {
-    return Region.Begin();
-  }
-  static tuple<double> GetRegionUpperCorner(const box &Region) {
-    return Region.End();
+  static box ComputeExtents(const box &Region) { return Region; }
+  static elem_set<int,MAX_DIMS> MapToBins(int NumDims, const range &BinRange, const tuple<double>
+    &LowerCorner, const tuple<double> &BinSize, const box &Region) {
+    elem_set<int,MAX_DIMS> BinLocs;
+    tuple<int> BinLocLower = ClampToRange(BinRange, MapToUniformGridCell(NumDims, LowerCorner,
+      BinSize, Region.Begin()));
+    tuple<int> BinLocUpper = ClampToRange(BinRange, MapToUniformGridCell(NumDims, LowerCorner,
+      BinSize, Region.End()));
+    range OverlappedBinRange = MakeEmptyRange(NumDims);
+    OverlappedBinRange = ExtendRange(OverlappedBinRange, BinLocLower);
+    OverlappedBinRange = ExtendRange(OverlappedBinRange, BinLocUpper);
+    BinLocs.Reserve(OverlappedBinRange.Count());
+    for (int k = OverlappedBinRange.Begin(2); k < OverlappedBinRange.End(2); ++k) {
+      for (int j = OverlappedBinRange.Begin(1); j < OverlappedBinRange.End(1); ++j) {
+        for (int i = OverlappedBinRange.Begin(0); i < OverlappedBinRange.End(0); ++i) {
+          BinLocs.Insert({i,j,k});
+        }
+      }
+    }
+    return BinLocs;
   }
 };
 }

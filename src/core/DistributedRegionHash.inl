@@ -4,43 +4,32 @@
 namespace ovk {
 namespace core {
 
-template <typename CoordType> distributed_region_hash<CoordType>::distributed_region_hash(int
+template <typename RegionType> distributed_region_hash<RegionType>::distributed_region_hash(int
   NumDims, comm_view Comm):
   NumDims_(NumDims),
   Comm_(Comm),
-  GlobalExtents_(traits::MakeEmptyRegion(NumDims)),
+  GlobalExtents_(MakeEmptyExtents_(NumDims, coord_type_tag<coord_type>())),
   ProcRange_(MakeEmptyRange(NumDims)),
   ProcIndexer_(ProcRange_),
   ProcSize_(MakeUniformTuple<coord_type>(NumDims, coord_type(0), coord_type(1))),
-  AuxDataNumBytes_(0),
-  AuxDataMPIType_(MPI_DATATYPE_NULL),
   BinRange_(MakeEmptyRange(NumDims))
 {}
 
-template <typename CoordType> distributed_region_hash<CoordType>::distributed_region_hash(int
-  NumDims, comm_view Comm, int NumLocalRegions, array_view<const region_type> LocalRegions):
-  distributed_region_hash(NumDims, Comm, NumLocalRegions, LocalRegions, array<const byte *>({
-    NumLocalRegions}, nullptr), 0, MPI_DATATYPE_NULL)
-{}
-
-template <typename CoordType> distributed_region_hash<CoordType>::distributed_region_hash(int
-  NumDims, comm_view Comm, int NumLocalRegions, array_view<const region_type> LocalRegions, const
-  array<const byte *> &LocalRegionAuxData, long long AuxDataNumBytes, MPI_Datatype AuxDataMPIType):
+template <typename RegionType> distributed_region_hash<RegionType>::distributed_region_hash(int
+  NumDims, comm_view Comm, array_view<const region_type> LocalRegions):
   NumDims_(NumDims),
-  Comm_(Comm),
-  AuxDataNumBytes_(AuxDataNumBytes),
-  AuxDataMPIType_(AuxDataMPIType)
+  Comm_(Comm)
 {
 
-  MPI_Datatype MPICoordType = GetMPIDataType<coord_type>();
+  auto CoordMPIType = mpi_serializable_traits<coord_type>::CreateMPIType();
 
-  GlobalExtents_ = traits::MakeEmptyRegion(NumDims);
+  GlobalExtents_ = MakeEmptyExtents_(NumDims, coord_type_tag<coord_type>());
   for (auto &Region : LocalRegions) {
-    GlobalExtents_ = traits::UnionRegions(GlobalExtents_, Region);
+    GlobalExtents_ = UnionExtents_(GlobalExtents_, region_traits::ComputeExtents(Region));
   }
 
-  MPI_Allreduce(MPI_IN_PLACE, GlobalExtents_.Begin().Data(), NumDims_, MPICoordType, MPI_MIN, Comm_);
-  MPI_Allreduce(MPI_IN_PLACE, GlobalExtents_.End().Data(), NumDims_, MPICoordType, MPI_MAX, Comm_);
+  MPI_Allreduce(MPI_IN_PLACE, GlobalExtents_.Begin().Data(), NumDims_, CoordMPIType, MPI_MIN, Comm_);
+  MPI_Allreduce(MPI_IN_PLACE, GlobalExtents_.End().Data(), NumDims_, CoordMPIType, MPI_MAX, Comm_);
 
   tuple<int> NumProcs = BinDecomp_(NumDims_, GlobalExtents_, Comm_.Size());
 
@@ -49,31 +38,21 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
 
   ProcSize_ = GetBinSize_(GlobalExtents_, NumProcs);
 
-  array<set<int>> LocalRegionOverlappedRanks({NumLocalRegions});
+  array<set<int>> LocalRegionOverlappedProcs({LocalRegions.Count()});
 
-  for (int iRegion = 0; iRegion < NumLocalRegions; ++iRegion) {
-    tuple<coord_type> LowerCorner = traits::GetRegionLowerCorner(LocalRegions(iRegion));
-    tuple<coord_type> UpperCorner = traits::GetRegionUpperCorner(LocalRegions(iRegion));
-    tuple<int> ProcLocLower = ClampToRange(ProcRange_, MapToUniformCell_(NumDims_,
-      GlobalExtents_.Begin(), ProcSize_, LowerCorner));
-    tuple<int> ProcLocUpper = ClampToRange(ProcRange_, MapToUniformCell_(NumDims_,
-      GlobalExtents_.Begin(), ProcSize_, UpperCorner));
-    range OverlappedProcRange = MakeEmptyRange(NumDims_);
-    OverlappedProcRange = ExtendRange(OverlappedProcRange, ProcLocLower);
-    OverlappedProcRange = ExtendRange(OverlappedProcRange, ProcLocUpper);
-    for (int k = OverlappedProcRange.Begin(2); k < OverlappedProcRange.End(2); ++k) {
-      for (int j = OverlappedProcRange.Begin(1); j < OverlappedProcRange.End(1); ++j) {
-        for (int i = OverlappedProcRange.Begin(0); i < OverlappedProcRange.End(0); ++i) {
-          int Rank = ProcIndexer_.ToIndex(i,j,k);
-          LocalRegionOverlappedRanks(iRegion).Insert(Rank);
-        }
-      }
+  for (int iRegion = 0; iRegion < LocalRegions.Count(); ++iRegion) {
+    elem_set<int,MAX_DIMS> ProcLocs = region_traits::MapToBins(NumDims_, ProcRange_,
+      GlobalExtents_.Begin(), ProcSize_, LocalRegions(iRegion));
+    set<int> &Procs = LocalRegionOverlappedProcs(iRegion);
+    Procs.Reserve(ProcLocs.Count());
+    for (auto &ProcLoc : ProcLocs) {
+      Procs.Insert(ProcIndexer_.ToIndex(ProcLoc));
     }
   }
 
   set<int> SendToRanks;
 
-  for (auto &Ranks : LocalRegionOverlappedRanks) {
+  for (auto &Ranks : LocalRegionOverlappedProcs) {
     for (int Rank : Ranks) {
       SendToRanks.Insert(Rank);
     }
@@ -84,7 +63,7 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
   map<int,int> NumRegionsToRank;
   map<int,int> NumRegionsFromRank;
 
-  for (auto &Ranks : LocalRegionOverlappedRanks) {
+  for (auto &Ranks : LocalRegionOverlappedProcs) {
     for (int Rank : Ranks) {
       ++NumRegionsToRank.Fetch(Rank, 0);
     }
@@ -119,44 +98,50 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
     NumSends += Entry.Value();
   }
 
-  Requests.Reserve(4*(NumSends + NumRecvs));
+  Requests.Reserve(NumSends + NumRecvs);
 
-  RegionData_.Resize({NumRecvs});
+  using mpi_region_type = typename mpi_traits::packed_type;
+  auto RegionMPIType = mpi_traits::CreateMPIType();
+  MPI_Type_commit(&RegionMPIType.Get());
 
-  int iNextRegion = 0;
+  array<mpi_region_type> SendRegions({LocalRegions.Count()});
+  array<mpi_region_type> RecvRegions({NumRecvs});
+
+  int iRecv = 0;
   for (int Rank : RecvFromRanks) {
     int NumRegions = NumRegionsFromRank(Rank);
     for (int iRegionFromRank = 0; iRegionFromRank < NumRegions; ++iRegionFromRank) {
-      region_data &Data = RegionData_(iNextRegion);
-      MPI_Irecv(Data.Region_.Begin().Data(), MAX_DIMS, MPICoordType, Rank, 0, Comm_,
-        &Requests.Append());
-      MPI_Irecv(Data.Region_.End().Data(), MAX_DIMS, MPICoordType, Rank, 0, Comm_,
-        &Requests.Append());
-      Data.Rank_ = Rank;
-      Data.AuxData_.Resize({AuxDataNumBytes_});
-      if (AuxDataNumBytes_ > 0) {
-        MPI_Irecv(Data.AuxData_.Data(), 1, AuxDataMPIType_, Rank, 0, Comm_, &Requests.Append());
-      }
-      ++iNextRegion;
+      mpi_region_type &RecvRegion = RecvRegions(iRecv);
+      MPI_Irecv(&RecvRegion, 1, RegionMPIType, Rank, 0, Comm_, &Requests.Append());
+      ++iRecv;
     }
   }
 
-  for (int iRegion = 0; iRegion < NumLocalRegions; ++iRegion) {
-    auto &Ranks = LocalRegionOverlappedRanks(iRegion);
+  for (int iRegion = 0; iRegion < LocalRegions.Count(); ++iRegion) {
+    auto &Ranks = LocalRegionOverlappedProcs(iRegion);
+    mpi_region_type &SendRegion = SendRegions(iRegion);
+    SendRegion = mpi_traits::Pack(LocalRegions(iRegion));
     for (int Rank : Ranks) {
-      MPI_Isend(LocalRegions(iRegion).Begin().Data(), MAX_DIMS, MPICoordType, Rank, 0, Comm_,
-        &Requests.Append());
-      MPI_Isend(LocalRegions(iRegion).End().Data(), MAX_DIMS, MPICoordType, Rank, 0, Comm_,
-        &Requests.Append());
-      if (AuxDataNumBytes_ > 0) {
-        MPI_Isend(LocalRegionAuxData(iRegion), 1, AuxDataMPIType_, Rank, 0, Comm_,
-          &Requests.Append());
-      }
+      MPI_Isend(&SendRegion, 1, RegionMPIType, Rank, 0, Comm_, &Requests.Append());
     }
   }
 
   MPI_Waitall(Requests.Count(), Requests.Data(), MPI_STATUSES_IGNORE);
   Requests.Clear();
+
+  RegionData_.Resize({NumRecvs});
+
+  iRecv = 0;
+  for (int Rank : RecvFromRanks) {
+    int NumRegions = NumRegionsFromRank(Rank);
+    for (int iRegionFromRank = 0; iRegionFromRank < NumRegions; ++iRegionFromRank) {
+      region_data &Data = RegionData_(iRecv);
+      const mpi_region_type &RecvRegion = RecvRegions(iRecv);
+      Data.Region_ = mpi_traits::Unpack(RecvRegion);
+      Data.Rank_ = Rank;
+      ++iRecv;
+    }
+  }
 
   int ProcToBinMultiplier = 1;
 
@@ -164,8 +149,9 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
 
     double AvgBinRegionLength = 0.;
     for (auto &Data : RegionData_) {
+      extents_type Extents = region_traits::ComputeExtents(Data.Region_);
       for (int iDim = 0; iDim < NumDims_; ++iDim) {
-        AvgBinRegionLength += double(Data.Region_.Size(iDim));
+        AvgBinRegionLength += double(Extents.Size(iDim));
       }
     }
     AvgBinRegionLength /= double(NumDims_*RegionData_.Count());
@@ -185,76 +171,82 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
   MPI_Allgather(&ProcToBinMultiplier, 1, MPI_INT, ProcToBinMultipliers_.Data(), 1, MPI_INT,
     Comm_);
 
-  array<map<int,range>> LocalRegionOverlappedBinRanges({NumLocalRegions});
+  array<map<int,set<int>>> LocalRegionOverlappedBins({LocalRegions.Count()});
 
-  for (int iRegion = 0; iRegion < NumLocalRegions; ++iRegion) {
-    tuple<coord_type> LowerCorner = traits::GetRegionLowerCorner(LocalRegions(iRegion));
-    tuple<coord_type> UpperCorner = traits::GetRegionUpperCorner(LocalRegions(iRegion));
-    tuple<int> ProcLocLower = ClampToRange(ProcRange_, MapToUniformCell_(NumDims_,
-      GlobalExtents_.Begin(), ProcSize_, LowerCorner));
-    tuple<int> ProcLocUpper = ClampToRange(ProcRange_, MapToUniformCell_(NumDims_,
-      GlobalExtents_.Begin(), ProcSize_, UpperCorner));
-    range OverlappedProcRange = MakeEmptyRange(NumDims_);
-    OverlappedProcRange = ExtendRange(OverlappedProcRange, ProcLocLower);
-    OverlappedProcRange = ExtendRange(OverlappedProcRange, ProcLocUpper);
-    for (int k = OverlappedProcRange.Begin(2); k < OverlappedProcRange.End(2); ++k) {
-      for (int j = OverlappedProcRange.Begin(1); j < OverlappedProcRange.End(1); ++j) {
-        for (int i = OverlappedProcRange.Begin(0); i < OverlappedProcRange.End(0); ++i) {
-          tuple<int> ProcLoc = {i,j,k};
-          int Rank = ProcIndexer_.ToIndex(ProcLoc);
-          range ProcBinRange = MakeEmptyRange(NumDims_);
-          for (int iDim = 0; iDim < NumDims_; ++iDim) {
-            ProcBinRange.Begin(iDim) = 0;
-            ProcBinRange.End(iDim) = ProcToBinMultipliers_(Rank);
-          }
-          region_type ProcExtents = traits::MakeEmptyRegion(NumDims_);
-          for (int iDim = 0; iDim < NumDims_; ++iDim) {
-            ProcExtents.Begin(iDim) = GlobalExtents_.Begin(iDim) + coord_type(ProcLoc(iDim))*
-              ProcSize_(iDim);
-            ProcExtents.End(iDim) = Min(GlobalExtents_.Begin(iDim) + coord_type(ProcLoc(iDim)+1)*
-              ProcSize_(iDim), GlobalExtents_.End(iDim));
-          }
-          tuple<coord_type> ProcBinSize = GetBinSize_(ProcExtents, ProcBinRange.Size());
-          tuple<int> BinLocLower = ClampToRange(ProcBinRange, MapToUniformCell_(NumDims_,
-            ProcExtents.Begin(), ProcBinSize, LowerCorner));
-          tuple<int> BinLocUpper = ClampToRange(ProcBinRange, MapToUniformCell_(NumDims_,
-            ProcExtents.Begin(), ProcBinSize, UpperCorner));
-          range &OverlappedBinRange = LocalRegionOverlappedBinRanges(iRegion).Insert(Rank);
-          OverlappedBinRange = MakeEmptyRange(NumDims_);
-          OverlappedBinRange = ExtendRange(OverlappedBinRange, BinLocLower);
-          OverlappedBinRange = ExtendRange(OverlappedBinRange, BinLocUpper);
-        }
-      }
+  Requests.Reserve(NumSends + NumRecvs);
+
+  array<map<int,int>> NumLocalRegionOverlappedBins({LocalRegions.Count()});
+  array<int> NumProcRegionOverlappedBins({RegionData_.Count()});
+
+  int iNextRegion = 0;
+  for (int Rank : RecvFromRanks) {
+    int NumRegions = NumRegionsFromRank(Rank);
+    for (int iRegionFromRank = 0; iRegionFromRank < NumRegions; ++iRegionFromRank) {
+      int &NumBins = NumProcRegionOverlappedBins(iNextRegion);
+      MPI_Irecv(&NumBins, 1, MPI_INT, Rank, 0, Comm_, &Requests.Append());
+      ++iNextRegion;
     }
   }
 
-  Requests.Reserve(2*(NumSends + NumRecvs));
+  for (int iRegion = 0; iRegion < LocalRegions.Count(); ++iRegion) {
+    const set<int> &OverlappedProcs = LocalRegionOverlappedProcs(iRegion);
+    auto &BinsForProc = LocalRegionOverlappedBins(iRegion);
+    auto &NumBinsForProc = NumLocalRegionOverlappedBins(iRegion);
+    for (int iProc : OverlappedProcs) {
+      tuple<int> ProcLoc = ProcIndexer_.ToTuple(iProc);
+      range ProcBinRange = MakeEmptyRange(NumDims_);
+      for (int iDim = 0; iDim < NumDims_; ++iDim) {
+        ProcBinRange.Begin(iDim) = 0;
+        ProcBinRange.End(iDim) = ProcToBinMultipliers_(iProc);
+      }
+      extents_type ProcExtents = MakeEmptyExtents_(NumDims_, coord_type_tag<coord_type>());
+      for (int iDim = 0; iDim < NumDims_; ++iDim) {
+        ProcExtents.Begin(iDim) = GlobalExtents_.Begin(iDim) + coord_type(ProcLoc(iDim))*
+          ProcSize_(iDim);
+        ProcExtents.End(iDim) = Min(GlobalExtents_.Begin(iDim) + coord_type(ProcLoc(iDim)+1)*
+          ProcSize_(iDim), GlobalExtents_.End(iDim));
+      }
+      range_indexer_c<int> ProcBinIndexer(ProcBinRange);
+      tuple<coord_type> ProcBinSize = GetBinSize_(ProcExtents, ProcBinRange.Size());
+      elem_set<int,MAX_DIMS> BinLocs = region_traits::MapToBins(NumDims_, ProcBinRange,
+        ProcExtents.Begin(), ProcBinSize, LocalRegions(iRegion));
+      set<int> &Bins = BinsForProc.Insert(iProc);
+      Bins.Reserve(BinLocs.Count());
+      for (auto &BinLoc : BinLocs) {
+        Bins.Insert(ProcBinIndexer.ToIndex(BinLoc));
+      }
+      NumBinsForProc.Insert(iProc, int(Bins.Count()));
+    }
+    for (auto &Entry : NumBinsForProc) {
+      int Rank = Entry.Key();
+      const int &NumBins = Entry.Value();
+      MPI_Isend(&NumBins, 1, MPI_INT, Rank, 0, Comm_, &Requests.Append());
+    }
+  }
 
-  array<range> BinRegionOverlappedBinRanges;
-  BinRegionOverlappedBinRanges.Resize({RegionData_.Count()});
+  MPI_Waitall(Requests.Count(), Requests.Data(), MPI_STATUSES_IGNORE);
+  Requests.Clear();
+
+  array<array<int>> ProcRegionOverlappedBins({RegionData_.Count()});
 
   iNextRegion = 0;
   for (int Rank : RecvFromRanks) {
     int NumRegions = NumRegionsFromRank(Rank);
     for (int iRegionFromRank = 0; iRegionFromRank < NumRegions; ++iRegionFromRank) {
-      range &OverlappedBinRange = BinRegionOverlappedBinRanges(iNextRegion);
-      MPI_Irecv(OverlappedBinRange.Begin().Data(), MAX_DIMS, MPI_INT, Rank, 0, Comm_,
-        &Requests.Append());
-      MPI_Irecv(OverlappedBinRange.End().Data(), MAX_DIMS, MPI_INT, Rank, 0, Comm_,
-        &Requests.Append());
+      int NumBins = NumProcRegionOverlappedBins(iNextRegion);
+      array<int> &Bins = ProcRegionOverlappedBins(iNextRegion);
+      Bins.Resize({NumBins});
+      MPI_Irecv(Bins.Data(), NumBins, MPI_INT, Rank, 0, Comm_, &Requests.Append());
       ++iNextRegion;
     }
   }
 
-  for (int iRegion = 0; iRegion < NumLocalRegions; ++iRegion) {
-    auto &OverlappedBinRanges = LocalRegionOverlappedBinRanges(iRegion);
-    for (auto &Entry : OverlappedBinRanges) {
+  for (int iRegion = 0; iRegion < LocalRegions.Count(); ++iRegion) {
+    auto &BinsForProc = LocalRegionOverlappedBins(iRegion);
+    for (auto &Entry : BinsForProc) {
       int Rank = Entry.Key();
-      const range &OverlappedBinRange = Entry.Value();
-      MPI_Isend(OverlappedBinRange.Begin().Data(), MAX_DIMS, MPI_INT, Rank, 0, Comm_,
-        &Requests.Append());
-      MPI_Isend(OverlappedBinRange.End().Data(), MAX_DIMS, MPI_INT, Rank, 0, Comm_,
-        &Requests.Append());
+      const set<int> &Bins = Entry.Value();
+      MPI_Isend(Bins.Data(), Bins.Count(), MPI_INT, Rank, 0, Comm_, &Requests.Append());
     }
   }
 
@@ -269,16 +261,14 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
       BinRange_.End(iDim) = ProcToBinMultiplier;
     }
 
+    range_indexer_c<int> BinIndexer(BinRange_);
+
     NumRegionsPerBin_.Resize(BinRange_, 0);
 
-    for (auto &OverlappedBinRange : BinRegionOverlappedBinRanges) {
-      for (int k = OverlappedBinRange.Begin(2); k < OverlappedBinRange.End(2); ++k) {
-        for (int j = OverlappedBinRange.Begin(1); j < OverlappedBinRange.End(1); ++j) {
-          for (int i = OverlappedBinRange.Begin(0); i < OverlappedBinRange.End(0); ++i) {
-            tuple<int> Bin = {i,j,k};
-            ++NumRegionsPerBin_(Bin);
-          }
-        }
+    for (auto &Bins : ProcRegionOverlappedBins) {
+      for (int iBin : Bins) {
+        tuple<int> BinLoc = BinIndexer.ToTuple(iBin);
+        ++NumRegionsPerBin_(BinLoc);
       }
     }
 
@@ -288,9 +278,9 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
     for (int k = BinRange_.Begin(2); k < BinRange_.End(2); ++k) {
       for (int j = BinRange_.Begin(1); j < BinRange_.End(1); ++j) {
         for (int i = BinRange_.Begin(0); i < BinRange_.End(0); ++i) {
-          tuple<int> Bin = {i,j,k};
-          BinRegionIndicesStarts_(Bin) = TotalBinRegionIndices;
-          TotalBinRegionIndices += NumRegionsPerBin_(Bin);
+          tuple<int> BinLoc = {i,j,k};
+          BinRegionIndicesStarts_(BinLoc) = TotalBinRegionIndices;
+          TotalBinRegionIndices += NumRegionsPerBin_(BinLoc);
         }
       }
     }
@@ -301,16 +291,12 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
     NumRegionsPerBin_.Fill(0);
 
     for (int iRegion = 0; iRegion < RegionData_.Count(); ++iRegion) {
-      const range &OverlappedBinRange = BinRegionOverlappedBinRanges(iRegion);
-      for (int k = OverlappedBinRange.Begin(2); k < OverlappedBinRange.End(2); ++k) {
-        for (int j = OverlappedBinRange.Begin(1); j < OverlappedBinRange.End(1); ++j) {
-          for (int i = OverlappedBinRange.Begin(0); i < OverlappedBinRange.End(0); ++i) {
-            tuple<int> Bin = {i,j,k};
-            long long iBinRegionIndex = BinRegionIndicesStarts_(Bin) + NumRegionsPerBin_(Bin);
-            BinRegionIndices_(iBinRegionIndex) = iRegion;
-            ++NumRegionsPerBin_(Bin);
-          }
-        }
+      auto &Bins = ProcRegionOverlappedBins(iRegion);
+      for (int iBin : Bins) {
+        tuple<int> BinLoc = BinIndexer.ToTuple(iBin);
+        long long iBinRegionIndex = BinRegionIndicesStarts_(BinLoc) + NumRegionsPerBin_(BinLoc);
+        BinRegionIndices_(iBinRegionIndex) = iRegion;
+        ++NumRegionsPerBin_(BinLoc);
       }
     }
 
@@ -318,11 +304,11 @@ template <typename CoordType> distributed_region_hash<CoordType>::distributed_re
 
 }
 
-template <typename CoordType> elem<int,2> distributed_region_hash<CoordType>::MapToBin(const
+template <typename RegionType> elem<int,2> distributed_region_hash<RegionType>::MapToBin(const
   tuple<coord_type> &Point) const {
 
-  tuple<int> ProcLoc = ClampToRange(ProcRange_, MapToUniformCell_(NumDims_, GlobalExtents_.Begin(),
-    ProcSize_, Point));
+  tuple<int> ProcLoc = ClampToRange(ProcRange_, MapToUniformGridCell(NumDims_,
+    GlobalExtents_.Begin(), ProcSize_, Point));
 
   int Rank = ProcIndexer_.ToIndex(ProcLoc);
 
@@ -334,7 +320,7 @@ template <typename CoordType> elem<int,2> distributed_region_hash<CoordType>::Ma
 
   range_indexer_c<int> ProcBinIndexer(ProcBinRange);
 
-  region_type ProcExtents = traits::MakeEmptyRegion(NumDims_);
+  extents_type ProcExtents = MakeEmptyExtents_(NumDims_, coord_type_tag<coord_type>());
   for (int iDim = 0; iDim < NumDims_; ++iDim) {
     ProcExtents.Begin(iDim) = GlobalExtents_.Begin(iDim) + coord_type(ProcLoc(iDim))*
       ProcSize_(iDim);
@@ -344,7 +330,7 @@ template <typename CoordType> elem<int,2> distributed_region_hash<CoordType>::Ma
 
   tuple<coord_type> ProcBinSize = GetBinSize_(ProcExtents, ProcBinRange.Size());
 
-  tuple<int> BinLoc = ClampToRange(ProcBinRange, MapToUniformCell_(NumDims_, ProcExtents.Begin(),
+  tuple<int> BinLoc = ClampToRange(ProcBinRange, MapToUniformGridCell(NumDims_, ProcExtents.Begin(),
     ProcBinSize, Point));
 
   int iBin = ProcBinIndexer.ToIndex(BinLoc);
@@ -353,10 +339,8 @@ template <typename CoordType> elem<int,2> distributed_region_hash<CoordType>::Ma
 
 }
 
-template <typename CoordType> map<int,distributed_region_hash_retrieved_bins<CoordType>>
-  distributed_region_hash<CoordType>::RetrieveBins(array_view<const elem<int,2>> BinIDs) const {
-
-  MPI_Datatype MPICoordType = GetMPIDataType<coord_type>();
+template <typename RegionType> map<int,distributed_region_hash_retrieved_bins<RegionType>>
+  distributed_region_hash<RegionType>::RetrieveBins(array_view<const elem<int,2>> BinIDs) const {
 
   set<int> BinRanks;
   for (auto &BinID : BinIDs) {
@@ -468,12 +452,15 @@ template <typename CoordType> map<int,distributed_region_hash_retrieved_bins<Coo
   MPI_Waitall(Requests.Count(), Requests.Data(), MPI_STATUSES_IGNORE);
   Requests.Clear();
 
-  Requests.Reserve(3*(RetrievingRanks.Count()+BinRanks.Count()));
+  Requests.Reserve(2*(RetrievingRanks.Count()+BinRanks.Count()));
+
+  using mpi_region_type = typename mpi_traits::packed_type;
+  auto RegionMPIType = mpi_traits::CreateMPIType();
+  MPI_Type_commit(&RegionMPIType.Get());
 
   struct region_send_recv {
-    array<coord_type,3> Regions;
+    array<mpi_region_type> Regions;
     array<int> Ranks;
-    array<byte,2> AuxData;
   };
 
   map<int,region_send_recv> RecvRegionData;
@@ -482,16 +469,11 @@ template <typename CoordType> map<int,distributed_region_hash_retrieved_bins<Coo
   for (int Rank : BinRanks) {
     region_send_recv &Recv = RecvRegionData.Insert(Rank);
     int NumRegions = NumRecvRegions(Rank);
-    Recv.Regions.Resize({{2,MAX_DIMS,NumRegions}});
+    Recv.Regions.Resize({NumRegions});
     Recv.Ranks.Resize({NumRegions});
-    Recv.AuxData.Resize({{NumRegions,AuxDataNumBytes_}});
-    MPI_Irecv(Recv.Regions.Data(), 2*MAX_DIMS*NumRegions, MPICoordType, Rank, 0, Comm_,
+    MPI_Irecv(Recv.Regions.Data(), NumRegions, RegionMPIType, Rank, 0, Comm_,
       &Requests.Append());
     MPI_Irecv(Recv.Ranks.Data(), NumRegions, MPI_INT, Rank, 0, Comm_, &Requests.Append());
-    if (AuxDataNumBytes_ > 0) {
-      MPI_Irecv(Recv.AuxData.Data(), NumRegions, AuxDataMPIType_, Rank, 0, Comm_,
-        &Requests.Append());
-    }
   }
 
   map<int,region_send_recv> SendRegionData;
@@ -501,26 +483,17 @@ template <typename CoordType> map<int,distributed_region_hash_retrieved_bins<Coo
     region_send_recv &Send = SendRegionData.Insert(Rank);
     const set<int> &RegionIndices = SendingRegionIndices(Rank);
     int NumRegions = RegionIndices.Count();
-    Send.Regions.Resize({{2,MAX_DIMS,NumRegions}});
+    Send.Regions.Resize({NumRegions});
     Send.Ranks.Resize({NumRegions});
-    Send.AuxData.Resize({{NumRegions,AuxDataNumBytes_}});
     for (int iSendRegion = 0; iSendRegion < NumRegions; ++iSendRegion) {
       int iRegion = RegionIndices[iSendRegion];
       const region_data &Data = RegionData_(iRegion);
+      Send.Regions(iSendRegion) = mpi_traits::Pack(Data.Region_);
       Send.Ranks(iSendRegion) = Data.Rank_;
-      for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-        Send.Regions(0,iDim,iSendRegion) = Data.Region_.Begin(iDim);
-        Send.Regions(1,iDim,iSendRegion) = Data.Region_.End(iDim);
-      }
-      std::memcpy(Send.AuxData.Data(iSendRegion,0), Data.AuxData_.Data(), AuxDataNumBytes_);
     }
-    MPI_Isend(Send.Regions.Data(), 2*MAX_DIMS*NumRegions, MPICoordType, Rank, 0, Comm_,
+    MPI_Isend(Send.Regions.Data(), NumRegions, RegionMPIType, Rank, 0, Comm_,
       &Requests.Append());
     MPI_Isend(Send.Ranks.Data(), NumRegions, MPI_INT, Rank, 0, Comm_, &Requests.Append());
-    if (AuxDataNumBytes_ > 0) {
-      MPI_Isend(Send.AuxData.Data(), NumRegions, AuxDataMPIType_, Rank, 0, Comm_,
-        &Requests.Append());
-    }
   }
 
   MPI_Waitall(Requests.Count(), Requests.Data(), MPI_STATUSES_IGNORE);
@@ -614,23 +587,12 @@ template <typename CoordType> map<int,distributed_region_hash_retrieved_bins<Coo
   for (int Rank : BinRanks) {
     retrieved_bins &Bins = RetrievedBins.Insert(Rank);
     const region_send_recv &Recv = RecvRegionData(Rank);
-    int NumRegions = Recv.Ranks.Count();
+    int NumRegions = Recv.Regions.Count();
     Bins.RegionData_.Resize({NumRegions});
     for (int iRegion = 0; iRegion < NumRegions; ++iRegion) {
       region_data &Data = Bins.RegionData_(iRegion);
-      Data.Region_.Begin() = {
-        Recv.Regions(0,0,iRegion),
-        Recv.Regions(0,1,iRegion),
-        Recv.Regions(0,2,iRegion)
-      };
-      Data.Region_.End() = {
-        Recv.Regions(1,0,iRegion),
-        Recv.Regions(1,1,iRegion),
-        Recv.Regions(1,2,iRegion)
-      };
+      Data.Region_ = mpi_traits::Unpack(Recv.Regions(iRegion));
       Data.Rank_ = Recv.Ranks(iRegion);
-      Data.AuxData_.Resize({AuxDataNumBytes_});
-      std::memcpy(Data.AuxData_.Data(), Recv.AuxData.Data(iRegion,0), AuxDataNumBytes_);
     }
     bin_index_data &BinIndexData = RecvBinIndexData(Rank);
     const array<int> &BinIndices = BinsReceiving(Rank);
@@ -653,8 +615,36 @@ template <typename CoordType> map<int,distributed_region_hash_retrieved_bins<Coo
 
 }
 
-template <typename CoordType> tuple<int> distributed_region_hash<CoordType>::BinDecomp_(int NumDims,
-  const region_type &GlobalExtents, int MaxBins) {
+template <typename RegionType> interval<int,MAX_DIMS> distributed_region_hash<RegionType>::
+  MakeEmptyExtents_(int NumDims, coord_type_tag<int>) {
+
+  return MakeEmptyRange(NumDims);
+
+}
+
+template <typename RegionType> interval<double,MAX_DIMS> distributed_region_hash<RegionType>::
+  MakeEmptyExtents_(int NumDims, coord_type_tag<double>) {
+
+  return MakeEmptyBox(NumDims);
+
+}
+
+template <typename RegionType> interval<int,MAX_DIMS> distributed_region_hash<RegionType>::
+  UnionExtents_(const interval<int,MAX_DIMS> &Left, const interval<int,MAX_DIMS> &Right) {
+
+  return UnionRanges(Left, Right);
+
+}
+
+template <typename RegionType> interval<double,MAX_DIMS> distributed_region_hash<RegionType>::
+  UnionExtents_(const interval<double,MAX_DIMS> &Left, const interval<double,MAX_DIMS> &Right) {
+
+  return UnionBoxes(Left, Right);
+
+}
+
+template <typename RegionType> tuple<int> distributed_region_hash<RegionType>::BinDecomp_(int
+  NumDims, const extents_type &Extents, int MaxBins) {
 
   tuple<int> NumBins = {1,1,1};
 
@@ -666,7 +656,7 @@ template <typename CoordType> tuple<int> distributed_region_hash<CoordType>::Bin
 
     tuple<double> Length;
     for (int iDim = 0; iDim < NumDims; ++iDim) {
-      Length(iDim) = double(GlobalExtents.Size(iDim));
+      Length(iDim) = double(Extents.Size(iDim));
     }
 
     double Volume = 1.;
@@ -687,22 +677,22 @@ template <typename CoordType> tuple<int> distributed_region_hash<CoordType>::Bin
 
     NumBins(iMinLengthDim) = Max(int(Length(iMinLengthDim)*Base),1);
 
-    region_type GlobalExtentsReduced = traits::MakeEmptyRegion(NumDims-1);
+    extents_type ExtentsReduced = MakeEmptyExtents_(NumDims-1, coord_type_tag<coord_type>());
 
     int iReducedDim;
 
     iReducedDim = 0;
     for (int iDim = 0; iDim < NumDims; ++iDim) {
       if (iDim != iMinLengthDim) {
-        GlobalExtentsReduced.Begin(iReducedDim) = GlobalExtents.Begin(iDim);
-        GlobalExtentsReduced.End(iReducedDim) = GlobalExtents.End(iDim);
+        ExtentsReduced.Begin(iReducedDim) = Extents.Begin(iDim);
+        ExtentsReduced.End(iReducedDim) = Extents.End(iDim);
         ++iReducedDim;
       }
     }
 
     int MaxBinsReduced = MaxBins/NumBins(iMinLengthDim);
 
-    tuple<int> NumBinsReduced = BinDecomp_(NumDims-1, GlobalExtentsReduced, MaxBinsReduced);
+    tuple<int> NumBinsReduced = BinDecomp_(NumDims-1, ExtentsReduced, MaxBinsReduced);
 
     iReducedDim = 0;
     for (int iDim = 0; iDim < NumDims; ++iDim) {
@@ -718,58 +708,29 @@ template <typename CoordType> tuple<int> distributed_region_hash<CoordType>::Bin
 
 }
 
-template <typename CoordType> tuple<int> distributed_region_hash<CoordType>::GetBinSize_(const range
-  &GlobalExtents, const tuple<int> &NumBins) {
+template <typename RegionType> tuple<int> distributed_region_hash<RegionType>::GetBinSize_(const
+  interval<int,MAX_DIMS> &Extents, const tuple<int> &NumBins) {
 
   tuple<int> BinSize;
 
   for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    BinSize(iDim) = (GlobalExtents.Size(iDim)+NumBins(iDim)-1)/NumBins(iDim);
+    BinSize(iDim) = (Extents.Size(iDim)+NumBins(iDim)-1)/NumBins(iDim);
   }
 
   return BinSize;
 
 }
 
-template <typename CoordType> tuple<double> distributed_region_hash<CoordType>::GetBinSize_(const
-  box &GlobalExtents, const tuple<int> &NumBins) {
+template <typename RegionType> tuple<double> distributed_region_hash<RegionType>::GetBinSize_(const
+  interval<double,MAX_DIMS> &Extents, const tuple<int> &NumBins) {
 
   tuple<double> BinSize;
 
   for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
-    BinSize(iDim) = GlobalExtents.Size(iDim)/double(NumBins(iDim));
+    BinSize(iDim) = Extents.Size(iDim)/double(NumBins(iDim));
   }
 
   return BinSize;
-
-}
-
-template <typename CoordType> tuple<int> distributed_region_hash<CoordType>::MapToUniformCell_(int
-  NumDims, const tuple<int> &Origin, const tuple<int> &CellSize, const tuple<int> &Point) {
-
-  tuple<int> Cell = MakeUniformTuple<int>(NumDims, 0);
-
-  for (int iDim = 0; iDim < NumDims; ++iDim) {
-    int Offset = Point(iDim) - Origin(iDim);
-    // Division rounding down
-    Cell(iDim) = Offset/CellSize(iDim) - (Offset % CellSize(iDim) < 0);
-  }
-
-  return Cell;
-
-}
-
-template <typename CoordType> tuple<int> distributed_region_hash<CoordType>::MapToUniformCell_(int
-  NumDims, const tuple<double> &Origin, const tuple<double> &CellSize, const tuple<double> &Point) {
-
-  tuple<int> Cell = MakeUniformTuple<int>(NumDims, 0);
-
-  for (int iDim = 0; iDim < NumDims; ++iDim) {
-    double Offset = Point(iDim) - Origin(iDim);
-    Cell(iDim) = int(std::floor(Offset/CellSize(iDim)));
-  }
-
-  return Cell;
 
 }
 

@@ -4,48 +4,48 @@
 namespace ovk {
 namespace core {
 
-template <typename CoordType> region_hash<CoordType>::region_hash(int NumDims):
+template <typename RegionType> region_hash<RegionType>::region_hash(int NumDims):
   NumDims_(NumDims),
   BinRange_(MakeEmptyRange(NumDims)),
   BinIndexer_(BinRange_),
-  Extents_(traits::MakeEmtpyRegion(NumDims)),
+  Extents_(MakeEmptyExtents_(NumDims, coord_type_tag<coord_type>())),
   BinSize_(MakeUniformTuple<coord_type>(NumDims, coord_type(0))),
   BinRegionIndices_({1}, 0)
 {}
 
-template <typename CoordType> region_hash<CoordType>::region_hash(int NumDims, const tuple<int>
+template <typename RegionType> region_hash<RegionType>::region_hash(int NumDims, const tuple<int>
   &NumBins, array_view<const region_type> Regions):
   NumDims_(NumDims),
   BinRange_({NumBins}),
   BinIndexer_(BinRange_)
 {
 
-  Extents_ = traits::MakeEmptyRegion(NumDims);
+  Extents_ = MakeEmptyExtents_(NumDims, coord_type_tag<coord_type>());
   for (auto &Region : Regions) {
-    Extents_ = traits::UnionRegions(Extents_, Region);
+    Extents_ = UnionExtents_(Extents_, region_traits::ComputeExtents(Region));
   }
 
   BinSize_ = GetBinSize_(Extents_, NumBins);
 
+  array<set<int>> RegionOverlappedBins({Regions.Count()});
+
+  for (int iRegion = 0; iRegion < Regions.Count(); ++iRegion) {
+    elem_set<int,MAX_DIMS> BinLocs = region_traits::MapToBins(NumDims_, BinRange_, Extents_.Begin(),
+      BinSize_, Regions(iRegion));
+    set<int> &Bins = RegionOverlappedBins(iRegion);
+    Bins.Reserve(BinLocs.Count());
+    for (auto &BinLoc : BinLocs) {
+      Bins.Insert(BinIndexer_.ToIndex(BinLoc));
+    }
+  }
+
   field<long long> NumRegionsInBin(BinRange_, 0);
 
-  for (auto &Region : Regions) {
-    tuple<coord_type> LowerCorner = traits::GetRegionLowerCorner(Region);
-    tuple<coord_type> UpperCorner = traits::GetRegionUpperCorner(Region);
-    tuple<int> BinLocLower = ClampToRange(BinRange_, MapToUniformCell_(NumDims_,
-      Extents_.Begin(), BinSize_, LowerCorner));
-    tuple<int> BinLocUpper = ClampToRange(BinRange_, MapToUniformCell_(NumDims_,
-      Extents_.Begin(), BinSize_, UpperCorner));
-    range OverlappedBinRange = MakeEmptyRange(NumDims_);
-    OverlappedBinRange = ExtendRange(OverlappedBinRange, BinLocLower);
-    OverlappedBinRange = ExtendRange(OverlappedBinRange, BinLocUpper);
-    for (int k = OverlappedBinRange.Begin(2); k < OverlappedBinRange.End(2); ++k) {
-      for (int j = OverlappedBinRange.Begin(1); j < OverlappedBinRange.End(1); ++j) {
-        for (int i = OverlappedBinRange.Begin(0); i < OverlappedBinRange.End(0); ++i) {
-          tuple<int> BinLoc = {i,j,k};
-          ++NumRegionsInBin(BinLoc);
-        }
-      }
+  for (int iRegion = 0; iRegion < Regions.Count(); ++iRegion) {
+    const set<int> &Bins = RegionOverlappedBins(iRegion);
+    for (int iBin : Bins) {
+      tuple<int> BinLoc = BinIndexer_.ToTuple(iBin);
+      ++NumRegionsInBin(BinLoc);
     }
   }
 
@@ -70,37 +70,22 @@ template <typename CoordType> region_hash<CoordType>::region_hash(int NumDims, c
   NumRegionsInBin.Fill(0);
 
   for (long long iRegion = 0; iRegion < Regions.Count(); ++iRegion) {
-    const region_type &Region = Regions(iRegion);
-    tuple<coord_type> LowerCorner = traits::GetRegionLowerCorner(Region);
-    tuple<coord_type> UpperCorner = traits::GetRegionUpperCorner(Region);
-    tuple<int> BinLocLower = ClampToRange(BinRange_, MapToUniformCell_(NumDims_,
-      Extents_.Begin(), BinSize_, LowerCorner));
-    tuple<int> BinLocUpper = ClampToRange(BinRange_, MapToUniformCell_(NumDims_,
-      Extents_.Begin(), BinSize_, UpperCorner));
-    range OverlappedBinRange = MakeEmptyRange(NumDims_);
-    OverlappedBinRange = ExtendRange(OverlappedBinRange, BinLocLower);
-    OverlappedBinRange = ExtendRange(OverlappedBinRange, BinLocUpper);
-    for (int k = OverlappedBinRange.Begin(2); k < OverlappedBinRange.End(2); ++k) {
-      for (int j = OverlappedBinRange.Begin(1); j < OverlappedBinRange.End(1); ++j) {
-        for (int i = OverlappedBinRange.Begin(0); i < OverlappedBinRange.End(0); ++i) {
-          tuple<int> BinLoc = {i,j,k};
-          long long iBin = BinIndexer_.ToIndex(BinLoc);
-          BinRegionIndices_(BinRegionIndicesStarts_(iBin)+NumRegionsInBin[iBin]) = iRegion;
-          ++NumRegionsInBin[iBin];
-        }
-      }
+    const set<int> &Bins = RegionOverlappedBins(iRegion);
+    for (int iBin : Bins) {
+      BinRegionIndices_(BinRegionIndicesStarts_(iBin)+NumRegionsInBin[iBin]) = iRegion;
+      ++NumRegionsInBin[iBin];
     }
   }
 
 }
 
-template <typename CoordType> long long region_hash<CoordType>::MapToBin(const tuple<coord_type>
+template <typename RegionType> long long region_hash<RegionType>::MapToBin(const tuple<coord_type>
   &Point) const {
 
   long long iBin = -1;
 
   if (Extents_.Contains(Point)) {
-    tuple<int> BinLoc = ClampToRange(BinRange_, MapToUniformCell_(NumDims_, Extents_.Begin(),
+    tuple<int> BinLoc = ClampToRange(BinRange_, MapToUniformGridCell(NumDims_, Extents_.Begin(),
       BinSize_, Point));
     iBin = BinIndexer_.ToIndex(BinLoc);
   }
@@ -109,7 +94,7 @@ template <typename CoordType> long long region_hash<CoordType>::MapToBin(const t
 
 }
 
-template <typename CoordType> array_view<const long long> region_hash<CoordType>::RetrieveBin(long
+template <typename RegionType> array_view<const long long> region_hash<RegionType>::RetrieveBin(long
   long iBin) const {
 
   long long BinStart = BinRegionIndicesStarts_(iBin);
@@ -119,8 +104,36 @@ template <typename CoordType> array_view<const long long> region_hash<CoordType>
 
 }
 
-template <typename CoordType> tuple<int> region_hash<CoordType>::GetBinSize_(const range &Extents,
-  const tuple<int> &NumBins) {
+template <typename RegionType> interval<int,MAX_DIMS> region_hash<RegionType>::MakeEmptyExtents_(
+  int NumDims, coord_type_tag<int>) {
+
+  return MakeEmptyRange(NumDims);
+
+}
+
+template <typename RegionType> interval<double,MAX_DIMS> region_hash<RegionType>::MakeEmptyExtents_(
+  int NumDims, coord_type_tag<double>) {
+
+  return MakeEmptyBox(NumDims);
+
+}
+
+template <typename RegionType> interval<int,MAX_DIMS> region_hash<RegionType>::UnionExtents_(const
+  interval<int,MAX_DIMS> &Left, const interval<int,MAX_DIMS> &Right) {
+
+  return UnionRanges(Left, Right);
+
+}
+
+template <typename RegionType> interval<double,MAX_DIMS> region_hash<RegionType>::UnionExtents_(
+  const interval<double,MAX_DIMS> &Left, const interval<double,MAX_DIMS> &Right) {
+
+  return UnionBoxes(Left, Right);
+
+}
+
+template <typename RegionType> tuple<int> region_hash<RegionType>::GetBinSize_(const
+  interval<int,MAX_DIMS> &Extents, const tuple<int> &NumBins) {
 
   tuple<int> BinSize;
 
@@ -132,8 +145,8 @@ template <typename CoordType> tuple<int> region_hash<CoordType>::GetBinSize_(con
 
 }
 
-template <typename CoordType> tuple<double> region_hash<CoordType>::GetBinSize_(const box &Extents,
-  const tuple<int> &NumBins) {
+template <typename RegionType> tuple<double> region_hash<RegionType>::GetBinSize_(const
+  interval<double,MAX_DIMS> &Extents, const tuple<int> &NumBins) {
 
   tuple<double> BinSize;
 
@@ -142,35 +155,6 @@ template <typename CoordType> tuple<double> region_hash<CoordType>::GetBinSize_(
   }
 
   return BinSize;
-
-}
-
-template <typename CoordType> tuple<int> region_hash<CoordType>::MapToUniformCell_(int NumDims,
-  const tuple<int> &Origin, const tuple<int> &CellSize, const tuple<int> &Point) {
-
-  tuple<int> Cell = MakeUniformTuple<int>(NumDims, 0);
-
-  for (int iDim = 0; iDim < NumDims; ++iDim) {
-    int Offset = Point(iDim) - Origin(iDim);
-    // Division rounding down
-    Cell(iDim) = Offset/CellSize(iDim) - (Offset % CellSize(iDim) < 0);
-  }
-
-  return Cell;
-
-}
-
-template <typename CoordType> tuple<int> region_hash<CoordType>::MapToUniformCell_(int NumDims,
-  const tuple<double> &Origin, const tuple<double> &CellSize, const tuple<double> &Point) {
-
-  tuple<int> Cell = MakeUniformTuple<int>(NumDims, 0);
-
-  for (int iDim = 0; iDim < NumDims; ++iDim) {
-    double Offset = Point(iDim) - Origin(iDim);
-    Cell(iDim) = int(std::floor(Offset/CellSize(iDim)));
-  }
-
-  return Cell;
 
 }
 
