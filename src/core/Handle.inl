@@ -1,90 +1,80 @@
 namespace ovk {
 namespace core {
 
-template <typename T> template <typename F, OVK_FUNCDEF_REQUIRES(IsCallableWith<F, T *>())>
-  handle<T>::handle(T Handle, F Delete) {
+template <typename T> template <typename F, OVK_FUNCDEF_REQUIRES(IsCallableWith<F, T>())>
+  handle<T>::handle(T Handle, F Delete):
+  Handle_(Handle),
+  Delete_(std::move(Delete))
+{}
 
-  auto CleanUpHandle = core::OnScopeExit([&] {
-    Delete(&Handle);
-  });
+template <typename T> template <typename F, OVK_FUNCDEF_REQUIRES(!IsCallableWith<F, T>() &&
+  IsCallableWith<F, T *>())> handle<T>::handle(T Handle, F Delete):
+  Handle_(Handle),
+  Delete_([Delete](T &Handle) { Delete(&Handle); })
+{}
 
-  T *HandlePtr = new T(Handle);
+template <typename T> handle<T>::~handle() noexcept {
 
-  CleanUpHandle.Dismiss();
-
-  Ptr_ = std::shared_ptr<T>(HandlePtr, [Delete](T *HandlePtr) {
-    Delete(HandlePtr);
-    delete HandlePtr;
-  });
-
-}
-
-template <typename T> template <typename F, OVK_FUNCDEF_REQUIRES(!IsCallableWith<F, T *>() &&
-  IsCallableWith<F, T>())> handle<T>::handle(T Handle, F Delete) {
-
-  auto CleanUpHandle = core::OnScopeExit([&] {
-    Delete(Handle);
-  });
-
-  T *HandlePtr = new T(Handle);
-
-  CleanUpHandle.Dismiss();
-
-  Ptr_ = std::shared_ptr<T>(HandlePtr, [Delete](T *HandlePtr) {
-    Delete(*HandlePtr);
-    delete HandlePtr;
-  });
+  Reset();
 
 }
 
 template <typename T> handle<T>::operator bool() const {
 
-  return Ptr_ != nullptr;
+  return static_cast<bool>(Handle_);
 
 }
 
 template <typename T> handle<T>::operator T() const {
 
-  OVK_DEBUG_ASSERT(Ptr_, "Invalid handle.");
+  OVK_DEBUG_ASSERT(Handle_, "Invalid handle.");
 
-  return *Ptr_;
+  return *Handle_;
 
 }
 
-template <typename T> T handle<T>::Get() const {
+template <typename T> const T &handle<T>::Get() const {
 
-  OVK_DEBUG_ASSERT(Ptr_, "Invalid handle.");
+  OVK_DEBUG_ASSERT(Handle_, "Invalid handle.");
 
-  return *Ptr_;
+  return *Handle_;
+
+}
+
+template <typename T> T &handle<T>::Get() {
+
+  OVK_DEBUG_ASSERT(Handle_, "Invalid handle.");
+
+  return *Handle_;
 
 }
 
 template <typename T> void handle<T>::Reset() {
 
-  Ptr_.reset();
+  if (Handle_) {
+    std::move(Delete_)(*Handle_);
+    Handle_.Reset();
+    Delete_ = nullptr;
+  }
 
 }
 
-template <typename T, typename F, OVK_FUNCDEF_REQUIRES(IsCallableWith<F, T *>())> handle<T>
+template <typename T> T handle<T>::Release() {
+
+  Delete_ = nullptr;
+
+  return Handle_.Release();
+
+}
+
+template <typename T, typename F, OVK_FUNCDEF_REQUIRES(IsCallableWith<F, T>())> handle<T>
   MakeHandle(T Handle, F Delete) {
   return {std::move(Handle), std::move(Delete)};
 }
 
-template <typename T, typename F, OVK_FUNCDEF_REQUIRES(!IsCallableWith<F, T *>() &&
-  IsCallableWith<F, T>())> handle<T> MakeHandle(T Handle, F Delete) {
+template <typename T, typename F, OVK_FUNCDEF_REQUIRES(!IsCallableWith<F, T>() &&
+  IsCallableWith<F, T *>())> handle<T> MakeHandle(T Handle, F Delete) {
   return {std::move(Handle), std::move(Delete)};
-}
-
-template <typename T> bool operator==(const handle<T> &Left, const handle<T> &Right) {
-
-  return (!Left && !Right) || ((Left && Right) && Left.Get() == Right.Get());
-
-}
-
-template <typename T> bool operator!=(const handle<T> &Left, const handle<T> &Right) {
-
-  return !(Left == Right);
-
 }
 
 }}

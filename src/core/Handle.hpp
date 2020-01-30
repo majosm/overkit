@@ -6,11 +6,11 @@
 
 #include <ovk/core/Debug.hpp>
 #include <ovk/core/Global.hpp>
+#include <ovk/core/Optional.hpp>
 #include <ovk/core/Requires.hpp>
-#include <ovk/core/ScopeGuard.hpp>
 #include <ovk/core/TypeTraits.hpp>
 
-#include <memory>
+#include <functional>
 #include <utility>
 
 namespace ovk {
@@ -21,31 +21,40 @@ template <typename T> class handle {
 public:
 
   handle() = default;
-  template <typename F, OVK_FUNCDECL_REQUIRES(IsCallableWith<F, T *>())> handle(T Handle, F Delete);
-  template <typename F, OVK_FUNCDECL_REQUIRES(!IsCallableWith<F, T *>() && IsCallableWith<F, T>())>
+  template <typename F, OVK_FUNCDECL_REQUIRES(IsCallableWith<F, T>())> handle(T Handle, F Delete);
+  template <typename F, OVK_FUNCDECL_REQUIRES(!IsCallableWith<F, T>() && IsCallableWith<F, T *>())>
     handle(T Handle, F Delete);
+
+  handle(const handle &Other) = delete;
+  handle(handle &&Other) noexcept = default;
+
+  handle &operator=(const handle &Other) = delete;
+  handle &operator=(handle &&Other) noexcept = default;
+
+  ~handle() noexcept;
 
   explicit operator bool() const;
 
   operator T() const;
 
-  T Get() const;
+  const T &Get() const;
+  T &Get();
 
   void Reset();
 
+  T Release();
+
 private:
 
-  std::shared_ptr<T> Ptr_;
+  optional<T> Handle_;
+  std::function<void(T &)> Delete_;
 
 };
 
-template <typename T, typename F, OVK_FUNCDECL_REQUIRES(IsCallableWith<F, T *>())> handle<T>
+template <typename T, typename F, OVK_FUNCDECL_REQUIRES(IsCallableWith<F, T>())> handle<T>
   MakeHandle(T Handle, F Delete);
-template <typename T, typename F, OVK_FUNCDECL_REQUIRES(!IsCallableWith<F, T *>() &&
-  IsCallableWith<F, T>())> handle<T> MakeHandle(T Handle, F Delete);
-
-template <typename T> bool operator==(const handle<T> &Left, const handle<T> &Right);
-template <typename T> bool operator!=(const handle<T> &Left, const handle<T> &Right);
+template <typename T, typename F, OVK_FUNCDECL_REQUIRES(!IsCallableWith<F, T>() &&
+  IsCallableWith<F, T *>())> handle<T> MakeHandle(T Handle, F Delete);
 
 }}
 
