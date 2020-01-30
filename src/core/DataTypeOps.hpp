@@ -17,13 +17,22 @@
 namespace ovk {
 namespace core {
 
+inline handle<MPI_Datatype> CreateMPIContiguousType(int Count, MPI_Datatype ElementMPIType) {
+
+  MPI_Datatype MPITypeRaw;
+  MPI_Type_contiguous(Count, ElementMPIType, &MPITypeRaw);
+
+  return {MPITypeRaw, &MPI_Type_free};
+
+}
+
 struct mpi_struct_block {
   std::ptrdiff_t Offset;
   int Count;
   MPI_Datatype Type;
 };
 
-inline handle<MPI_Datatype> CreateStructMPIDatatype(std::size_t Size, std::initializer_list<
+inline handle<MPI_Datatype> CreateMPIStructType(std::size_t Size, std::initializer_list<
   mpi_struct_block> Blocks) {
 
   int NumBlocks = int(Blocks.size());
@@ -40,17 +49,20 @@ inline handle<MPI_Datatype> CreateStructMPIDatatype(std::size_t Size, std::initi
     ++iBlock;
   }
 
-  MPI_Datatype ElementsTypeRaw;
+  MPI_Datatype BlocksMPITypeRaw;
   MPI_Type_create_struct(NumBlocks, BlockCounts.Data(), BlockOffsets.Data(), BlockTypes.Data(),
-    &ElementsTypeRaw);
-  handle<MPI_Datatype> ElementsType(ElementsTypeRaw, &MPI_Type_free);
+    &BlocksMPITypeRaw);
+  handle<MPI_Datatype> BlocksMPIType(BlocksMPITypeRaw, &MPI_Type_free);
 
-  MPI_Datatype StructTypeRaw;
-  MPI_Type_create_resized(ElementsType, 0, Size, &StructTypeRaw);
-  MPI_Type_commit(&StructTypeRaw);
+  MPI_Datatype MPITypeRaw;
+  MPI_Type_create_resized(BlocksMPIType, 0, Size, &MPITypeRaw);
 
-  return {StructTypeRaw, &MPI_Type_free};
+  return {MPITypeRaw, &MPI_Type_free};
 
+}
+
+template <typename T1, typename T2> long long GetByteOffset(const T1 &Left, const T2 &Right) {
+  return reinterpret_cast<const byte *>(&Right) - reinterpret_cast<const byte *>(&Left);
 }
 
 }}

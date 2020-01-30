@@ -175,6 +175,7 @@ set(INTERNAL_HEADERS
   Math.hpp
   Math.inl
   Moveabool.hpp
+  MPISerializableTraits.hpp
   Optional.inl
   OverlapAccel.hpp
   OverlapComponent.h
