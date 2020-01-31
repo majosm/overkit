@@ -17,7 +17,7 @@ namespace core {
 template <typename T, typename=void> struct hashable_region_traits {
 /*
   using coord_type = ???;
-  static interval<coord_type,MAX_DIMS> ComputeExtents(const T &Region) { return ???; }
+  static interval<coord_type,MAX_DIMS> ComputeExtents(int NumDims, const T &Region) { return ???; }
   static elem_set<int,MAX_DIMS> MapToBins(int NumDims, const range &BinRange, const
     tuple<coord_type> &LowerCorner, const tuple<coord_type> &BinSize, const T &Region) {
     return ???;

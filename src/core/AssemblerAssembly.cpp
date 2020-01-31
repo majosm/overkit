@@ -366,24 +366,280 @@ struct generate_subdivisions {
 };
 
 struct generate_subdivision_boxes {
-  template <typename T> array<box> operator()(const T &Manipulator, const cart &CellCart, const
-    array<distributed_field<double>> &Coords, const distributed_field<bool> &CellActiveMask, double
-    Tolerance, const array<range> &SubdivisionRanges) const {
-    array<field_view<const double>> CoordsViews({MAX_DIMS}, {Coords(0), Coords(1), Coords(2)});
-    tuple<double> ScaleFactor = MakeUniformTuple<double>(CellCart.Dimension(), 1.+2.*Tolerance, 1.);
-    array<box> Boxes;
+  using bounding_box = assembler_internal::bounding_box;
+  template <typename T> array<bounding_box> operator()(const T &Manipulator, const cart &Cart, const
+    cart &CellCart, const array<distributed_field<double>> &Coords, const distributed_field<bool>
+    &CellActiveMask, double Tolerance, const array<range> &SubdivisionRanges) const {
+    int NumDims = Cart.Dimension();
+    auto &Indexer = Coords(0).Values().Indexer();
+    tuple<double> ScaleFactor = MakeUniformTuple<double>(NumDims, 1.+2.*Tolerance, 1.);
+    array<bounding_box> Boxes;
     Boxes.Reserve(SubdivisionRanges.Count());
-    for (auto &CellRange : SubdivisionRanges) {
-      range CellCoverRange = MakeCellCoverRange(CellCart, CellRange);
-      box &Bounds = Boxes.Append();
-      Bounds = MakeEmptyBox(CellCart.Dimension());
-      for (int k = CellCoverRange.Begin(2); k < CellCoverRange.End(2); ++k) {
-        for (int j = CellCoverRange.Begin(1); j < CellCoverRange.End(1); ++j) {
-          for (int i = CellCoverRange.Begin(0); i < CellCoverRange.End(0); ++i) {
-            tuple<int> Cell = {i,j,k};
-            if (!CellActiveMask(Cell)) continue;
-            box CellBounds = ScaleBox(Manipulator.CellBounds(CoordsViews, Cell), ScaleFactor);
-            Bounds = UnionBoxes(Bounds, CellBounds);
+    if (Manipulator.Type() == geometry_type::CURVILINEAR) {
+      for (auto &CellRange : SubdivisionRanges) {
+        range CellCoverRange = MakeCellCoverRange(CellCart, CellRange);
+        bounding_box &BoundingBox = Boxes.Append();
+        switch (NumDims) {
+        case 1:
+          BoundingBox.Orientation = {
+            {1., 0., 0.},
+            {0., 1., 0.},
+            {0., 0., 1.}
+          };
+          break;
+        case 2: {
+          auto Length = [](const elem<double,2> &Vec) -> double {
+            return std::sqrt(Vec(0)*Vec(0) + Vec(1)*Vec(1));
+          };
+          const range &Range = core::RangeCellToPointAll(Cart, CellCoverRange);
+          elem<int,2> Middle = {
+            (Range.Begin(0) + Range.End(0))/2,
+            (Range.Begin(1) + Range.End(1))/2
+          };
+          double PathLengthI = 0.;
+          elem<double,2> PathDisplacementI = {0.,0.};
+          long long iPrevCoord = Indexer.ToIndex(Range.Begin(0),Middle(1),0);
+          for (int i = Range.Begin(0)+1; i < Range.End(0); ++i) {
+            long long iCoord = Indexer.ToIndex(i,Middle(1),0);
+            elem<double,2> Displacement = {
+              Coords(0)[iCoord] - Coords(0)[iPrevCoord],
+              Coords(1)[iCoord] - Coords(1)[iPrevCoord]
+            };
+            PathLengthI += Length(Displacement);
+            PathDisplacementI += Displacement;
+            iPrevCoord = iCoord;
+          }
+          double PathLengthJ = 0.;
+          elem<double,2> PathDisplacementJ = {0.,0.};
+          iPrevCoord = Indexer.ToIndex(Middle(0),Range.Begin(1),0);
+          for (int j = Range.Begin(1)+1; j < Range.End(1); ++j) {
+            long long iCoord = Indexer.ToIndex(Middle(0),j,0);
+            elem<double,2> Displacement = {
+              Coords(0)[iCoord] - Coords(0)[iPrevCoord],
+              Coords(1)[iCoord] - Coords(1)[iPrevCoord]
+            };
+            PathLengthJ += Length(Displacement);
+            PathDisplacementJ += Displacement;
+            iPrevCoord = iCoord;
+          }
+          double Det = core::ColumnDeterminant2D(PathDisplacementI, PathDisplacementJ);
+          if (std::abs(Det) >= 1.e-6*PathLengthI*PathLengthJ) {
+            elem<double,2> OrientationI = PathDisplacementI;
+            elem<double,2> OrientationJ = PathDisplacementJ;
+            auto Orthonormalize = [](elem<double,2> &Vec1, elem<double,2> &Vec2) {
+              auto Dot = [](const elem<double,2> &Vec1, const elem<double,2> &Vec2) -> double {
+                return Vec1(0)*Vec2(0) + Vec1(1)*Vec2(1);
+              };
+              auto Normalize = [&Dot](const elem<double,2> &Vec) -> elem<double,2> {
+                double Length = std::sqrt(Dot(Vec, Vec));
+                return {Vec(0)/Length, Vec(1)/Length};
+              };
+              Vec1 = Normalize(Vec1);
+              double Dot21 = Dot(Vec2, Vec1);
+              Vec2(0) -= Dot21*Vec1(0);
+              Vec2(1) -= Dot21*Vec1(1);
+              Vec2 = Normalize(Vec2);
+            };
+            double LengthI = Length(OrientationI);
+            double LengthJ = Length(OrientationJ);
+            if (LengthI >= LengthJ) {
+              Orthonormalize(OrientationI, OrientationJ);
+            } else {
+              Orthonormalize(OrientationJ, OrientationI);
+            }
+            BoundingBox.Orientation = {
+              {OrientationI(0), OrientationJ(0), 0.},
+              {OrientationI(1), OrientationJ(1), 0.},
+              {             0.,              0., 1.}
+            };
+          } else {
+            BoundingBox.Orientation = {
+              {1., 0., 0.},
+              {0., 1., 0.},
+              {0., 0., 1.}
+            };
+          }
+          break;
+        }
+        default: {
+          auto Length = [](const elem<double,3> &Vec) -> double {
+            return std::sqrt(Vec(0)*Vec(0) + Vec(1)*Vec(1) + Vec(2)*Vec(2));
+          };
+          const range &Range = core::RangeCellToPointAll(Cart, CellRange);
+          elem<int,3> Middle = {
+            (Range.Begin(0) + Range.End(0))/2,
+            (Range.Begin(1) + Range.End(1))/2,
+            (Range.Begin(2) + Range.End(2))/2
+          };
+          double PathLengthI = 0.;
+          elem<double,3> PathDisplacementI = {0.,0.,0.};
+          long long iPrevCoord = Indexer.ToIndex(Range.Begin(0),Middle(1),Middle(2));
+          for (int i = Range.Begin(0)+1; i < Range.End(0); ++i) {
+            long long iCoord = Indexer.ToIndex(i,Middle(1),Middle(2));
+            elem<double,3> Displacement = {
+              Coords(0)[iCoord] - Coords(0)[iPrevCoord],
+              Coords(1)[iCoord] - Coords(1)[iPrevCoord],
+              Coords(2)[iCoord] - Coords(2)[iPrevCoord]
+            };
+            PathLengthI += Length(Displacement);
+            PathDisplacementI += Displacement;
+            iPrevCoord = iCoord;
+          }
+          double PathLengthJ = 0.;
+          elem<double,3> PathDisplacementJ = {0.,0.,0.};
+          iPrevCoord = Indexer.ToIndex(Middle(0),Range.Begin(1),Middle(2));
+          for (int j = Range.Begin(1)+1; j < Range.End(1); ++j) {
+            long long iCoord = Indexer.ToIndex(Middle(0),j,Middle(2));
+            elem<double,3> Displacement = {
+              Coords(0)[iCoord] - Coords(0)[iPrevCoord],
+              Coords(1)[iCoord] - Coords(1)[iPrevCoord],
+              Coords(2)[iCoord] - Coords(2)[iPrevCoord]
+            };
+            PathLengthJ += Length(Displacement);
+            PathDisplacementJ += Displacement;
+            iPrevCoord = iCoord;
+          }
+          double PathLengthK = 0.;
+          elem<double,3> PathDisplacementK = {0.,0.,0.};
+          iPrevCoord = Indexer.ToIndex(Middle(0),Middle(1),Range.Begin(2));
+          for (int k = Range.Begin(2)+1; k < Range.End(2); ++k) {
+            long long iCoord = Indexer.ToIndex(Middle(0),Middle(1),k);
+            elem<double,3> Displacement = {
+              Coords(0)[iCoord] - Coords(0)[iPrevCoord],
+              Coords(1)[iCoord] - Coords(1)[iPrevCoord],
+              Coords(2)[iCoord] - Coords(2)[iPrevCoord]
+            };
+            PathLengthK += Length(Displacement);
+            PathDisplacementK += Displacement;
+            iPrevCoord = iCoord;
+          }
+          double Det = core::ColumnDeterminant3D(PathDisplacementI, PathDisplacementJ,
+            PathDisplacementK);
+          if (std::abs(Det) >= 1.e-6*PathLengthI*PathLengthJ*PathLengthK) {
+            elem<double,3> OrientationI = PathDisplacementI;
+            elem<double,3> OrientationJ = PathDisplacementJ;
+            elem<double,3> OrientationK = PathDisplacementK;
+            auto Orthonormalize = [](elem<double,3> &Vec1, elem<double,3> &Vec2, elem<double,3>
+              &Vec3) {
+              auto Dot = [](const elem<double,3> &Vec1, const elem<double,3> &Vec2) -> double {
+                return Vec1(0)*Vec2(0) + Vec1(1)*Vec2(1) + Vec1(2)*Vec2(2);
+              };
+              auto Normalize = [&Dot](const elem<double,3> &Vec) -> elem<double,3> {
+                double Length = std::sqrt(Dot(Vec, Vec));
+                return {Vec(0)/Length, Vec(1)/Length, Vec(2)/Length};
+              };
+              Vec1 = Normalize(Vec1);
+              double Dot21 = Dot(Vec2, Vec1);
+              double Dot31 = Dot(Vec3, Vec1);
+              for (int iDim = 0; iDim < 3; ++iDim) {
+                Vec2(iDim) -= Dot21*Vec1(iDim);
+                Vec3(iDim) -= Dot31*Vec1(iDim);
+              }
+              Vec2 = Normalize(Vec2);
+              double Dot32 = Dot(Vec3, Vec2);
+              for (int iDim = 0; iDim < 3; ++iDim) {
+                Vec3(iDim) -= Dot32*Vec2(iDim);
+              }
+              Vec3 = Normalize(Vec3);
+            };
+            double LengthI = Length(OrientationI);
+            double LengthJ = Length(OrientationJ);
+            double LengthK = Length(OrientationK);
+            if (LengthI >= LengthJ) {
+              if (LengthJ >= LengthK) {
+                Orthonormalize(OrientationI, OrientationJ, OrientationK);
+              } else if (LengthI >= LengthK) {
+                Orthonormalize(OrientationI, OrientationK, OrientationJ);
+              } else {
+                Orthonormalize(OrientationK, OrientationI, OrientationJ);
+              }
+            } else {
+              if (LengthJ < LengthK) {
+                Orthonormalize(OrientationK, OrientationJ, OrientationI);
+              } else if (LengthI < LengthK) {
+                Orthonormalize(OrientationJ, OrientationK, OrientationI);
+              } else {
+                Orthonormalize(OrientationJ, OrientationI, OrientationK);
+              }
+            }
+            BoundingBox.Orientation = {
+              {OrientationI(0), OrientationJ(0), OrientationK(0)},
+              {OrientationI(1), OrientationJ(1), OrientationK(1)},
+              {OrientationI(2), OrientationJ(2), OrientationK(2)}
+            };
+          } else {
+            BoundingBox.Orientation = {
+              {1., 0., 0.},
+              {0., 1., 0.},
+              {0., 0., 1.}
+            };
+          }
+          break;
+        }}
+        field<double> TransformedCellVertexCoords[MAX_DIMS];
+        field_view<const double> TransformedCellVertexCoordsViews[MAX_DIMS];
+        tuple<int> CellSize = MakeUniformTuple<int>(NumDims, 2, 1);
+        for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+          TransformedCellVertexCoords[iDim].Resize({CellSize});
+          TransformedCellVertexCoordsViews[iDim] = TransformedCellVertexCoords[iDim];
+        }
+        BoundingBox.Box = MakeEmptyBox(NumDims);
+        for (int k = CellCoverRange.Begin(2); k < CellCoverRange.End(2); ++k) {
+          for (int j = CellCoverRange.Begin(1); j < CellCoverRange.End(1); ++j) {
+            for (int i = CellCoverRange.Begin(0); i < CellCoverRange.End(0); ++i) {
+              tuple<int> Cell = {i,j,k};
+              if (!CellActiveMask(Cell)) continue;
+              range CellVertexRange;
+              for (int iDim = 0; iDim < NumDims; ++iDim) {
+                CellVertexRange.Begin(iDim) = Cell(iDim);
+                CellVertexRange.End(iDim) = Cell(iDim)+2;
+              }
+              for (int iDim = NumDims; iDim < MAX_DIMS; ++iDim) {
+                CellVertexRange.Begin(iDim) = 0;
+                CellVertexRange.End(iDim) = 1;
+              }
+              int iVertex = 0;
+              for (int o = CellVertexRange.Begin(2); o < CellVertexRange.End(2); ++o) {
+                for (int n = CellVertexRange.Begin(1); n < CellVertexRange.End(1); ++n) {
+                  for (int m = CellVertexRange.Begin(0); m < CellVertexRange.End(0); ++m) {
+                    long long iCoord = Indexer.ToIndex(m,n,o);
+                    for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+                      TransformedCellVertexCoords[iDim][iVertex] =
+                        BoundingBox.Orientation(0)(iDim)*Coords(0)[iCoord] +
+                        BoundingBox.Orientation(1)(iDim)*Coords(1)[iCoord] +
+                        BoundingBox.Orientation(2)(iDim)*Coords(2)[iCoord];
+                    }
+                    ++iVertex;
+                  }
+                }
+              }
+              box CellBounds = ScaleBox(Manipulator.CellBounds(TransformedCellVertexCoordsViews,
+                {0,0,0}), ScaleFactor);
+              BoundingBox.Box = UnionBoxes(BoundingBox.Box, CellBounds);
+            }
+          }
+        }
+      }
+    } else {
+      field_view<const double> CoordsViews[MAX_DIMS] = {Coords(0), Coords(1), Coords(2)};
+      for (auto &CellRange : SubdivisionRanges) {
+        range CellCoverRange = MakeCellCoverRange(CellCart, CellRange);
+        bounding_box &BoundingBox = Boxes.Append();
+        BoundingBox.Orientation = {
+          {1., 0., 0.},
+          {0., 1., 0.},
+          {0., 0., 1.}
+        };
+        BoundingBox.Box = MakeEmptyBox(NumDims);
+        for (int k = CellCoverRange.Begin(2); k < CellCoverRange.End(2); ++k) {
+          for (int j = CellCoverRange.Begin(1); j < CellCoverRange.End(1); ++j) {
+            for (int i = CellCoverRange.Begin(0); i < CellCoverRange.End(0); ++i) {
+              tuple<int> Cell = {i,j,k};
+              if (!CellActiveMask(Cell)) continue;
+              box CellBounds = ScaleBox(Manipulator.CellBounds(CoordsViews, Cell),
+                ScaleFactor);
+              BoundingBox.Box = UnionBoxes(BoundingBox.Box, CellBounds);
+            }
           }
         }
       }
@@ -489,11 +745,11 @@ void assembler::DetectOverlap_() {
     const geometry &Geometry = GeometryComponent.Geometry(GridID);
     core::geometry_manipulator GeometryManipulator(Geometry.Type(), NumDims);
     const array<range> &SubdivisionRanges = SubdivisionRangesForLocalGrid(GridID);
-    array<box> Boxes = GeometryManipulator.Apply(generate_subdivision_boxes(), Grid.CellCart(),
-      Geometry.Coords(), CellActiveMask, MaxOverlapTolerances(GridID), SubdivisionRanges);
+    array<bounding_box> Boxes = GeometryManipulator.Apply(generate_subdivision_boxes(),
+      Grid.Cart(), Grid.CellCart(), Geometry.Coords(), CellActiveMask, MaxOverlapTolerances(GridID),
+      SubdivisionRanges);
     for (int iSubdivision = 0; iSubdivision < SubdivisionRanges.Count(); ++iSubdivision) {
-      bounding_box &BoundingBox = SubdivisionBoundingBoxes.Append();
-      BoundingBox.Box = Boxes(iSubdivision);
+      bounding_box &BoundingBox = SubdivisionBoundingBoxes.Append(Boxes(iSubdivision));
       BoundingBox.GridID = GridID;
       BoundingBox.SubdivisionIndex = iSubdivision;
     }
@@ -616,11 +872,19 @@ void assembler::DetectOverlap_() {
             const bounding_box_hash_region_data &RegionData = Bins.RegionData(iRegion);
             int Rank = RegionData.Rank();
             const bounding_box &BoundingBox = RegionData.Region();
-            const box &Box = BoundingBox.Box;
             int MGridID = BoundingBox.GridID;
-            int iSubdivision = BoundingBox.SubdivisionIndex;
-            if (Options_.Overlappable({MGridID,NGridID}) && Box.Contains(PointCoords)) {
-              SubdivisionsFromMGridAndRank.Fetch({MGridID,Rank}).Insert(iSubdivision);
+            if (Options_.Overlappable({MGridID,NGridID})) {
+              tuple<double> TransformedCoords;
+              for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+                TransformedCoords(iDim) =
+                  BoundingBox.Orientation(0)(iDim)*PointCoords(0) +
+                  BoundingBox.Orientation(1)(iDim)*PointCoords(1) +
+                  BoundingBox.Orientation(2)(iDim)*PointCoords(2);
+              }
+              if (BoundingBox.Box.Contains(TransformedCoords)) {
+                int iSubdivision = BoundingBox.SubdivisionIndex;
+                SubdivisionsFromMGridAndRank.Fetch({MGridID,Rank}).Insert(iSubdivision);
+              }
             }
           }
         }
@@ -1048,11 +1312,19 @@ void assembler::DetectOverlap_() {
             const bounding_box_hash_region_data &RegionData = Bins.RegionData(iRegion);
             int Rank = RegionData.Rank();
             const bounding_box &BoundingBox = RegionData.Region();
-            const box &Box = BoundingBox.Box;
             int MGridID = BoundingBox.GridID;
-            int iSubdivision = BoundingBox.SubdivisionIndex;
-            if (Options_.Overlappable({MGridID,NGridID}) && Box.Contains(PointCoords)) {
-              ++(NumQueryPointsForMGridAndRank.Fetch({MGridID,Rank}).Fetch(iSubdivision));
+            if (Options_.Overlappable({MGridID,NGridID})) {
+              tuple<double> TransformedCoords;
+              for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+                TransformedCoords(iDim) =
+                  BoundingBox.Orientation(0)(iDim)*PointCoords(0) +
+                  BoundingBox.Orientation(1)(iDim)*PointCoords(1) +
+                  BoundingBox.Orientation(2)(iDim)*PointCoords(2);
+              }
+              if (BoundingBox.Box.Contains(TransformedCoords)) {
+                int iSubdivision = BoundingBox.SubdivisionIndex;
+                ++(NumQueryPointsForMGridAndRank.Fetch({MGridID,Rank}).Fetch(iSubdivision));
+              }
             }
           }
         }
@@ -1113,13 +1385,21 @@ void assembler::DetectOverlap_() {
             const bounding_box_hash_region_data &RegionData = Bins.RegionData(iRegion);
             int Rank = RegionData.Rank();
             const bounding_box &BoundingBox = RegionData.Region();
-            const box &Box = BoundingBox.Box;
             int MGridID = BoundingBox.GridID;
-            int iSubdivision = BoundingBox.SubdivisionIndex;
-            if (Options_.Overlappable({MGridID,NGridID}) && Box.Contains(PointCoords)) {
-              subdivision_overlap_data &OverlapData = OverlapDataForMGridAndRank({MGridID,Rank})(
-                iSubdivision);
-              OverlapData.Points.Append(LocalIndexer.ToIndex(Point));
+            if (Options_.Overlappable({MGridID,NGridID})) {
+              tuple<double> TransformedCoords;
+              for (int iDim = 0; iDim < MAX_DIMS; ++iDim) {
+                TransformedCoords(iDim) =
+                  BoundingBox.Orientation(0)(iDim)*PointCoords(0) +
+                  BoundingBox.Orientation(1)(iDim)*PointCoords(1) +
+                  BoundingBox.Orientation(2)(iDim)*PointCoords(2);
+              }
+              if (BoundingBox.Box.Contains(TransformedCoords)) {
+                int iSubdivision = BoundingBox.SubdivisionIndex;
+                subdivision_overlap_data &OverlapData = OverlapDataForMGridAndRank({MGridID,Rank})(
+                  iSubdivision);
+                OverlapData.Points.Append(LocalIndexer.ToIndex(Point));
+              }
             }
           }
         }

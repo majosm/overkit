@@ -35,7 +35,7 @@ template <typename IndexType> using range_indexer_c = range_indexer<IndexType,
 namespace core {
 template <> struct hashable_region_traits<range> {
   using coord_type = int;
-  static range ComputeExtents(const range &Region) { return Region; }
+  static range ComputeExtents(int, const range &Region) { return Region; }
   static elem_set<int,MAX_DIMS> MapToBins(int NumDims, const range &BinRange, const tuple<int>
     &LowerCorner, const tuple<int> &BinSize, const range &Region) {
     elem_set<int,MAX_DIMS> BinLocs;

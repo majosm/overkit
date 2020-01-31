@@ -25,7 +25,7 @@ template <typename RegionType> distributed_region_hash<RegionType>::distributed_
 
   GlobalExtents_ = MakeEmptyExtents_(NumDims, coord_type_tag<coord_type>());
   for (auto &Region : LocalRegions) {
-    GlobalExtents_ = UnionExtents_(GlobalExtents_, region_traits::ComputeExtents(Region));
+    GlobalExtents_ = UnionExtents_(GlobalExtents_, region_traits::ComputeExtents(NumDims, Region));
   }
 
   MPI_Allreduce(MPI_IN_PLACE, GlobalExtents_.Begin().Data(), NumDims_, CoordMPIType, MPI_MIN, Comm_);
@@ -149,7 +149,7 @@ template <typename RegionType> distributed_region_hash<RegionType>::distributed_
 
     double AvgBinRegionLength = 0.;
     for (auto &Data : RegionData_) {
-      extents_type Extents = region_traits::ComputeExtents(Data.Region_);
+      extents_type Extents = region_traits::ComputeExtents(NumDims, Data.Region_);
       for (int iDim = 0; iDim < NumDims_; ++iDim) {
         AvgBinRegionLength += double(Extents.Size(iDim));
       }

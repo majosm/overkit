@@ -32,7 +32,7 @@ inline box ScaleBox(const box &Box, const tuple<double> &Factor);
 namespace core {
 template <> struct hashable_region_traits<box> {
   using coord_type = double;
-  static box ComputeExtents(const box &Region) { return Region; }
+  static box ComputeExtents(int, const box &Region) { return Region; }
   static elem_set<int,MAX_DIMS> MapToBins(int NumDims, const range &BinRange, const tuple<double>
     &LowerCorner, const tuple<double> &BinSize, const box &Region) {
     elem_set<int,MAX_DIMS> BinLocs;

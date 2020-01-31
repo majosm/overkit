@@ -25,6 +25,7 @@
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Grid.hpp>
 #include <ovk/core/HashableRegionTraits.hpp>
+#include <ovk/core/Interval.hpp>
 #include <ovk/core/Map.hpp>
 #include <ovk/core/MPISerializableTraits.hpp>
 #include <ovk/core/Optional.hpp>
@@ -67,6 +68,8 @@ inline bool ValidConnectionType(connection_type ConnectionType) {
 
 namespace assembler_internal {
 struct bounding_box {
+//   static_array<double,MAX_DIMS*MAX_DIMS,2> Orientation;
+  tuple<tuple<double>> Orientation;
   box Box;
   int GridID = -1;
   int SubdivisionIndex = -1;
@@ -77,19 +80,261 @@ struct bounding_box {
 namespace core {
 template <> struct hashable_region_traits<assembler_internal::bounding_box> {
   using coord_type = double;
-  static box ComputeExtents(const assembler_internal::bounding_box &Region) { return Region.Box; }
+  static box ComputeExtents(int NumDims, const assembler_internal::bounding_box &Region) {
+    box Extents;
+    switch (NumDims) {
+    case 1:
+      Extents = ComputeExtents1D(Region);
+      break;
+    case 2:
+      Extents = ComputeExtents2D(Region);
+      break;
+    default:
+      Extents = ComputeExtents3D(Region);
+      break;
+    }
+    return Extents;
+  }
+  static box ComputeExtents1D(const assembler_internal::bounding_box &Region) {
+    return Region.Box;
+  }
+  static box ComputeExtents2D(const assembler_internal::bounding_box &Region) {
+    auto OrientInv = [&Region](const elem<double,2> &Vec) -> elem<double,2> {
+      const tuple<tuple<double>> &O = Region.Orientation;
+      return {
+        O(0)(0)*Vec(0) + O(0)(1)*Vec(1),
+        O(1)(0)*Vec(0) + O(1)(1)*Vec(1)
+      };
+    };
+    elem<double,2> RegionCorners[4] = {
+      OrientInv({Region.Box.Begin(0),Region.Box.Begin(1)}),
+      OrientInv({  Region.Box.End(0),Region.Box.Begin(1)}),
+      OrientInv({Region.Box.Begin(0),  Region.Box.End(1)}),
+      OrientInv({  Region.Box.End(0),  Region.Box.End(1)})
+    };
+    box Extents = MakeEmptyBox(2);
+    for (int l = 0; l < 4; ++l) {
+      Extents = ExtendBox(Extents, {RegionCorners[l](0), RegionCorners[l](1), 0.});
+    }
+    return Extents;
+  }
+  static box ComputeExtents3D(const assembler_internal::bounding_box &Region) {
+    auto OrientInv = [&Region](const elem<double,3> &Vec) -> elem<double,3> {
+      const tuple<tuple<double>> &O = Region.Orientation;
+      return {
+        O(0)(0)*Vec(0) + O(0)(1)*Vec(1) + O(0)(2)*Vec(2),
+        O(1)(0)*Vec(0) + O(1)(1)*Vec(1) + O(1)(2)*Vec(2),
+        O(2)(0)*Vec(0) + O(2)(1)*Vec(1) + O(2)(2)*Vec(2)
+      };
+    };
+    elem<double,3> RegionCorners[8] = {
+      OrientInv({Region.Box.Begin(0),Region.Box.Begin(1), Region.Box.Begin(2)}),
+      OrientInv({  Region.Box.End(0),Region.Box.Begin(1), Region.Box.Begin(2)}),
+      OrientInv({Region.Box.Begin(0),  Region.Box.End(1), Region.Box.Begin(2)}),
+      OrientInv({  Region.Box.End(0),  Region.Box.End(1), Region.Box.Begin(2)}),
+      OrientInv({Region.Box.Begin(0),Region.Box.Begin(1),   Region.Box.End(2)}),
+      OrientInv({  Region.Box.End(0),Region.Box.Begin(1),   Region.Box.End(2)}),
+      OrientInv({Region.Box.Begin(0),  Region.Box.End(1),   Region.Box.End(2)}),
+      OrientInv({  Region.Box.End(0),  Region.Box.End(1),   Region.Box.End(2)})
+    };
+    box Extents = MakeEmptyBox(3);
+    for (int l = 0; l < 8; ++l) {
+      Extents = ExtendBox(Extents, RegionCorners[l]);
+    }
+    return Extents;
+  }
   static elem_set<int,MAX_DIMS> MapToBins(int NumDims, const range &BinRange, const tuple<double>
     &LowerCorner, const tuple<double> &BinSize, const assembler_internal::bounding_box &Region) {
-    return hashable_region_traits<box>::MapToBins(NumDims, BinRange, LowerCorner, BinSize,
-      Region.Box);
+    elem_set<int,MAX_DIMS> Bins;
+    switch (NumDims) {
+    case 1:
+      Bins = MapToBins1D(BinRange, LowerCorner, BinSize, Region);
+      break;
+    case 2:
+      Bins = MapToBins2D(BinRange, LowerCorner, BinSize, Region);
+      break;
+    default:
+      Bins = MapToBins3D(BinRange, LowerCorner, BinSize, Region);
+      break;
+    }
+    return Bins;
+  }
+  static elem_set<int,MAX_DIMS> MapToBins1D(const range &BinRange, const tuple<double> &LowerCorner,
+    const tuple<double> &BinSize, const assembler_internal::bounding_box &Region) {
+    return hashable_region_traits<box>::MapToBins(1, BinRange, LowerCorner, BinSize, Region.Box);
+  }
+  static elem_set<int,MAX_DIMS> MapToBins2D(const range &BinRange, const tuple<double> &LowerCorner,
+    const tuple<double> &BinSize, const assembler_internal::bounding_box &Region) {
+    auto OrientInv = [&Region](const elem<double,2> &Vec) -> elem<double,2> {
+      const tuple<tuple<double>> &O = Region.Orientation;
+      return {
+        O(0)(0)*Vec(0) + O(0)(1)*Vec(1),
+        O(1)(0)*Vec(0) + O(1)(1)*Vec(1)
+      };
+    };
+    elem<double,2> RegionCorners[4] = {
+      OrientInv({Region.Box.Begin(0),Region.Box.Begin(1)}),
+      OrientInv({  Region.Box.End(0),Region.Box.Begin(1)}),
+      OrientInv({Region.Box.Begin(0),  Region.Box.End(1)}),
+      OrientInv({  Region.Box.End(0),  Region.Box.End(1)})
+    };
+    box RegionExtents = MakeEmptyBox(2);
+    for (int l = 0; l < 4; ++l) {
+      RegionExtents = ExtendBox(RegionExtents, {RegionCorners[l](0), RegionCorners[l](1), 0.});
+    }
+    elem_set<int,MAX_DIMS> CandidateBins = hashable_region_traits<box>::MapToBins(2, BinRange,
+      LowerCorner, BinSize, RegionExtents);
+    elem_set<int,MAX_DIMS> Bins;
+    Bins.Reserve(CandidateBins.Count());
+    elem<double,2> SeparatingLineAxes[4] = {
+      {1., 0.},
+      {0., 1.},
+      OrientInv({1.,0.}),
+      OrientInv({0.,1.})
+    };
+    auto OverlapsAlongAxis = [](array_view<const elem<double,2>> Corners1, array_view<const
+      elem<double,2>> Corners2, const elem<double,2> &Axis) -> bool {
+      auto IntervalAlongAxis = [](const array_view<const elem<double,2>> &Corners, const
+        elem<double,2> &Axis) -> interval<double> {
+        interval<double> Interval;
+        Interval.Begin(0) = std::numeric_limits<double>::max();
+        Interval.End(0) = std::numeric_limits<double>::min();
+        for (auto &Corner : Corners) {
+          double Dot = Corner(0)*Axis(0) + Corner(1)*Axis(1);
+          Interval.Begin(0) = Min(Interval.Begin(0), Dot);
+          Interval.End(0) = Max(Interval.End(0), Dot);
+        }
+        return Interval;
+      };
+      interval<double> Interval1 = IntervalAlongAxis(Corners1, Axis);
+      interval<double> Interval2 = IntervalAlongAxis(Corners2, Axis);
+      return Interval2.End(0) >= Interval1.Begin(0) && Interval1.End(0) >= Interval2.Begin(0);
+    };
+    for (auto &BinLoc : CandidateBins) {
+      box BinExtents = MakeEmptyBox(2);
+      for (int iDim = 0; iDim < 2; ++iDim) {
+        BinExtents.Begin(iDim) = LowerCorner(iDim) + double(BinLoc(iDim))*BinSize(iDim);
+        BinExtents.End(iDim) = LowerCorner(iDim) + double(BinLoc(iDim)+1)*BinSize(iDim);
+      }
+      elem<double,2> BinCorners[4] = {
+        {BinExtents.Begin(0),BinExtents.Begin(1)},
+        {  BinExtents.End(0),BinExtents.Begin(1)},
+        {BinExtents.Begin(0),  BinExtents.End(1)},
+        {  BinExtents.End(0),  BinExtents.End(1)}
+      };
+      bool Overlaps = true;
+      for (auto &Axis : SeparatingLineAxes) {
+        Overlaps = Overlaps && OverlapsAlongAxis(RegionCorners, BinCorners, Axis);
+        if (!Overlaps) break;
+      }
+      if (Overlaps) {
+        Bins.Insert(BinLoc);
+      }
+    }
+    return Bins;
+  }
+  static elem_set<int,MAX_DIMS> MapToBins3D(const range &BinRange, const tuple<double> &LowerCorner,
+    const tuple<double> &BinSize, const assembler_internal::bounding_box &Region) {
+    auto OrientInv = [&Region](const elem<double,3> &Vec) -> elem<double,3> {
+      const tuple<tuple<double>> &O = Region.Orientation;
+      return {
+        O(0)(0)*Vec(0) + O(0)(1)*Vec(1) + O(0)(2)*Vec(2),
+        O(1)(0)*Vec(0) + O(1)(1)*Vec(1) + O(1)(2)*Vec(2),
+        O(2)(0)*Vec(0) + O(2)(1)*Vec(1) + O(2)(2)*Vec(2)
+      };
+    };
+    elem<double,3> RegionCorners[8] = {
+      OrientInv({Region.Box.Begin(0),Region.Box.Begin(1), Region.Box.Begin(2)}),
+      OrientInv({  Region.Box.End(0),Region.Box.Begin(1), Region.Box.Begin(2)}),
+      OrientInv({Region.Box.Begin(0),  Region.Box.End(1), Region.Box.Begin(2)}),
+      OrientInv({  Region.Box.End(0),  Region.Box.End(1), Region.Box.Begin(2)}),
+      OrientInv({Region.Box.Begin(0),Region.Box.Begin(1),   Region.Box.End(2)}),
+      OrientInv({  Region.Box.End(0),Region.Box.Begin(1),   Region.Box.End(2)}),
+      OrientInv({Region.Box.Begin(0),  Region.Box.End(1),   Region.Box.End(2)}),
+      OrientInv({  Region.Box.End(0),  Region.Box.End(1),   Region.Box.End(2)})
+    };
+    box RegionExtents = MakeEmptyBox(3);
+    for (int l = 0; l < 8; ++l) {
+      RegionExtents = ExtendBox(RegionExtents, RegionCorners[l]);
+    }
+    elem_set<int,MAX_DIMS> CandidateBins = hashable_region_traits<box>::MapToBins(3, BinRange,
+      LowerCorner, BinSize, RegionExtents);
+    elem_set<int,MAX_DIMS> Bins;
+    Bins.Reserve(CandidateBins.Count());
+    elem<double,3> RegionAxisI = OrientInv({1.,0.,0.});
+    elem<double,3> RegionAxisJ = OrientInv({0.,1.,0.});
+    elem<double,3> RegionAxisK = OrientInv({0.,0.,1.});
+    elem<double,3> SeparatingPlaneAxes[15] = {
+      {1., 0., 0.},
+      {0., 1., 0.},
+      {0., 0., 1.},
+      RegionAxisI,
+      RegionAxisJ,
+      RegionAxisK,
+      {0., -RegionAxisI(2), RegionAxisI(1)},
+      {0., -RegionAxisJ(2), RegionAxisJ(1)},
+      {0., -RegionAxisK(2), RegionAxisK(1)},
+      {RegionAxisI(2), 0., -RegionAxisI(0)},
+      {RegionAxisJ(2), 0., -RegionAxisJ(0)},
+      {RegionAxisK(2), 0., -RegionAxisK(0)},
+      {-RegionAxisI(1), RegionAxisI(0), 0.},
+      {-RegionAxisJ(1), RegionAxisJ(0), 0.},
+      {-RegionAxisJ(1), RegionAxisK(0), 0.}
+    };
+    auto OverlapsAlongAxis = [](array_view<const elem<double,3>> Corners1, array_view<const
+      elem<double,3>> Corners2, const elem<double,3> &Axis) -> bool {
+      auto IntervalAlongAxis = [](const array_view<const elem<double,3>> &Corners, const
+        elem<double,3> &Axis) -> interval<double> {
+        interval<double> Interval;
+        Interval.Begin(0) = std::numeric_limits<double>::max();
+        Interval.End(0) = std::numeric_limits<double>::min();
+        for (auto &Corner : Corners) {
+          double Dot = Corner(0)*Axis(0) + Corner(1)*Axis(1) + Corner(2)*Axis(2);
+          Interval.Begin(0) = Min(Interval.Begin(0), Dot);
+          Interval.End(0) = Max(Interval.End(0), Dot);
+        }
+        return Interval;
+      };
+      interval<double> Interval1 = IntervalAlongAxis(Corners1, Axis);
+      interval<double> Interval2 = IntervalAlongAxis(Corners2, Axis);
+      return Interval2.End(0) >= Interval1.Begin(0) && Interval1.End(0) >= Interval2.Begin(0);
+    };
+    for (auto &BinLoc : CandidateBins) {
+      box BinExtents = MakeEmptyBox(3);
+      for (int iDim = 0; iDim < 3; ++iDim) {
+        BinExtents.Begin(iDim) = LowerCorner(iDim) + double(BinLoc(iDim))*BinSize(iDim);
+        BinExtents.End(iDim) = LowerCorner(iDim) + double(BinLoc(iDim)+1)*BinSize(iDim);
+      }
+      elem<double,3> BinCorners[8] = {
+        {BinExtents.Begin(0),BinExtents.Begin(1), BinExtents.Begin(2)},
+        {  BinExtents.End(0),BinExtents.Begin(1), BinExtents.Begin(2)},
+        {BinExtents.Begin(0),  BinExtents.End(1), BinExtents.Begin(2)},
+        {  BinExtents.End(0),  BinExtents.End(1), BinExtents.Begin(2)},
+        {BinExtents.Begin(0),BinExtents.Begin(1),   BinExtents.End(2)},
+        {  BinExtents.End(0),BinExtents.Begin(1),   BinExtents.End(2)},
+        {BinExtents.Begin(0),  BinExtents.End(1),   BinExtents.End(2)},
+        {  BinExtents.End(0),  BinExtents.End(1),   BinExtents.End(2)}
+      };
+      bool Overlaps = true;
+      for (auto &Axis : SeparatingPlaneAxes) {
+        Overlaps = Overlaps && OverlapsAlongAxis(RegionCorners, BinCorners, Axis);
+        if (!Overlaps) break;
+      }
+      if (Overlaps) {
+        Bins.Insert(BinLoc);
+      }
+    }
+    return Bins;
   }
 };
 template <> struct mpi_serializable_traits<assembler_internal::bounding_box> {
   using packed_type = assembler_internal::bounding_box;
   static handle<MPI_Datatype> CreateMPIType() {
+    auto OrientationMPIType = mpi_serializable_traits<tuple<tuple<double>>>::CreateMPIType();
     auto BoxMPIType = mpi_serializable_traits<box>::CreateMPIType();
     assembler_internal::bounding_box Dummy;
     return CreateMPIStructType(sizeof(Dummy), {
+      {GetByteOffset(Dummy,Dummy.Orientation),1,OrientationMPIType.Get()},
       {GetByteOffset(Dummy,Dummy.Box),1,BoxMPIType.Get()},
       {GetByteOffset(Dummy,Dummy.GridID),2,MPI_INT}
     });

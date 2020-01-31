@@ -22,7 +22,7 @@ template <typename RegionType> region_hash<RegionType>::region_hash(int NumDims,
 
   Extents_ = MakeEmptyExtents_(NumDims, coord_type_tag<coord_type>());
   for (auto &Region : Regions) {
-    Extents_ = UnionExtents_(Extents_, region_traits::ComputeExtents(Region));
+    Extents_ = UnionExtents_(Extents_, region_traits::ComputeExtents(NumDims, Region));
   }
 
   BinSize_ = GetBinSize_(Extents_, NumBins);

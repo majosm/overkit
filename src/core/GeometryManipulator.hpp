@@ -18,22 +18,23 @@ namespace core {
 
 namespace geometry_manipulator_internal {
 
-template <geometry_type Type, int NumDims> struct geometry_manipulator_for_type_and_dim {
+template <geometry_type Type_, int NumDims> struct geometry_manipulator_for_type_and_dim {
+  constexpr geometry_type Type() const { return Type_; }
   bool OverlapsCell(const array_view<const field_view<const double>> &Coords, double Tolerance,
     const tuple<int> &Cell, const tuple<double> &PointCoords) const {
-    return core::OverlapsCell<Type, NumDims>(Coords, Tolerance, Cell, PointCoords);
+    return core::OverlapsCell<Type_, NumDims>(Coords, Tolerance, Cell, PointCoords);
   }
   optional<tuple<double>> CoordsInCell(const array_view<const field_view<const double>> &Coords,
     const tuple<int> &Cell, const tuple<double> &PointCoords) const {
-    return core::CoordsInCell<Type, NumDims>(Coords, Cell, PointCoords);
+    return core::CoordsInCell<Type_, NumDims>(Coords, Cell, PointCoords);
   }
   double CellVolume(const array_view<const field_view<const double>> &Coords, const tuple<int>
     &Cell) const {
-    return core::CellVolume<Type, NumDims>(Coords, Cell);
+    return core::CellVolume<Type_, NumDims>(Coords, Cell);
   }
   box CellBounds(const array_view<const field_view<const double>> &Coords, const tuple<int> &Cell)
     const {
-    return core::CellBounds<Type, NumDims>(Coords, Cell);
+    return core::CellBounds<Type_, NumDims>(Coords, Cell);
   }
 };
 
