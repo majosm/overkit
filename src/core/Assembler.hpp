@@ -67,20 +67,21 @@ inline bool ValidConnectionType(connection_type ConnectionType) {
 }
 
 namespace assembler_internal {
-struct bounding_box {
+struct fragment {
+  int GridID = -1;
+  int ID = -1;
+  range CellRange;
 //   static_array<double,MAX_DIMS*MAX_DIMS,2> Orientation;
   tuple<tuple<double>> Orientation;
   box Box;
-  int GridID = -1;
-  int SubdivisionIndex = -1;
-  bounding_box() = default;
+  fragment() = default;
 };
 }
 
 namespace core {
-template <> struct hashable_region_traits<assembler_internal::bounding_box> {
+template <> struct hashable_region_traits<assembler_internal::fragment> {
   using coord_type = double;
-  static box ComputeExtents(int NumDims, const assembler_internal::bounding_box &Region) {
+  static box ComputeExtents(int NumDims, const assembler_internal::fragment &Region) {
     box Extents;
     switch (NumDims) {
     case 1:
@@ -95,10 +96,10 @@ template <> struct hashable_region_traits<assembler_internal::bounding_box> {
     }
     return Extents;
   }
-  static box ComputeExtents1D(const assembler_internal::bounding_box &Region) {
+  static box ComputeExtents1D(const assembler_internal::fragment &Region) {
     return Region.Box;
   }
-  static box ComputeExtents2D(const assembler_internal::bounding_box &Region) {
+  static box ComputeExtents2D(const assembler_internal::fragment &Region) {
     auto OrientInv = [&Region](const elem<double,2> &Vec) -> elem<double,2> {
       const tuple<tuple<double>> &O = Region.Orientation;
       return {
@@ -118,7 +119,7 @@ template <> struct hashable_region_traits<assembler_internal::bounding_box> {
     }
     return Extents;
   }
-  static box ComputeExtents3D(const assembler_internal::bounding_box &Region) {
+  static box ComputeExtents3D(const assembler_internal::fragment &Region) {
     auto OrientInv = [&Region](const elem<double,3> &Vec) -> elem<double,3> {
       const tuple<tuple<double>> &O = Region.Orientation;
       return {
@@ -144,7 +145,7 @@ template <> struct hashable_region_traits<assembler_internal::bounding_box> {
     return Extents;
   }
   static elem_set<int,MAX_DIMS> MapToBins(int NumDims, const range &BinRange, const tuple<double>
-    &LowerCorner, const tuple<double> &BinSize, const assembler_internal::bounding_box &Region) {
+    &LowerCorner, const tuple<double> &BinSize, const assembler_internal::fragment &Region) {
     elem_set<int,MAX_DIMS> Bins;
     switch (NumDims) {
     case 1:
@@ -160,11 +161,11 @@ template <> struct hashable_region_traits<assembler_internal::bounding_box> {
     return Bins;
   }
   static elem_set<int,MAX_DIMS> MapToBins1D(const range &BinRange, const tuple<double> &LowerCorner,
-    const tuple<double> &BinSize, const assembler_internal::bounding_box &Region) {
+    const tuple<double> &BinSize, const assembler_internal::fragment &Region) {
     return hashable_region_traits<box>::MapToBins(1, BinRange, LowerCorner, BinSize, Region.Box);
   }
   static elem_set<int,MAX_DIMS> MapToBins2D(const range &BinRange, const tuple<double> &LowerCorner,
-    const tuple<double> &BinSize, const assembler_internal::bounding_box &Region) {
+    const tuple<double> &BinSize, const assembler_internal::fragment &Region) {
     auto OrientInv = [&Region](const elem<double,2> &Vec) -> elem<double,2> {
       const tuple<tuple<double>> &O = Region.Orientation;
       return {
@@ -234,7 +235,7 @@ template <> struct hashable_region_traits<assembler_internal::bounding_box> {
     return Bins;
   }
   static elem_set<int,MAX_DIMS> MapToBins3D(const range &BinRange, const tuple<double> &LowerCorner,
-    const tuple<double> &BinSize, const assembler_internal::bounding_box &Region) {
+    const tuple<double> &BinSize, const assembler_internal::fragment &Region) {
     auto OrientInv = [&Region](const elem<double,3> &Vec) -> elem<double,3> {
       const tuple<tuple<double>> &O = Region.Orientation;
       return {
@@ -327,20 +328,24 @@ template <> struct hashable_region_traits<assembler_internal::bounding_box> {
     return Bins;
   }
 };
-template <> struct mpi_serializable_traits<assembler_internal::bounding_box> {
-  using packed_type = assembler_internal::bounding_box;
+template <> struct mpi_serializable_traits<assembler_internal::fragment> {
+  using packed_type = assembler_internal::fragment;
   static handle<MPI_Datatype> CreateMPIType() {
+    auto RangeMPIType = mpi_serializable_traits<range>::CreateMPIType();
     auto OrientationMPIType = mpi_serializable_traits<tuple<tuple<double>>>::CreateMPIType();
     auto BoxMPIType = mpi_serializable_traits<box>::CreateMPIType();
-    assembler_internal::bounding_box Dummy;
+    assembler_internal::fragment Dummy;
     return CreateMPIStructType(sizeof(Dummy), {
+      {GetByteOffset(Dummy,Dummy.GridID),2,MPI_INT},
+      {GetByteOffset(Dummy,Dummy.CellRange),1,RangeMPIType.Get()},
       {GetByteOffset(Dummy,Dummy.Orientation),1,OrientationMPIType.Get()},
-      {GetByteOffset(Dummy,Dummy.Box),1,BoxMPIType.Get()},
-      {GetByteOffset(Dummy,Dummy.GridID),2,MPI_INT}
+      {GetByteOffset(Dummy,Dummy.Box),1,BoxMPIType.Get()}
     });
   }
-  static packed_type Pack(const assembler_internal::bounding_box &Box) { return Box; }
-  static assembler_internal::bounding_box Unpack(const packed_type &PackedBox) { return PackedBox; }
+  static packed_type Pack(const assembler_internal::fragment &Fragment) { return Fragment; }
+  static assembler_internal::fragment Unpack(const packed_type &PackedFragment) {
+    return PackedFragment;
+  }
 };
 }
 
@@ -536,12 +541,11 @@ private:
     {}
   };
 
-  using bounding_box = assembler_internal::bounding_box;
+  using fragment = assembler_internal::fragment;
 
-  using bounding_box_hash = core::distributed_region_hash<bounding_box>;
-  using bounding_box_hash_region_data = core::distributed_region_data<bounding_box>;
-  using bounding_box_hash_retrieved_bins = core::distributed_region_hash_retrieved_bins<
-    bounding_box>;
+  using fragment_hash = core::distributed_region_hash<fragment>;
+  using fragment_hash_region_data = core::distributed_region_data<fragment>;
+  using fragment_hash_retrieved_bins = core::distributed_region_hash_retrieved_bins<fragment>;
 
   struct local_overlap_m_aux_data {
     core::collect_map CollectMap;
@@ -557,7 +561,7 @@ private:
 
   struct assembly_data {
     map<int,local_grid_aux_data> LocalGridAuxData;
-    bounding_box_hash BoundingBoxHash;
+    fragment_hash FragmentHash;
     elem_map<int,2,local_overlap_m_aux_data> LocalOverlapMAuxData;
     elem_map<int,2,local_overlap_n_aux_data> LocalOverlapNAuxData;
     elem_map<int,2,distributed_field<bool>> ProjectedBoundaryMasks;
@@ -602,11 +606,11 @@ private:
   void GenerateConnectivityData_();
 
   static constexpr int OVERLAP_TIME = core::profiler::ASSEMBLER_OVERLAP_TIME;
-  static constexpr int OVERLAP_SUBDIVIDE_TIME = core::profiler::ASSEMBLER_OVERLAP_SUBDIVIDE_TIME;
-  static constexpr int OVERLAP_BB_TIME = core::profiler::ASSEMBLER_OVERLAP_BB_TIME;
-  static constexpr int OVERLAP_BB_CREATE_HASH_TIME = core::profiler::ASSEMBLER_OVERLAP_BB_CREATE_HASH_TIME;
-  static constexpr int OVERLAP_BB_MAP_TO_BINS_TIME = core::profiler::ASSEMBLER_OVERLAP_BB_MAP_TO_BINS_TIME;
-  static constexpr int OVERLAP_BB_RETRIEVE_BINS_TIME = core::profiler::ASSEMBLER_OVERLAP_BB_RETRIEVE_BINS_TIME;
+  static constexpr int OVERLAP_FRAGMENT_TIME = core::profiler::ASSEMBLER_OVERLAP_FRAGMENT_TIME;
+  static constexpr int OVERLAP_HASH_TIME = core::profiler::ASSEMBLER_OVERLAP_HASH_TIME;
+  static constexpr int OVERLAP_HASH_CREATE_TIME = core::profiler::ASSEMBLER_OVERLAP_HASH_CREATE_TIME;
+  static constexpr int OVERLAP_HASH_MAP_TO_BINS_TIME = core::profiler::ASSEMBLER_OVERLAP_HASH_MAP_TO_BINS_TIME;
+  static constexpr int OVERLAP_HASH_RETRIEVE_BINS_TIME = core::profiler::ASSEMBLER_OVERLAP_HASH_RETRIEVE_BINS_TIME;
   static constexpr int OVERLAP_CONNECT_TIME = core::profiler::ASSEMBLER_OVERLAP_CONNECT_TIME;
   static constexpr int OVERLAP_SEARCH_TIME = core::profiler::ASSEMBLER_OVERLAP_SEARCH_TIME;
   static constexpr int OVERLAP_SEARCH_BUILD_ACCEL_TIME = core::profiler::ASSEMBLER_OVERLAP_SEARCH_BUILD_ACCEL_TIME;
