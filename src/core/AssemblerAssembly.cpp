@@ -659,17 +659,15 @@ struct generate_overlap_data {
   // the definition up here, just cheat and make it a template parameter
   template <typename T, typename OverlapDataType> void operator()(const T &Manipulator,
     const std::string &MGridName, const field_indexer &MGridCellGlobalIndexer, array_view<const
-    field_view<const double>> MGridCoords, const std::string &NGridName, const field_indexer
-    &NGridLocalIndexer, const array<distributed_field<double>> &NGridCoords, const
-    core::overlap_accel &OverlapAccel, double OverlapTolerance, OverlapDataType &OverlapData,
-    core::logger &Logger) {
-    for (long long iQueryPoint = 0; iQueryPoint < OverlapData.Points.Count(); ++iQueryPoint) {
-      long long iPoint = OverlapData.Points(iQueryPoint);
-      tuple<int> Point = NGridLocalIndexer.ToTuple(iPoint);
+    field_view<const double>> MGridCoords, const std::string &NGridName, const core::overlap_accel
+    &OverlapAccel, double OverlapTolerance, OverlapDataType &OverlapData, core::logger &Logger) {
+    long long NumQueryPoints = OverlapData.Points.Count();
+    for (long long iQueryPoint = 0; iQueryPoint < NumQueryPoints; ++iQueryPoint) {
+      // Temporarily stored coordinates of query points in OverlapData coords array
       tuple<double> PointCoords = {
-        NGridCoords(0)(Point),
-        NGridCoords(1)(Point),
-        NGridCoords(2)(Point)
+        OverlapData.Coords(0,iQueryPoint),
+        OverlapData.Coords(1,iQueryPoint),
+        OverlapData.Coords(2,iQueryPoint)
       };
       optional<tuple<int>> MaybeCell;
       optional<tuple<double>> MaybeCellCoords;
@@ -1233,7 +1231,8 @@ void assembler::DetectOverlap_() {
     for (auto &FragmentEntry : FragmentData) {
       int FragmentID = FragmentEntry.Key();
       fragment_data &Data = FragmentEntry.Value();
-      Data.CellRange = FragmentsForLocalGrid(MGridID)(FragmentID).CellRange;
+      const fragment &Fragment = FragmentsForLocalGrid(MGridID)(FragmentID);
+      Data.CellRange = Fragment.CellRange;
       range CoordsRange, CellActiveMaskRange;
       GenerateFragmentDataRanges(MGrid.Cart(), MGrid.CellCart(), Data.CellRange, CoordsRange,
         CellActiveMaskRange);
@@ -1243,7 +1242,11 @@ void assembler::DetectOverlap_() {
         for (int k = CoordsRange.Begin(2); k < CoordsRange.End(2); ++k) {
           for (int j = CoordsRange.Begin(1); j < CoordsRange.End(1); ++j) {
             for (int i = CoordsRange.Begin(0); i < CoordsRange.End(0); ++i) {
-              Data.Coords(iDim)(i,j,k) = Coords(iDim)(i,j,k);
+              long long iCoord = Coords(0).Values().Indexer().ToIndex(i,j,k);
+              Data.Coords(iDim)(i,j,k) =
+                Fragment.Orientation(0)(iDim)*Coords(0)[iCoord] +
+                Fragment.Orientation(1)(iDim)*Coords(1)[iCoord] +
+                Fragment.Orientation(2)(iDim)*Coords(2)[iCoord];
             }
           }
         }
@@ -1402,6 +1405,11 @@ void assembler::DetectOverlap_() {
               if (Fragment.Box.Contains(TransformedCoords)) {
                 fragment_overlap_data &OverlapData = FragmentOverlapDataForMGridAndRank({MGridID,
                   Rank})(Fragment.ID);
+                long long iNextQueryPoint = OverlapData.Points.Count();
+                // Temporarily store coordinates of query points in OverlapData coords array
+                OverlapData.Coords(0,iNextQueryPoint) = TransformedCoords(0);
+                OverlapData.Coords(1,iNextQueryPoint) = TransformedCoords(1);
+                OverlapData.Coords(2,iNextQueryPoint) = TransformedCoords(2);
                 OverlapData.Points.Append(LocalIndexer.ToIndex(Point));
               }
             }
@@ -1570,10 +1578,6 @@ void assembler::DetectOverlap_() {
       for (int NGridID : Domain.LocalGridIDs()) {
         elem<int,2> IDPair = {MGridID,NGridID};
         const grid &NGrid = Domain.Grid(NGridID);
-        const range &LocalRange = NGrid.LocalRange();
-        field_indexer LocalIndexer(LocalRange);
-        const geometry &Geometry = GeometryComponent.Geometry(NGridID);
-        auto &Coords = Geometry.Coords();
         auto &OverlapDataForMGridAndRank = FragmentOverlapDataForLocalNGrid(NGridID);
         auto MGridAndRankIter = OverlapDataForMGridAndRank.Find({MGridID,Rank});
         if (MGridAndRankIter == OverlapDataForMGridAndRank.End()) continue;
@@ -1583,8 +1587,7 @@ void assembler::DetectOverlap_() {
         fragment_overlap_data &OverlapData = FragmentIter->Value();
         double OverlapTolerance = Options_.OverlapTolerance(IDPair);
         GeometryManipulator.Apply(generate_overlap_data(), MGridInfo.Name(), MGridCellGlobalIndexer,
-          MGridCoords, NGrid.Name(), LocalIndexer, Coords, OverlapAccel, OverlapTolerance,
-          OverlapData, Logger);
+          MGridCoords, NGrid.Name(), OverlapAccel, OverlapTolerance, OverlapData, Logger);
       }
       Profiler.Stop(OVERLAP_SEARCH_QUERY_ACCEL_TIME);
     }
