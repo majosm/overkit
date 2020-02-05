@@ -47,7 +47,8 @@ public:
 private:
 
   optional<T> Handle_;
-  std::function<void(T &)> Delete_;
+  // std::function is not noexcept movable until C++20
+  std::unique_ptr<std::function<void(T &)>> Delete_;
 
 };
 

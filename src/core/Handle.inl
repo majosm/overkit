@@ -4,13 +4,13 @@ namespace core {
 template <typename T> template <typename F, OVK_FUNCDEF_REQUIRES(IsCallableWith<F, T>())>
   handle<T>::handle(T Handle, F Delete):
   Handle_(Handle),
-  Delete_(std::move(Delete))
+  Delete_(new std::function<void(T &)>(std::move(Delete)))
 {}
 
 template <typename T> template <typename F, OVK_FUNCDEF_REQUIRES(!IsCallableWith<F, T>() &&
   IsCallableWith<F, T *>())> handle<T>::handle(T Handle, F Delete):
   Handle_(Handle),
-  Delete_([Delete](T &Handle) { Delete(&Handle); })
+  Delete_(new std::function<void(T &)>([Delete](T &Handle) { Delete(&Handle); }))
 {}
 
 template <typename T> handle<T>::~handle() noexcept {
@@ -52,7 +52,7 @@ template <typename T> T &handle<T>::Get() {
 template <typename T> void handle<T>::Reset() {
 
   if (Handle_) {
-    std::move(Delete_)(*Handle_);
+    std::move(*Delete_)(*Handle_);
     Handle_.Reset();
     Delete_ = nullptr;
   }
