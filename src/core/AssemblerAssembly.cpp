@@ -1562,7 +1562,20 @@ void assembler::DetectOverlap_() {
       long long NumCellsLeaf = (long long)(Max(std::pow(2., 12.-DepthAdjust), 1.));
       double MaxNodeUnoccupiedVolume = std::pow(2., -2.-DepthAdjust);
       double MaxNodeCellVolumeVariation = 0.5;
-      double BinScale = std::pow(2., -1.-ResolutionAdjust);
+      long long NumFragmentCells = Data.CellRange.Count();
+      long long NumQueryPoints = 0;
+      for (int NGridID : Domain.LocalGridIDs()) {
+        auto &FragmentOverlapDataForMGridAndRank = FragmentOverlapDataForLocalNGrid(NGridID);
+        auto MGridAndRankIter = FragmentOverlapDataForMGridAndRank.Find({MGridID,Rank});
+        if (MGridAndRankIter == FragmentOverlapDataForMGridAndRank.End()) continue;
+        auto &FragmentOverlapData = MGridAndRankIter->Value();
+        auto FragmentIter = FragmentOverlapData.Find(FragmentID);
+        if (FragmentIter == FragmentOverlapData.End()) continue;
+        const fragment_overlap_data &OverlapData = FragmentIter->Value();
+        NumQueryPoints += OverlapData.Points.Count();
+      }
+      double BinScale = 1./Min(std::pow(double(NumQueryPoints)/double(NumFragmentCells),
+        1./double(NumDims)), 1.) * std::pow(2., -1.-ResolutionAdjust);
       elem<field_view<const double>,MAX_DIMS> MGridCoords = {
         Data.Coords(0),
         Data.Coords(1),
