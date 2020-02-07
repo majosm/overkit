@@ -7,12 +7,12 @@
 #include <ovk/core/Array.hpp>
 #include <ovk/core/ArrayView.hpp>
 #include <ovk/core/Box.hpp>
-#include <ovk/core/ElemSet.hpp>
 #include <ovk/core/Field.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/HashableRegionTraits.hpp>
 #include <ovk/core/Math.hpp>
 #include <ovk/core/Range.hpp>
+#include <ovk/core/Set.hpp>
 #include <ovk/core/Tuple.hpp>
 
 #include <cmath>

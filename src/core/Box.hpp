@@ -5,7 +5,6 @@
 #define OVK_CORE_BOX_HPP_INCLUDED
 
 #include <ovk/core/ArrayTraits.hpp>
-#include <ovk/core/ElemSet.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/HashableRegionTraits.hpp>
 #include <ovk/core/Indexer.hpp>
@@ -13,6 +12,7 @@
 #include <ovk/core/Math.hpp>
 #include <ovk/core/Range.hpp>
 #include <ovk/core/ScalarOps.hpp>
+#include <ovk/core/Set.hpp>
 #include <ovk/core/Tuple.hpp>
 
 namespace ovk {
@@ -33,9 +33,11 @@ namespace core {
 template <> struct hashable_region_traits<box> {
   using coord_type = double;
   static box ComputeExtents(int, const box &Region) { return Region; }
-  static elem_set<int,MAX_DIMS> MapToBins(int NumDims, const range &BinRange, const tuple<double>
-    &LowerCorner, const tuple<double> &BinSize, const box &Region) {
-    elem_set<int,MAX_DIMS> BinLocs;
+  template <typename IndexerType> static set<typename IndexerType::index_type> MapToBins(int
+    NumDims, const range &BinRange, const IndexerType &BinIndexer, const tuple<double> &LowerCorner,
+    const tuple<double> &BinSize, const box &Region) {
+    using index_type = typename IndexerType::index_type;
+    set<index_type> Bins;
     tuple<int> BinLocLower = ClampToRange(BinRange, MapToUniformGridCell(NumDims, LowerCorner,
       BinSize, Region.Begin()));
     tuple<int> BinLocUpper = ClampToRange(BinRange, MapToUniformGridCell(NumDims, LowerCorner,
@@ -43,15 +45,15 @@ template <> struct hashable_region_traits<box> {
     range OverlappedBinRange = MakeEmptyRange(NumDims);
     OverlappedBinRange = ExtendRange(OverlappedBinRange, BinLocLower);
     OverlappedBinRange = ExtendRange(OverlappedBinRange, BinLocUpper);
-    BinLocs.Reserve(OverlappedBinRange.Count());
+    Bins.Reserve(OverlappedBinRange.Count());
     for (int k = OverlappedBinRange.Begin(2); k < OverlappedBinRange.End(2); ++k) {
       for (int j = OverlappedBinRange.Begin(1); j < OverlappedBinRange.End(1); ++j) {
         for (int i = OverlappedBinRange.Begin(0); i < OverlappedBinRange.End(0); ++i) {
-          BinLocs.Insert({i,j,k});
+          Bins.Insert(BinIndexer.ToIndex(i,j,k));
         }
       }
     }
-    return BinLocs;
+    return Bins;
   }
 };
 }

@@ -144,28 +144,33 @@ template <> struct hashable_region_traits<assembler_internal::fragment> {
     }
     return Extents;
   }
-  static elem_set<int,MAX_DIMS> MapToBins(int NumDims, const range &BinRange, const tuple<double>
-    &LowerCorner, const tuple<double> &BinSize, const assembler_internal::fragment &Region) {
-    elem_set<int,MAX_DIMS> Bins;
+  template <typename IndexerType> static set<typename IndexerType::index_type> MapToBins(int
+    NumDims, const range &BinRange, const IndexerType &BinIndexer, const tuple<double> &LowerCorner,
+    const tuple<double> &BinSize, const assembler_internal::fragment &Region) {
+    set<typename IndexerType::index_type> Bins;
     switch (NumDims) {
     case 1:
-      Bins = MapToBins1D(BinRange, LowerCorner, BinSize, Region);
+      Bins = MapToBins1D(BinRange, BinIndexer, LowerCorner, BinSize, Region);
       break;
     case 2:
-      Bins = MapToBins2D(BinRange, LowerCorner, BinSize, Region);
+      Bins = MapToBins2D(BinRange, BinIndexer, LowerCorner, BinSize, Region);
       break;
     default:
-      Bins = MapToBins3D(BinRange, LowerCorner, BinSize, Region);
+      Bins = MapToBins3D(BinRange, BinIndexer, LowerCorner, BinSize, Region);
       break;
     }
     return Bins;
   }
-  static elem_set<int,MAX_DIMS> MapToBins1D(const range &BinRange, const tuple<double> &LowerCorner,
-    const tuple<double> &BinSize, const assembler_internal::fragment &Region) {
-    return hashable_region_traits<box>::MapToBins(1, BinRange, LowerCorner, BinSize, Region.Box);
+  template <typename IndexerType> static set<typename IndexerType::index_type> MapToBins1D(const
+    range &BinRange, const IndexerType &BinIndexer, const tuple<double> &LowerCorner, const
+    tuple<double> &BinSize, const assembler_internal::fragment &Region) {
+    return hashable_region_traits<box>::MapToBins(1, BinRange, BinIndexer, LowerCorner, BinSize,
+      Region.Box);
   }
-  static elem_set<int,MAX_DIMS> MapToBins2D(const range &BinRange, const tuple<double> &LowerCorner,
-    const tuple<double> &BinSize, const assembler_internal::fragment &Region) {
+  template <typename IndexerType> static set<typename IndexerType::index_type> MapToBins2D(const
+    range &BinRange, const IndexerType &BinIndexer, const tuple<double> &LowerCorner, const
+    tuple<double> &BinSize, const assembler_internal::fragment &Region) {
+    using index_type = typename IndexerType::index_type;
     auto OrientInv = [&Region](const elem<double,2> &Vec) -> elem<double,2> {
       const tuple<tuple<double>> &O = Region.Orientation;
       return {
@@ -183,9 +188,9 @@ template <> struct hashable_region_traits<assembler_internal::fragment> {
     for (int l = 0; l < 4; ++l) {
       RegionExtents = ExtendBox(RegionExtents, {RegionCorners[l](0), RegionCorners[l](1), 0.});
     }
-    elem_set<int,MAX_DIMS> CandidateBins = hashable_region_traits<box>::MapToBins(2, BinRange,
+    set<index_type> CandidateBins = hashable_region_traits<box>::MapToBins(2, BinRange, BinIndexer,
       LowerCorner, BinSize, RegionExtents);
-    elem_set<int,MAX_DIMS> Bins;
+    set<index_type> Bins;
     Bins.Reserve(CandidateBins.Count());
     elem<double,2> SeparatingLineAxes[4] = {
       {1., 0.},
@@ -211,7 +216,8 @@ template <> struct hashable_region_traits<assembler_internal::fragment> {
       interval<double> Interval2 = IntervalAlongAxis(Corners2, Axis);
       return Interval2.End(0) >= Interval1.Begin(0) && Interval1.End(0) >= Interval2.Begin(0);
     };
-    for (auto &BinLoc : CandidateBins) {
+    for (index_type iBin : CandidateBins) {
+      tuple<int> BinLoc = BinIndexer.ToTuple(iBin);
       box BinExtents = MakeEmptyBox(2);
       for (int iDim = 0; iDim < 2; ++iDim) {
         BinExtents.Begin(iDim) = LowerCorner(iDim) + double(BinLoc(iDim))*BinSize(iDim);
@@ -229,13 +235,15 @@ template <> struct hashable_region_traits<assembler_internal::fragment> {
         if (!Overlaps) break;
       }
       if (Overlaps) {
-        Bins.Insert(BinLoc);
+        Bins.Insert(iBin);
       }
     }
     return Bins;
   }
-  static elem_set<int,MAX_DIMS> MapToBins3D(const range &BinRange, const tuple<double> &LowerCorner,
-    const tuple<double> &BinSize, const assembler_internal::fragment &Region) {
+  template <typename IndexerType> static set<typename IndexerType::index_type> MapToBins3D(const
+    range &BinRange, const IndexerType &BinIndexer, const tuple<double> &LowerCorner, const
+    tuple<double> &BinSize, const assembler_internal::fragment &Region) {
+    using index_type = typename IndexerType::index_type;
     auto OrientInv = [&Region](const elem<double,3> &Vec) -> elem<double,3> {
       const tuple<tuple<double>> &O = Region.Orientation;
       return {
@@ -258,9 +266,9 @@ template <> struct hashable_region_traits<assembler_internal::fragment> {
     for (int l = 0; l < 8; ++l) {
       RegionExtents = ExtendBox(RegionExtents, RegionCorners[l]);
     }
-    elem_set<int,MAX_DIMS> CandidateBins = hashable_region_traits<box>::MapToBins(3, BinRange,
+    set<index_type> CandidateBins = hashable_region_traits<box>::MapToBins(3, BinRange, BinIndexer,
       LowerCorner, BinSize, RegionExtents);
-    elem_set<int,MAX_DIMS> Bins;
+    set<index_type> Bins;
     Bins.Reserve(CandidateBins.Count());
     elem<double,3> RegionAxisI = OrientInv({1.,0.,0.});
     elem<double,3> RegionAxisJ = OrientInv({0.,1.,0.});
@@ -300,7 +308,8 @@ template <> struct hashable_region_traits<assembler_internal::fragment> {
       interval<double> Interval2 = IntervalAlongAxis(Corners2, Axis);
       return Interval2.End(0) >= Interval1.Begin(0) && Interval1.End(0) >= Interval2.Begin(0);
     };
-    for (auto &BinLoc : CandidateBins) {
+    for (index_type iBin : CandidateBins) {
+      tuple<int> BinLoc = BinIndexer.ToTuple(iBin);
       box BinExtents = MakeEmptyBox(3);
       for (int iDim = 0; iDim < 3; ++iDim) {
         BinExtents.Begin(iDim) = LowerCorner(iDim) + double(BinLoc(iDim))*BinSize(iDim);
@@ -322,7 +331,7 @@ template <> struct hashable_region_traits<assembler_internal::fragment> {
         if (!Overlaps) break;
       }
       if (Overlaps) {
-        Bins.Insert(BinLoc);
+        Bins.Insert(iBin);
       }
     }
     return Bins;

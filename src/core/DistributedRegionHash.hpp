@@ -11,7 +11,6 @@
 #include <ovk/core/CommunicationOps.hpp>
 #include <ovk/core/DataType.hpp>
 #include <ovk/core/Elem.hpp>
-#include <ovk/core/ElemSet.hpp>
 #include <ovk/core/Field.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/HashableRegionTraits.hpp>

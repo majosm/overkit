@@ -27,23 +27,19 @@ template <typename RegionType> region_hash<RegionType>::region_hash(int NumDims,
 
   BinSize_ = GetBinSize_(Extents_, NumBins);
 
-  array<set<int>> RegionOverlappedBins({Regions.Count()});
+  array<set<long long>> RegionOverlappedBins({Regions.Count()});
 
   for (int iRegion = 0; iRegion < Regions.Count(); ++iRegion) {
-    elem_set<int,MAX_DIMS> BinLocs = region_traits::MapToBins(NumDims_, BinRange_, Extents_.Begin(),
-      BinSize_, Regions(iRegion));
-    set<int> &Bins = RegionOverlappedBins(iRegion);
-    Bins.Reserve(BinLocs.Count());
-    for (auto &BinLoc : BinLocs) {
-      Bins.Insert(BinIndexer_.ToIndex(BinLoc));
-    }
+    set<long long> &Bins = RegionOverlappedBins(iRegion);
+    Bins = region_traits::MapToBins(NumDims_, BinRange_, BinIndexer_, Extents_.Begin(), BinSize_,
+      Regions(iRegion));
   }
 
   field<long long> NumRegionsInBin(BinRange_, 0);
 
   for (int iRegion = 0; iRegion < Regions.Count(); ++iRegion) {
-    const set<int> &Bins = RegionOverlappedBins(iRegion);
-    for (int iBin : Bins) {
+    const set<long long> &Bins = RegionOverlappedBins(iRegion);
+    for (long long iBin : Bins) {
       tuple<int> BinLoc = BinIndexer_.ToTuple(iBin);
       ++NumRegionsInBin(BinLoc);
     }
@@ -70,8 +66,8 @@ template <typename RegionType> region_hash<RegionType>::region_hash(int NumDims,
   NumRegionsInBin.Fill(0);
 
   for (long long iRegion = 0; iRegion < Regions.Count(); ++iRegion) {
-    const set<int> &Bins = RegionOverlappedBins(iRegion);
-    for (int iBin : Bins) {
+    const set<long long> &Bins = RegionOverlappedBins(iRegion);
+    for (long long iBin : Bins) {
       BinRegionIndices_(BinRegionIndicesStarts_(iBin)+NumRegionsInBin[iBin]) = iRegion;
       ++NumRegionsInBin[iBin];
     }

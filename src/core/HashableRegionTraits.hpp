@@ -4,9 +4,9 @@
 #ifndef OVK_CORE_HASHABLE_REGION_TRAITS_HPP_INCLUDED
 #define OVK_CORE_HASHABLE_REGION_TRAITS_HPP_INCLUDED
 
-#include <ovk/core/ElemSet.hpp>
 #include <ovk/core/Global.hpp>
 #include <ovk/core/Interval.hpp>
+#include <ovk/core/Set.hpp>
 #include <ovk/core/Tuple.hpp>
 
 #include <type_traits>
@@ -18,8 +18,9 @@ template <typename T, typename=void> struct hashable_region_traits {
 /*
   using coord_type = ???;
   static interval<coord_type,MAX_DIMS> ComputeExtents(int NumDims, const T &Region) { return ???; }
-  static elem_set<int,MAX_DIMS> MapToBins(int NumDims, const range &BinRange, const
-    tuple<coord_type> &LowerCorner, const tuple<coord_type> &BinSize, const T &Region) {
+  template <typename IndexerType> static set<typename IndexerType::index_type> MapToBins(int
+    NumDims, const range &BinRange, const IndexerType &BinIndexer, const tuple<coord_type>
+    &LowerCorner, const tuple<coord_type> &BinSize, const T &Region) {
     return ???;
   }
 */

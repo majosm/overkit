@@ -41,13 +41,9 @@ template <typename RegionType> distributed_region_hash<RegionType>::distributed_
   array<set<int>> LocalRegionOverlappedProcs({LocalRegions.Count()});
 
   for (int iRegion = 0; iRegion < LocalRegions.Count(); ++iRegion) {
-    elem_set<int,MAX_DIMS> ProcLocs = region_traits::MapToBins(NumDims_, ProcRange_,
-      GlobalExtents_.Begin(), ProcSize_, LocalRegions(iRegion));
     set<int> &Procs = LocalRegionOverlappedProcs(iRegion);
-    Procs.Reserve(ProcLocs.Count());
-    for (auto &ProcLoc : ProcLocs) {
-      Procs.Insert(ProcIndexer_.ToIndex(ProcLoc));
-    }
+    Procs = region_traits::MapToBins(NumDims_, ProcRange_, ProcIndexer_, GlobalExtents_.Begin(),
+      ProcSize_, LocalRegions(iRegion));
   }
 
   set<int> SendToRanks;
@@ -208,13 +204,9 @@ template <typename RegionType> distributed_region_hash<RegionType>::distributed_
       }
       range_indexer_c<int> ProcBinIndexer(ProcBinRange);
       tuple<coord_type> ProcBinSize = GetBinSize_(ProcExtents, ProcBinRange.Size());
-      elem_set<int,MAX_DIMS> BinLocs = region_traits::MapToBins(NumDims_, ProcBinRange,
-        ProcExtents.Begin(), ProcBinSize, LocalRegions(iRegion));
       set<int> &Bins = BinsForProc.Insert(iProc);
-      Bins.Reserve(BinLocs.Count());
-      for (auto &BinLoc : BinLocs) {
-        Bins.Insert(ProcBinIndexer.ToIndex(BinLoc));
-      }
+      Bins = region_traits::MapToBins(NumDims_, ProcBinRange, ProcBinIndexer, ProcExtents.Begin(),
+        ProcBinSize, LocalRegions(iRegion));
       NumBinsForProc.Insert(iProc, int(Bins.Count()));
     }
     for (auto &Entry : NumBinsForProc) {
