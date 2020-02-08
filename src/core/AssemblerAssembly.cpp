@@ -4343,13 +4343,13 @@ void assembler::GenerateConnectivityData_() {
   map<int,int> MaxReceiverDistances;
 
   for (int GridID : Domain.LocalGridIDs()) {
-    MaxReceiverDistances.Insert(GridID, 0);
+    MaxReceiverDistances.Insert(GridID, 1);
   }
 
   for (auto &OverlapID : OverlapComponent.LocalOverlapMIDs()) {
     int MGridID = OverlapID(0);
     int &MaxDistance = MaxReceiverDistances(MGridID);
-    MaxDistance = Max(MaxDistance, Options_.EdgePadding(OverlapID));
+    MaxDistance = Max(MaxDistance, 1+Options_.EdgePadding(OverlapID));
   }
 
   map<int,distributed_field<int>> ReceiverDistancesForGrid;
@@ -4501,7 +4501,7 @@ void assembler::GenerateConnectivityData_() {
           if (BaseOverlapMask(Point)) {
             if (ReceiverMask(Point) && OverlapMask(Point)) {
               double ReceiverDistance = double(ReceiverDistances(iOverlapping));
-              double MaxDistance = double(Max(Options_.EdgePadding(OverlapID),1));
+              double MaxDistance = double(1+Options_.EdgePadding(OverlapID));
               double NormalizedDistance = Min(ReceiverDistance/MaxDistance, 1.);
               double Volume = OverlapVolumes(iOverlapping);
               if (DonorGridIDs(Point) < 0) {
