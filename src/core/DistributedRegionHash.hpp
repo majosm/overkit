@@ -133,6 +133,18 @@ private:
   field<long long> BinRegionIndicesStarts_;
   array<int> BinRegionIndices_;
 
+  template <hashable_region_maps_to MapsTo> struct maps_to_tag {};
+
+  template <typename IndexerType> set<typename IndexerType::index_type> MapToBins_(const range
+    &BinRange, const IndexerType &BinIndexer, const tuple<coord_type> &LowerCorner, const
+    tuple<coord_type> &BinSize, const region_type &Region, maps_to_tag<
+    hashable_region_maps_to::SET>) const;
+
+  template <typename IndexerType> set<typename IndexerType::index_type> MapToBins_(const range
+    &BinRange, const IndexerType &BinIndexer, const tuple<coord_type> &LowerCorner, const
+    tuple<coord_type> &BinSize, const region_type &Region, maps_to_tag<
+    hashable_region_maps_to::RANGE>) const;
+
   template <typename T> struct coord_type_tag {};
 
   static interval<int,MAX_DIMS> MakeEmptyExtents_(int NumDims, coord_type_tag<int>);

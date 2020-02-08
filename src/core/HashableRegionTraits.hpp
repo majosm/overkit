@@ -14,10 +14,22 @@
 namespace ovk {
 namespace core {
 
+enum class hashable_region_maps_to {
+  RANGE,
+  SET
+};
+
 template <typename T, typename=void> struct hashable_region_traits {
 /*
   using coord_type = ???;
+  static constexpr hashable_region_maps_to MapsTo() { return ???; }
   static interval<coord_type,MAX_DIMS> ComputeExtents(int NumDims, const T &Region) { return ???; }
+  // If maps to range
+  static range MapToBins(int NumDims, const range &BinRange, const tuple<coord_type> &LowerCorner,
+    const tuple<coord_type> &BinSize, const T &Region) {
+    return ???;
+  }
+  // If maps to set
   template <typename IndexerType> static set<typename IndexerType::index_type> MapToBins(int
     NumDims, const range &BinRange, const IndexerType &BinIndexer, const tuple<coord_type>
     &LowerCorner, const tuple<coord_type> &BinSize, const T &Region) {

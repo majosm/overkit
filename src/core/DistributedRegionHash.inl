@@ -41,9 +41,9 @@ template <typename RegionType> distributed_region_hash<RegionType>::distributed_
   array<set<int>> LocalRegionOverlappedProcs({LocalRegions.Count()});
 
   for (int iRegion = 0; iRegion < LocalRegions.Count(); ++iRegion) {
-    set<int> &Procs = LocalRegionOverlappedProcs(iRegion);
-    Procs = region_traits::MapToBins(NumDims_, ProcRange_, ProcIndexer_, GlobalExtents_.Begin(),
-      ProcSize_, LocalRegions(iRegion));
+    LocalRegionOverlappedProcs(iRegion) = MapToBins_(ProcRange_, ProcIndexer_,
+      GlobalExtents_.Begin(), ProcSize_, LocalRegions(iRegion), 
+      maps_to_tag<region_traits::MapsTo()>());
   }
 
   set<int> SendToRanks;
@@ -205,8 +205,8 @@ template <typename RegionType> distributed_region_hash<RegionType>::distributed_
       range_indexer_c<int> ProcBinIndexer(ProcBinRange);
       tuple<coord_type> ProcBinSize = GetBinSize_(ProcExtents, ProcBinRange.Size());
       set<int> &Bins = BinsForProc.Insert(iProc);
-      Bins = region_traits::MapToBins(NumDims_, ProcBinRange, ProcBinIndexer, ProcExtents.Begin(),
-        ProcBinSize, LocalRegions(iRegion));
+      Bins = MapToBins_(ProcBinRange, ProcBinIndexer, ProcExtents.Begin(),
+        ProcBinSize, LocalRegions(iRegion), maps_to_tag<region_traits::MapsTo()>());
       NumBinsForProc.Insert(iProc, int(Bins.Count()));
     }
     for (auto &Entry : NumBinsForProc) {
@@ -605,6 +605,33 @@ template <typename RegionType> map<int,distributed_region_hash_retrieved_bins<Re
 
   return RetrievedBins;
 
+}
+
+template <typename RegionType> template <typename IndexerType> set<typename IndexerType::index_type>
+  distributed_region_hash<RegionType>::MapToBins_(const range &BinRange, const IndexerType
+  &BinIndexer, const tuple<coord_type> &LowerCorner, const tuple<coord_type> &BinSize, const
+  region_type &Region, maps_to_tag<hashable_region_maps_to::SET>) const {
+  return region_traits::MapToBins(NumDims_, BinRange, BinIndexer, LowerCorner, BinSize,
+    Region);
+}
+
+template <typename RegionType> template <typename IndexerType> set<typename IndexerType::index_type>
+  distributed_region_hash<RegionType>::MapToBins_(const range &BinRange, const IndexerType
+  &BinIndexer, const tuple<coord_type> &LowerCorner, const tuple<coord_type> &BinSize, const
+  region_type &Region, maps_to_tag<hashable_region_maps_to::RANGE>) const {
+  using index_type = typename IndexerType::index_type;
+  range Bins = region_traits::MapToBins(NumDims_, BinRange, LowerCorner, BinSize, Region);
+  set<index_type> BinsSet;
+  BinsSet.Reserve(Bins.Count());
+  for (int k = Bins.Begin(2); k < Bins.End(2); ++k) {
+    for (int j = Bins.Begin(1); j < Bins.End(1); ++j) {
+      for (int i = Bins.Begin(0); i < Bins.End(0); ++i) {
+        index_type iBin = BinIndexer.ToIndex(i,j,k);
+        BinsSet.Insert(iBin);
+      }
+    }
+  }
+  return BinsSet;
 }
 
 template <typename RegionType> interval<int,MAX_DIMS> distributed_region_hash<RegionType>::

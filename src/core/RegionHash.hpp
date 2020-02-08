@@ -61,6 +61,19 @@ private:
   array<long long> BinRegionIndicesStarts_;
   array<long long> BinRegionIndices_;
 
+  void MapToBins_(const region_type &Region, range &Bins) const;
+  void MapToBins_(const region_type &Region, set<long long> &Bins) const;
+
+  void AccumulateBinRegionCounts_(const range &Bins, field<long long> &NumRegionsInBin) const;
+  void AccumulateBinRegionCounts_(const set<long long> &Bins, field<long long> &NumRegionsInBin)
+    const;
+
+  void AddToBins_(int iRegion, const range &Bins, const array<long long> &BinRegionIndicesStarts,
+    array<long long> &BinRegionIndices, field<long long> &NumRegionsAddedToBin) const;
+  void AddToBins_(int iRegion, const set<long long> &Bins, const array<long long>
+    &BinRegionIndicesStarts, array<long long> &BinRegionIndices, field<long long>
+    &NumRegionsAddedToBin) const ;
+
   template <typename T> struct coord_type_tag {};
 
   interval<int,MAX_DIMS> MakeEmptyExtents_(int NumDims, coord_type_tag<int>);

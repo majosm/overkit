@@ -81,6 +81,7 @@ struct fragment {
 namespace core {
 template <> struct hashable_region_traits<assembler_internal::fragment> {
   using coord_type = double;
+  static constexpr hashable_region_maps_to MapsTo() { return hashable_region_maps_to::SET; }
   static box ComputeExtents(int NumDims, const assembler_internal::fragment &Region) {
     box Extents;
     switch (NumDims) {
@@ -164,8 +165,20 @@ template <> struct hashable_region_traits<assembler_internal::fragment> {
   template <typename IndexerType> static set<typename IndexerType::index_type> MapToBins1D(const
     range &BinRange, const IndexerType &BinIndexer, const tuple<double> &LowerCorner, const
     tuple<double> &BinSize, const assembler_internal::fragment &Region) {
-    return hashable_region_traits<box>::MapToBins(1, BinRange, BinIndexer, LowerCorner, BinSize,
+    using index_type = typename IndexerType::index_type;
+    range Bins = hashable_region_traits<box>::MapToBins(1, BinRange, LowerCorner, BinSize,
       Region.Box);
+    set<index_type> BinsSet;
+    BinsSet.Reserve(Bins.Count());
+    for (int k = Bins.Begin(2); k < Bins.End(2); ++k) {
+      for (int j = Bins.Begin(1); j < Bins.End(1); ++j) {
+        for (int i = Bins.Begin(0); i < Bins.End(0); ++i) {
+          index_type iBin = BinIndexer.ToIndex(i,j,k);
+          BinsSet.Insert(iBin);
+        }
+      }
+    }
+    return BinsSet;
   }
   template <typename IndexerType> static set<typename IndexerType::index_type> MapToBins2D(const
     range &BinRange, const IndexerType &BinIndexer, const tuple<double> &LowerCorner, const
@@ -188,8 +201,8 @@ template <> struct hashable_region_traits<assembler_internal::fragment> {
     for (int l = 0; l < 4; ++l) {
       RegionExtents = ExtendBox(RegionExtents, {RegionCorners[l](0), RegionCorners[l](1), 0.});
     }
-    set<index_type> CandidateBins = hashable_region_traits<box>::MapToBins(2, BinRange, BinIndexer,
-      LowerCorner, BinSize, RegionExtents);
+    range CandidateBins = hashable_region_traits<box>::MapToBins(2, BinRange, LowerCorner, BinSize,
+      RegionExtents);
     set<index_type> Bins;
     Bins.Reserve(CandidateBins.Count());
     elem<double,2> SeparatingLineAxes[4] = {
@@ -216,26 +229,29 @@ template <> struct hashable_region_traits<assembler_internal::fragment> {
       interval<double> Interval2 = IntervalAlongAxis(Corners2, Axis);
       return Interval2.End(0) >= Interval1.Begin(0) && Interval1.End(0) >= Interval2.Begin(0);
     };
-    for (index_type iBin : CandidateBins) {
-      tuple<int> BinLoc = BinIndexer.ToTuple(iBin);
-      box BinExtents = MakeEmptyBox(2);
-      for (int iDim = 0; iDim < 2; ++iDim) {
-        BinExtents.Begin(iDim) = LowerCorner(iDim) + double(BinLoc(iDim))*BinSize(iDim);
-        BinExtents.End(iDim) = LowerCorner(iDim) + double(BinLoc(iDim)+1)*BinSize(iDim);
-      }
-      elem<double,2> BinCorners[4] = {
-        {BinExtents.Begin(0),BinExtents.Begin(1)},
-        {  BinExtents.End(0),BinExtents.Begin(1)},
-        {BinExtents.Begin(0),  BinExtents.End(1)},
-        {  BinExtents.End(0),  BinExtents.End(1)}
-      };
-      bool Overlaps = true;
-      for (auto &Axis : SeparatingLineAxes) {
-        Overlaps = Overlaps && OverlapsAlongAxis(RegionCorners, BinCorners, Axis);
-        if (!Overlaps) break;
-      }
-      if (Overlaps) {
-        Bins.Insert(iBin);
+    for (int j = CandidateBins.Begin(1); j < CandidateBins.End(1); ++j) {
+      for (int i = CandidateBins.Begin(0); i < CandidateBins.End(0); ++i) {
+        tuple<int> BinLoc = {i,j,0};
+        box BinExtents = MakeEmptyBox(2);
+        for (int iDim = 0; iDim < 2; ++iDim) {
+          BinExtents.Begin(iDim) = LowerCorner(iDim) + double(BinLoc(iDim))*BinSize(iDim);
+          BinExtents.End(iDim) = LowerCorner(iDim) + double(BinLoc(iDim)+1)*BinSize(iDim);
+        }
+        elem<double,2> BinCorners[4] = {
+          {BinExtents.Begin(0),BinExtents.Begin(1)},
+          {  BinExtents.End(0),BinExtents.Begin(1)},
+          {BinExtents.Begin(0),  BinExtents.End(1)},
+          {  BinExtents.End(0),  BinExtents.End(1)}
+        };
+        bool Overlaps = true;
+        for (auto &Axis : SeparatingLineAxes) {
+          Overlaps = Overlaps && OverlapsAlongAxis(RegionCorners, BinCorners, Axis);
+          if (!Overlaps) break;
+        }
+        if (Overlaps) {
+          index_type iBin = BinIndexer.ToIndex(BinLoc);
+          Bins.Insert(iBin);
+        }
       }
     }
     return Bins;
@@ -266,8 +282,8 @@ template <> struct hashable_region_traits<assembler_internal::fragment> {
     for (int l = 0; l < 8; ++l) {
       RegionExtents = ExtendBox(RegionExtents, RegionCorners[l]);
     }
-    set<index_type> CandidateBins = hashable_region_traits<box>::MapToBins(3, BinRange, BinIndexer,
-      LowerCorner, BinSize, RegionExtents);
+    range CandidateBins = hashable_region_traits<box>::MapToBins(3, BinRange, LowerCorner, BinSize,
+      RegionExtents);
     set<index_type> Bins;
     Bins.Reserve(CandidateBins.Count());
     elem<double,3> RegionAxisI = OrientInv({1.,0.,0.});
@@ -308,30 +324,35 @@ template <> struct hashable_region_traits<assembler_internal::fragment> {
       interval<double> Interval2 = IntervalAlongAxis(Corners2, Axis);
       return Interval2.End(0) >= Interval1.Begin(0) && Interval1.End(0) >= Interval2.Begin(0);
     };
-    for (index_type iBin : CandidateBins) {
-      tuple<int> BinLoc = BinIndexer.ToTuple(iBin);
-      box BinExtents = MakeEmptyBox(3);
-      for (int iDim = 0; iDim < 3; ++iDim) {
-        BinExtents.Begin(iDim) = LowerCorner(iDim) + double(BinLoc(iDim))*BinSize(iDim);
-        BinExtents.End(iDim) = LowerCorner(iDim) + double(BinLoc(iDim)+1)*BinSize(iDim);
-      }
-      elem<double,3> BinCorners[8] = {
-        {BinExtents.Begin(0),BinExtents.Begin(1), BinExtents.Begin(2)},
-        {  BinExtents.End(0),BinExtents.Begin(1), BinExtents.Begin(2)},
-        {BinExtents.Begin(0),  BinExtents.End(1), BinExtents.Begin(2)},
-        {  BinExtents.End(0),  BinExtents.End(1), BinExtents.Begin(2)},
-        {BinExtents.Begin(0),BinExtents.Begin(1),   BinExtents.End(2)},
-        {  BinExtents.End(0),BinExtents.Begin(1),   BinExtents.End(2)},
-        {BinExtents.Begin(0),  BinExtents.End(1),   BinExtents.End(2)},
-        {  BinExtents.End(0),  BinExtents.End(1),   BinExtents.End(2)}
-      };
-      bool Overlaps = true;
-      for (auto &Axis : SeparatingPlaneAxes) {
-        Overlaps = Overlaps && OverlapsAlongAxis(RegionCorners, BinCorners, Axis);
-        if (!Overlaps) break;
-      }
-      if (Overlaps) {
-        Bins.Insert(iBin);
+    for (int k = CandidateBins.Begin(2); k < CandidateBins.End(2); ++k) {
+      for (int j = CandidateBins.Begin(1); j < CandidateBins.End(1); ++j) {
+        for (int i = CandidateBins.Begin(0); i < CandidateBins.End(0); ++i) {
+          tuple<int> BinLoc = {i,j,k};
+          box BinExtents = MakeEmptyBox(3);
+          for (int iDim = 0; iDim < 3; ++iDim) {
+            BinExtents.Begin(iDim) = LowerCorner(iDim) + double(BinLoc(iDim))*BinSize(iDim);
+            BinExtents.End(iDim) = LowerCorner(iDim) + double(BinLoc(iDim)+1)*BinSize(iDim);
+          }
+          elem<double,3> BinCorners[8] = {
+            {BinExtents.Begin(0),BinExtents.Begin(1), BinExtents.Begin(2)},
+            {  BinExtents.End(0),BinExtents.Begin(1), BinExtents.Begin(2)},
+            {BinExtents.Begin(0),  BinExtents.End(1), BinExtents.Begin(2)},
+            {  BinExtents.End(0),  BinExtents.End(1), BinExtents.Begin(2)},
+            {BinExtents.Begin(0),BinExtents.Begin(1),   BinExtents.End(2)},
+            {  BinExtents.End(0),BinExtents.Begin(1),   BinExtents.End(2)},
+            {BinExtents.Begin(0),  BinExtents.End(1),   BinExtents.End(2)},
+            {  BinExtents.End(0),  BinExtents.End(1),   BinExtents.End(2)}
+          };
+          bool Overlaps = true;
+          for (auto &Axis : SeparatingPlaneAxes) {
+            Overlaps = Overlaps && OverlapsAlongAxis(RegionCorners, BinCorners, Axis);
+            if (!Overlaps) break;
+          }
+          if (Overlaps) {
+            index_type iBin = BinIndexer.ToIndex(BinLoc);
+            Bins.Insert(iBin);
+          }
+        }
       }
     }
     return Bins;

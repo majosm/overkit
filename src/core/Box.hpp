@@ -32,27 +32,17 @@ inline box ScaleBox(const box &Box, const tuple<double> &Factor);
 namespace core {
 template <> struct hashable_region_traits<box> {
   using coord_type = double;
+  static constexpr hashable_region_maps_to MapsTo() { return hashable_region_maps_to::RANGE; }
   static box ComputeExtents(int, const box &Region) { return Region; }
-  template <typename IndexerType> static set<typename IndexerType::index_type> MapToBins(int
-    NumDims, const range &BinRange, const IndexerType &BinIndexer, const tuple<double> &LowerCorner,
+  static range MapToBins(int NumDims, const range &BinRange, const tuple<double> &LowerCorner,
     const tuple<double> &BinSize, const box &Region) {
-    using index_type = typename IndexerType::index_type;
-    set<index_type> Bins;
     tuple<int> BinLocLower = ClampToRange(BinRange, MapToUniformGridCell(NumDims, LowerCorner,
       BinSize, Region.Begin()));
     tuple<int> BinLocUpper = ClampToRange(BinRange, MapToUniformGridCell(NumDims, LowerCorner,
       BinSize, Region.End()));
-    range OverlappedBinRange = MakeEmptyRange(NumDims);
-    OverlappedBinRange = ExtendRange(OverlappedBinRange, BinLocLower);
-    OverlappedBinRange = ExtendRange(OverlappedBinRange, BinLocUpper);
-    Bins.Reserve(OverlappedBinRange.Count());
-    for (int k = OverlappedBinRange.Begin(2); k < OverlappedBinRange.End(2); ++k) {
-      for (int j = OverlappedBinRange.Begin(1); j < OverlappedBinRange.End(1); ++j) {
-        for (int i = OverlappedBinRange.Begin(0); i < OverlappedBinRange.End(0); ++i) {
-          Bins.Insert(BinIndexer.ToIndex(i,j,k));
-        }
-      }
-    }
+    range Bins = MakeEmptyRange(NumDims);
+    Bins = ExtendRange(Bins, BinLocLower);
+    Bins = ExtendRange(Bins, BinLocUpper);
     return Bins;
   }
 };

@@ -27,22 +27,19 @@ template <typename RegionType> region_hash<RegionType>::region_hash(int NumDims,
 
   BinSize_ = GetBinSize_(Extents_, NumBins);
 
-  array<set<long long>> RegionOverlappedBins({Regions.Count()});
+  using mapped_bins_type = typename std::conditional<region_traits::MapsTo()
+    == hashable_region_maps_to::RANGE, range, set<long long>>::type;
+
+  array<mapped_bins_type> RegionOverlappedBins({Regions.Count()});
 
   for (int iRegion = 0; iRegion < Regions.Count(); ++iRegion) {
-    set<long long> &Bins = RegionOverlappedBins(iRegion);
-    Bins = region_traits::MapToBins(NumDims_, BinRange_, BinIndexer_, Extents_.Begin(), BinSize_,
-      Regions(iRegion));
+    MapToBins_(Regions(iRegion), RegionOverlappedBins(iRegion));
   }
 
   field<long long> NumRegionsInBin(BinRange_, 0);
 
   for (int iRegion = 0; iRegion < Regions.Count(); ++iRegion) {
-    const set<long long> &Bins = RegionOverlappedBins(iRegion);
-    for (long long iBin : Bins) {
-      tuple<int> BinLoc = BinIndexer_.ToTuple(iBin);
-      ++NumRegionsInBin(BinLoc);
-    }
+    AccumulateBinRegionCounts_(RegionOverlappedBins(iRegion), NumRegionsInBin);
   }
 
   BinRegionIndicesStarts_.Resize({BinRange_.Count()+1});
@@ -66,11 +63,8 @@ template <typename RegionType> region_hash<RegionType>::region_hash(int NumDims,
   NumRegionsInBin.Fill(0);
 
   for (long long iRegion = 0; iRegion < Regions.Count(); ++iRegion) {
-    const set<long long> &Bins = RegionOverlappedBins(iRegion);
-    for (long long iBin : Bins) {
-      BinRegionIndices_(BinRegionIndicesStarts_(iBin)+NumRegionsInBin[iBin]) = iRegion;
-      ++NumRegionsInBin[iBin];
-    }
+    AddToBins_(iRegion, RegionOverlappedBins(iRegion), BinRegionIndicesStarts_, BinRegionIndices_,
+      NumRegionsInBin);
   }
 
 }
@@ -97,6 +91,70 @@ template <typename RegionType> array_view<const long long> region_hash<RegionTyp
   long long BinEnd = BinRegionIndicesStarts_(iBin+1);
 
   return {BinRegionIndices_.Data(BinStart), {0,BinEnd-BinStart}};
+
+}
+
+template <typename RegionType> void region_hash<RegionType>::MapToBins_(const region_type &Region, 
+  range &Bins) const {
+
+  Bins = region_traits::MapToBins(NumDims_, BinRange_, Extents_.Begin(), BinSize_, Region);
+
+}
+
+template <typename RegionType> void region_hash<RegionType>::MapToBins_(const region_type &Region, 
+  set<long long> &Bins) const {
+
+  Bins = region_traits::MapToBins(NumDims_, BinRange_, BinIndexer_, Extents_.Begin(), BinSize_,
+    Region);
+
+}
+
+template <typename RegionType> void region_hash<RegionType>::AccumulateBinRegionCounts_(const range
+  &Bins, field<long long> &NumRegionsInBin) const {
+
+  for (int k = Bins.Begin(2); k < Bins.End(2); ++k) {
+    for (int j = Bins.Begin(1); j < Bins.End(1); ++j) {
+      for (int i = Bins.Begin(0); i < Bins.End(0); ++i) {
+        ++NumRegionsInBin(i,j,k);
+      }
+    }
+  }
+
+}
+
+template <typename RegionType> void region_hash<RegionType>::AccumulateBinRegionCounts_(const
+  set<long long> &Bins, field<long long> &NumRegionsInBin) const {
+
+  for (long long iBin : Bins) {
+    ++NumRegionsInBin[iBin];
+  }
+
+}
+
+template <typename RegionType> void region_hash<RegionType>::AddToBins_(int iRegion, const
+  range &Bins, const array<long long> &BinRegionIndicesStarts, array<long long> &BinRegionIndices,
+  field<long long> &NumRegionsAddedToBin) const {
+
+  for (int k = Bins.Begin(2); k < Bins.End(2); ++k) {
+    for (int j = Bins.Begin(1); j < Bins.End(1); ++j) {
+      for (int i = Bins.Begin(0); i < Bins.End(0); ++i) {
+        long long iBin = BinIndexer_.ToIndex(i,j,k);
+        BinRegionIndices(BinRegionIndicesStarts(iBin)+NumRegionsAddedToBin[iBin]) = iRegion;
+        ++NumRegionsAddedToBin[iBin];
+      }
+    }
+  }
+
+}
+
+template <typename RegionType> void region_hash<RegionType>::AddToBins_(int iRegion, const
+  set<long long> &Bins, const array<long long> &BinRegionIndicesStarts, array<long long>
+  &BinRegionIndices, field<long long> &NumRegionsAddedToBin) const {
+
+  for (long long iBin : Bins) {
+    BinRegionIndices(BinRegionIndicesStarts(iBin)+NumRegionsAddedToBin[iBin]) = iRegion;
+    ++NumRegionsAddedToBin[iBin];
+  }
 
 }
 
