@@ -114,6 +114,7 @@ option(EXAMPLES "Enable examples" OFF)
 option(TESTS "Enable tests" OFF)
 option(COVERAGE "Enable coverage analysis" OFF)
 option(PROFILE "Enable profiling" OFF)
+option(OPENMP "Enable OpenMP support" OFF)
 option(XPACC "Enable XPACC-specific extras" OFF)
 
 if(NOT DEFINED SUBPROJECT)
@@ -177,6 +178,23 @@ if(NOT HAVE_MPI_IBARRIER)
 endif()
 set(CMAKE_REQUIRED_INCLUDES)
 set(CMAKE_REQUIRED_LIBRARIES)
+
+#--------
+# OpenMP
+#--------
+
+# OpenMP
+if(OPENMP)
+  find_package(OpenMP REQUIRED)
+  # Need to specify -fopenmp/-qopenmp/etc. at link time too, but FindOpenMP doesn't
+  # create a flag for it for some reason
+  if(NOT OpenMP_C_LIB_NAMES)
+    set(OpenMP_EXE_LINKER_FLAGS "${OpenMP_C_FLAGS}")
+  endif()
+  set(HAVE_OPENMP TRUE CACHE INTERNAL "")
+else()
+  set(HAVE_OPENMP FALSE CACHE INTERNAL "")
+endif()
 
 #----------------
 # C math library
@@ -467,6 +485,7 @@ set(OverkitParallel_CMAKE_OPTION_EXAMPLES ${EXAMPLES})
 set(OverkitParallel_CMAKE_OPTION_TESTS ${TESTS})
 set(OverkitParallel_CMAKE_OPTION_COVERAGE ${COVERAGE})
 set(OverkitParallel_CMAKE_OPTION_PROFILE ${PROFILE})
+set(OverkitParallel_CMAKE_OPTION_OPENMP ${OPENMP})
 set(OverkitParallel_CMAKE_OPTION_XPACC ${XPACC})
 
 configure_file(${CMAKE_SOURCE_DIR}/config/OverkitDefs.cmake.in
@@ -500,6 +519,7 @@ convert_to_01(EXAMPLES OverkitParallel_MAKE_OPTION_EXAMPLES)
 convert_to_01(TESTS OverkitParallel_MAKE_OPTION_TESTS)
 convert_to_01(COVERAGE OverkitParallel_MAKE_OPTION_COVERAGE)
 convert_to_01(PROFILE OverkitParallel_MAKE_OPTION_PROFILE)
+convert_to_01(OPENMP OverkitParallel_MAKE_OPTION_OPENMP)
 convert_to_01(XPACC OverkitParallel_MAKE_OPTION_XPACC)
 
 configure_file(${CMAKE_SOURCE_DIR}/config/OverkitDefs.mk.in
@@ -552,6 +572,7 @@ message(STATUS "Examples:            ${EXAMPLES}")
 message(STATUS "Tests:               ${TESTS}")
 message(STATUS "Coverage:            ${COVERAGE}")
 message(STATUS "Profiling:           ${PROFILE}")
+message(STATUS "OpenMP:              ${OPENMP}")
 if(XPACC)
 message(STATUS "XPACC:               ${XPACC}")
 endif()

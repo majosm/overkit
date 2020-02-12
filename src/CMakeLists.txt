@@ -55,6 +55,12 @@ if(EXTERNAL_MPI)
   target_link_libraries(overkit-parallel PUBLIC ${MPI_LIBS})
 endif()
 
+# OpenMP
+if(OPENMP)
+  target_link_libraries(overkit-parallel PUBLIC ${OpenMP_EXE_LINKER_FLAGS}
+    ${OpenMP_CXX_LIB_NAMES} ${OpenMP_C_LIB_NAMES})
+endif()
+
 # C math library
 target_link_libraries(overkit-parallel PUBLIC ${C_MATH_LIBRARY})
 

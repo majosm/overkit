@@ -257,6 +257,11 @@ if(EXTERNAL_MPI)
   target_include_directories(overkit-core SYSTEM PUBLIC ${MPI_INCLUDES})
 endif()
 
+# OpenMP
+if(OPENMP)
+  target_compile_options(overkit-core PUBLIC ${OpenMP_CXX_FLAGS})
+endif()
+
 #----------------
 # Header targets
 #----------------
@@ -291,6 +296,7 @@ add_custom_command(OUTPUT ${BUILT_CONFIG_HEADER}
     -DOVK_COVERAGE=${COVERAGE}
     -DOVK_XPACC=${XPACC}
     -DOVK_HAVE_MPI_IBARRIER=${HAVE_MPI_IBARRIER}
+    -DOVK_HAVE_OPENMP=${HAVE_OPENMP}
     -P "${CMAKE_SOURCE_DIR}/config/scripts/configure-file.cmake"
 )
 install(FILES ${BUILT_CONFIG_HEADER} DESTINATION include/${BUILT_HEADER_PREFIX})
