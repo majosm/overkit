@@ -117,6 +117,7 @@ set(INTERNAL_HEADERS
   CollectAny.hpp
   CollectBase.hpp
   CollectInterp.hpp
+  CollectInterpThreaded.hpp
   CollectMap.hpp
   CollectMax.hpp
   CollectMin.hpp

@@ -273,6 +273,36 @@ inline collect CreateCollectInterp(std::shared_ptr<context> Context, comm_view C
   return {};
 }
 
+#ifdef OVK_HAVE_OPENMP
+namespace collect_internal {
+collect CreateCollectInterpThreadedRow(std::shared_ptr<context> &&Context, comm_view Comm, const
+  cart &Cart, const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int
+  Count, const range &FieldValuesRange, floating_ref<const array<double,3>> InterpCoefs);
+collect CreateCollectInterpThreadedCol(std::shared_ptr<context> &&Context, comm_view Comm, const
+  cart &Cart, const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int
+  Count, const range &FieldValuesRange, floating_ref<const array<double,3>> InterpCoefs);
+}
+inline collect CreateCollectInterpThreaded(std::shared_ptr<context> Context, comm_view Comm, const
+  cart &Cart, const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int
+  Count, const range &FieldValuesRange, array_layout FieldValuesLayout, floating_ref<const
+  array<double,3>> InterpCoefs) {
+  switch (FieldValuesLayout) {
+  case array_layout::ROW_MAJOR:
+    return collect_internal::CreateCollectInterpThreadedRow(std::move(Context), Comm, Cart,
+      LocalRange, CollectMap, ValueType, Count, FieldValuesRange, InterpCoefs);
+    break;
+  case array_layout::COLUMN_MAJOR:
+    return collect_internal::CreateCollectInterpThreadedCol(std::move(Context), Comm, Cart,
+      LocalRange, CollectMap, ValueType, Count, FieldValuesRange, InterpCoefs);
+    break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+    break;
+  }
+  return {};
+}
+#endif
+
 }}
 
 #endif

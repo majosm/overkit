@@ -6,6 +6,7 @@
 #include "ovk/core/CollectAll.hpp"
 #include "ovk/core/CollectAny.hpp"
 #include "ovk/core/CollectInterp.hpp"
+#include "ovk/core/CollectInterpThreaded.hpp"
 #include "ovk/core/CollectMax.hpp"
 #include "ovk/core/CollectMin.hpp"
 #include "ovk/core/CollectNone.hpp"
@@ -402,5 +403,34 @@ collect CreateCollectInterpRow(std::shared_ptr<context> &&Context, comm_view Com
   return Collect;
 
 }
+
+#ifdef OVK_HAVE_OPENMP
+template <typename T> using collect_interp_threaded_row = collect_interp_threaded<T,
+  array_layout::ROW_MAJOR>;
+
+collect CreateCollectInterpThreadedRow(std::shared_ptr<context> &&Context, comm_view Comm, const
+  cart &Cart, const range &LocalRange, const collect_map &CollectMap, data_type ValueType, int
+  Count, const range &FieldValuesRange, floating_ref<const array<double,3>> InterpCoefs) {
+
+  collect Collect;
+
+  switch (ValueType) {
+  case data_type::FLOAT:
+    Collect = collect_interp_threaded_row<float>(std::move(Context), Comm, Cart, LocalRange,
+      CollectMap, Count, FieldValuesRange, InterpCoefs);
+    break;
+  case data_type::DOUBLE:
+    Collect = collect_interp_threaded_row<double>(std::move(Context), Comm, Cart, LocalRange,
+      CollectMap, Count, FieldValuesRange, InterpCoefs);
+    break;
+  default:
+    OVK_DEBUG_ASSERT(false, "Invalid data type for interpolation collect operation.");
+    break;
+  }
+
+  return Collect;
+
+}
+#endif
 
 }}}

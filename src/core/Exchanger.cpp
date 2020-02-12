@@ -930,8 +930,13 @@ void exchanger::CreateCollect(const elem<int,2> &ConnectivityID, int CollectID, 
     {
     floating_ref<const array<double,3>> InterpCoefs = FloatingRefRebind(ConnectivityM.
       GetFloatingRef(), ConnectivityM.InterpCoefs());
+#ifdef OVK_HAVE_OPENMP
+    Collect = core::CreateCollectInterpThreaded(Domain.SharedContext(), GridComm, Cart, LocalRange,
+      CollectMap, ValueType, Count, GridValuesRange, GridValuesLayout, InterpCoefs);
+#else
     Collect = core::CreateCollectInterp(Domain.SharedContext(), GridComm, Cart, LocalRange,
       CollectMap, ValueType, Count, GridValuesRange, GridValuesLayout, InterpCoefs);
+#endif
     }
     break;
   default:

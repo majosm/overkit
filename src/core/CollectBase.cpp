@@ -26,7 +26,7 @@ namespace collect_internal {
 
 template <array_layout Layout> collect_base<Layout>::collect_base(std::shared_ptr<context>
   &&Context, comm_view Comm, const cart &Cart, const range &LocalRange, const collect_map
-  &CollectMap, int Count, const range &FieldValuesRange):
+  &CollectMap, int Count, const range &FieldValuesRange, int NumThreads):
   Context_(std::move(Context)),
   Comm_(Comm),
   Cart_(Cart),
@@ -42,8 +42,12 @@ template <array_layout Layout> collect_base<Layout>::collect_base(std::shared_pt
 
   Requests_.Reserve(Sends.Count()+Recvs.Count());
 
-  LocalVertexCellIndices_.Resize({CollectMap_->MaxVertices()});
-  LocalVertexFieldValuesIndices_.Resize({CollectMap_->MaxVertices()});
+  LocalVertexCellIndices_.Resize({NumThreads});
+  LocalVertexFieldValuesIndices_.Resize({NumThreads});
+  for (int iThread = 0; iThread < NumThreads; ++iThread) {
+    LocalVertexCellIndices_(iThread).Resize({CollectMap_->MaxVertices()});
+    LocalVertexFieldValuesIndices_(iThread).Resize({CollectMap_->MaxVertices()});
+  }
 
 }
 
@@ -106,8 +110,9 @@ template class collect_base<array_layout::COLUMN_MAJOR>;
 
 template <typename T, array_layout Layout> collect_base_for_type<T, Layout>::collect_base_for_type(
   std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart, const range &LocalRange,
-  const collect_map &CollectMap, int Count, const range &FieldValuesRange):
-  parent_type(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count, FieldValuesRange)
+  const collect_map &CollectMap, int Count, const range &FieldValuesRange, int NumThreads):
+  parent_type(std::move(Context), Comm, Cart, LocalRange, CollectMap, Count, FieldValuesRange,
+    NumThreads)
 {
 
   const array<collect_map::send> &Sends = CollectMap_->Sends();
@@ -237,17 +242,20 @@ template <typename T, array_layout Layout> void collect_base_for_type<T, Layout>
 template <typename T, array_layout Layout> void collect_base_for_type<T, Layout>::
   AssembleVertexValues_(array_view<array_view<const value_type>> FieldValues, const array<
   array<value_type,2>> &RemoteValues, long long iCell, const range &CellRange, const range_indexer<
-  int,Layout> &CellIndexer, array_view<value_type,2> VertexValues) {
+  int,Layout> &CellIndexer, array_view<value_type,2> VertexValues, int iThread) {
+
+  array<int> &LocalVertexCellIndices = LocalVertexCellIndices_(iThread);
+  array<long long> &LocalVertexFieldValuesIndices = LocalVertexFieldValuesIndices_(iThread);
 
   int NumLocalVertices;
-  parent_type::GetLocalCellInfo_(CellRange, CellIndexer, NumLocalVertices, LocalVertexCellIndices_,
-    LocalVertexFieldValuesIndices_);
+  parent_type::GetLocalCellInfo_(CellRange, CellIndexer, NumLocalVertices, LocalVertexCellIndices,
+    LocalVertexFieldValuesIndices);
 
   // Fill in the local data
   for (int iCount = 0; iCount < Count_; ++iCount) {
     for (int iLocalVertex = 0; iLocalVertex < NumLocalVertices; ++iLocalVertex) {
-      VertexValues(iCount,LocalVertexCellIndices_(iLocalVertex)) = FieldValues(iCount)(
-        LocalVertexFieldValuesIndices_(iLocalVertex));
+      VertexValues(iCount,LocalVertexCellIndices(iLocalVertex)) = FieldValues(iCount)(
+        LocalVertexFieldValuesIndices(iLocalVertex));
     }
   }
 

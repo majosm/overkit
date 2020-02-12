@@ -31,7 +31,8 @@ template <array_layout Layout> class collect_base {
 protected:
 
   collect_base(std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart, const range
-    &LocalRange, const collect_map &CollectMap, int Count, const range &FieldValuesRange);
+    &LocalRange, const collect_map &CollectMap, int Count, const range &FieldValuesRange, int
+    NumThreads);
 
   // Can't define these here due to issues with GCC < 6.3 and Intel < 17
   // implementations of extern template
@@ -57,8 +58,8 @@ protected:
   range_indexer<long long,Layout> FieldValuesIndexer_;
 
   array<MPI_Request> Requests_;
-  array<int> LocalVertexCellIndices_;
-  array<long long> LocalVertexFieldValuesIndices_;
+  array<array<int>> LocalVertexCellIndices_;
+  array<array<long long>> LocalVertexFieldValuesIndices_;
 
   range GetCellRange_(long long iCell) const;
 
@@ -89,7 +90,8 @@ public:
   using value_type = T;
 
   collect_base_for_type(std::shared_ptr<context> &&Context, comm_view Comm, const cart &Cart, const
-    range &LocalRange, const collect_map &CollectMap, int Count, const range &FieldValuesRange);
+    range &LocalRange, const collect_map &CollectMap, int Count, const range &FieldValuesRange, int
+    NumThreads=1);
 
 protected:
 
@@ -117,7 +119,7 @@ protected:
 
   void AssembleVertexValues_(array_view<array_view<const value_type>> FieldValues, const
     array<array<value_type,2>> &RemoteValues, long long iCell, const range &CellRange, const
-    range_indexer<int,Layout> &CellIndexer, array_view<value_type,2> VertexValues);
+    range_indexer<int,Layout> &CellIndexer, array_view<value_type,2> VertexValues, int iThread=0);
 
 private:
 
