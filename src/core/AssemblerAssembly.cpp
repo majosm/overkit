@@ -4362,7 +4362,7 @@ void assembler::GenerateConnectivityData_() {
     distributed_field<int> &ReceiverDistances = ReceiverDistancesForGrid.Insert(GridID,
       Grid.SharedPartition(), MaxDistance);
     distributed_field<bool> CoverMask;
-    core::DetectEdge(ReceiverMask, core::edge_type::INNER, core::mask_bc::MIRROR, false,
+    core::DetectEdge(ReceiverMask, core::edge_type::INNER, core::mask_bc::FALSE, false,
       CoverMask);
     for (int Distance = 0; Distance < MaxDistance; ++Distance) {
       for (long long l = 0; l < NumExtended; ++l) {
@@ -4370,7 +4370,7 @@ void assembler::GenerateConnectivityData_() {
           ReceiverDistances[l] = ReceiverMask[l] ? -Distance : Distance;
         }
       }
-      core::DilateMask(CoverMask, 1, core::mask_bc::MIRROR);
+      core::DilateMask(CoverMask, 1, core::mask_bc::FALSE);
     }
   }
 
@@ -4515,7 +4515,22 @@ void assembler::GenerateConnectivityData_() {
                 if (std::abs(NormalizedDistance-DonorNormalizedDistances(Point)) > TOLERANCE) {
                   BetterDonor = NormalizedDistance > DonorNormalizedDistances(Point);
                 } else {
-                  BetterDonor = Volume < DonorVolumes(Point);
+                  occludes Occludes = Options_.Occludes({DonorGridIDs(Point),MGridID});
+                  switch (Occludes) {
+                  case occludes::ALL:
+                    BetterDonor = false;
+                    break;
+                  case occludes::NONE:
+                    BetterDonor = true;
+                    break;
+                  case occludes::COARSE:
+                    BetterDonor = Volume < DonorVolumes(Point);
+                    break;
+                  default:
+                    OVK_DEBUG_ASSERT(false, "Unhandled enum value.");
+                    BetterDonor = false;
+                    break;
+                  }
                 }
                 if (BetterDonor) {
                   if (!Disjoint || NormalizedDistance > 0.) {
