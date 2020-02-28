@@ -106,6 +106,24 @@ endif()
 #----------------
 
 set(BUILT_HEADER_PREFIX support)
+
+set(PUGIXML_TAR ${CMAKE_CURRENT_SOURCE_DIR}/pugixml.tar.gz)
+set(PUGIXML_DIR ${CMAKE_BINARY_DIR}/include/${BUILT_HEADER_PREFIX}/pugixml)
+add_custom_command(OUTPUT ${PUGIXML_DIR}
+  MAIN_DEPENDENCY ${PUGIXML_TAR}
+  COMMAND "${CMAKE_COMMAND}" -E tar xzf "${PUGIXML_TAR}"
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/include/${BUILT_HEADER_PREFIX}
+)
+set_source_files_properties(
+  ${PUGIXML_DIR}/pugiconfig.hpp
+  ${PUGIXML_DIR}/pugixml.cpp
+  ${PUGIXML_DIR}/pugixml.hpp
+  PROPERTIES GENERATED TRUE
+)
+
+add_custom_target(pugixml-headers ALL DEPENDS ${PUGIXML_DIR})
+list(APPEND LOCAL_TARGETS pugixml-headers)
+
 set(BUILT_HEADERS)
 foreach(HEADER_NAME ${HEADERS})
   set(BUILT_HEADER ${CMAKE_BINARY_DIR}/include/${BUILT_HEADER_PREFIX}/${HEADER_NAME})
@@ -120,13 +138,6 @@ set_source_files_properties(${BUILT_HEADERS} PROPERTIES GENERATED TRUE)
 
 add_custom_target(support-headers ALL DEPENDS ${BUILT_HEADERS})
 list(APPEND LOCAL_TARGETS support-headers)
-
-#================
-# Subdirectories
-#================
-
-# pugixml for XML parsing
-add_subdirectory(pugixml)
 
 #==============
 # Finalization
