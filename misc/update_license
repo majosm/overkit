@@ -2,17 +2,34 @@
 
 year=$(date +%Y)
 
-files=
-files="$files $(find . -name LICENSE.txt)"
-files="$files $(find . -name CMakeLists.txt)"
-files="$files $(find config -name \*.cmake)"
-files="$files $(find examples -name \*.c -o -name \*.cpp -o -name \*.h -o -name \*.hpp -o -name \*.inl -o -name \*.h.in -o -name \*.hpp.in)"
-files="$files $(find src -name \*.c -o -name \*.cpp -o -name \*.h -o -name \*.hpp -o -name \*.inl -o -name \*.h.in -o -name \*.hpp.in)"
-files="$files $(find tests -name \*.c -o -name \*.cpp -o -name \*.h -o -name \*.hpp -o -name \*.inl -o -name \*.h.in -o -name \*.hpp.in)"
-files="$files $(find support -name \*.c -o -name \*.cpp -o -name \*.h -o -name \*.hpp -o -name \*.inl -o -name \*.h.in -o -name \*.hpp.in)"
-files="$files $(find utils -name \*.c -o -name \*.cpp -o -name \*.h -o -name \*.hpp -o -name \*.inl -o -name \*.h.in -o -name \*.hpp.in)"
+source_dirs="config examples misc src support tests utils"
+
+files="LICENSE.txt CMakeLists.txt"
+
+for dir in $source_dirs; do
+  files="$files $(find $dir \
+    -name LICENSE.txt -o \
+    -name CMakeLists.txt -o \
+    -name \*.cmake -o \
+    -name \*.c -o \
+    -name \*.cpp -o \
+    -name \*.h -o \
+    -name \*.hpp -o \
+    -name \*.inl -o \
+    -name \*.cmake.in -o \
+    -name \*.mk.in -o \
+    -name \*.h.in -o \
+    -name \*.hpp.in \
+  )"
+done
 
 name="Matthew J. Smith and Overkit contributors"
+
+for file in $files; do
+  if [ $(grep -c "$name" $file) -eq 0 ]; then
+    echo "WARNING: File $file possibly missing license header."
+  fi
+done
 
 for file in $files; do
   cp "$file" old_license_file
