@@ -134,7 +134,7 @@ else()
 endif()
 
 # Overkit
-target_link_libraries(unit-tests PRIVATE overkit-parallel)
+target_link_libraries(unit-tests PRIVATE overkit)
 
 # Support library
 target_link_libraries(unit-tests PRIVATE support)

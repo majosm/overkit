@@ -84,7 +84,7 @@ else()
 endif()
 
 # Overkit
-target_link_libraries(support PRIVATE overkit-parallel)
+target_link_libraries(support PRIVATE overkit)
 
 # MPI
 if(EXTERNAL_MPI)

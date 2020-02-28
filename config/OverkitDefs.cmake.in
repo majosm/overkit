@@ -2,19 +2,19 @@
 # License: MIT (http://opensource.org/licenses/MIT)
 
 # Location
-set(OverkitParallel_DIR @OverkitParallel_CMAKE_DIR@)
+set(Overkit_DIR @Overkit_CMAKE_DIR@)
 
 # Compiling/linking
-set(OverkitParallel_INCLUDES @OverkitParallel_CMAKE_INCLUDES@)
-set(OverkitParallel_LIBRARIES @OverkitParallel_CMAKE_LIBRARIES@)
-set(OverkitParallel_HEADERS @OverkitParallel_CMAKE_HEADERS@)
+set(Overkit_INCLUDES @Overkit_CMAKE_INCLUDES@)
+set(Overkit_LIBRARIES @Overkit_CMAKE_LIBRARIES@)
+set(Overkit_HEADERS @Overkit_CMAKE_HEADERS@)
 
 # Build option detection
-set(OverkitParallel_OPTION_SHARED_LIBS @OverkitParallel_CMAKE_OPTION_SHARED_LIBS@)
-set(OverkitParallel_OPTION_EXAMPLES @OverkitParallel_CMAKE_OPTION_EXAMPLES@)
-set(OverkitParallel_OPTION_TESTS @OverkitParallel_CMAKE_OPTION_TESTS@)
-set(OverkitParallel_OPTION_COVERAGE @OverkitParallel_CMAKE_OPTION_COVERAGE@)
-set(OverkitParallel_OPTION_PROFILE @OverkitParallel_CMAKE_OPTION_PROFILE@)
-set(OverkitParallel_OPTION_OPENMP @OverkitParallel_CMAKE_OPTION_OPENMP@)
-set(OverkitParallel_OPTION_HDF5 @OverkitParallel_CMAKE_OPTION_HDF5@)
-set(OverkitParallel_OPTION_XPACC @OverkitParallel_CMAKE_OPTION_XPACC@)
+set(Overkit_OPTION_SHARED_LIBS @Overkit_CMAKE_OPTION_SHARED_LIBS@)
+set(Overkit_OPTION_EXAMPLES @Overkit_CMAKE_OPTION_EXAMPLES@)
+set(Overkit_OPTION_TESTS @Overkit_CMAKE_OPTION_TESTS@)
+set(Overkit_OPTION_COVERAGE @Overkit_CMAKE_OPTION_COVERAGE@)
+set(Overkit_OPTION_PROFILE @Overkit_CMAKE_OPTION_PROFILE@)
+set(Overkit_OPTION_OPENMP @Overkit_CMAKE_OPTION_OPENMP@)
+set(Overkit_OPTION_HDF5 @Overkit_CMAKE_OPTION_HDF5@)
+set(Overkit_OPTION_XPACC @Overkit_CMAKE_OPTION_XPACC@)

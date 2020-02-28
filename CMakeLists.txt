@@ -30,11 +30,11 @@ include(CMakePackageConfigHelpers)
 # Project definition
 #--------------------
 
-project(OverkitParallel CXX C)
-set(OverkitParallel_VERSION_MAJOR 0)
-set(OverkitParallel_VERSION_MINOR 3)
-set(OverkitParallel_VERSION_PATCH 0)
-set(OverkitParallel_VERSION ${OverkitParallel_VERSION_MAJOR}.${OverkitParallel_VERSION_MINOR}.${OverkitParallel_VERSION_PATCH})
+project(Overkit CXX C)
+set(Overkit_VERSION_MAJOR 0)
+set(Overkit_VERSION_MINOR 3)
+set(Overkit_VERSION_PATCH 0)
+set(Overkit_VERSION ${Overkit_VERSION_MAJOR}.${Overkit_VERSION_MINOR}.${Overkit_VERSION_PATCH})
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/config/modules)
 
@@ -493,41 +493,41 @@ endif()
 
 # CMake
 if(SUBPROJECT)
-  set(OverkitParallel_CMAKE_DIR ${CMAKE_BINARY_DIR})
-  set(OverkitParallel_CMAKE_INCLUDES ${CMAKE_BINARY_DIR}/include)
+  set(Overkit_CMAKE_DIR ${CMAKE_BINARY_DIR})
+  set(Overkit_CMAKE_INCLUDES ${CMAKE_BINARY_DIR}/include)
 else()
-  set(OverkitParallel_CMAKE_DIR ${CMAKE_INSTALL_PREFIX})
-  set(OverkitParallel_CMAKE_INCLUDES ${CMAKE_INSTALL_PREFIX}/include)
+  set(Overkit_CMAKE_DIR ${CMAKE_INSTALL_PREFIX})
+  set(Overkit_CMAKE_INCLUDES ${CMAKE_INSTALL_PREFIX}/include)
 endif()
-set(OverkitParallel_CMAKE_LIBRARIES OverkitParallel::overkit-parallel)
-set(OverkitParallel_CMAKE_HEADERS overkit.h)
+set(Overkit_CMAKE_LIBRARIES Overkit::overkit)
+set(Overkit_CMAKE_HEADERS overkit.h)
 
-set(OverkitParallel_CMAKE_OPTION_SHARED_LIBS ${BUILD_SHARED_LIBS})
-set(OverkitParallel_CMAKE_OPTION_EXAMPLES ${EXAMPLES})
-set(OverkitParallel_CMAKE_OPTION_TESTS ${TESTS})
-set(OverkitParallel_CMAKE_OPTION_COVERAGE ${COVERAGE})
-set(OverkitParallel_CMAKE_OPTION_PROFILE ${PROFILE})
-set(OverkitParallel_CMAKE_OPTION_OPENMP ${OPENMP})
-set(OverkitParallel_CMAKE_OPTION_HDF5 ${HDF5})
-set(OverkitParallel_CMAKE_OPTION_XPACC ${XPACC})
+set(Overkit_CMAKE_OPTION_SHARED_LIBS ${BUILD_SHARED_LIBS})
+set(Overkit_CMAKE_OPTION_EXAMPLES ${EXAMPLES})
+set(Overkit_CMAKE_OPTION_TESTS ${TESTS})
+set(Overkit_CMAKE_OPTION_COVERAGE ${COVERAGE})
+set(Overkit_CMAKE_OPTION_PROFILE ${PROFILE})
+set(Overkit_CMAKE_OPTION_OPENMP ${OPENMP})
+set(Overkit_CMAKE_OPTION_HDF5 ${HDF5})
+set(Overkit_CMAKE_OPTION_XPACC ${XPACC})
 
 configure_file(${CMAKE_SOURCE_DIR}/config/OverkitDefs.cmake.in
-  ${CMAKE_BINARY_DIR}/OverkitParallelDefs.cmake @ONLY)
+  ${CMAKE_BINARY_DIR}/OverkitDefs.cmake @ONLY)
 
-install(FILES ${CMAKE_BINARY_DIR}/OverkitParallelDefs.cmake DESTINATION lib/OverkitParallel/CMake)
+install(FILES ${CMAKE_BINARY_DIR}/OverkitDefs.cmake DESTINATION lib/Overkit/CMake)
 
 # Make
 if(SUBPROJECT)
-  set(OverkitParallel_MAKE_DIR ${CMAKE_BINARY_DIR})
-  set(OverkitParallel_MAKE_CPPFLAGS -I\"${CMAKE_BINARY_DIR}/include\")
-  set(OverkitParallel_MAKE_LDFLAGS -L\"${CMAKE_BINARY_DIR}/lib\")
+  set(Overkit_MAKE_DIR ${CMAKE_BINARY_DIR})
+  set(Overkit_MAKE_CPPFLAGS -I\"${CMAKE_BINARY_DIR}/include\")
+  set(Overkit_MAKE_LDFLAGS -L\"${CMAKE_BINARY_DIR}/lib\")
 else()
-  set(OverkitParallel_MAKE_DIR ${CMAKE_INSTALL_PREFIX})
-  set(OverkitParallel_MAKE_CPPFLAGS -I\"${CMAKE_INSTALL_PREFIX}/include\")
-  set(OverkitParallel_MAKE_LDFLAGS -L\"${CMAKE_INSTALL_PREFIX}/lib\")
+  set(Overkit_MAKE_DIR ${CMAKE_INSTALL_PREFIX})
+  set(Overkit_MAKE_CPPFLAGS -I\"${CMAKE_INSTALL_PREFIX}/include\")
+  set(Overkit_MAKE_LDFLAGS -L\"${CMAKE_INSTALL_PREFIX}/lib\")
 endif()
-set(OverkitParallel_MAKE_LIBS -loverkit-parallel)
-set(OverkitParallel_MAKE_HEADERS overkit.h)
+set(Overkit_MAKE_LIBS -loverkit)
+set(Overkit_MAKE_HEADERS overkit.h)
 
 macro(convert_to_01 IN OUT)
 if(${${IN}})
@@ -537,42 +537,42 @@ else()
 endif()
 endmacro()
 
-convert_to_01(BUILD_SHARED_LIBS OverkitParallel_MAKE_OPTION_SHARED_LIBS)
-convert_to_01(EXAMPLES OverkitParallel_MAKE_OPTION_EXAMPLES)
-convert_to_01(TESTS OverkitParallel_MAKE_OPTION_TESTS)
-convert_to_01(COVERAGE OverkitParallel_MAKE_OPTION_COVERAGE)
-convert_to_01(PROFILE OverkitParallel_MAKE_OPTION_PROFILE)
-convert_to_01(OPENMP OverkitParallel_MAKE_OPTION_OPENMP)
-convert_to_01(HDF5 OverkitParallel_MAKE_OPTION_HDF5)
-convert_to_01(XPACC OverkitParallel_MAKE_OPTION_XPACC)
+convert_to_01(BUILD_SHARED_LIBS Overkit_MAKE_OPTION_SHARED_LIBS)
+convert_to_01(EXAMPLES Overkit_MAKE_OPTION_EXAMPLES)
+convert_to_01(TESTS Overkit_MAKE_OPTION_TESTS)
+convert_to_01(COVERAGE Overkit_MAKE_OPTION_COVERAGE)
+convert_to_01(PROFILE Overkit_MAKE_OPTION_PROFILE)
+convert_to_01(OPENMP Overkit_MAKE_OPTION_OPENMP)
+convert_to_01(HDF5 Overkit_MAKE_OPTION_HDF5)
+convert_to_01(XPACC Overkit_MAKE_OPTION_XPACC)
 
 configure_file(${CMAKE_SOURCE_DIR}/config/OverkitDefs.mk.in
-  ${CMAKE_BINARY_DIR}/OverkitParallelDefs.mk @ONLY)
+  ${CMAKE_BINARY_DIR}/OverkitDefs.mk @ONLY)
 
-install(FILES ${CMAKE_BINARY_DIR}/OverkitParallelDefs.mk DESTINATION lib/OverkitParallel/Make)
+install(FILES ${CMAKE_BINARY_DIR}/OverkitDefs.mk DESTINATION lib/Overkit/Make)
 
 #--------------------------
 # Exports and version info
 #--------------------------
 
 configure_file(${CMAKE_SOURCE_DIR}/config/OverkitConfig.cmake
-  ${CMAKE_BINARY_DIR}/OverkitParallelConfig.cmake COPYONLY)
+  ${CMAKE_BINARY_DIR}/OverkitConfig.cmake COPYONLY)
 
-write_basic_package_version_file(${CMAKE_BINARY_DIR}/OverkitParallelConfigVersion.cmake
-  VERSION ${OverkitParallel_VERSION}
+write_basic_package_version_file(${CMAKE_BINARY_DIR}/OverkitConfigVersion.cmake
+  VERSION ${Overkit_VERSION}
   COMPATIBILITY SameMajorVersion
 )
 
-export(EXPORT OverkitParallelTargets NAMESPACE OverkitParallel:: FILE ${CMAKE_BINARY_DIR}/OverkitParallelTargets.cmake)
+export(EXPORT OverkitTargets NAMESPACE Overkit:: FILE ${CMAKE_BINARY_DIR}/OverkitTargets.cmake)
 
 install(
   FILES
-    ${CMAKE_BINARY_DIR}/OverkitParallelConfig.cmake
-    ${CMAKE_BINARY_DIR}/OverkitParallelConfigVersion.cmake
-  DESTINATION lib/OverkitParallel/CMake
+    ${CMAKE_BINARY_DIR}/OverkitConfig.cmake
+    ${CMAKE_BINARY_DIR}/OverkitConfigVersion.cmake
+  DESTINATION lib/Overkit/CMake
 )
 
-install(EXPORT OverkitParallelTargets NAMESPACE OverkitParallel:: DESTINATION lib/OverkitParallel/CMake)
+install(EXPORT OverkitTargets NAMESPACE Overkit:: DESTINATION lib/Overkit/CMake)
 
 #=============================
 # Write configuration summary

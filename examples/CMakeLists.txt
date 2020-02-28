@@ -135,7 +135,7 @@ foreach(EXAMPLE ${C_TARGETS} ${CXX_TARGETS})
   target_link_libraries(${EXAMPLE} PRIVATE ${C_MATH_LIBRARY})
 
   # Overkit
-  target_link_libraries(${EXAMPLE} PRIVATE overkit-parallel)
+  target_link_libraries(${EXAMPLE} PRIVATE overkit)
 
   # Support library
   target_link_libraries(${EXAMPLE} PRIVATE support)

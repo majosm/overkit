@@ -15,31 +15,31 @@ set(LOCAL_TARGETS)
 # Library target
 #----------------
 
-add_library(overkit-parallel
+add_library(overkit
   $<TARGET_OBJECTS:overkit-core>
   $<TARGET_OBJECTS:overkit-core-c>
   $<TARGET_OBJECTS:overkit-extras>
   $<TARGET_OBJECTS:overkit-extras-c>
 )
-list(APPEND LOCAL_TARGETS overkit-parallel)
+list(APPEND LOCAL_TARGETS overkit)
 
-add_library(OverkitParallel::overkit-parallel ALIAS overkit-parallel)
+add_library(Overkit::overkit ALIAS overkit)
 
-set_property(TARGET overkit-parallel PROPERTY ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set_property(TARGET overkit-parallel PROPERTY LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set_property(TARGET overkit PROPERTY ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set_property(TARGET overkit PROPERTY LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-target_include_directories(overkit-parallel PUBLIC
+target_include_directories(overkit PUBLIC
   $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
 
-set_property(TARGET overkit-parallel PROPERTY VERSION ${OverkitParallel_VERSION})
-set_property(TARGET overkit-parallel PROPERTY SOVERSION ${OverkitParallel_VERSION_MAJOR})
-set_property(TARGET overkit-parallel PROPERTY INTERFACE_OverkitParallel_VERSION_MAJOR ${OverkitParallel_VERSION_MAJOR})
-set_property(TARGET overkit-parallel APPEND PROPERTY COMPATIBLE_INTERFACE_STRING OverkitParallel_VERSION_MAJOR)
+set_property(TARGET overkit PROPERTY VERSION ${Overkit_VERSION})
+set_property(TARGET overkit PROPERTY SOVERSION ${Overkit_VERSION_MAJOR})
+set_property(TARGET overkit PROPERTY INTERFACE_Overkit_VERSION_MAJOR ${Overkit_VERSION_MAJOR})
+set_property(TARGET overkit APPEND PROPERTY COMPATIBLE_INTERFACE_STRING Overkit_VERSION_MAJOR)
 
-install(TARGETS overkit-parallel
-  EXPORT OverkitParallelTargets
+install(TARGETS overkit
+  EXPORT OverkitTargets
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   INCLUDES DESTINATION include
@@ -51,22 +51,22 @@ install(TARGETS overkit-parallel
 
 # MPI
 if(EXTERNAL_MPI)
-  target_include_directories(overkit-parallel SYSTEM PUBLIC ${MPI_INCLUDES})
-  target_link_libraries(overkit-parallel PUBLIC ${MPI_LIBS})
+  target_include_directories(overkit SYSTEM PUBLIC ${MPI_INCLUDES})
+  target_link_libraries(overkit PUBLIC ${MPI_LIBS})
 endif()
 
 # OpenMP
 if(OPENMP)
-  target_link_libraries(overkit-parallel PUBLIC ${OpenMP_EXE_LINKER_FLAGS}
+  target_link_libraries(overkit PUBLIC ${OpenMP_EXE_LINKER_FLAGS}
     ${OpenMP_CXX_LIB_NAMES} ${OpenMP_C_LIB_NAMES})
 endif()
 
 # C math library
-target_link_libraries(overkit-parallel PUBLIC ${C_MATH_LIBRARY})
+target_link_libraries(overkit PUBLIC ${C_MATH_LIBRARY})
 
 # Coverage
 if(COVERAGE)
-  target_link_libraries(overkit-parallel PUBLIC ${COVERAGE_LINK_FLAGS})
+  target_link_libraries(overkit PUBLIC ${COVERAGE_LINK_FLAGS})
 endif()
 
 #----------------
