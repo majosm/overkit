@@ -1,0 +1,8 @@
+#! /bin/bash
+
+top_level_sources="CMakeLists.txt OverkitSubproject.cmake"
+subdirs="config examples misc src support tests utils"
+
+cloc --force-lang="C++",inl --force-lang="Make",mk.in --force-lang="CMake",cmake.in \
+  --force-lang="C",h.in --force-lang="C++",hpp.in --ignored=cloc_ignored.txt $top_level_sources \
+  $subdirs
