@@ -32,7 +32,7 @@ include(CMakePackageConfigHelpers)
 
 project(Overkit CXX C)
 set(Overkit_VERSION_MAJOR 0)
-set(Overkit_VERSION_MINOR 3)
+set(Overkit_VERSION_MINOR 4)
 set(Overkit_VERSION_PATCH 0)
 set(Overkit_VERSION ${Overkit_VERSION_MAJOR}.${Overkit_VERSION_MINOR}.${Overkit_VERSION_PATCH})
 
