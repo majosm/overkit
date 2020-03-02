@@ -112,7 +112,10 @@ set(PUGIXML_DIR ${CMAKE_BINARY_DIR}/include/${BUILT_HEADER_PREFIX}/pugixml)
 add_custom_command(OUTPUT ${PUGIXML_DIR}
   MAIN_DEPENDENCY ${PUGIXML_TAR}
   COMMAND "${CMAKE_COMMAND}" -E tar xzf "${PUGIXML_TAR}"
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/include/${BUILT_HEADER_PREFIX}
+  # Can't do the above command directly into the target directory because CMake doesn't create the
+  # directory structure without the copy
+  COMMAND "${CMAKE_COMMAND}" -E copy_directory pugixml "${PUGIXML_DIR}"
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
 set_source_files_properties(
   ${PUGIXML_DIR}/pugiconfig.hpp
