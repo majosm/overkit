@@ -179,7 +179,7 @@ static int *CreateOutputState(const ovk_domain *Domain, int ConnectivityComponen
 
   long long iPoint;
   for (iPoint = 0; iPoint < NumLocalPoints; ++iPoint) {
-    OutputState[iPoint] = 0;
+    OutputState[iPoint] = 1;
   }
   int NumLocalConnectivityNs = ovkLocalConnectivityNCount(ConnectivityComponent);
   int *LocalConnectivityNMGridIDs = malloc(NumLocalConnectivityNs*sizeof(int));
