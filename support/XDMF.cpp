@@ -50,7 +50,7 @@ xdmf xdmf::internal_Create(std::string &&Path, int NumDims, ovk::comm_view Comm_
   std::string Directory = Path.substr(0,iNameStart);
   std::string Name = Path.substr(iNameStart,iNameEnd-iNameStart);
 
-  ovk::tuple<std::string> CoordNames = {"X", "Y", "Z"};
+  std::string CoordNames[] = {"X", "Y", "Z"};
 
   if (Comm.Rank() == 0) {
 
@@ -83,9 +83,9 @@ xdmf xdmf::internal_Create(std::string &&Path, int NumDims, ovk::comm_view Comm_
 
       pugi::xml_node GeometryNode = GridNode.append_child("Geometry");
       std::string GeometryTypeString;
-      GeometryTypeString += CoordNames(0);
+      GeometryTypeString += CoordNames[0];
       for (int iDim = 1; iDim < NumDims; ++iDim) {
-        GeometryTypeString += "_" + CoordNames(iDim);
+        GeometryTypeString += "_" + CoordNames[iDim];
       }
       GeometryNode.append_attribute("GeometryType") = GeometryTypeString.c_str();
 
@@ -95,7 +95,7 @@ xdmf xdmf::internal_Create(std::string &&Path, int NumDims, ovk::comm_view Comm_
         DataItemNode.append_attribute("NumberType") = "Float";
         DataItemNode.append_attribute("Precision") = 8;
         DataItemNode.append_attribute("Format") = "HDF";
-        std::string DataPath = Name + ".h5:/" + Grid.Name() + "/Geometry/" + CoordNames(iDim);
+        std::string DataPath = Name + ".h5:/" + Grid.Name() + "/Geometry/" + CoordNames[iDim];
         DataItemNode.text().set(DataPath.c_str());
       }
 
@@ -165,7 +165,7 @@ xdmf xdmf::internal_Create(std::string &&Path, int NumDims, ovk::comm_view Comm_
     auto Dataspace = ovk::core::MakeHandle(H5Screate_simple(NumDims, DataspaceSize.Data(),
       nullptr), H5Sclose);
     for (int iDim = 0; iDim < NumDims; ++iDim) {
-      ovk::core::MakeHandle(H5Dcreate(GeometryGroup, CoordNames(iDim).c_str(), H5T_NATIVE_DOUBLE,
+      ovk::core::MakeHandle(H5Dcreate(GeometryGroup, CoordNames[iDim].c_str(), H5T_NATIVE_DOUBLE,
         Dataspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT), H5Dclose);
     }
     auto AttributesGroup = ovk::core::MakeHandle(H5Gcreate(GridGroup, "Attributes", H5P_DEFAULT,
@@ -235,7 +235,7 @@ xdmf xdmf::internal_Open(std::string &&Path, ovk::comm_view Comm_) {
   std::string Directory = Path.substr(0,iNameStart);
   std::string Name = Path.substr(iNameStart,iNameEnd-iNameStart);
 
-  ovk::tuple<std::string> CoordNames = {"X", "Y", "Z"};
+  std::string CoordNames[] = {"X", "Y", "Z"};
 
   int NumDims;
   int NumGrids;
@@ -478,9 +478,9 @@ xdmf &xdmf::WriteGeometry(const std::string &GridName, int Dimension, ovk::field
     H5Gclose);
   auto GeometryGroup = ovk::core::MakeHandle(H5Gopen(GridGroup, "Geometry", H5P_DEFAULT), H5Gclose);
 
-  ovk::tuple<std::string> CoordNames = {"X", "Y", "Z"};
+  std::string CoordNames[] = {"X", "Y", "Z"};
 
-  auto Dataset = ovk::core::MakeHandle(H5Dopen(GeometryGroup, CoordNames(Dimension).c_str(),
+  auto Dataset = ovk::core::MakeHandle(H5Dopen(GeometryGroup, CoordNames[Dimension].c_str(),
     H5P_DEFAULT), H5Dclose);
 
   WriteHDF5Data(Dataset, NumDims_, H5T_NATIVE_DOUBLE, Data, WriteRange);
